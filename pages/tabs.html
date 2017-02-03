@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>Bootstrap Case</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+  <style type="text/css">
+    @media only screen and (max-width: 768px){
+                #tabs2{
+                  display: block;
+                }
+                #tabs_content1{
+                  display: none;
+                }
+                #tabs1{
+                display: none;
+              }
+    }
+    @media only screen and (min-width: 768px){
+              /*#tabs1{
+                display: block;
+              }*/
+              #tabs2{
+                display: none;
+              }
+    }
+
+
+  </style>
+  <script>
+  $(document).ready(function(){
+
+    $("#option11").click(
+       function(){
+                var $this = $(this);
+                if ($this.hasClass("clicked-once")) {
+                    // already been clicked once, hide it
+                    // $this.hide();
+                    $(".tab-content").hide();
+                    $("#tabs2").show();
+                    $("#option12").show();
+                    $("#option13").show();
+                    $("#option14").show();
+                    
+                }else {
+                    // first time this is clicked, mark it
+                    $this.addClass("clicked-once");
+                    
+                    $("#option12").hide();
+                    $("#option13").hide();
+                    $("#option14").hide();
+                    $(".tab-content").show();
+                    
+                }
+            }
+
+    );
+
+        $("#option12").click(
+       function(){
+                var $this = $(this);
+                if ($this.hasClass("clicked-once")) {
+                    // already been clicked once, hide it
+                    // $this.hide();
+                    $(".tab-content").hide();
+                    $("#tabs2").show();
+                    $("#option11").show();
+                    $("#option13").show();
+                    $("#option14").show();
+                    
+                }else {
+                    // first time this is clicked, mark it
+                    $this.addClass("clicked-once");
+                    
+                    $("#option11").hide();
+                    $("#option13").hide();
+                    $("#option14").hide();
+                    $(".tab-content").show();
+                    
+                }
+            }
+
+    );
+
+        $("#option13").click(
+       function(){
+                var $this = $(this);
+                if ($this.hasClass("clicked-once")) {
+                    // already been clicked once, hide it
+                    // $this.hide();
+                    $(".tab-content").hide();
+                    $("#tabs2").show();
+                    $("#option11").show();
+                    $("#option12").show();
+                    $("#option14").show();
+                    
+                }else {
+                    // first time this is clicked, mark it
+                    $this.addClass("clicked-once");
+                    
+                    $("#option11").hide();
+                    $("#option12").hide();
+                    $("#option14").hide();
+                    $(".tab-content").show();
+                    
+                }
+            }
+
+    );
+
+
+        $("#option14").click(
+       function(){
+                var $this = $(this);
+                if ($this.hasClass("clicked-once")) {
+                    // already been clicked once, hide it
+                    // $this.hide();
+                    $(".tab-content").hide();
+                    $("#tabs2").show();
+                    $("#option11").show();
+                    $("#option12").show();
+                    $("#option13").show();
+                    
+                }else {
+                    // first time this is clicked, mark it
+                    $this.addClass("clicked-once");
+                    
+                    $("#option11").hide();
+                    $("#option12").hide();
+                    $("#option13").hide();
+                    $(".tab-content").show();
+                    
+                }
+            }
+
+    );
+           
+     
+      // function(){
+      //     $("#option12").hide();
+      //     $("#option13").hide();
+      //     $("#option14").hide();
+      //     $(".tab-content").show();
+      // });
+  });
+
+  
+  </script>
+</head>
+<body>
+
+<div class="container">
+  <center><h2>Offlinetrend</h2></center>
+
+
+  <ul class="nav nav-tabs" id="tabs1">
+    <li class="active"><a data-toggle="tab" href="#option1_elements" id='option1'>Option1</a></li>
+    <li><a data-toggle="tab" href="#option2_elements" id='option2'>Option2</a></li>
+    <li><a data-toggle="tab" href="#option3_elements" id='option3'>Option3</a></li>
+    <li><a data-toggle="tab" href="#option4_elements" id='option4'>Option4</a></li>
+  </ul>
+
+  <ul class="nav nav-tabs" id="tabs2">
+    <li class="active"><a data-toggle="tab" href="#option1_elements" id='option11'>OPTION1</a></li>
+    <li><a data-toggle="tab" href="#option2_elements" id='option12'>OPTION2</a></li>
+    <li><a data-toggle="tab" href="#option3_elements" id='option13'>OPTION3</a></li>
+    <li><a data-toggle="tab" href="#option4_elements" id='option14'>OPTION4</a></li>
+  </ul>
+  <div class="tab-content" id="tabs_content1">
+    <div id="option1_elements" class="tab-pane fade in active">
+      <h3>Menu 1</h3>
+      <p>Lorem ipsum dolor sit amet,<br> consectetur adipisicing elit, sed do eiusmod tempor <br>incididunt ut labore et dolore magna aliqua.</p>
+    </div>
+    <div id="option2_elements" class="tab-pane fade">
+      <h3>Menu 2</h3>
+      <p>Ut enim ad minim veniam, quis <br>nostrud exercitation ullamco laboris nisi ut aliquip<br> ex ea commodo consequat.</p>
+    </div>
+    <div id="option3_elements" class="tab-pane fade">
+      <h3>Menu 3</h3>
+      <p>Sed ut perspiciatis unde omnis iste<br> natus error sit voluptatem accusantium doloremque<br> laudantium, totam rem aperiam.</p>
+    </div>
+    <div id="option4_elements" class="tab-pane fade">
+      <h3>Menu 4</h3>
+      <p>Eaque ipsa quae ab illo inventore veritatis <br>et quasi architecto beatae vitae dicta <br>sunt explicabo.</p>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
