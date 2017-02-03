@@ -1,0 +1,30 @@
+body{
+	background-image: url("../img/black_river.jpg");
+	opacity: 1.0;
+}
+/*timer*/
+#span_timer{
+	color:lightgreen;
+	font-weight: bold;
+}
+#span_resolution{
+	font-weight: bold;
+}
+#div_r1c2{
+	/*background-color: #4412AB;*/ 			/*Does not make any effect in presence of bg-img*/
+	height: 768px;
+	/*background-image: url("../img/green_sight.jpg");*/
+	/*opacity: 0.3;*/
+}
+
+#div_r1c1{
+	/*background-color: #4412AB;*/ 			/*Does not make any effect in presence of bg-img*/
+	height: 768px;
+	/*background-image: url("../img/railway_track.jpg");*/
+	/*opacity: 0.5;*/
+}
+
+#div_list_group{
+	display: none;
+	/*visibility: hidden;*/
+}
