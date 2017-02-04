@@ -33,3 +33,16 @@ img{
 	font-weight: bold;
 	color: gray;
 }
+
+#h5_try_text{
+	color:black;
+}
+
+pre code{
+	color:darkgreen;
+	font-family: sans-serif;
+}
+pre{
+	margin-right: 100px;
+	margin-left: 100px ;
+}
