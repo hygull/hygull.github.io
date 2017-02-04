@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <title>Pythoframe</title>
+  <title>Pythofrank</title>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="stylesheet" href='css/bootstrap.min.css'>
@@ -56,7 +56,20 @@
             <center><h3>Python - for loops</h3></center>
             <!-- <h5 id='h5_try_text' data-toggle='tooltip' title='Practice will make you perfect' data-placement='bottom' >Try to learn as much as possble you can</h5> -->
             <img src='img/for_loops_2017_02_04_at_6_38_48_PM.png' alt='for loops' class="img-responsive">
-            <pre><code>
+         
+    </div>
+    <div class="col-xs-12 col-sm-3 col-md-3 col-lg-3 text-center" id='div_r1c2'><!--r1c2-->
+      <h1 data-toggle='tooltip' title='Time is very important in our life' data-placement='bottom'><span id='span_timer'></span></h1><br>
+      <div class="panel panel-success">
+            <div class="panel-heading text-center"><img data-toggle='tooltip' title='Creator of Python'  class="img img-circle img-responsive center-block" id='img_Guido' src='img/Guido_van_Rossum.png'><br><h4 class='test' data-toggle='tooltip' title='Creator of Python' data-placement='bottom' >Guido Van Rossum</h4></div>
+            <div class="panel-body" id='div_guido_info'>Van Rossum was born and raised in the Netherlands, where he received a master's degree in mathematics and computer science from the University of Amsterdam in 1982.<br><br> He later worked for various research institutes, including the Dutch Centrum Wiskunde &amp; Informatica (CWI), Amsterdam, the United States National Institute of Standards and Technology (NIST), Gaithersburg, Maryland, and the Corporation for National Research Initiatives (CNRI), Reston, Virginia.</div>
+      </div> 
+  </div><!--r1c2 closed-->
+</div><!--row1 closed-->
+<div class="row"><!--row2 starts-->
+  <div class="col-lg-9 col-md-9 col-sm-9 col-xs-12">
+  <center><h3 id='h3_output'>Output</h3></center>
+       <pre><code>
 admins-MacBook-Pro-3:hygull.github.io admin$ python ~/projects/Python/PythonFiles/python_for_loops.py 
 1
 2
@@ -123,15 +136,43 @@ R   i   s   h   i   k   e   s   h
 admins-MacBook-Pro-3:hygull.github.io admin$ 
 
             </code></pre>
-    </div>
-    <div class="col-xs-12 col-sm-3 col-md-3 col-lg-3 text-center" id='div_r1c2'><!--r1c2-->
-      <h1 data-toggle='tooltip' title='Time is very important in our life' data-placement='bottom'><span id='span_timer'></span></h1><br>
-      <div class="panel panel-success">
-            <div class="panel-heading text-center"><img data-toggle='tooltip' title='Creator of Python'  class="img img-circle img-responsive center-block" id='img_Guido' src='img/Guido_van_Rossum.png'><br><h4 class='test' data-toggle='tooltip' title='Creator of Python' data-placement='bottom' >Guido Van Rossum</h4></div>
-            <div class="panel-body" id='div_guido_info'>Van Rossum was born and raised in the Netherlands, where he received a master's degree in mathematics and computer science from the University of Amsterdam in 1982.<br><br> He later worked for various research institutes, including the Dutch Centrum Wiskunde &amp; Informatica (CWI), Amsterdam, the United States National Institute of Standards and Technology (NIST), Gaithersburg, Maryland, and the Corporation for National Research Initiatives (CNRI), Reston, Virginia.</div>
-      </div> 
-  </div><!--row1 ends-->
+<br>
+<center><h3 id='h3_output'>Output</h3></center>
+
+  <pre><code id='code_for_loop'>
+"""
+    date of creation : 04 Feb 2017.
+    aim of script      : To understand the concept of for loops in python.
+    coded by           : Rishikesh Agrawani.
+"""
+for i in range(1,11):   #Printing natural numbers from 1 to 10
+    print i                    #Newline will be automatically appended 
+
+
+for j in range(5,21):       #Printing numbers from 5 to 20
+    print j
+
+
+for k in range(2,21,2):     #Printing even numbers between 1 and 21, here 2 denotes the increment
+    print k                         #in each iteration
+
+
+for i in range(1,11):       #Printing tables for numbers in range [1,10]
+    for j in range(1,11):   #Nested loop 
+        print i*j,"\t",
+    print "\n"
+
+for c in "Rishikesh":       #Printing all characters of string 'Rishikesh' in a line separated
+    print c,"\t",                 #by tab
+print ""
+
+for num in [1,3,7,9,11]:    #Printing all the numbers of list one by one in new lines
+    print num
+
+  </code></pre>
+  </div>
 </div>
-</div>
+</div>  <!--container closed-->
+
 </body>
 </html>

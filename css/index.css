@@ -44,12 +44,22 @@ img#img_Guido{
 }
 
 pre code{
-	color:lightgreen;
+	color:gray;
 	font-family: sans-serif;
-
+	font-size: 20px;
 }
 pre{
-	margin-right: 100px;
-	margin-left: 100px ;
-	background-color: navy;
+	background-color: black;
+}
+
+@media only screen and (max-width: 768px){
+	#code_for_loop{
+		font-size: 10px;
+		color:lightgreen;
+		font-family: tahoma;
+	}
+}
+
+#h3_output,#h3_code{
+	color:white;
 }
