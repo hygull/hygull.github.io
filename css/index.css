@@ -1,6 +1,8 @@
 body{
 	background-image: url("../img/black_river.jpg");
-	opacity: 1.0;
+/*background-image: url("../img/for_loops_2017_02_04_at_5_31_25_PM.png");
+	*/opacity: 1.0;
+/*background-repeat: no-repeat;*/
 }
 /*timer*/
 #span_timer{
@@ -24,8 +26,11 @@ body{
 
 img{
 
-	width: 30%;
+	width: 100%;
 
+}
+img#img_Guido{
+	width: 30%;
 }
 
 #div_guido_info{
@@ -39,10 +44,12 @@ img{
 }
 
 pre code{
-	color:darkgreen;
+	color:lightgreen;
 	font-family: sans-serif;
+
 }
 pre{
 	margin-right: 100px;
 	margin-left: 100px ;
+	background-color: navy;
 }
