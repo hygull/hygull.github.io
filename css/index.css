@@ -11,14 +11,14 @@ body{
 }
 
 #div_r1c2{
-	/*background-color: #4412AB;*/ 			/*Does not make any effect in presence of bg-img*/
+	/*background-color: white; 	*/		/*Does not make any effect in presence of bg-img*/
 	height: 768px;
 	/*background-image: url("../img/green_sight.jpg");*/
 	/*opacity: 0.3;*/
 }
 
 #div_r1c1{
-	/*background-color: #4412AB;*/ 			/*Does not make any effect in presence of bg-img*/
+	background-color: #4412AB; 			/*Does not make any effect in presence of bg-img*/
 	height: 768px;
 	/*background-image: url("../img/railway_track.jpg");*/
 	/*opacity: 0.5;*/
@@ -49,7 +49,7 @@ pre code{
 	font-size: 20px;
 }
 pre{
-	background-color: black;
+	background-color: white;
 }
 
 @media only screen and (max-width: 768px){
@@ -62,4 +62,33 @@ pre{
 
 #h3_output,#h3_code{
 	color:white;
+}
+
+.heading{
+	color:white;
+}
+
+.list-group a:nth-child(even){
+	font-weight: bold;
+	font-family: tahoma;
+	background-color: #a9dfbf;
+	color:#2e4053;
+	border:0px;
+}
+.list-group a:nth-child(even):hover{
+	background-color: #abebc6;/*#f8f9f9;*/
+	color:#283747;
+	border:0px;
+}
+.list-group a:nth-child(odd){
+	font-weight: bold;
+	font-family: tahoma;
+	background-color:#5d6d7e ;
+	color:white;
+	border:0px;
+}
+.list-group a:nth-child(odd):hover{
+	background-color: #515a5a;/*#f8f9f9;*/
+	color:white;
+	border:0px;
 }

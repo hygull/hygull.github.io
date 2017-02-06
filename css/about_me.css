@@ -1,0 +1,45 @@
+#img_Rishikesh{
+	width:40%;
+	height: 40%;
+}
+
+#p_intro1{
+	font-family: sans-serif;
+	font-weight: bold;
+	font-style: all;
+	color:gray;
+}
+#p_intro2{
+	font-family: sans-serif;
+	font-weight: bold;
+	font-style: all;
+	color:green;
+}
+body{
+	background-image: url('../img/respected_abraham_lincoln.jpg');
+	opacity: 0.9;
+}
+.prettyprint{
+	background-color: white;
+}
+
+#div_r1c2{
+	background-color: navy;
+}
+
+#name,#email,#mobile_number,#college,#passout_year,#branch{
+	text-align: left;
+}
+#email,#mobile_number,#college,#passout_year,#branch{
+	font-family: tahoma;
+	font-weight: bold; 
+}
+#email,#mobile_number{
+	color:navy;
+}
+/*#div_basic_info{
+	background-image: url('../img/logo.jpg');
+	float: right;
+	background-repeat: no-repeat;
+}*/
+
