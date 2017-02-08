@@ -12,7 +12,7 @@
 	color:gray;
 }
 #span_timer{
-	color:lightgreen;
+	color:gray;
 	font-weight: bold;
 }
 /*#p_intro1{
@@ -38,9 +38,9 @@ body{
 	background-color: white;
 }
 
-#div_r1c2{
+/*#div_r1c2{
 	background-color: navy;
-}
+}*/
 
 #name,#email,#mobile_number,#college,#passout_year,#branch{
 	text-align: left;
@@ -74,6 +74,6 @@ th{
 tr{
 	background-color: #f0fff0;
 }
-#a_github,#a_gitlab{
+#a_github,#a_gitlab,#a_hackerearth{
 	text-decoration: none;
 }
