@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>addClass()</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+  <style>
+  .h1_new_class{
+          color:red;
+  }
+  </style>
+  <script>
+  $(document).ready(function(){
+          $("button").click(function(){
+            $("h1").addClass("h1_new_class");
+          });
+  });
+  </script>
+</head>
+<body>
+  
+<div class="container">
+  <h1>Hello Rontz</h1>
+  <button>Add new class(.h1_new_class) to above &lt;tag&gt; tag.After that it's color will change to GREEN.</button>
+
+  <p class='intro'>Tiger</p>
+</div>
+
+</body>
+</html>

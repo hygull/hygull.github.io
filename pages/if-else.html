@@ -4,20 +4,20 @@
   <title>Pythofrank</title>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link rel="stylesheet" href='css/bootstrap.min.css'>
-    <link rel="stylesheet" href='css/tooltip.css'>
-  <script src="js/jquery.min.js"></script> <!--3.1.1-->
-  <script src="js/bootstrap.min.js"></script><!--3.3.7-->
+  <link rel="stylesheet" href='../css/bootstrap.min.css'>
+    <link rel="stylesheet" href='../css/tooltip.css'>
+  <script src="../js/jquery.min.js"></script> <!--3.1.1-->
+  <script src="../js/bootstrap.min.js"></script><!--3.3.7-->
   <!-- https://cdn.rawgit.com/google/code-prettify/master/loader/run_prettify.js -->
-  <script src="js/run_prettify.js"></script>
+  <script src="../js/run_prettify.js"></script>
   <!--My JS-->
-  <script type="text/javascript" src='js/timer.js'></script>
-  <script src='js/tooltip.js'></script>
-  <script src="js/index.js"></script>
+  <script type="../text/javascript" src='js/timer.js'></script>
+  <script src='../js/tooltip.js'></script>
+  <script src="../js/index.js"></script>
   <!--My CSS-->
-  <link rel='stylesheet' href="css/index.css" />
+  <link rel='stylesheet' href="../css/index.css" />
   <!-- <link rel='stylesheet' href="css/sunburst.css" /> -->
-  <link rel='stylesheet' href="css/desert.css" />
+  <link rel='stylesheet' href="../css/desert.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
 <!--  <link rel='stylesheet' href="css/sons_of_obsidian.css" /> -->
 <!-- <link rel='stylesheet' href="css/doxy.css" /> -->
@@ -37,18 +37,18 @@
         </div>
         <div id="navbar" class="navbar-collapse collapse">
           <ul class="nav navbar-nav">
-                <li class="active"><a href="#">Home</a></li>
-                <li class="dropdown"><a href="pages/about.html">About</a></li> 
-                    <li><a href="pages/blogs.html">Blogs</a></li>
-                    <li><a href="pages/posts.html">Posts</a></li>
-                    <li><a href="pages/contact.html">Contact</a></li>
-                    <li><a href="pages/carrer.html">Career</a></li>
-                    <li><a href="pages/examples.html">Examples</a></li>
-                    <li><a href="pages/resume.html">Resume</a></li>
+                <li class="active"><a href="../index.html">Home</a></li>
+                <li class="dropdown"><a href="about.html">About</a></li> 
+                    <li><a href="blogs.html">Blogs</a></li>
+                    <li><a href="posts.html">Posts</a></li>
+                    <li><a href="contact.html">Contact</a></li>
+                    <li><a href="carrer.html">Career</a></li>
+                    <li><a href="examples.html">Examples</a></li>
+                    <li><a href="resume.html">Resume</a></li>
           </ul>
           <ul class="nav navbar-nav navbar-right">
-               <li><a href="pages/about_me.html"> About me</a></li>
-               <li><a href="pages/info.html">     System info</a></li>
+               <li><a href="about_me.html"> About me</a></li>
+               <li><a href="info.html">     System info</a></li>
           </ul>
         </div><!--/.nav-collapse -->
       </div>
@@ -78,14 +78,7 @@
                  <a href="#" class="list-group-item">13. Quotation</a>
                  <a href="#" class="list-group-item">14. What is suite?</a>
                  <a href="#" class="list-group-item">15. Writing multiple statements in a single line</a>
-                 <a href="#" class="list-group-item">Numbers</a>
-                 <a href="#" class="list-group-item">String</a>
-                 <a href="#" class="list-group-item">List</a>
-                 <a href="#" class="list-group-item">Tuple</a>
-                 <a href="#" class="list-group-item">Dictionary</a>
-                 <a href="#" class="list-group-item">Set</a>
-                 <a href="#" class="list-group-item">Map</a>
-                 <a href="pages/if-else.html" class="list-group-item">16. Decision making</a>
+                 <a href="#" class="list-group-item">16. Decision making</a>
                  <a href="#" class="list-group-item">17. Loops</a>
                  <a href="#" class="list-group-item">18. Function</a>
                  <a href="#" class="list-group-item">19. Class</a>
@@ -96,68 +89,68 @@
               </div>
     </div><!--r1c1 closed-->
     <div class="col-xs-12 col-sm-10 col-md-10 col-lg-10" id='div_r1c2'><!--r1c2 starts-->
-            <center><h2 class='heading'><i class="fa fa-superpowers" aria-hidden="true"></i> &nbsp;Python - for loops</h2></center><br>
+            <center><h2 class='heading'><i class="fa fa-superpowers" aria-hidden="true"></i> &nbsp;Python - Decision making (if-else)</h2></center><br>
             <!-- <h5 id='h5_try_text' data-toggle='tooltip' title='Practice will make you perfect' data-placement='bottom' >Try to learn as much as possble you can</h5> -->
             <!-- <img src='img/for_loops_2017_02_04_at_6_38_48_PM.png' alt='for loops' class="img-responsive">
           -->
               <pre class='prettyprint' style="background-color:#4e504d;"><!-- #34495E -->
 
   """
-      created_at       : 04 Feb 2017.
+      created_at       : 08 Feb 2017.
       updated_at       : 08 Feb 2017.
-      aim of script    : To understand the concept of for loops in python.
+      aim of script    : To understand the concept of if-else (decision making) in python.
       coded by         : Rishikesh Agrawani.
       Python version   : 2.7.12
   """
 
-  for i in range(1,11):       #Printing natural numbers from 1 to 10
-      print i                 #Newline will be automatically appended 
+  a = 10                          #a is initialized to 10
+  b = 5                           #b is initialized to 5
+  c = 2                           #c is initialized to 2
+  d = (10/2)                      #d is initialized to 5
+
+  print a,b,c,d                   #10 5 2 5
+
+  if a == 10:                     #Condition is true
+      print "a is equal to 10"    #It will execute    
+  else:
+      print "a is not equal to 10"
 
 
-  for j in range(5,21):       #Printing numbers from 5 to 20
-      print j
+  if b != 5:                         #Now condition is False
+      print "b is not equal to 5"
+  else:
+      print "b is equal to 5"        #It will execute
 
 
-  for k in range(2,21,2):     #Printing even numbers between 1 and 21, here 2 denotes the 
-      print k                 #increment in each iteration
+  if (d==5) and (c==2):                             #True
+      print "d is equal to 5 and c equals 2"        #It'll execute
+  else:
+      print "d is not equal to 5 and c is not equal to 2"
 
 
-  for i in range(1,11):       #Printing tables for numbers in range [1,10]
-      for j in range(1,11):   #Nested loop 
-          print i*j,"\t",
-      print "\n"              #For newline
+  if 3 < 10:                         #True
+      print "3 is less than 10"      #It will execute
+  else:
+      print "3 is not less than 10"
 
 
-  for c in "Rishikesh":       #Printing all characters of string 'Rishikesh' in 1 line, each separated by tab
-      print c,"\t",           
-  print ""                    #For newline
+  if 3 > 10:                             #False
+      print "3 is greater than 10";      #; can be excluded at the end of the statement
+  else:
+    print "3 is not greater than 10";    #It will execute
 
 
-  for num in [1,3,7,9,11]:    #Printing all the numbers of list one by one in new lines
-      print num
+  if ((55/11) + (45-40)) <= 10:            #5 <= 5
+      print "(55/11) + (45-40) is less than or equal to 10";       #It will execute
+  else:
+      print "(55/11) + (45-40) is greater than 10";
 
 
-  cities  = ["Bangalore",'Raipur',"Dhamtari",'London']         #Defining list of cities 
-  for city in cities:                                          #Printing all the cities 1 by 1
-      print city
+  if (19**2) >= (100*4):                   #361 >= 400
+      print "(19**2) is greater  than or equal to (100*4)"       
+  else:
+      print "(19**2) is not greater than or equal to (100*4)"      #It will execute
 
-  #Defining a dictionary containing the details, an example to span a line into multiple lines
-  details = {   "name"      : "Grimmy Heldon", \
-                "age"       : 45, \
-                'languages' : ['C','C++','Python','Golang','PHP','Core Java'],\
-                'profession': "Backend Developer", \
-                'is_active' : True,\
-                'fav_num'   : 67+92j
-            }
-  print details    #Printing the dictionary
-
-  for key,value in details.iteritems():     #Printing key &amp; value individually using for loop
-      print key,' => ',value
-
-  digits = [0,1,2,3,4,5,6,7,8,9]            #List of single digit numbers
-  digits_spell = ['Zero', 'One' ,'Two', "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine"] #List of spelling for single digit numbers
-  for digit,digit_spell in zip(digits,digits_spell):        #Iterating 2 lists simultaneously
-      print digit," : ",digit_spell         #0 : Zero, 1 : One, 2 : Two (and so on, in new line)
 <br>
 </pre>
     </div>
