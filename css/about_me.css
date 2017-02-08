@@ -2,19 +2,34 @@
 	width:40%;
 	height: 40%;
 }
-
-#p_intro1{
+#div_r1c2{
+	/*background-color: white; 	*/		/*Does not make any effect in presence of bg-img*/
+	height: 768px;
+	/*background-image: url("../img/green_sight.jpg");*/
+	/*opacity: 0.3;*/
+}
+#name{
+	color:gray;
+}
+#span_timer{
+	color:lightgreen;
+	font-weight: bold;
+}
+/*#p_intro1{
 	font-family: sans-serif;
 	font-weight: bold;
 	font-style: all;
-	color:gray;
-}
-#p_intro2{
+	color:white;
+}*/
+/*#p_intro1 h4{
+	color:white;
+}*/
+/*#p_intro2{
 	font-family: sans-serif;
 	font-weight: bold;
 	font-style: all;
 	color:green;
-}
+}*/
 body{
 	background-image: url('../img/respected_abraham_lincoln.jpg');
 	opacity: 0.9;
@@ -42,4 +57,23 @@ body{
 	float: right;
 	background-repeat: no-repeat;
 }*/
+td,th{
+	text-align: left;
+	font-family: tahoma;
+	font-weight: bold;
 
+}
+tr:hover{
+background-color: hotpink;
+}
+th{
+	background-color: lightblue;
+	font-size: 20px;
+	color:navy;
+}
+tr{
+	background-color: #f0fff0;
+}
+#a_github,#a_gitlab{
+	text-decoration: none;
+}

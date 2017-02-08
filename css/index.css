@@ -19,9 +19,11 @@ body{
 
 #div_r1c1{
 	background-color: #4412AB; 			/*Does not make any effect in presence of bg-img*/
-	height: 768px;
+	/*height: 768px;*/
 	/*background-image: url("../img/railway_track.jpg");*/
 	/*opacity: 0.5;*/
+	padding-bottom: 0px;
+	margin-bottom: 0px;
 }
 
 img{
@@ -92,3 +94,28 @@ pre{
 	color:white;
 	border:0px;
 }
+
+#a_topics{
+	display:none;
+	overflow: hidden;
+	text-decoration: none;
+	font-weight: bold;
+	font-family: tahoma;
+}
+
+/*Media Queries*/
+@media only screen and (max-width: 768px){
+	#a_topics{
+		display: block;
+		/*visibility: visible;*/
+	}
+	#div_list_group{
+		display: none;
+	}
+	/*
+		h2,h6{
+			data-placement:right;
+		}
+	*/
+}
+/*Media Queries end*/
