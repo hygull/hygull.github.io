@@ -298,7 +298,39 @@
     File "<stdin>", line 1, in <module>
   IndexError: list index out of range
   >>> 
-
+  <hr>
+  <h4>&nbsp;#Example 6 - AttributeError</h4>
+  <h4>&nbsp;#Interactive mode programming</h4>
+  >>> class Car:
+  ...     def __init__(self,name,color,price,is_new):
+  ...         self.name = name
+  ...         self.color = color
+  ...         self.price = price
+  ...         self.is_new = is_new
+  ...     def show_details():
+  ...         print "Name : ",self.name
+  ...         print "Color : ",self.color
+  ...         print "Price : ",self.price
+  ...         print "IsNew : ",self.is_new
+  ... 
+  >>> maruti = Car("Maruti","Red",2000000,True)
+  >>> print "My car's name is : ",maruti.name
+  My car's name is :  Maruti
+  >>> 
+  >>> print "It's color is : ",maruti.color
+  It's color is :  Red
+  >>> 
+  >>> print "It's price is : ",maruti.price
+  It's price is :  2000000
+  >>> 
+  >>> print "Is it new : ",maruti.is_new
+  Is it new :  True
+  >>> 
+  >>> print maruti.gears       #It will raise an Exception
+  Traceback (most recent call last):
+    File "<stdin>", line 1, in <module>
+  AttributeError: Car instance has no attribute 'gears'
+  >>> 
         </pre>
     </div>
 </div><!--row1 closed-->
