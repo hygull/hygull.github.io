@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>Pythofrank</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href='../css/bootstrap.min.css'>
+    <link rel="stylesheet" href='../css/tooltip.css'>
+  <script src="../js/jquery.min.js"></script> <!--3.1.1-->
+  <script src="../js/bootstrap.min.js"></script><!--3.3.7-->
+  <!-- https://cdn.rawgit.com/google/code-prettify/master/loader/run_prettify.js -->
+  <script src="../js/run_prettify.js"></script>
+  <!--My JS-->
+  <script type="text/javascript" src='../js/timer.js'></script>
+  <script src='../js/tooltip.js'></script>
+  <script src="../js/index.js"></script>
+  <!--My CSS-->
+  <link rel='stylesheet' href="../css/index.css" />
+   <link rel='stylesheet' href="../css/exception-handling.css" />
+   <link rel="stylesheet" type="text/css" href="../css/vertical_nav.css">
+  <!-- <link rel='stylesheet' href="css/sunburst.css" /> -->
+  <link rel='stylesheet' href="../css/desert.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+<!--  <link rel='stylesheet' href="css/sons_of_obsidian.css" /> -->
+<!-- <link rel='stylesheet' href="css/doxy.css" /> -->
+</head>
+<body>
+ <!-- Fixed navbar -->
+    <nav class="navbar navbar-inverse navbar-fixed-top">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="#">Pythoframe</a>
+        </div>
+        <div id="navbar" class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+                <li class="active"><a href="../index.html">Home</a></li>
+                <li class="dropdown"><a href="about.html">About</a></li> 
+                    <li><a href="blogs.html">Blogs</a></li>
+                    <li><a href="posts.html">Posts</a></li>
+                    <li><a href="contact.html">Contact</a></li>
+                    <li><a href="carrer.html">Career</a></li>
+                    <li><a href="examples.html">Examples</a></li>
+                    <li><a href="resume.html">Resume</a></li>
+          </ul>
+          <ul class="nav navbar-nav navbar-right">
+               <li><a href="about_me.html"> About me</a></li>
+               <li><a href="info.html">     System info</a></li>
+          </ul>
+        </div><!--/.nav-collapse -->
+      </div>
+    </nav>
+    <hr>
+<div class="container-fluid">
+  <div class="row"><!--row1-->
+    <div class="col-xs-12 col-sm-2 col-md-2 col-lg-2 text-center" id='div_r1c1' style="padding:0px;"><!--r1c1-->
+      <h3 data-toggle='tooltip' title='Time is very important in our life' data-placement='bottom'><i class="fa fa-clock-o" id='span_timer' aria-hidden="true"></i> &nbsp; <span id='span_timer'></span></h3><br>
+       <div class="sidebar-nav">
+      <div class="navbar navbar-default" role="navigation">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".sidebar-navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <span class="visible-xs navbar-brand">All Topics</span>
+        </div>
+        <div class="navbar-collapse collapse sidebar-navbar-collapse">
+          <ul class="nav navbar-nav" id='list-group'>
+           <!--  <li class="active"><a href="#">Menu Item 1</a></li> -->
+            <li><a href="#" class="list-group-item">1. What is Python?</a></li>
+                <li><a href="#" class="list-group-item">2. Who created Python?</a></li>
+                <li><a href="#" class="list-group-item">3. How to install it?</a></li>
+                <li><a href="#" class="list-group-item">4. IDE &amp; editors </a></li>
+                 <li><a href="#" class="list-group-item">5. Indentation</a></li>
+                 <li><a href="#" class="list-group-item">6. Interactive mode programming </a></li>
+                 <li><a href="#" class="list-group-item">7. Script mode programming </a></li>
+
+                <li><a href="#" class="list-group-item">8. Variables</a></li>
+                <li><a href="#" class="list-group-item">9. Identifiers</a></li>
+                <li><a href="#" class="list-group-item">10. Keywords</a></li>
+                <li><a href="#" class="list-group-item">10. Operators</a></li>
+                <li><a href="#" class="list-group-item"> 11. Comments</a></li>
+                 <li><a href="#" class="list-group-item">12. Multiline statement</a></li>
+                 <li><a href="#" class="list-group-item">13. Quotation</a></li>
+                 <li><a href="#" class="list-group-item">14. What is suite?</a></li>
+                 <li><a href="#" class="list-group-item">15. Writing multiple statements in a single line</a></li>
+                 <li><a href="#" class="list-group-item">Numbers</a></li>
+                 <li><a href="#" class="list-group-item">String</a></li>
+                 <li><a href="#" class="list-group-item">List</a></li>
+                 <li><a href="#" class="list-group-item">Tuple</a></li>
+                 <li><a href="#" class="list-group-item">Dictionary</a></li>
+                 <li><a href="#" class="list-group-item">Set</a></li>
+                 <li><a href="#" class="list-group-item">Map</a></li>
+                 <li><a href="pages/if-else.html" class="list-group-item">16. Decision making</a></li>
+                 <li><a href="#" class="list-group-item">17. Loops</a></li>
+                 <li><a href="#" class="list-group-item">18. Function</a></li>
+                 <li><a href="#" class="list-group-item">19. Class</a></li>
+                 <li><a href="#" class="list-group-item">20. File handling</a></li>
+                 <li><a href="pages/exception-handling.html" class="list-group-item">21. Exception handling</a></li>
+                 <li><a href="#" class="list-group-item">22. Date &amp; time</a></li>
+                 <li><a href="#" class="list-group-item">23. Working with images</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+           
+          
+    </div><!--r1c1 closed-->
+    <div class="col-xs-12 col-sm-10 col-md-10 col-lg-10" id='div_r1c2'><!--r1c2 starts-->
+            <center><h2 class='heading'><i class="fa fa-superpowers" aria-hidden="true"></i> &nbsp;Python - Exception Handling</h2></center><br>
+            <!-- <h5 id='h5_try_text' data-toggle='tooltip' title='Practice will make you perfect' data-placement='bottom' >Try to learn as much as possble you can</h5> -->
+            <!-- <img src='img/for_loops_2017_02_04_at_6_38_48_PM.png' alt='for loops' class="img-responsive">
+          -->
+          <p class='p_desc_text'><i class="fa fa-pencil" aria-hidden='true'></i> Exception handling is very important in programming. It allows an executing program to not terminate immedialtely after an exception occurs at any point.Let us see how to handle exception in Python. As I have not decribed the whole concept here that is why I have commented the lines. You can also visit <a href='https://docs.python.org/2.7/tutorial/errors.html#' target="_blank"> Errors and Execptions</a> and read it more clearly.</p>
+              <pre class='prettyprint' style="background-color:#4e504d;"><!-- #34495E -->
+
+  """
+      created_at       : 09 Feb 2017.
+      updated_at       : 09 Feb 2017.
+      aim of script    : To understand the concept of exception handling in Python.
+      coded by         : Rishikesh Agrawani.
+      Python version   : 2.7.12
+  """
+  a = 3
+  b = 4
+  name = 'Randy'
+
+  try:
+      print a+b           #It will execute
+  except:
+      print "Error while adding 2 numbers"
+
+  try:
+      print a+name        #It raises TypeError 
+  except:
+      print "Error while adding 2 numbers"     #It will execute
+
+
+  cities = ["Raipur", 'Jagdalpur', 'Kondagaon', 'Dhamtari', "Nagri"]
+  try:
+      for index in range(len(cities)):
+          print cities[index]                                   #It will execute to print all the cities
+  except:
+      print "Operation successful"
+
+
+  try:
+      for index in range(len(cities)+1):
+          print cities[index]
+  except:
+      print "Error while accessing the out of range index"      #It will execute
+
+
+  try:
+      print 5+"Robinson"
+  except:
+      print "Can't add integer and string"            #It will execute
+  finally:
+      print "finally block execution is fixed"        #It will definitely execute
+        <br>
+        </pre>
+        <br>
+        <p class ='p_desc_text'><i class="fa fa-pencil" aria-hidden='true'></i>   Let us look at a different flavour of handling exceptions. After that we will move towards the advance exception handling examples.Here we wll handle the exact Exception types. Let us see it in the following examples.</p>
+        <pre class='prettyprint' style="background-color:#4e504d;">
+  <h4>&nbsp;#Example 1 - ZeroDivisionError</h4>
+  try:
+      a = 10
+      c = 0
+      print a/c                                               #This statement will raise ZeroDivisionError
+  except ZeroDivisionError:                                   #This block will catch the Exception
+      print "You are trying to divide something by 0 (zero)"  #So it will execute
+
+  <h4>&nbsp;#Interactive mode programming</h4>
+  >>> a = 10
+  >>> b = 5
+  >>> 
+  >>> print a
+  10
+  >>> print a+b
+  15
+  >>> print a/b
+  2
+  >>> print a/0
+  Traceback (most recent call last):
+    File "<stdin>", line 1, in <module>
+  ZeroDivisionError: integer division or modulo by zero
+  >>> 
+  <hr>
+  <h4>&nbsp;#Example 2 - TypeError</h4>
+  try:
+      a = 10
+      name = "Peter"
+      print a+name                                            #This statement will raise TypeError
+  except TypeError:       
+      print "You are trying to add invalid operands type"     #It'll execute
+
+  <h4>&nbsp;#Interactive mode programming</h4>
+  >>> print [1,2,3,4,5]
+  [1, 2, 3, 4, 5]
+  >>> 
+  >>> print tuple([1,2,3,4,5])
+  (1, 2, 3, 4, 5)
+  >>> 
+  >>> print tuple({'name':'Rishikesh','age':24,'languages':['C','C++','Python','Go','HTML','JavaScript']})
+  ('languages', 'age', 'name')
+  >>> 
+  >>> print tuple(range(10))
+  (0, 1, 2, 3, 4, 5, 6, 7, 8, 9)
+  >>>
+  >>> print tuple("Rishikesh")
+  ('R', 'i', 's', 'h', 'i', 'k', 'e', 's', 'h')
+  >>>
+  >>> tuple(5+5j)
+  Traceback (most recent call last):
+    File "<stdin>", line 1, in <module>
+  TypeError: 'complex' object is not iterable
+  >>>
+  <hr>
+  <h4>&nbsp;#Example 3 - ValueError</h4>
+  a = int("1234")                                             #Converting '1234', a string to an integer
+  print a
+
+  try:
+      b = int("1234y")                                        #It will raise ValueError 
+  except ValueError:
+      print "You are trying to convert an invalid string equivalent of integer to int type"   #it will execute
+
+  <h4>&nbsp;#Interactive mode programming</h4>
+  >>> int('1234')
+  1234
+  >>>
+  >>> int('1234y')
+  Traceback (most recent call last):
+    File "<stdin>", line 1, in <module>
+  ValueError: invalid literal for int() with base 10: '1234y'
+  >>>
+  <hr>
+  <h4>&nbsp;#Example 4 - NameError</h4>
+  try:
+      a = 10
+      b = 5
+      print a+b                                               #It will print 15
+      print d 
+  except NameError:
+      print "You are trying to access undefined variable(s)"  #It will execute
+
+  <h4>&nbsp;#Interactive mode programming</h4>
+  >>> a = 10
+  >>> b = 5
+  >>> 
+  >>> print a+b
+  15
+  >>>
+  >>> print d
+  Traceback (most recent call last):
+    File "<stdin>", line 1, in <module>
+  NameError: name 'd' is not defined
+  >>> 
+
+
+        </pre>
+        <br>
+        <p class ='p_desc_text'><i class="fa fa-pencil" aria-hidden='true'></i>  Let us move little forward and see how to catch an exception as an object and print the details/information it holds. It is clear in the following example.</p>
+        <pre class='prettyprint' style="background-color:#4e504d;">
+  <h4>&nbsp;#Example 5 - IndexError</h4>
+
+  try:
+      fruits = ["Apple", "Orange", "Grape", "Blackberry", "Gooseberry", "Strawberry"]   #valid indexes are 0,1,2,3,4,5
+      print fruits[4], fruits[5]                              #Gooseberry Strawberry
+      print fruits[6]                                         #It will raise IndexError
+  except IndexError as index_err:
+      print "You are trying to access invalid index"
+      print index_err                                         #list index out of range
+
+  <h4>&nbsp;#Interactive mode programming</h4>
+  >>> evens = [num for num in range(2,21) if num%2==0]
+  >>> print evens
+  [2, 4, 6, 8, 10, 12, 14, 16, 18, 20]
+  >>> 
+  >>> print len(evens)
+  10
+  >>> 
+  >>> print evens[0]     #first element of the list
+  2
+  >>> 
+  >>> print evens[9]     #last element of the list
+  20
+  >>> 
+  >>> print evens[10]    #out of range access
+  Traceback (most recent call last):
+    File "<stdin>", line 1, in <module>
+  IndexError: list index out of range
+  >>> 
+
+        </pre>
+    </div>
+</div><!--row1 closed-->
+
+</div>  <!--container closed-->
+
+</body>
+</html>

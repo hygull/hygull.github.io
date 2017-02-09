@@ -1,5 +1,6 @@
 body{
-	background-image: url("../img/black_river.jpg");
+	background-image: url("../img/2560x1600bg.jpg");
+	/*background-image: url("../img/black_river.jpg");*/
 /*background-image: url("../img/for_loops_2017_02_04_at_5_31_25_PM.png");
 	*/opacity: 1.0;
 /*background-repeat: no-repeat;*/
@@ -53,14 +54,14 @@ pre code{
 pre{
 	background-color: white;
 }
-
+/*
 @media only screen and (max-width: 768px){
 	#code_for_loop{
 		font-size: 10px;
 		color:lightgreen;
 		font-family: tahoma;
 	}
-}
+}*/
 
 #h3_output,#h3_code{
 	color:white;
@@ -70,52 +71,35 @@ pre{
 	color:white;
 }
 
-.list-group a:nth-child(even){
+/*#list-group li:nth-child(even){
 	font-weight: bold;
 	font-family: tahoma;
-	background-color: #a9dfbf;
+	background-color:gray;
 	color:#2e4053;
 	border:0px;
 }
-.list-group a:nth-child(even):hover{
-	background-color: #abebc6;/*#f8f9f9;*/
-	color:#283747;
+#list-group li:nth-child(even):hover{
+	background-color: gray;/*#f8f9f9;*/
+/*	color:#283747;
 	border:0px;
 }
-.list-group a:nth-child(odd){
+#list-group li:nth-child(odd){
 	font-weight: bold;
 	font-family: tahoma;
 	background-color:#5d6d7e ;
 	color:white;
 	border:0px;
 }
-.list-group a:nth-child(odd):hover{
-	background-color: #515a5a;/*#f8f9f9;*/
-	color:white;
+#list-group li:nth-child(odd):hover{
+	background-color:#d9d9d9;/*#f8f9f9;*/
+/*	color:black;
 	border:0px;
-}
+}*/
 
-#a_topics{
+a{
 	display:none;
 	overflow: hidden;
 	text-decoration: none;
 	font-weight: bold;
 	font-family: tahoma;
 }
-
-/*Media Queries*/
-@media only screen and (max-width: 768px){
-	#a_topics{
-		display: block;
-		/*visibility: visible;*/
-	}
-	#div_list_group{
-		display: none;
-	}
-	/*
-		h2,h6{
-			data-placement:right;
-		}
-	*/
-}
-/*Media Queries end*/
