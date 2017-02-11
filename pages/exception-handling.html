@@ -13,7 +13,7 @@
   <!--My JS-->
   <script type="text/javascript" src='../js/timer.js'></script>
   <script src='../js/tooltip.js'></script>
-  <script src="../js/index.js"></script>
+ 
   <!--My CSS-->
   <link rel='stylesheet' href="../css/index.css" />
    <link rel='stylesheet' href="../css/exception-handling.css" />
@@ -123,7 +123,7 @@
 
   """
       created_at       : 09 Feb 2017.
-      updated_at       : 09 Feb 2017.
+      updated_at       : 11 Feb 2017.
       aim of script    : To understand the concept of exception handling in Python.
       coded by         : Rishikesh Agrawani.
       Python version   : 2.7.12
@@ -410,12 +410,55 @@
     File "<stdin>", line 2, in show2
   UnboundLocalError: local variable 'a' referenced before assignment
   >>> 
-
         </pre>
+        <p class ='p_desc_text'><i class="fa fa-pencil" aria-hidden='true'></i>  In previous examples, we saw that we are handling only single exception in each example. So what about there's a possibility of multiple exceptions. Python also has the great technique for this. Let us see how to specify multiple exceptions in except clause. </p>
+        <pre class='prettyprint' style="background-color:#4e504d;">
+        <h4>&nbsp;#Example 8 - KeyboardInterrupt, ValueError, ZeroDivisionError</h4>
+  def test_func(b,s):
+      try:
+          d = raw_input('\n\nINPUT : Enter any info Or press Ctrl+c or Command+c to raise KeyboardInterrupt Exception : ')
+          a = 10
+          print a/b                             #If b equals 0
+
+          c = int(s)                            #It will raise an exception, if scontains non-digits
+      except (ValueError,KeyboardInterrupt,ZeroDivisionError):
+          print "\nMSG : Either ValueError, KeyboardInterrupt, ZeroDivisionError Exception occured... "
+      else:
+          print "No error occured"
+      finally:
+          print "This is the last statement(residing inside finally clause) to be executed from try-except-else-finally clauses"
+
+  test_func(5,"1235")                    #It will not raise any exception, so else clause will execute if you don't press Ctrl+c/Command+c
+  test_func(0,"1235")                    #ZeroDivisionError will be raised by this statement if you don't press Ctrl+c/Command+c
+  test_func(5,"1235abc")                 #ValueError will be raised by this statement if you don't press Ctrl+c/Command+c
+        </pre>
+        <p class ='p_desc_text'><i class="fa fa-pencil" aria-hidden='true'></i> In the previous example, it is not clear that which function call is raising which exception because we have defined the Exceptions collectively inside a tuple of except statement. Let us find the type of exceptions separately and generate the meaningful messages to the user. For the sake of simplicity, I am using the previous example here.</p>
+        <pre class='prettyprint' style="background-color:#4e504d;">
+        <h4>&nbsp;#Example 8 - KeyboardInterrupt, ValueError, ZeroDivisionError (modified)</h4>
+  def test_func(b,s):
+      try:
+          d = raw_input('\n\n>>> Enter any info Or press Ctrl+c or Command+c to raise KeyboardInterrupt Exception : ')
+          a = 10
+          print a/b                       #If b equals 0
+
+          c = int(s)                      #It will raise an exception, if s contains non-digits
+      except ValueError:
+          print "\nMSG : ValueError Exception occured... "
+      except KeyboardInterrupt:
+          print "\nMSG : KeyboardInterrupt Exception occured... "
+      except ZeroDivisionError:
+          print "\nMSG : ZeroDivisionError Exception occured... "
+      else:
+          print "No error occured"
+      finally:
+          print "This is the last statement(residing inside finally clause) to be executed from try-except-else-finally clauses"
+
+  test_func(5,"1235")                      #It will not raise any exception, so else clause will execute if you don't press Ctrl+c/Command+c
+  test_func(0,"1235")                      #ZeroDivisionError will be raised by this statement
+  test_func(5,"1235abc")                   #ValueError will be raised by this statement
+          </pre>
     </div>
-</div><!--row1 closed-->
-
+</div><!--row1c2 closed-->
 </div>  <!--container closed-->
-
 </body>
 </html>
