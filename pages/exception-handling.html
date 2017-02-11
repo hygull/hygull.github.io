@@ -133,20 +133,20 @@
   name = 'Randy'
 
   try:
-      print a+b           #It will execute
+      print a+b           #It will get executed
   except:
       print "Error while adding 2 numbers"
 
   try:
       print a+name        #It raises TypeError 
   except:
-      print "Error while adding 2 numbers"     #It will execute
+      print "Error while adding 2 numbers"     #It will get executed
 
 
   cities = ["Raipur", 'Jagdalpur', 'Kondagaon', 'Dhamtari', "Nagri"]
   try:
       for index in range(len(cities)):
-          print cities[index]                                   #It will execute to print all the cities
+          print cities[index]                                   #It will get executed to print all the cities
   except:
       print "Operation successful"
 
@@ -155,13 +155,13 @@
       for index in range(len(cities)+1):
           print cities[index]
   except:
-      print "Error while accessing the out of range index"      #It will execute
+      print "Error while accessing the out of range index"      #It will get executed
 
 
   try:
       print 5+"Robinson"
   except:
-      print "Can't add integer and string"            #It will execute
+      print "Can't add integer and string"            #It will get executed
   finally:
       print "finally block execution is fixed"        #It will definitely execute
         <br>
@@ -249,7 +249,7 @@
       print a+b                                               #It will print 15
       print d 
   except NameError:
-      print "You are trying to access undefined variable(s)"  #It will execute
+      print "You are trying to access undefined variable(s)"  #It will get executed
 
   <h4>&nbsp;#Interactive mode programming</h4>
   >>> a = 10
@@ -280,7 +280,7 @@
       print index_err                                         #list index out of range
 
   <h4>&nbsp;#Interactive mode programming</h4>
-  >>> evens = [num for num in range(2,21) if num%2==0]
+  >>> evens = [num for num in range(2,21) if num%2==0]        #A shorthand way to create a list of evens
   >>> print evens
   [2, 4, 6, 8, 10, 12, 14, 16, 18, 20]
   >>> 
@@ -300,6 +300,29 @@
   >>> 
   <hr>
   <h4>&nbsp;#Example 6 - AttributeError</h4>
+  class Details:
+      def __init__(self,name,age,friends):    
+          self.name = name
+          self.age  = age
+          self.friends = friends
+
+      def show_details(self):
+          print "Name : ",self.name
+          print "Age  : ",self.age
+          print "Friends : ",self.friends  #The items are in alphabetical order
+
+<!--   <h6>&nbsp;&nbsp;#try-except example 1</h6>  -->
+  try:
+      myself = Details("Rishikesh Agrawani",24,["Amit", 'Anand', 'Darshan', 'Guru', 'Pradeep', 'Praja', 'Pratik', 'Shivesh','Vinit'])
+      myself.show_details()                #It will get executed
+  except:
+      print "You are accessing the non-attribute."
+
+  try:
+      print myself.name                    #It's ok
+      print myself.profession              #It will raise an exception
+  except AttributeError as attrib_err:
+      print attrib_err                     #It will get executed. Details instance has no attribute 'profession'
   <h4>&nbsp;#Interactive mode programming</h4>
   >>> class Car:
   ...     def __init__(self,name,color,price,is_new):
@@ -331,6 +354,63 @@
     File "<stdin>", line 1, in <module>
   AttributeError: Car instance has no attribute 'gears'
   >>> 
+        </pre>
+        <p class ='p_desc_text'><i class="fa fa-pencil" aria-hidden='true'></i>  Till now, we only focused on the try-except blocks(clauses). Apart from this, try-except statement has 2 other optional clauses. These are else clause &amp; finallly clause.Let us see these clauses in the following examples<br><br><i class="fa fa-check" aria-hidden='true'></i> The main usage of else block is to put the error free code(that follows the code inside try clause) inside it. In this way we can reduce the number of lines present inside the try clause.<br><br><i class="fa fa-check" aria-hidden='true'></i> The finally block is used to define the clean up codes. For example, closing the opened files, releasing the netwok connections etc.</p>
+        <pre class='prettyprint' style="background-color:#4e504d;">
+        <h4>&nbsp;#Example 7 - UnboundLocalError (try-except-else-finally clauses)</h4>
+  try:
+      n1 = 10                              #Assigning a value to any variable a way of defining/redefining the variable in that scope
+      n2 = 5
+      print n1, n2                         #It will be printed
+  except:
+      print "An error occured"
+  else:
+      print "No error\n"                   #It will get executed
+
+  try:
+      def print_num():
+          n1+=1
+          print n1
+      print_num()                          #It will raise an exception
+  except UnboundLocalError as unbound_err:
+      print "Either you are trying to access any local variable defined in other suite or an undefined variable."
+      print unbound_err                    #local variable 'n1' referenced before assignment
+  else:
+      print "Just silent"                  #It won't get executed
+
+  <h4>&nbsp;#Interactive mode programming</h4>
+  >>> a = 10
+  >>> b = 5
+  >>> 
+  >>> print a
+  10
+  >>> print b
+  5
+  >>> 
+  >>> def show1():
+  ...     print a
+  ...     print b
+  ...     print id(a)
+  ... 
+  >>> show1()
+  10
+  5
+  140328992554976
+  >>> 
+  >>> print id(a)
+  140328992554976
+  >>> 
+  >>> def show2():
+  ...     a+=1
+  ...     print a
+  ... 
+  >>> show2()
+  Traceback (most recent call last):
+    File "<stdin>", line 1, in <module>
+    File "<stdin>", line 2, in show2
+  UnboundLocalError: local variable 'a' referenced before assignment
+  >>> 
+
         </pre>
     </div>
 </div><!--row1 closed-->
