@@ -13,15 +13,16 @@
   <!--My JS-->
   <script type="text/javascript" src='../js/timer.js'></script>
   <script src='../js/tooltip.js'></script>
-  <script src="../js/index.js"></script>
+
   <!--My CSS-->
   <link rel='stylesheet' href="../css/index.css" />
+    <link rel='stylesheet' href="../css/classes.css" />
   <!-- <link rel='stylesheet' href="css/sunburst.css" /> -->
   <link rel='stylesheet' href="../css/desert.css" />
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
 <!--  <link rel='stylesheet' href="css/sons_of_obsidian.css" /> -->
 <!-- <link rel='stylesheet' href="css/doxy.css" /> -->
- <link rel='stylesheet' href="../css/vertical_nav.css" />
+<link rel="stylesheet" type="text/css" href="../css/vertical_nav.css">
 </head>
 <body>
  <!-- Fixed navbar -->
@@ -34,12 +35,12 @@
             <span class="icon-bar"></span>
             <span class="icon-bar"></span>
           </button>
-          <a class="navbar-brand" href="#">Pythoframe</a>
+          <a class="navbar-brand" style='color: white' href="#">Pythofrank</a>
         </div>
         <div id="navbar" class="navbar-collapse collapse">
           <ul class="nav navbar-nav">
-                <li class="active"><a href="../index.html">Home</a></li>
-                <li class="dropdown"><a href="about.html">About</a></li> 
+                <li class="active"><a href="#">Home</a></li>
+                <li class="dropdown"><a href="pages/about.html">About</a></li> 
                     <li><a href="blogs.html">Blogs</a></li>
                     <li><a href="posts.html">Posts</a></li>
                     <li><a href="contact.html">Contact</a></li>
@@ -79,16 +80,25 @@
                  <a href="#" class="list-group-item">13. Quotation</a>
                  <a href="#" class="list-group-item">14. What is suite?</a>
                  <a href="#" class="list-group-item">15. Writing multiple statements in a single line</a>
-                 <a href="#" class="list-group-item">16. Decision making</a>
+                 <a href="#" class="list-group-item">Numbers</a>
+                 <a href="#" class="list-group-item">String</a>
+                 <a href="#" class="list-group-item">List</a>
+                 <a href="#" class="list-group-item">Tuple</a>
+                 <a href="#" class="list-group-item">Dictionary</a>
+                 <a href="#" class="list-group-item">Set</a>
+                 <a href="#" class="list-group-item">Map</a>
+                 <a href="pages/if-else.html" class="list-group-item">16. Decision making</a>
                  <a href="#" class="list-group-item">17. Loops</a>
                  <a href="#" class="list-group-item">18. Function</a>
                  <a href="#" class="list-group-item">19. Class</a>
                  <a href="#" class="list-group-item">20. File handling</a>
-                 <a href="exception-handling.html" class="list-group-item">21. Exception handling</a>
+                 <a href="pages/exception-handling.html" class="list-group-item">21. Exception handling</a>
                  <a href="#" class="list-group-item">22. Date &amp; time</a>
                  <a href="#" class="list-group-item">23. Working with images</a>
-              </div> -->
-    <div class="sidebar-nav">
+              </div>
+
+ -->   
+ <div class="sidebar-nav">
       <div class="navbar navbar-default" role="navigation">
         <div class="navbar-header">
           <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".sidebar-navbar-collapse">
@@ -100,8 +110,9 @@
           <span class="visible-xs navbar-brand">All Topics</span>
         </div>
         <div class="navbar-collapse collapse sidebar-navbar-collapse">
-          <ul class="nav navbar-nav">
-                <li><a href="#" class="list-group-item">1. What is Python?</a></li>
+          <ul class="nav navbar-nav" id='list-group'>
+           <!--  <li class="active"><a href="#">Menu Item 1</a></li> -->
+            <li><a href="#" class="list-group-item">1. What is Python?</a></li>
                 <li><a href="#" class="list-group-item">2. Who created Python?</a></li>
                 <li><a href="#" class="list-group-item">3. How to install it?</a></li>
                 <li><a href="#" class="list-group-item">4. IDE &amp; editors </a></li>
@@ -125,85 +136,134 @@
                  <li><a href="#" class="list-group-item">Dictionary</a></li>
                  <li><a href="#" class="list-group-item">Set</a></li>
                  <li><a href="#" class="list-group-item">Map</a></li>
-                 <li><a href="#" class="list-group-item">16. Decision making</a></li>
+                 <li><a href="if-else.html" class="list-group-item">16. Decision making</a></li>
                  <li><a href="#" class="list-group-item">17. Loops</a></li>
                  <li><a href="functions.html" class="list-group-item">18. Functions</a></li>
-                 <li><a href="classes.html" class="list-group-item">19. Class</a></li>
+                 <li><a href="#" class="list-group-item">19. Class</a></li>
                  <li><a href="#" class="list-group-item">20. File handling</a></li>
                  <li><a href="exception-handling.html" class="list-group-item">21. Exception handling</a></li>
                  <li><a href="#" class="list-group-item">22. Date &amp; time</a></li>
                  <li><a href="#" class="list-group-item">23. Working with images</a></li>
           </ul>
-          </ul>
         </div>
       </div>
     </div>
-    </div><!--r1c1 closed-->
+                
+  </div><!--r1c1 closed-->
     <div class="col-xs-12 col-sm-10 col-md-10 col-lg-10" id='div_r1c2'><!--r1c2 starts-->
-            <center><h2 class='heading'><i class="fa fa-superpowers" aria-hidden="true"></i> &nbsp;Python - Decision making (if-else)</h2></center><br>
+            <br><br>
+            <center><h2 class='heading'><i class="fa fa-superpowers" aria-hidden="true"></i> &nbsp;Python - classes</h2></center><br>
             <!-- <h5 id='h5_try_text' data-toggle='tooltip' title='Practice will make you perfect' data-placement='bottom' >Try to learn as much as possble you can</h5> -->
             <!-- <img src='img/for_loops_2017_02_04_at_6_38_48_PM.png' alt='for loops' class="img-responsive">
           -->
+             <p class='p_desc_text'><i class="fa fa-pencil" aria-hidden='true'></i>  Classes are defined as a blueprint that encapsulates data and its related operations under a single name.<br><br>
+             <i class="fa fa-check" aria-hidden='true'></i> In this article we will see the scripts related to the following topic.<br><span style='color:blue;'> 1) Inheritance<br>  2) static method<br>3) class method <br> 4) instance variable <br>5) class variable <br> 6) static variable</span><br><br> Let's move through the topics 1-by-1 with examples.
+             </p>
               <pre class='prettyprint' style="background-color:#4e504d;"><!-- #34495E -->
 
   """
-      created_at       : 08 Feb 2017.
-      updated_at       : 08 Feb 2017.
-      aim of script    : To understand the concept of if-else (decision making) in python.
+      created_at       : 13 Feb 2017.
+      updated_at       : 13 Feb 2017.
+      aim of script    : To understand the concept of classes in python.
       coded by         : Rishikesh Agrawani.
       Python version   : 2.7.12
   """
+  <h4>&nbsp;#Defining a class</h4>
+  class Car:
+      def __init__(self):              #This is the constructor of class Car
+          self.name = "Maruti"         #Adding name attribute to class instance 
+          self.color = "Red"           #Adding color attribute to class instance
+          self.price = 1000000         #Adding price attribute to class instance 
 
-  a = 10                          #a is initialized to 10
-  b = 5                           #b is initialized to 5
-  c = 2                           #c is initialized to 2
-  d = (10/2)                      #d is initialized to 5
-
-  print a,b,c,d                   #10 5 2 5
-
-  if a == 10:                     #Condition is true
-      print "a is equal to 10"    #It will get executed    
-  else:
-      print "a is not equal to 10"
-
-
-  if b != 5:                         #Now condition is False
-      print "b is not equal to 5"
-  else:
-      print "b is equal to 5"        #It will get executed
+      def show_details(self):          #This method prints the value of attributes of invoking object
+          print "Name : ",self.name
+          print "Color : ",self.color
+          print "Price : ",self.price
 
 
-  if (d==5) and (c==2):                             #True
-      print "d is equal to 5 and c equals 2"        #It'll execute
-  else:
-      print "d is not equal to 5 and c is not equal to 2"
-
-
-  if 3 < 10:                         #True
-      print "3 is less than 10"      #It will get executed
-  else:
-      print "3 is not less than 10"
-
-
-  if 3 > 10:                             #False
-      print "3 is greater than 10";      #; can be excluded at the end of the statement
-  else:
-    print "3 is not greater than 10";    #It will get executed
-
-
-  if ((55/11) + (45-40)) <= 10:            #5 <= 5
-      print "(55/11) + (45-40) is less than or equal to 10";       #It will get executed
-  else:
-      print "(55/11) + (45-40) is greater than 10";
-
-
-  if (19**2) >= (100*4):                   #361 >= 400
-      print "(19**2) is greater  than or equal to (100*4)"       
-  else:
-      print "(19**2) is not greater than or equal to (100*4)"      #It will get executed
-
-<br>
 </pre>
+<br>
+ <p class='p_desc_text'><i class="fa fa-check" aria-hidden='true'></i> Inheritance is defined a mechanism of deriving a new class from the existing one.<br><i class="fa fa-check" aria-hidden='true'></i> In the following example, <span span style='color:blue;'>ThreeNums</span> &amp; <span span style='color:blue;'>TwoNums</span> are classes &amp; <span span style='color:blue;'>ThreeNums</span> is inheriting <span span style='color:blue;'>TwoNums</span> class.
+<pre class='prettyprint' style="background-color:#4e504d;">
+<h4>&nbsp;#Inheritance</h4>
+ """class TwoNums"""
+  class TwoNums:
+      def __init__(self,a,b):                     #TwoNums class constructor
+           self.num1 = a 
+           self.num2 = b
+
+      def add_two_nums(self):                     #It adds the value of attributes num1 and num2 then returns the sum
+           return self.num1 + self.num2
+ <br>
+  """class ThreeNums"""
+  class ThreeNums(TwoNums):
+      def __init__(self,a,b,c):                    #ThreeNums class counstructor
+           TwoNums.__init__(self,a,b)              #Calling parent's constructor to instantiate it
+           self.num3 = c 
+
+      def  add_three_nums(self):
+          return (self.add_two_nums()+self.num3)  #It returns the sum of attributes num1, num2 and num3 then returns the sum
+
+  obj = ThreeNums(10,30,60)
+  print obj.add_three_nums()                      #100
+  </pre>
+  <br>
+   <p class='p_desc_text'><i class="fa fa-check" aria-hidden='true'></i> <span span style='color:blue;'>static method</span> is defined as a method which neither takes an instance nor takes class as its first argument.<br>
+   <i class="fa fa-check" aria-hidden='true'></i> In the following example, I've defined sum() as static method.
+  <pre class='prettyprint' style="background-color:#4e504d;">
+  <h4>&nbsp;#static method</h4>
+  class A:
+      def __init__(self):
+           self.a = 10
+           self.b = 11
+
+      @staticmethod
+      def sum(obj):                     #sum() is an static method
+           return obj.a + obj.b
+
+  print A.sum(A())                      #21
+
+  instance = A()       
+
+  print instance.sum(instance)          #21
+  </pre>
+  <br>
+  <p class='p_desc_text'><i class="fa fa-check" aria-hidden='true'></i> <span span style='color:blue;'>class method</span> is defined as a method which exactly takes class as its first argument.<br>
+   <i class="fa fa-check" aria-hidden='true'></i> In the following example, I've defined sum() as class method.
+  <pre class='prettyprint' style="background-color:#4e504d;">
+  <h4>&nbsp;#class method</h4>
+  class A:
+      def __init__(self):
+           self.a = 10
+           self.b = 11
+
+      @classmethod
+      def sum(cls):                     #sum() is a class method
+           obj = cls()                  #Instantiation
+           print "cls => ",cls          #cls =>  __main__.A
+           return obj.a + obj.b
+
+  print A.sum()                         #21
+  </pre>
+  <br>
+  <p class='p_desc_text'><i class="fa fa-check" aria-hidden='true'></i> An <span span style='color:blue;'>instance variable </span> is defined as a variable that is created by the constructor of class.<br>
+   <i class="fa fa-check" aria-hidden='true'></i> In the following example,<span span style='color:blue;'> instance</span> and <span span style='color:blue;'> obj </span>are 2 instance variables.
+  <pre class='prettyprint' style="background-color:#4e504d;">
+  <h4>&nbsp;#instance variable</h4>
+  class Numbers:
+        def __init__(self, num1, num2):
+             self.a = num1
+             self.b = num2
+
+        def sum(self):
+             return self.a + self.b
+
+  obj = Numbers(10, 12)                   
+  print obj.sum()                         #22
+
+  instance = Numbers(23,77)               
+  print instance.sum()                    #100
+  </pre>
     </div>
 </div><!--row1 closed-->
 

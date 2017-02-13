@@ -13,15 +13,16 @@
   <!--My JS-->
   <script type="text/javascript" src='../js/timer.js'></script>
   <script src='../js/tooltip.js'></script>
-  <script src="../js/index.js"></script>
+
   <!--My CSS-->
   <link rel='stylesheet' href="../css/index.css" />
+    <link rel='stylesheet' href="../css/loops.css" />
   <!-- <link rel='stylesheet' href="css/sunburst.css" /> -->
   <link rel='stylesheet' href="../css/desert.css" />
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
 <!--  <link rel='stylesheet' href="css/sons_of_obsidian.css" /> -->
 <!-- <link rel='stylesheet' href="css/doxy.css" /> -->
- <link rel='stylesheet' href="../css/vertical_nav.css" />
+<link rel="stylesheet" type="text/css" href="../css/vertical_nav.css">
 </head>
 <body>
  <!-- Fixed navbar -->
@@ -34,12 +35,12 @@
             <span class="icon-bar"></span>
             <span class="icon-bar"></span>
           </button>
-          <a class="navbar-brand" href="#">Pythoframe</a>
+          <a class="navbar-brand" style='color: white' href="#">Pythofrank</a>
         </div>
         <div id="navbar" class="navbar-collapse collapse">
           <ul class="nav navbar-nav">
-                <li class="active"><a href="../index.html">Home</a></li>
-                <li class="dropdown"><a href="about.html">About</a></li> 
+                <li class="active"><a href="#">Home</a></li>
+                <li class="dropdown"><a href="pages/about.html">About</a></li> 
                     <li><a href="blogs.html">Blogs</a></li>
                     <li><a href="posts.html">Posts</a></li>
                     <li><a href="contact.html">Contact</a></li>
@@ -79,16 +80,25 @@
                  <a href="#" class="list-group-item">13. Quotation</a>
                  <a href="#" class="list-group-item">14. What is suite?</a>
                  <a href="#" class="list-group-item">15. Writing multiple statements in a single line</a>
-                 <a href="#" class="list-group-item">16. Decision making</a>
+                 <a href="#" class="list-group-item">Numbers</a>
+                 <a href="#" class="list-group-item">String</a>
+                 <a href="#" class="list-group-item">List</a>
+                 <a href="#" class="list-group-item">Tuple</a>
+                 <a href="#" class="list-group-item">Dictionary</a>
+                 <a href="#" class="list-group-item">Set</a>
+                 <a href="#" class="list-group-item">Map</a>
+                 <a href="pages/if-else.html" class="list-group-item">16. Decision making</a>
                  <a href="#" class="list-group-item">17. Loops</a>
                  <a href="#" class="list-group-item">18. Function</a>
                  <a href="#" class="list-group-item">19. Class</a>
                  <a href="#" class="list-group-item">20. File handling</a>
-                 <a href="exception-handling.html" class="list-group-item">21. Exception handling</a>
+                 <a href="pages/exception-handling.html" class="list-group-item">21. Exception handling</a>
                  <a href="#" class="list-group-item">22. Date &amp; time</a>
                  <a href="#" class="list-group-item">23. Working with images</a>
-              </div> -->
-    <div class="sidebar-nav">
+              </div>
+
+ -->   
+ <div class="sidebar-nav">
       <div class="navbar navbar-default" role="navigation">
         <div class="navbar-header">
           <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".sidebar-navbar-collapse">
@@ -100,8 +110,9 @@
           <span class="visible-xs navbar-brand">All Topics</span>
         </div>
         <div class="navbar-collapse collapse sidebar-navbar-collapse">
-          <ul class="nav navbar-nav">
-                <li><a href="#" class="list-group-item">1. What is Python?</a></li>
+          <ul class="nav navbar-nav" id='list-group'>
+           <!--  <li class="active"><a href="#">Menu Item 1</a></li> -->
+            <li><a href="#" class="list-group-item">1. What is Python?</a></li>
                 <li><a href="#" class="list-group-item">2. Who created Python?</a></li>
                 <li><a href="#" class="list-group-item">3. How to install it?</a></li>
                 <li><a href="#" class="list-group-item">4. IDE &amp; editors </a></li>
@@ -125,7 +136,7 @@
                  <li><a href="#" class="list-group-item">Dictionary</a></li>
                  <li><a href="#" class="list-group-item">Set</a></li>
                  <li><a href="#" class="list-group-item">Map</a></li>
-                 <li><a href="#" class="list-group-item">16. Decision making</a></li>
+                 <li><a href="if-else.html" class="list-group-item">16. Decision making</a></li>
                  <li><a href="#" class="list-group-item">17. Loops</a></li>
                  <li><a href="functions.html" class="list-group-item">18. Functions</a></li>
                  <li><a href="classes.html" class="list-group-item">19. Class</a></li>
@@ -134,75 +145,94 @@
                  <li><a href="#" class="list-group-item">22. Date &amp; time</a></li>
                  <li><a href="#" class="list-group-item">23. Working with images</a></li>
           </ul>
-          </ul>
         </div>
       </div>
     </div>
-    </div><!--r1c1 closed-->
+                
+  </div><!--r1c1 closed-->
     <div class="col-xs-12 col-sm-10 col-md-10 col-lg-10" id='div_r1c2'><!--r1c2 starts-->
-            <center><h2 class='heading'><i class="fa fa-superpowers" aria-hidden="true"></i> &nbsp;Python - Decision making (if-else)</h2></center><br>
+            <br><br>
+            <center><h2 class='heading'><i class="fa fa-superpowers" aria-hidden="true"></i> &nbsp;Python - loops</h2></center><br>
             <!-- <h5 id='h5_try_text' data-toggle='tooltip' title='Practice will make you perfect' data-placement='bottom' >Try to learn as much as possble you can</h5> -->
             <!-- <img src='img/for_loops_2017_02_04_at_6_38_48_PM.png' alt='for loops' class="img-responsive">
           -->
+             <p class='p_desc_text'><i class="fa fa-pencil" aria-hidden='true'></i> Loops are useful for executing a statement or a group of statements again &amp; again based the truth value(True/False) of the conditional expression.<br><br>
+             <i class="fa fa-check" aria-hidden='true'></i> There are 2 types of loop available in Python.<br><span style='color:blue;'> 1) for loop<br>  2) while loop.</span><br><br> Let's see these loops 1-by-1 in the following examples.
+             </p>
               <pre class='prettyprint' style="background-color:#4e504d;"><!-- #34495E -->
 
   """
-      created_at       : 08 Feb 2017.
-      updated_at       : 08 Feb 2017.
-      aim of script    : To understand the concept of if-else (decision making) in python.
+      created_at       : 04 Feb 2017.
+      updated_at       : 12 Feb 2017.
+      aim of script    : To understand the concept of for loops in python.
       coded by         : Rishikesh Agrawani.
       Python version   : 2.7.12
   """
-
-  a = 10                          #a is initialized to 10
-  b = 5                           #b is initialized to 5
-  c = 2                           #c is initialized to 2
-  d = (10/2)                      #d is initialized to 5
-
-  print a,b,c,d                   #10 5 2 5
-
-  if a == 10:                     #Condition is true
-      print "a is equal to 10"    #It will get executed    
-  else:
-      print "a is not equal to 10"
+  <h4>&nbsp;#for loop - examples</h4>
+  for i in range(1,11):       #Printing natural numbers from 1 to 10
+      print i                 #Newline will be automatically appended 
 
 
-  if b != 5:                         #Now condition is False
-      print "b is not equal to 5"
-  else:
-      print "b is equal to 5"        #It will get executed
+  for j in range(5,21):       #Printing numbers from 5 to 20
+      print j
 
 
-  if (d==5) and (c==2):                             #True
-      print "d is equal to 5 and c equals 2"        #It'll execute
-  else:
-      print "d is not equal to 5 and c is not equal to 2"
+  for k in range(2,21,2):     #Printing even numbers between 1 and 21, here 2 denotes the 
+      print k                 #increment in each iteration
 
 
-  if 3 < 10:                         #True
-      print "3 is less than 10"      #It will get executed
-  else:
-      print "3 is not less than 10"
+  for i in range(1,11):       #Printing tables for numbers in range [1,10]
+      for j in range(1,11):   #Nested loop 
+          print i*j,"\t",
+      print "\n"              #For newline
 
 
-  if 3 > 10:                             #False
-      print "3 is greater than 10";      #; can be excluded at the end of the statement
-  else:
-    print "3 is not greater than 10";    #It will get executed
+  for c in "Rishikesh":       #Printing all characters of string 'Rishikesh' in 1 line, each separated by tab
+      print c,"\t",           
+  print ""                    #For newline
 
 
-  if ((55/11) + (45-40)) <= 10:            #5 <= 5
-      print "(55/11) + (45-40) is less than or equal to 10";       #It will get executed
-  else:
-      print "(55/11) + (45-40) is greater than 10";
+  for num in [1,3,7,9,11]:    #Printing all the numbers of list one by one in new lines
+      print num
 
 
-  if (19**2) >= (100*4):                   #361 >= 400
-      print "(19**2) is greater  than or equal to (100*4)"       
-  else:
-      print "(19**2) is not greater than or equal to (100*4)"      #It will get executed
+  cities  = ["Bangalore",'Raipur',"Dhamtari",'London']         #Defining list of cities 
+  for city in cities:                                          #Printing all the cities 1 by 1
+      print city
 
-<br>
+  #Defining a dictionary containing the details, an example to span a line into multiple lines
+  details = {   "name"      : "Grimmy Heldon", \
+                "age"       : 45, \
+                'languages' : ['C','C++','Python','Golang','PHP','Core Java'],\
+                'profession': "Backend Developer", \
+                'is_active' : True,\
+                'fav_num'   : 67+92j
+            }
+  print details    #Printing the dictionary
+
+  for key,value in details.iteritems():     #Printing key &amp; value individually using for loop
+      print key,' => ',value
+
+  digits = [0,1,2,3,4,5,6,7,8,9]            #List of single digit numbers
+  digits_spell = ['Zero', 'One' ,'Two', "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine"] #List of spelling for single digit numbers
+  for digit,digit_spell in zip(digits,digits_spell):        #Iterating 2 lists simultaneously
+      print digit," : ",digit_spell         #0 : Zero, 1 : One, 2 : Two (and so on, in new line)
+      <br>
+<hr>
+  <h4>&nbsp;#while loop - examples</h4>
+  i = 1                       #Initialization of loop counter
+  while i<=10:                #Conditonal test
+      print 5*i               #Printing factors of 5 
+      i+=1                    #Incrementing loop counter by 1
+
+
+  city = "Raipur"                                                           #Initializing variable named city
+  while True:                                                               #Condition is always True
+      city = raw_input("Enter city name (Enter => Bangalore to exit) : ")   #Take i/p from keyboard
+      if city=="Bangalore":                                                 #If we entered => Bangalore
+          break                                                             #come out from the for loop
+      else:                                                                 #Otherwise
+          print "You entered ",city                                         #Print whatever we entered
 </pre>
     </div>
 </div><!--row1 closed-->

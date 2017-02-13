@@ -7,7 +7,7 @@ body{
 }
 /*timer*/
 #span_timer{
-	color:lightgreen;
+	color:navy;
 	font-weight: bold;
 }
 
@@ -19,7 +19,7 @@ body{
 }
 
 #div_r1c1{
-	background-color: #4412AB; 			/*Does not make any effect in presence of bg-img*/
+/*	background-color: #4412AB; 		*/	/*Does not make any effect in presence of bg-img*/
 	/*height: 768px;*/
 	/*background-image: url("../img/railway_track.jpg");*/
 	/*opacity: 0.5;*/

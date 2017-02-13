@@ -13,15 +13,16 @@
   <!--My JS-->
   <script type="text/javascript" src='../js/timer.js'></script>
   <script src='../js/tooltip.js'></script>
-  <script src="../js/index.js"></script>
+ 
   <!--My CSS-->
   <link rel='stylesheet' href="../css/index.css" />
+   <link rel='stylesheet' href="../css/functions.css" />
+   <link rel="stylesheet" type="text/css" href="../css/vertical_nav.css">
   <!-- <link rel='stylesheet' href="css/sunburst.css" /> -->
   <link rel='stylesheet' href="../css/desert.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
 <!--  <link rel='stylesheet' href="css/sons_of_obsidian.css" /> -->
 <!-- <link rel='stylesheet' href="css/doxy.css" /> -->
- <link rel='stylesheet' href="../css/vertical_nav.css" />
 </head>
 <body>
  <!-- Fixed navbar -->
@@ -54,41 +55,13 @@
         </div><!--/.nav-collapse -->
       </div>
     </nav>
-    <hr>
+    <br>
+    <br>
 <div class="container-fluid">
   <div class="row"><!--row1-->
     <div class="col-xs-12 col-sm-2 col-md-2 col-lg-2 text-center" id='div_r1c1' style="padding:0px;"><!--r1c1-->
-      <h3 data-toggle='tooltip' title='Time is very important in our life' data-placement='bottom'><i class="fa fa-clock-o" id='span_timer' aria-hidden="true"></i> &nbsp; <span id='span_timer'></span></h3><br>
-              <!-- <a role='button' class="btn-primary btn-block btn-lg" id='a_topics'>Show all topics</a>
-              
-              <div class="list-group" id='div_list_group'>
-                <a href="#" class="list-group-item">1. What is Python?</a>
-                <a href="#" class="list-group-item">2. Who created Python?</a>
-                <a href="#" class="list-group-item">3. How to install it?</a>
-                <a href="#" class="list-group-item">4. IDE &amp; editors </a>
-                 <a href="#" class="list-group-item">5. Indentation</a>
-                 <a href="#" class="list-group-item">6. Interactive mode programming </a>
-                 <a href="#" class="list-group-item">7. Script mode programming </a>
-
-                <a href="#" class="list-group-item">8. Variables</a>
-                <a href="#" class="list-group-item">9. Identifiers</a>
-                <a href="#" class="list-group-item">10. Keywords</a>
-                <a href="#" class="list-group-item">10. Operators</a>
-                <a href="#" class="list-group-item"> 11. Comments</a>
-                 <a href="#" class="list-group-item">12. Multiline statement</a>
-                 <a href="#" class="list-group-item">13. Quotation</a>
-                 <a href="#" class="list-group-item">14. What is suite?</a>
-                 <a href="#" class="list-group-item">15. Writing multiple statements in a single line</a>
-                 <a href="#" class="list-group-item">16. Decision making</a>
-                 <a href="#" class="list-group-item">17. Loops</a>
-                 <a href="#" class="list-group-item">18. Function</a>
-                 <a href="#" class="list-group-item">19. Class</a>
-                 <a href="#" class="list-group-item">20. File handling</a>
-                 <a href="exception-handling.html" class="list-group-item">21. Exception handling</a>
-                 <a href="#" class="list-group-item">22. Date &amp; time</a>
-                 <a href="#" class="list-group-item">23. Working with images</a>
-              </div> -->
-    <div class="sidebar-nav">
+      <h3 data-toggle='tooltip' title='Time is very important in our life' data-placement='bottom'> <span id='span_timer'></span></h3><br>
+       <div class="sidebar-nav">
       <div class="navbar navbar-default" role="navigation">
         <div class="navbar-header">
           <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".sidebar-navbar-collapse">
@@ -100,8 +73,9 @@
           <span class="visible-xs navbar-brand">All Topics</span>
         </div>
         <div class="navbar-collapse collapse sidebar-navbar-collapse">
-          <ul class="nav navbar-nav">
-                <li><a href="#" class="list-group-item">1. What is Python?</a></li>
+          <ul class="nav navbar-nav" id='list-group'>
+           <!--  <li class="active"><a href="#">Menu Item 1</a></li> -->
+            <li><a href="#" class="list-group-item">1. What is Python?</a></li>
                 <li><a href="#" class="list-group-item">2. Who created Python?</a></li>
                 <li><a href="#" class="list-group-item">3. How to install it?</a></li>
                 <li><a href="#" class="list-group-item">4. IDE &amp; editors </a></li>
@@ -125,89 +99,103 @@
                  <li><a href="#" class="list-group-item">Dictionary</a></li>
                  <li><a href="#" class="list-group-item">Set</a></li>
                  <li><a href="#" class="list-group-item">Map</a></li>
-                 <li><a href="#" class="list-group-item">16. Decision making</a></li>
-                 <li><a href="#" class="list-group-item">17. Loops</a></li>
-                 <li><a href="functions.html" class="list-group-item">18. Functions</a></li>
-                 <li><a href="classes.html" class="list-group-item">19. Class</a></li>
+                 <li><a href="pages/if-else.html" class="list-group-item">16. Decision making</a></li>
+                 <li><a href="loops.html" class="list-group-item">17. Loops</a></li>
+                 <li><a href="#" class="list-group-item">18. Function</a></li>
+                 <li><a href="#" class="list-group-item">19. Class</a></li>
                  <li><a href="#" class="list-group-item">20. File handling</a></li>
                  <li><a href="exception-handling.html" class="list-group-item">21. Exception handling</a></li>
                  <li><a href="#" class="list-group-item">22. Date &amp; time</a></li>
                  <li><a href="#" class="list-group-item">23. Working with images</a></li>
           </ul>
-          </ul>
         </div>
       </div>
     </div>
+           
+          
     </div><!--r1c1 closed-->
     <div class="col-xs-12 col-sm-10 col-md-10 col-lg-10" id='div_r1c2'><!--r1c2 starts-->
-            <center><h2 class='heading'><i class="fa fa-superpowers" aria-hidden="true"></i> &nbsp;Python - Decision making (if-else)</h2></center><br>
+            <center><h2 class='heading'><i class="fa fa-superpowers" aria-hidden="true"></i> &nbsp;Python - Functions</h2></center><br>
             <!-- <h5 id='h5_try_text' data-toggle='tooltip' title='Practice will make you perfect' data-placement='bottom' >Try to learn as much as possble you can</h5> -->
             <!-- <img src='img/for_loops_2017_02_04_at_6_38_48_PM.png' alt='for loops' class="img-responsive">
           -->
+          <p class='p_desc_text'><i class="fa fa-pencil" aria-hidden='true'></i> Function is defined as a self contained block of statements that performs a specific task. It provides a way to reuse the code again &amp; again, in this way function allows a group of programmers or a team to use the same code. It improve the readability of the code. <br><br>
+          <i class="fa fa-check" aria-hidden='true'></i> Use <span style="color:blue;">def</span> keyword to define the function.<br><br>
+          <i class="fa fa-check" aria-hidden='true'></i> Use lowercase letters and numbers while naming the function. If function name contains multi-words then separate those words with _ (underscore) character. Always start function name with smallcase letters.<br><br>
+          <i class="fa fa-check" aria-hidden='true'></i> Let us see in the following examples, how to define the functions in Python. I will start with a little/simple one and move towards advanced.
+          </p>
               <pre class='prettyprint' style="background-color:#4e504d;"><!-- #34495E -->
 
   """
-      created_at       : 08 Feb 2017.
-      updated_at       : 08 Feb 2017.
-      aim of script    : To understand the concept of if-else (decision making) in python.
+      created_at       : 11 Feb 2017.
+      updated_at       : 11 Feb 2017.
+      aim of script    : To understand the concept of functions in Python.
       coded by         : Rishikesh Agrawani.
       Python version   : 2.7.12
   """
+  <h4>&nbsp;#Example 1 </h4>
+  def sum(a,b):                #definition of function named sum, which takes 2 parameters, adds those parameters and 
+      return a+b               #returns the result to its caller
 
-  a = 10                          #a is initialized to 10
-  b = 5                           #b is initialized to 5
-  c = 2                           #c is initialized to 2
-  d = (10/2)                      #d is initialized to 5
+  print sum(10,5)              #15  [calling sum() with 10 and 5 ]
+  print sum(6,8)               #14  [calling sum() with 6 and 8]
+  print sum("Banga","lore")    #Bangalore  [calling sum() with 'Banga' and 'lore']
+  <hr>
+  <h4>&nbsp;#Example 2</h4>
+  def print_from_last(nums):              #A function that prints list elements from end 1-by-1
+      for num in reversed(nums):          #Iterating through a 'listreverseiterator' object
+          print num                     
 
-  print a,b,c,d                   #10 5 2 5
+  print_from_last([5,6,0,3,2,1])
+  <hr>
+  <h4>&nbsp;#Example 3</h4>
+  def addition_of_all(nums):               #A funtion that returns the sum of all numbers/items of list/tuple argument passed to it
+      s = 0                                #variable s initialized with 0
+      for num in nums:                     #iterating through the list/tuple of items(numbers)
+          s += num                         #s = s+num
+      return s                             #returning the sum
 
-  if a == 10:                     #Condition is true
-      print "a is equal to 10"    #It will get executed    
-  else:
-      print "a is not equal to 10"
-
-
-  if b != 5:                         #Now condition is False
-      print "b is not equal to 5"
-  else:
-      print "b is equal to 5"        #It will get executed
-
-
-  if (d==5) and (c==2):                             #True
-      print "d is equal to 5 and c equals 2"        #It'll execute
-  else:
-      print "d is not equal to 5 and c is not equal to 2"
-
-
-  if 3 < 10:                         #True
-      print "3 is less than 10"      #It will get executed
-  else:
-      print "3 is not less than 10"
-
-
-  if 3 > 10:                             #False
-      print "3 is greater than 10";      #; can be excluded at the end of the statement
-  else:
-    print "3 is not greater than 10";    #It will get executed
-
-
-  if ((55/11) + (45-40)) <= 10:            #5 <= 5
-      print "(55/11) + (45-40) is less than or equal to 10";       #It will get executed
-  else:
-      print "(55/11) + (45-40) is greater than 10";
+  print addition_of_all( [1,2,3,4,5] )     #15  [calling addition_of_all() with 1 list argumnet having 5 numbers]
+  print addition_of_all( (11,22,33) )      #66  [calling addition_of_all() with 1 tuple argument having 3 numbers]
+<hr>
+  <h4>&nbsp;#Interactive mode programming</h4>
+  >>> def square(n):            #A function named square that takes 1 argument and retuns the square
+  ...     return n**2           #n**2 => n*n
+  ... 
+  >>> print square(10)
+  100
+  >>> 
+  >>> print square(11)
+  121
+  >>> 
+  >>> print square(5)
+  25
+  >>> 
 
 
-  if (19**2) >= (100*4):                   #361 >= 400
-      print "(19**2) is greater  than or equal to (100*4)"       
-  else:
-      print "(19**2) is not greater than or equal to (100*4)"      #It will get executed
+  >>> def cube(n):              #A function named cube that takes 1 argument and returns the cube
+  ...     return n**3           #n**3 => n*n*n
+  ... 
+  >>> print cube(5)
+  125
+  >>> 
+  >>> print cube(6)
+  216
+  >>> 
+  >>> print cube(7)
+  343
+  >>> 
+  >>> print cube(8)
+  512
+  >>> 
+  >>> print cube(3)
+  27
+  >>> 
 
-<br>
-</pre>
+        </pre>
+        <br>
     </div>
-</div><!--row1 closed-->
-
+</div><!--row1c2 closed-->
 </div>  <!--container closed-->
-
 </body>
 </html>
