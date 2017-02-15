@@ -63,8 +63,8 @@
     <hr>
 <div class="container-fluid">
   <div class="row"><!--row1-->
-    <div class="col-xs-12 col-sm-2 col-md-2 col-lg-2 text-center" id='div_r1c1' style="padding:0px;"><!--r1c1-->
-      <h3 data-toggle='tooltip' title='Time is very important in our life' data-placement='bottom'><br><br></i> &nbsp; <span id='span_timer'></span></h3><br>
+    <div class="col-xs-12 col-sm-2 col-md-2 col-lg-2 text-center" id='div_r1c1' style="padding:0px;"><br><!--r1c1-->
+      <h3 data-toggle='tooltip' title='Time is very important in our life' data-placement='bottom'><br></i> &nbsp; <span id='span_timer'></span></h3><br>
  <div class="sidebar-nav">
       <div class="navbar navbar-default" role="navigation">
         <div class="navbar-header">
@@ -101,7 +101,7 @@
                  <li><a href="list.html" class="list-group-item">List</a></li>
                  <li><a href="tuple.html" class="list-group-item">Tuple</a></li>
                  <li><a href="dictionary.html" class="list-group-item">Dictionary</a></li>
-                 <li><a href="sets.html" class="list-group-item">Set</a></li>
+                 <li><a href="set,html" class="list-group-item">Set</a></li>
                  <li><a href="map.html" class="list-group-item">Map</a></li>
                  <li><a href="if-else.html" class="list-group-item">16. Decision making</a></li>
                  <li><a href="loops.html" class="list-group-item">17. Loops</a></li>
@@ -118,74 +118,137 @@
                 
   </div><!--r1c1 closed-->
 
-<!--r1c1 closed-->
     <div class="col-xs-12 col-sm-10 col-md-10 col-lg-10" id='div_r1c2'><!--r1c2 starts-->
             <br><br>
-            <center><h2 class='heading'><i class="fa fa-superpowers" aria-hidden="true"></i> &nbsp;Python - Decision making (if-else)</h2></center><br>
-            <!-- <h5 id='h5_try_text' data-toggle='tooltip' title='Practice will make you perfect' data-placement='bottom' >Try to learn as much as possble you can</h5> -->
-            <!-- <img src='img/for_loops_2017_02_04_at_6_38_48_PM.png' alt='for loops' class="img-responsive">
-          -->
+            <center><h2 class='heading'><i class="fa fa-superpowers" aria-hidden="true"></i> &nbsp;Python - Set and frozenset</h2></center><br>
+           
+             <p class='p_desc_text'><i class="fa fa-pencil" aria-hidden='true'></i>  <span span style='color:blue;'> Set</span> is a major topic in mathematics. It plays an important role in mathematics. <br><i class="fa fa-check" aria-hidden='true'></i> In mathematics it is defined as a group of unique data items of similar type &amp; it does not allow duplicated elements in the group. <br><br><i class="fa fa-check" aria-hidden='true'></i> In Python, <span span style='color:blue;'> Set</span>  is defined as an unordered collection of unique elements. 
+             <br><i class="fa fa-check" aria-hidden='true'></i> Let's start with creation and <span span style='color:blue;'> UNION </span>operations on Set. 
+             <br><br>
+<span style="color:darkgreen">&nbsp;&nbsp;&nbsp;&nbsp;Note : </span><span style="color:blue">union() </span> is a predefined method.
+             </p>
               <pre class='prettyprint' style="background-color:#4e504d;"><!-- #34495E -->
 
   """
-      created_at       : 08 Feb 2017.
-      updated_at       : 08 Feb 2017.
-      aim of script    : To understand the concept of if-else (decision making) in python.
+      created_at       : 14 Feb 2017.
+      updated_at       : 14 Feb 2017.
+      aim of script    : To understand the concept of set/frozenset in Python.
       coded by         : Rishikesh Agrawani.
       Python version   : 2.7.12
   """
-
-  a = 10                          #a is initialized to 10
-  b = 5                           #b is initialized to 5
-  c = 2                           #c is initialized to 2
-  d = (10/2)                      #d is initialized to 5
-
-  print a,b,c,d                   #10 5 2 5
-
-  if a == 10:                     #Condition is true
-      print "a is equal to 10"    #It will get executed    
-  else:
-      print "a is not equal to 10"
-
-
-  if b != 5:                         #Now condition is False
-      print "b is not equal to 5"
-  else:
-      print "b is equal to 5"        #It will get executed
-
-
-  if (d==5) and (c==2):                             #True
-      print "d is equal to 5 and c equals 2"        #It'll execute
-  else:
-      print "d is not equal to 5 and c is not equal to 2"
-
-
-  if 3 < 10:                         #True
-      print "3 is less than 10"      #It will get executed
-  else:
-      print "3 is not less than 10"
-
-
-  if 3 > 10:                             #False
-      print "3 is greater than 10";      #; can be excluded at the end of the statement
-  else:
-    print "3 is not greater than 10";    #It will get executed
-
-
-  if ((55/11) + (45-40)) <= 10:            #5 <= 5
-      print "(55/11) + (45-40) is less than or equal to 10";       #It will get executed
-  else:
-      print "(55/11) + (45-40) is greater than 10";
-
-
-  if (19**2) >= (100*4):                   #361 >= 400
-      print "(19**2) is greater  than or equal to (100*4)"       
-  else:
-      print "(19**2) is not greater than or equal to (100*4)"      #It will get executed
-
-<br>
+  <h4>&nbsp;#Interactive mode programming - union operation on sets</h4>
+  >>> s1 = set()
+  >>> print s1
+  set([])
+  >>> 
+  >>> evens = [0,2,4,6,8,10]
+  >>> evens_set = set(evens)
+  >>> print evens_set
+  set([0, 2, 4, 6, 8, 10])
+  >>> 
+  >>> odds = [1,3,5,7,9]
+  >>> odds_set = set(odds)
+  >>> print odds_set
+  set([1, 3, 9, 5, 7])
+  >>> 
+  >>> evens_odds_set = evens_set|odds_set
+  >>> print evens_odds_set
+  set([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
+  >>> 
+  >>> s3 = evens_set.union(odds_set)
+  >>> print s3
+  set([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
+  >>> 
+  >>> A = set([1,2,3,4,5])
+  >>> B = set((4,5,6,7,8))
+  >>> C = set({7:"seven",9:"nine",10:"ten"})
+  >>> print A
+  set([1, 2, 3, 4, 5])
+  >>> 
+  >>> print B
+  set([8, 4, 5, 6, 7])
+  >>> 
+  >>> print C
+  set([9, 10, 7])
+  >>> 
+  >>> print A|B
+  set([1, 2, 3, 4, 5, 6, 7, 8])
+  >>> 
+  >>> print A|C
+  set([1, 2, 3, 4, 5, 7, 9, 10])
+  >>> 
+  >>> print B|C
+  set([4, 5, 6, 7, 8, 9, 10])
+  >>> 
+  >>> print A.union(B)
+  set([1, 2, 3, 4, 5, 6, 7, 8])
+  >>> 
+  >>> print A.union(C)
+  set([1, 2, 3, 4, 5, 7, 9, 10])
+  >>> 
+  >>> print B.union(C)
+  set([4, 5, 6, 7, 8, 9, 10])
+  >>> 
+  >>> print B.uinion(C)
+  Traceback (most recent call last):
+    File "<stdin>", line 1, in <module>
+  AttributeError: 'set' object has no attribute 'uinion'
+  >>>
 </pre>
-    </div>
+<br>
+ <p class='p_desc_text'><i class="fa fa-check" aria-hidden='true'></i> Now we are little bit familiar with <span span style='color:blue;'>UNION </span>operations on Set. <br>
+  <i class="fa fa-check" aria-hidden='true'></i> So let's see <span span style='color:blue;'>INTERSECTION  </span> operations on Set.<br><br>
+<span style="color:darkgreen">&nbsp;&nbsp;&nbsp;&nbsp;Note : </span><span style="color:blue">intersection() </span> is a predefined method.
+<pre class='prettyprint' style="background-color:#4e504d;">
+  <h4>&nbsp;#Interactive mode programming - intersection operation on sets</h4>
+  >>> wholes = [0,1,2,3,4,5,6,7,8]
+  >>> evens  = (0,2,4,6)
+  >>> odds   = {1:"one", 3:'three', 5:'five', 7:'seven'}
+  >>> 
+  >>> print wholes
+  [0, 1, 2, 3, 4, 5, 6, 7, 8]
+  >>> 
+  >>> print evens
+  (0, 2, 4, 6)
+  >>> 
+  >>> print odds
+  {1: 'one', 3: 'three', 5: 'five', 7: 'seven'}
+  >>> 
+  >>> S1 = set(wholes)
+  >>> S2 = set(evens)
+  >>> S3 = set(odds)
+  >>> 
+  >>> print S1
+  set([0, 1, 2, 3, 4, 5, 6, 7, 8])
+  >>> 
+  >>> print S2
+  set([0, 2, 4, 6])
+  >>> 
+  >>> print S3
+  set([1, 3, 5, 7])
+  >>> 
+  >>> S1&S2
+  set([0, 2, 4, 6])
+  >>> 
+  >>> S1&S3
+  set([1, 3, 5, 7])
+  >>> 
+  >>> S2&S3
+  set([])
+  >>> 
+  >>> S1.intersection(S2)
+  set([0, 2, 4, 6])
+  >>> 
+  >>> S1.intersection(S3)
+  set([1, 3, 5, 7])
+  >>> 
+  >>> S2.intersection(S3)
+  set([])
+  >>> 
+
+</pre>
+
+</div>
 </div><!--row1 closed-->
 
 </div>  <!--container closed-->

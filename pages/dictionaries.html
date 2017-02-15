@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>Pythofrank</title>
+  <meta charset="utf-8">
+  <meta name="description" content="Pythofrank, a website to help python beginners to make learn them Python easily with the help of a lot of examples. The site is very simple which only focuses on the study part. Enjoy it and please mail me for any topic that you want to see in the site.">
+  <meta name="keywords" content="Pythofrank,Python,Rishikesh Agrawani,hygull,hygull.github.io,Python beginners,Learn Python with practice examples">
+  <meta name="author" content="Rishikesh Agrawani">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+ <!--  <link rel="icon" type="image/gif/png" href="mouse_select_left.png"> -->
+  <link rel="stylesheet" href='../css/bootstrap.min.css'>
+  <link rel="stylesheet" href='../css/tooltip.css'>
+  <script src="../js/jquery.min.js"></script> <!--3.1.1-->
+  <script src="../js/bootstrap.min.js"></script><!--3.3.7-->
+  <!-- https://cdn.rawgit.com/google/code-prettify/master/loader/run_prettify.js -->
+  <script src="../js/run_prettify.js"></script>
+  <!--My JS-->
+  <script type="text/javascript" src='../js/timer.js'></script>
+  <script src='../js/tooltip.js'></script>
+
+  <!--My CSS-->
+  <link rel='stylesheet' href="../css/index.css" />
+  <link rel='stylesheet' href="../css/classes.css" />
+  <!-- <link rel='stylesheet' href="css/sunburst.css" /> -->
+  <link rel='stylesheet' href="../css/desert.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+<!--  <link rel='stylesheet' href="css/sons_of_obsidian.css" /> -->
+<!-- <link rel='stylesheet' href="css/doxy.css" /> -->
+<link rel="stylesheet" type="text/css" href="../css/vertical_nav.css">
+</head>
+<body>
+ <!-- Fixed navbar -->
+    <nav class="navbar navbar-inverse navbar-fixed-top">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" style='color: white' href="#">Pythofrank</a>
+        </div>
+        <div id="navbar" class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+                <li class="active"><a href="#">Home</a></li>
+                <li class="dropdown"><a href="pages/about.html">About</a></li> 
+                    <li><a href="blogs.html">Blogs</a></li>
+                    <li><a href="posts.html">Posts</a></li>
+                    <li><a href="contact.html">Contact</a></li>
+                    <li><a href="carrer.html">Career</a></li>
+                    <li><a href="examples.html">Examples</a></li>
+                    <li><a href="resume.html">Resume</a></li>
+          </ul>
+          <ul class="nav navbar-nav navbar-right">
+               <li><a href="about_me.html"> About me</a></li>
+               <li><a href="info.html">     System info</a></li>
+          </ul>
+        </div><!--/.nav-collapse -->
+      </div>
+    </nav>
+    <hr>
+<div class="container-fluid">
+  <div class="row"><!--row1-->
+    <div class="col-xs-12 col-sm-2 col-md-2 col-lg-2 text-center" id='div_r1c1' style="padding:0px;"><!--r1c1-->
+      <br><br>
+      <h3 data-toggle='tooltip' title='Time is very important in our life' data-placement='bottom'></i> &nbsp; <span id='span_timer'></span></h3><br>
+ <div class="sidebar-nav">
+      <div class="navbar navbar-default" role="navigation">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".sidebar-navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <span class="visible-xs navbar-brand">All Topics</span>
+        </div>
+        <div class="navbar-collapse collapse sidebar-navbar-collapse">
+          <ul class="nav navbar-nav" id='list-group'>
+           <!--  <li class="active"><a href="#">Menu Item 1</a></li> -->
+            <li><a href="what-is-python.html" class="list-group-item">1. What is Python?</a></li>
+                <li><a href="who-created-python.html" class="list-group-item">2. Who created Python?</a></li>
+                <li><a href="how-to-install-python.html" class="list-group-item">3. How to install it?</a></li>
+                <li><a href="ide-and-editors.html" class="list-group-item">4. IDE &amp; editors </a></li>
+                 <li><a href="indentation.html" class="list-group-item">5. Indentation</a></li>
+                 <li><a href="interactive-mode-programming.html" class="list-group-item">6. Interactive mode programming </a></li>
+                 <li><a href="script-mode-programming.html" class="list-group-item">7. Script mode programming </a></li>
+
+                <li><a href="variables.html" class="list-group-item">8. Variables</a></li>
+                <li><a href="indentifiers.html" class="list-group-item">9. Identifiers</a></li>
+                <li><a href="keywords.html" class="list-group-item">10. Keywords</a></li>
+                <li><a href="operators.hmtl" class="list-group-item">10. Operators</a></li>
+                <li><a href="comments.html" class="list-group-item"> 11. Comments</a></li>
+                 <li><a href="multiline-statement.hmtl" class="list-group-item">12. Multiline statement</a></li>
+                 <li><a href="quotation.html" class="list-group-item">13. Quotation</a></li>
+                 <li><a href="what-is-suite.html" class="list-group-item">14. What is suite?</a></li>
+                 <li><a href="writing-mulilines-in-single-line.hmtl" class="list-group-item">15. Writing multiple statements in a single line</a></li>
+                 <li><a href="numbers.html" class="list-group-item">Numbers</a></li>
+                 <li><a href="string.html" class="list-group-item">String</a></li>
+                 <li><a href="list.html" class="list-group-item">List</a></li>
+                 <li><a href="tuple.html" class="list-group-item">Tuple</a></li>
+                 <li><a href="dictionary.html" class="list-group-item">Dictionary</a></li>
+                 <li><a href="sets.html" class="list-group-item">Set</a></li>
+                 <li><a href="map.html" class="list-group-item">Map</a></li>
+                 <li><a href="if-else.html" class="list-group-item">16. Decision making</a></li>
+                 <li><a href="loops.html" class="list-group-item">17. Loops</a></li>
+                 <li><a href="functions.html" class="list-group-item">18. Functions</a></li>
+                 <li><a href="classes.html" class="list-group-item">19. Class</a></li>
+                 <li><a href="file-handling.html" class="list-group-item">20. File handling</a></li>
+                 <li><a href="exception-handling.html" class="list-group-item">21. Exception handling</a></li>
+                 <li><a href="date-and-time.html" class="list-group-item">22. Date &amp; time</a></li>
+                 <li><a href="working-with-files.html" class="list-group-item">23. Working with images</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+                
+  </div><!--r1c1 closed-->
+
+    <div class="col-xs-12 col-sm-10 col-md-10 col-lg-10" id='div_r1c2'><!--r1c2 starts-->
+            <br><br>
+            <center><h2 class='heading'><i class="fa fa-superpowers" aria-hidden="true"></i> &nbsp;Python - dictionary</h2></center><br>
+            <!-- <h5 id='h5_try_text' data-toggle='tooltip' title='Practice will make you perfect' data-placement='bottom' >Try to learn as much as possble you can</h5> -->
+            <!-- <img src='img/for_loops_2017_02_04_at_6_38_48_PM.png' alt='for loops' class="img-responsive">
+          -->
+             <p class='p_desc_text'><i class="fa fa-pencil" aria-hidden='true'></i>   <span span style='color:blue;'>Dictionary</span> is defined as a key-value based data structure where each key maps to some value. <br>
+             <br><i class="fa fa-check" aria-hidden='true'></i> It is used for defining a data structure where we want to organize/group data by creating a meaningful relationship between keys( <span span style='color:blue;'>eg. name, age, branch</span>) and their values( <span span style='color:blue;'>eg. 'Robert Prince', 22, "Mechanical engineering" </span>).<br><br>
+             <i class="fa fa-check" aria-hidden='true'></i> Interactive mode programming is a best way to start or have some basic knowledge of Python concepts. So here I'm starting with that.
+             </p>
+              <pre class='prettyprint' style="background-color:#4e504d;"><!-- #34495E -->
+
+  """
+      created_at       : 14 Feb 2017.
+      updated_at       : 14 Feb 2017.
+      aim of script    : To understand the concept of dictionary in Python.
+      coded by         : Rishikesh Agrawani.
+      Python version   : 2.7.12
+  """
+  <h4>&nbsp;#Interactive mode programming - #1</h4>
+  >>> d = {"city": "Bangalore", "state":"Karnataka", "country":"India"}  #d is a dictionary with 3 items
+  >>> d["city"]                                                          #printing 1st item
+  'Bangalore'
+  >>> 
+  >>> d["state"]                                                         #printing state
+  'Karnataka'
+  >>> 
+  >>> d["country"]                                                       #printing country
+  'India'
+  >>> 
+  >>> print d                                                            #printing whole dictionary
+  {'city': 'Bangalore', 'state': 'Karnataka', 'country': 'India'}
+  >>>
+    <h4>&nbsp;#Interactive mode programming - #2</h4>
+  >>> d = {"city": "Bangalore", "state":"Karnataka", "country":"India"}
+  >>> 
+  >>> d.values()
+  ['Bangalore', 'Karnataka', 'India']
+  >>> 
+  >>> d.keys()
+  ['city', 'state', 'country']
+  >>> 
+    <h4>&nbsp;#Interactive mode programming - #3</h4>
+  >>> d = {"city": "Bangalore", "state":"Karnataka", "country":"India"}
+  >>> print d
+  {'city': 'Bangalore', 'state': 'Karnataka', 'country': 'India'}
+  >>> 
+  >>> import json                   #importing json module
+  >>> pretty_d = json.dumps(d)
+  >>> print pretty_d
+  {"city": "Bangalore", "state": "Karnataka", "country": "India"}
+  >>> 
+  >>> pretty_d2 = json.dumps(d,indent=4)
+  >>> print pretty_d2
+  {
+      "city": "Bangalore", 
+      "state": "Karnataka", 
+      "country": "India"
+  }
+  >>> 
+  >>> pretty_d3 = json.dumps(d,indent=6)
+  >>> print pretty_d3
+  {
+        "city": "Bangalore", 
+        "state": "Karnataka", 
+        "country": "India"
+  }
+  >>>
+    <h4>&nbsp;#Interactive mode programming - #4</h4>
+  >>> import json
+  >>> d = {"city": "Bangalore", "state":"Karnataka", "country":"India"}
+  >>> 
+  >>> json.dumps(d)
+  '{"city": "Bangalore", "state": "Karnataka", "country": "India"}'
+  >>> 
+  >>> json.dumps(d, indent=3)
+  '{\n   "city": "Bangalore", \n   "state": "Karnataka", \n   "country": "India"\n}'
+  >>> 
+  >>> print json.dumps(d, indent=3)
+  {
+     "city": "Bangalore", 
+     "state": "Karnataka", 
+     "country": "India"
+  }
+  >>> 
+    <h4>&nbsp;#Interactive mode programming - #5</h4>
+  >>> import json
+  >>> d = {"city": "Bangalore", "state":"Karnataka", "country":"India"}
+  >>>
+  >>> print json.dumps(d, indent=6, sort_keys=True)         #printing dictionary in ascending order of keys
+  {
+        "city": "Bangalore", 
+        "country": "India", 
+        "state": "Karnataka"
+  }
+  >>> 
+    <h4>&nbsp;#Interactive mode programming - #6</h4>
+  >>> self = { 'name':'Grimmy Heldon',
+  ...          'age' :20,
+  ...          'friends':['Malinikesh','Smarika','Manjoosa','Dolly'],
+  ...          'siblings':[{'name':'Price Heldon','age':18},{'name':'Cuty Heldon','age':1}],
+  ...          'is_active':True
+  ... }
+  >>> 
+  >>> print self
+  {'is_active': True, 'siblings': [{'age': 18, 'name': 'Price Heldon'}, {'age': 1, 'name': 'Cuty Heldon'}], 'age': 20, 'friends': ['Malinikesh', 'Smarika', 'Manjoosa', 'Dolly'], 'name': 'Grimmy Heldon'}
+  >>> 
+  >>> import json
+  >>> print json.dumps(self)
+  {"is_active": true, "siblings": [{"age": 18, "name": "Price Heldon"}, {"age": 1, "name": "Cuty Heldon"}], "age": 20, "friends": ["Malinikesh", "Smarika", "Manjoosa", "Dolly"], "name": "Grimmy Heldon"}
+  >>> 
+  >>> print json.dumps(self,indent=5)
+  {
+       "is_active": true, 
+       "siblings": [
+            {
+                 "age": 18, 
+                 "name": "Price Heldon"
+            }, 
+            {
+                 "age": 1, 
+                 "name": "Cuty Heldon"
+            }
+       ], 
+       "age": 20, 
+       "friends": [
+            "Malinikesh", 
+            "Smarika", 
+            "Manjoosa", 
+            "Dolly"
+       ], 
+       "name": "Grimmy Heldon"
+  }
+  >>> 
+  >>> print json.dumps(self,indent=5,sort_keys=True)
+  {
+       "age": 20, 
+       "friends": [
+            "Malinikesh", 
+            "Smarika", 
+            "Manjoosa", 
+            "Dolly"
+       ], 
+       "is_active": true, 
+       "name": "Grimmy Heldon", 
+       "siblings": [
+            {
+                 "age": 18, 
+                 "name": "Price Heldon"
+            }, 
+            {
+                 "age": 1, 
+                 "name": "Cuty Heldon"
+            }
+       ]
+  }
+  >>> 
+  >>> print json.dumps(self,indent=5,separators=['....','****'])
+  {
+       "is_active"****true....
+       "siblings"****[
+            {
+                 "age"****18....
+                 "name"****"Price Heldon"
+            }....
+            {
+                 "age"****1....
+                 "name"****"Cuty Heldon"
+            }
+       ]....
+       "age"****20....
+       "friends"****[
+            "Malinikesh"....
+            "Smarika"....
+            "Manjoosa"....
+            "Dolly"
+       ]....
+       "name"****"Grimmy Heldon"
+  }
+  >>> 
+  >>> print json.dumps(self,indent=5,separators=['\*/','|*|'])
+  {
+       "is_active"|*|true\*/
+       "siblings"|*|[
+            {
+                 "age"|*|18\*/
+                 "name"|*|"Price Heldon"
+            }\*/
+            {
+                 "age"|*|1\*/
+                 "name"|*|"Cuty Heldon"
+            }
+       ]\*/
+       "age"|*|20\*/
+       "friends"|*|[
+            "Malinikesh"\*/
+            "Smarika"\*/
+            "Manjoosa"\*/
+            "Dolly"
+       ]\*/
+       "name"|*|"Grimmy Heldon"
+  }
+  >>> 
+  >>> print json.dumps(self,indent=5,separators=['\*/',' ==> '])
+  {
+       "is_active" ==> true\*/
+       "siblings" ==> [
+            {
+                 "age" ==> 18\*/
+                 "name" ==> "Price Heldon"
+            }\*/
+            {
+                 "age" ==> 1\*/
+                 "name" ==> "Cuty Heldon"
+            }
+       ]\*/
+       "age" ==> 20\*/
+       "friends" ==> [
+            "Malinikesh"\*/
+            "Smarika"\*/
+            "Manjoosa"\*/
+            "Dolly"
+       ]\*/
+       "name" ==> "Grimmy Heldon"
+  }
+  >>> 
+  >>> print json.dumps(self,indent=15)
+  {
+                 "is_active": true, 
+                 "siblings": [
+                                {
+                                               "age": 18, 
+                                               "name": "Price Heldon"
+                                }, 
+                                {
+                                               "age": 1, 
+                                               "name": "Cuty Heldon"
+                                }
+                 ], 
+                 "age": 20, 
+                 "friends": [
+                                "Malinikesh", 
+                                "Smarika", 
+                                "Manjoosa", 
+                                "Dolly"
+                 ], 
+                 "name": "Grimmy Heldon"
+  }
+  >>> 
+
+  </pre>
+<br>
+ <p class='p_desc_text'>
+<span style="color:darkgreen">&nbsp;&nbsp;&nbsp;&nbsp;A simple task for you beginners &raquo; </span><span style="color:blue">Write a <span style="color:darkred"> pyscript</span> to print a list of all the keys of a dictionary including the nested ones.</span><br>
+ <i class="fa fa-check" aria-hidden='true'></i> The following examples will clarify your concepts. <br><i class="fa fa-check" aria-hidden='true'></i> I've used long variable names for making it undestandable for you.</p>
+<pre class='prettyprint' style="background-color:#4e504d;">
+<h4>&nbsp;#Example - 1</h4>
+  employee = {"name" : "Jordon Smith", "age" : 24, "monthly_salary": 200000.67}
+  print employee["name"]              #Jordon Smith
+  print employee["age"]               #24
+  print employee["monthly_salary"]    #200000.67
+
+  print employee                      #{'age': 24, 'name': 'Jordon Smith', 'monthly_salary': 200000.67}
+  print employee.values()             #[24, 'Jordon Smith', 200000.67]
+  print employee.keys()               #['age', 'name', 'monthly_salary']
+
+  print employee
+  <hr>
+<h4>&nbsp;#Example - 2</h4>
+  student_details = {"name" : "Robert James", "age" : 55, "degree" : "BTech", "branch" : "CSE", "university" : "IIT, Kanpur"}
+  print student_details                         #Printing whole dictionary
+
+  print student_details["name"]                 #Robert James
+  print student_details['age']                  #55
+  print student_details['degree']               #BTech
+
+  keys = student_details.keys()                 #creating list of keys   
+  for key in keys:                              #iterating through created list of keys
+      print key," ==> ",student_details[key]    #printing key and value referenced by it
+
+<hr>
+  <h4>&nbsp;#Example - 3 (Pretty printing dictionary)</h4>
+  import json       #importing json module
+
+  student_details = {"name" : "Robert James", "age" : 55, "degree" : "BTech", "branch" : "CSE"}    #Defining a dictionary
+
+  pretty_format_details = json.dumps(student_details,indent=4)  #dumps() function returns the string   
+                                                                #representation of dictionary based on the keyworded arguments(if provided)
+  print pretty_format_details
+
+<hr>
+  <h4>&nbsp;#Example - 4 (Pretty printing dictionary in sorted keys order)</h4>
+  import json       #importing json module
+
+  student_details = {"name" : "Robert James", "age" : 55, "degree" : "BTech", "branch" : "CSE"}    #Defining a dictionary
+  pretty_format_key_sorted_details = json.dumps(student_details,indent=4,sort_keys=True)
+  print pretty_format_key_sorted_details
+
+<hr>
+  <h4 style="color:red;margin: 0px;padding:0px;">&nbsp;#Example- 5 </h4>
+ """Designing a function that takes 1 dictionary as an argument &amp; returns a list 2 items. 
+    First item will be a tuple containing all the keys &amp; second item will be a list of values."""
+
+  def key_value_separator(details):
+      return [tuple(details.keys()), details.values()]          
+
+  my_details = {  "name": "Rishikesh Agrawani", \               #Dictionary spanned in 4 lines
+                  "age" : 24, \
+                  "branch" : "CSE" \
+               }
+     
+  print key_value_separator(my_details)                         #[('age', 'name', 'branch'), [24, 'Rishikesh Agrawani', 'CSE']]
+  </pre>
+</div>
+</div><!--row1 closed-->
+
+</div>  <!--container closed-->
+
+</body>
+</html>
