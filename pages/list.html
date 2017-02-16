@@ -121,89 +121,109 @@
 <!--r1c1 closed-->
     <div class="col-xs-12 col-sm-10 col-md-10 col-lg-10" id='div_r1c2'><!--r1c2 starts-->
     <br><br>
-            <center><h2 class='heading'><i class="fa fa-superpowers" aria-hidden="true"></i> &nbsp;Python - Tuple</h2></center><br>
+            <center><h2 class='heading'><i class="fa fa-superpowers" aria-hidden="true"></i> &nbsp;Python - List</h2></center><br>
 
-          <p class='p_desc_text'><i class="fa fa-pencil" aria-hidden='true'></i> <span style="color:blue;">Tuple </span> is defined as an immutable list of data items. Once created tuple cannot be modified.
+          <p class='p_desc_text'><i class="fa fa-pencil" aria-hidden='true'></i> <span style="color:blue;">Tuple </span> is defined as an mutable list of data items. We can modify the items of a list after its creation, and this is one of the important difference between <span style="color:green">tuple and list </span>.
           </p>
               <pre class='prettyprint' style="background-color:#4e504d;"><!-- #34495E -->
 
   """
       created_at       : 16 Feb 2017.
       updated_at       : 16 Feb 2017.
-      aim of script    : To understand the concept of tuples in Python.
+      aim of script    : To understand the concept of lists in Python.
       coded by         : Rishikesh Agrawani.
       Python version   : 2.7.12
   """
   <h4>&nbsp;#Interactive mode programming - #1</h4>
-  >>> t = (1,2,3,4,5)           #1st way of creation
-  >>> print t
-  (1, 2, 3, 4, 5)
+  >>> l = [1,2,3,4,5]
+  >>>
+  >>> print l
+  [1, 2, 3, 4, 5]
   >>> 
-  >>> type(t)
-  &lt;type 'tuple'&gt;
+  >>> type(l)
+  &lt;type 'list'&gt;
   >>> 
-  >>> t[0]
+  >>> l[0]
   1
-  >>> t[3]
-  4
-  >>> t[3] = 5                  #Modification of objects/items of a tuple object is not allowed
+  >>> l[4]
+  5
+  >>> l[4] = 67
+  >>> 
+  >>> print l
+  [1, 2, 3, 4, 67]
+  >>> 
+  >>> l.append(69)                  #Apending item to list
+  >>> 
+  >>> print l
+  [1, 2, 3, 4, 67, 69]
+  >>> 
+  >>> print l.remove(4)             #Removing item from list
+  None
+  >>> 
+  >>> print l
+  [1, 2, 3, 67, 69]
+  >>> 
+  >>> print l.remove(333)
   Traceback (most recent call last):
     File "<stdin>", line 1, in <module>
-  TypeError: 'tuple' object does not support item assignment
+  ValueError: list.remove(x): x not in list
   >>> 
-  >>> t2 = 7,5,3,2,1            #2nd way of creation
-  >>> print t2
-  (7, 5, 3, 2, 1)
+  >>> print l.pop()                 #Popping out item from list
+  69
   >>> 
-  >>> t3 = 3,2,1,7,9,           #3rd way of creation
-  >>> print t3
-  (3, 2, 1, 7, 9)
+  >>> print l
+  [1, 2, 3, 67]
   >>> 
-  >>> t+t3                      #Adding 2 tuples 
-  (1, 2, 3, 4, 5, 3, 2, 1, 7, 9)
+  >>> print l.pop()
+  67
+  >>> print l.pop()
+  3
+  >>> print l.pop()
+  2
+  >>> print l.pop()
+  1
+  >>> print l.pop()
+  Traceback (most recent call last):
+    File "<stdin>", line 1, in <module>
+  IndexError: pop from empty list
   >>> 
-  >>> len(t)                    #Counting number of items in a tuple
-  5
+
+  <hr>
+  <h4>&nbsp;#Interactive mode programming - #2 (ways of creating list)</h4>
+  >>> l = xrange(5,11)
+  >>> l
+  xrange(5, 11)
+  >>> 
+  >>> l = list(l)
+  >>> l
+  [5, 6, 7, 8, 9, 10]
+  >>> 
+  >>> l2 = range(7,16)
+  >>> l2
+  [7, 8, 9, 10, 11, 12, 13, 14, 15]
+  >>> 
+  >>> l3 = [item for item in l2]
+  >>> l3
+  [7, 8, 9, 10, 11, 12, 13, 14, 15]
+  >>> 
+  >>> id(l)
+  4430567688
   >>>
-  <hr>
-  <h4>&nbsp;#Interactive mode programming - #2</h4>
-  >>> l = xrange(1,11)
-  >>> print l
-  xrange(1, 11)
+  >>> id(l2)
+  4430196960
+  >>>
+  >>> id(l3)                  #focus here
+  4430567472
   >>> 
-  >>> list(l)
-  [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+  >>> l4=l3                   #focus here
+  >>> id(l4)
+  4430567472
   >>> 
-  >>> lst = list(l)
-  >>> t   = tuple(lst)          #4th way of creating a tuple from a list
-  >>> t2  = tuple(l)            #5th way of creating a tuple from an xrange object
+  >>> l5=l3[:]                #focus here
+  >>> id(l5)
+  4430567112
   >>> 
-  >>> print t
-  (1, 2, 3, 4, 5, 6, 7, 8, 9, 10)
-  >>> 
-  >>> print t2
-  (1, 2, 3, 4, 5, 6, 7, 8, 9, 10)
-  >>> 
-  >>> for i in t:
-  ...     print i,
-  ... 
-  1 2 3 4 5 6 7 8 9 10
-  >>> 
-  <hr>
-  <h4>&nbsp;#Interactive mode programming - #3</h4>
-  >>> name = raw_input("Enter a squence of numbers 1 by 1 in a single line : ")
-  Enter a squence of numbers 1 by 1 in a single line : 1 2 3 4 5 6 7 8 9 10
-  >>> 
-  >>> print name                          #Printing string 
-  1 2 3 4 5 6 7 8 9 10
-  >>> 
-  >>> print type(name)                    #Printing type of variable named name
-  <type 'str'>
-  >>> 
-  >>> l = [int(s) for s in name.split()]  #Creating a list of numbers after extracting numbers from input string
-  >>> print l
-  [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
-  >>> 
+
 </pre>
     </div>
     
