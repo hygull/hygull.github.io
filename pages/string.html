@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>Pythofrank</title>
+  <meta charset="utf-8">
+  <meta name="description" content="Pythofrank, a website to help python beginners to make learn them Python easily with the help of a lot of examples. The site is very simple which only focuses on the study part. Enjoy it and please mail me for any topic that you want to see in the site.">
+  <meta name="keywords" content="Pythofrank,Python,Rishikesh Agrawani,hygull,hygull.github.io,Python beginners,Learn Python with practice examples">
+  <meta name="author" content="Rishikesh Agrawani">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <link rel="icon" type="image/gif/png" href="https://cdn3.iconfinder.com/data/icons/medicons-3/550/apple-health-48.png">
+  <link rel="stylesheet" href='../css/bootstrap.min.css'>
+  <link rel="stylesheet" href='../css/tooltip.css'>
+  <script src="../js/jquery.min.js"></script> <!--3.1.1-->
+  <script src="../js/bootstrap.min.js"></script><!--3.3.7-->
+  <!-- https://cdn.rawgit.com/google/code-prettify/master/loader/run_prettify.js -->
+  <script src="../js/run_prettify.js"></script>
+  <!--My JS-->
+  <script type="text/javascript" src='../js/timer.js'></script>
+  <script src='../js/tooltip.js'></script>
+
+  <!--My CSS-->
+  <link rel='stylesheet' href="../css/index.css" />
+  <link rel='stylesheet' href="../css/classes.css" />
+  <!-- <link rel='stylesheet' href="css/sunburst.css" /> -->
+  <link rel='stylesheet' href="../css/desert.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+<!--  <link rel='stylesheet' href="css/sons_of_obsidian.css" /> -->
+<!-- <link rel='stylesheet' href="css/doxy.css" /> -->
+<link rel="stylesheet" type="text/css" href="../css/vertical_nav.css">
+</head>
+<body>
+ <!-- Fixed navbar -->
+    <nav class="navbar navbar-inverse navbar-fixed-top">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" style='color: white' href="#">Pythofrank</a>
+        </div>
+        <div id="navbar" class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+                <li class="active"><a href="#">Home</a></li>
+                <li class="dropdown"><a href="pages/about.html">About</a></li> 
+                    <li><a href="blogs.html">Blogs</a></li>
+                    <li><a href="posts.html">Posts</a></li>
+                    <li><a href="contact.html">Contact</a></li>
+                    <li><a href="carrer.html">Career</a></li>
+                    <li><a href="examples.html">Examples</a></li>
+                    <li><a href="resume.html">Resume</a></li>
+          </ul>
+          <ul class="nav navbar-nav navbar-right">
+               <li><a href="about_me.html"> About me</a></li>
+               <li><a href="info.html">     System info</a></li>
+          </ul>
+        </div><!--/.nav-collapse -->
+      </div>
+    </nav>
+    <hr>
+<div class="container-fluid">
+  <div class="row"><!--row1-->
+    <div class="col-xs-12 col-sm-2 col-md-2 col-lg-2 text-center" id='div_r1c1' style="padding:0px;"><!--r1c1-->
+      <h3 data-toggle='tooltip' title='Time is very important in our life' data-placement='bottom'><br><br></i> &nbsp; <span id='span_timer'></span></h3><br>
+ <div class="sidebar-nav">
+      <div class="navbar navbar-default" role="navigation">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".sidebar-navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <span class="visible-xs navbar-brand">All Topics</span>
+        </div>
+        <div class="navbar-collapse collapse sidebar-navbar-collapse">
+          <ul class="nav navbar-nav" id='list-group'>
+           <!--  <li class="active"><a href="#">Menu Item 1</a></li> -->
+            <li><a href="what-is-python.html" class="list-group-item">1. What is Python?</a></li>
+                <li><a href="who-created-python.html" class="list-group-item">2. Who created Python?</a></li>
+                <li><a href="how-to-install-python.html" class="list-group-item">3. How to install it?</a></li>
+                <li><a href="ide-and-editors.html" class="list-group-item">4. IDE &amp; editors </a></li>
+                 <li><a href="indentation.html" class="list-group-item">5. Indentation</a></li>
+                 <li><a href="interactive-mode-programming.html" class="list-group-item">6. Interactive mode programming </a></li>
+                 <li><a href="script-mode-programming.html" class="list-group-item">7. Script mode programming </a></li>
+
+                <li><a href="variables.html" class="list-group-item">8. Variables</a></li>
+                <li><a href="indentifiers.html" class="list-group-item">9. Identifiers</a></li>
+                <li><a href="keywords.html" class="list-group-item">10. Keywords</a></li>
+                <li><a href="operators.hmtl" class="list-group-item">10. Operators</a></li>
+                <li><a href="comments.html" class="list-group-item"> 11. Comments</a></li>
+                 <li><a href="multiline-statement.hmtl" class="list-group-item">12. Multiline statement</a></li>
+                 <li><a href="quotation.html" class="list-group-item">13. Quotation</a></li>
+                 <li><a href="what-is-suite.html" class="list-group-item">14. What is suite?</a></li>
+                 <li><a href="writing-mulilines-in-single-line.hmtl" class="list-group-item">15. Writing multiple statements in a single line</a></li>
+                 <li><a href="numbers.html" class="list-group-item">Numbers</a></li>
+                 <li><a href="string.html" class="list-group-item">String</a></li>
+                 <li><a href="list.html" class="list-group-item">List</a></li>
+                 <li><a href="tuple.html" class="list-group-item">Tuple</a></li>
+                 <li><a href="dictionary.html" class="list-group-item">Dictionary</a></li>
+                 <li><a href="sets.html" class="list-group-item">Set</a></li>
+                 <li><a href="map.html" class="list-group-item">Map</a></li>
+                 <li><a href="if-else.html" class="list-group-item">16. Decision making</a></li>
+                 <li><a href="loops.html" class="list-group-item">17. Loops</a></li>
+                 <li><a href="functions.html" class="list-group-item">18. Functions</a></li>
+                 <li><a href="classes.html" class="list-group-item">19. Class</a></li>
+                 <li><a href="file-handling.html" class="list-group-item">20. File handling</a></li>
+                 <li><a href="exception-handling.html" class="list-group-item">21. Exception handling</a></li>
+                 <li><a href="date-and-time.html" class="list-group-item">22. Date &amp; time</a></li>
+                 <li><a href="working-with-files.html" class="list-group-item">23. Working with images</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+                
+  </div><!--r1c1 closed-->
+<!--r1c1 closed-->
+    <div class="col-xs-12 col-sm-10 col-md-10 col-lg-10" id='div_r1c2'><!--r1c2 starts-->
+    <br><br>
+            <center><h2 class='heading'><i class="fa fa-superpowers" aria-hidden="true"></i> &nbsp;Python - string</h2></center><br>
+
+          <p class='p_desc_text'><i class="fa fa-pencil" aria-hidden='true'></i> <span style="color:blue;">string</span> is defined a sequence of characters enclosed within single or double quotes. <br><i class="fa fa-check" aria-hidden='true'></i>  Python has no support for character types like C/C++, C#, Java etc. <br><i class="fa fa-check" aria-hidden='true'></i> So we need to use a single character string for defining any character. 
+          </p>
+              <pre class='prettyprint' style="background-color:#4e504d;"><!-- #34495E -->
+
+  """
+      created_at       : 16 Feb 2017.
+      updated_at       : 16 Feb 2017.
+      aim of script    : To understand the concept of strings in Python.
+      coded by         : Rishikesh Agrawani.
+      Python version   : 2.7.12
+  """
+  <h4>&nbsp;#Interactive mode programming - #1</h4>
+  >>> name = "Julia Kelly"      #with double quotes
+  >>> city = 'Bangalore'        #with single quotes
+  >>> 
+  >>> type(name)                #printing type
+  &lt;type 'str'&gt;
+  >>> 
+  >>> type(city)                #printing type
+  &lt;type 'str'&gt;
+  >>> 
+  >>> print name,city           #printing name &amp; city
+  Julia Kelly Bangalore
+  >>> 
+  >>> print name                #printing name
+  Julia Kelly
+  >>> 
+  >>> print city                #printing city
+  Bangalore
+  >>> 
+  >>> print "%s -- %s"%(name,city)          #1st way of formatting string variables
+  Julia Kelly -- Bangalore
+  >>> 
+  >>> print "{} == {}".format(name,city)    #2nd way of formatting string variables
+  Julia Kelly == Bangalore
+  >>> 
+  <hr>
+  <h4>&nbsp;#Interactive mode programming - #2</h4>
+  >>> firstname = 'Dolly'
+  >>> lastname  = "Heldon"
+  >>> 
+  >>> print (firstname)
+  Dolly
+  >>> 
+  >>> print firstname
+  Dolly
+  >>> 
+  >>> print firstname+lastname
+  DollyHeldon
+  >>> 
+  >>> print firstname+"\t"+lastname
+  Dolly Heldon
+  >>> 
+  >>> print firstname+"\n"+lastname
+  Dolly
+  Heldon
+  >>> 
+  >>> len(firstname)
+  5
+  >>> len(lastname)
+  6
+  >>>
+  <hr>
+  <h4>&nbsp;#Interactive mode programming - #3 (using some basic escape characters)</h4>
+  >>> print("Hello\nWorld")           #using \n
+  Hello
+  World
+  >>> print("Hello\tWorld")           #using \t
+  Hello World
+  >>> print("Hello\bWorld")           #using \b
+  HellWorld
+  >>> print("Hello\rWorld")           #using \r
+  World
+  >>> print("Hellok\rWorld")          #using \r
+  Worldk
+  >>> print("Hellok\fWorld")          #using \f
+  Hellok
+        World
+  >>> print("Hellok\fWorld\fPython")  #using \f
+  Hellok
+        World
+             Python
+  >>>
+  >>> print "Hello",chr(0x0a),"World\fRishikesh"    #0x0a is hex representation
+  Hello
+  World
+       Rishikesh
+  >>> 
+  >>> city = "Bangalore"
+  >>> print city + " is cool place to survive.\vIt is in India."    #using \v
+  Bangalore is cool place to survive.
+                                     It is in India.
+  >>>
+  >>> print city + " is cool place to survive.\v\vIt is in India."  #using \v
+  Bangalore is cool place to survive.
+
+                                     It is in India.
+  >>>
+  <hr>
+  <h4>&nbsp;#Interactive mode programming - #3 (indexing & slicing)</h4>
+  >>> s = "ABCDEFGHIJ"
+  >>> print s[0]            #Accessing characters using index
+  A
+  >>> print s[len(s)-1]     #Accesssing last character of a string
+  J
+  >>> id(s)             
+  4558293776
+  >>> 
+  >>> s2 = s
+  >>> id(s2)
+  4558293776
+  >>> 
+  >>> print s2
+  ABCDEFGHIJ
+  >>> 
+  >>> s3 = s[:]             #getting a slice having all the characters of string
+  >>> id(s3)
+  4558293776
+  >>>
+  >>> print s
+  ABCDEFGHIJ
+  >>> 
+  >>> print s[:2]           #getting a substing having characters from start to 2nd character
+  AB
+  >>> print s[:3]           #getting a substing having characters from start to 3rd character
+  ABC
+  >>> print s[:len(s)]      #getting a substing having characters from start to end
+  ABCDEFGHIJ
+  >>> 
+  >>> print s[1:len(s)]     #getting a substing having characters at index 1 to end
+  BCDEFGHIJ
+  >>> 
+  >>> print s[1:]           #Same as above
+  BCDEFGHIJ
+  >>> print s[3:]           #getting a substing having characters at index 3 to end
+  DEFGHIJ
+  >>> 
+  <hr>
+  <h4>&nbsp;#Interactive mode programming - #4 (string operations)</h4>
+  >>> s = "ABCDEFGHIJ"
+  >>> 
+  >>> print s
+  ABCDEFGHIJ
+  >>> 
+  >>> print len(s)                  #len() function
+  10
+  >>> 
+  >>> id(s)                         #id() function
+  4558293776
+  >>> 
+  >>> s.replace("AB","ab")          #replace() method
+  'abCDEFGHIJ'
+  >>> 
+  >>> print s
+  ABCDEFGHIJ
+  >>> 
+  >>> s2 = 'ABxyABpqABmnABcdAB'
+  >>> 
+  >>> s2.replace("AB","##",2)       #3rd parameter denotes the max number of replacements
+  '##xy##pqABmnABcdAB'
+  >>> 
+  >>> s2.replace("AB","##",3)
+  '##xy##pq##mnABcdAB'
+  >>> 
+  >>> s2.replace("AB","##",4)
+  '##xy##pq##mn##cdAB'
+  >>> 
+  >>> s2.replace("AB","##",5)
+  '##xy##pq##mn##cd##'
+  >>> 
+  >>> s2.replace("AB","##",6)
+  '##xy##pq##mn##cd##'
+  >>> 
+  <hr>
+  <h4>&nbsp;#Interactive mode programming - #5 (formatting)</h4>
+  >>> name  = 'Smiley Moullen'
+  >>> age   = 25
+  >>> salary = 80000.567
+  >>> 
+  >>> print "My name is",name,".I am ",age,' .I earn',salary,'monthly.'
+  My name is Smiley Moullen .I am  25  .I earn 3.14 monthly.
+  >>> 
+  >>> print "My name is %s .I am %d .I earn %f monthly."%(name,age,salary)
+  My name is Smiley Moullen .I am 25 .I earn 80000.567000 monthly.
+  >>> 
+  >>> print "My name is %s .I am %d .I earn %.3f monthly."%(name,age,salary)
+  My name is Smiley Moullen .I am 25 .I earn 80000.567 monthly.
+  >>> 
+  >>> print "My name is %s .I am %d .I earn %.2f monthly."%(name,age,salary)
+  My name is Smiley Moullen .I am 25 .I earn 80000.56 monthly.
+  >>> 
+  >>> s = "abcd"
+  >>> s2 = 'abCdEf'
+  >>> s3 = 'aBcD@tIGer#'
+  >>> 
+  >>> s.capitalize()          #Capitalie the first letter
+  'Abcd'
+  >>> 
+  >>> s2.capitalize()
+  'Abcdef'
+  >>> s3.capitalize()
+  'Abcd@tiger#'
+  >>> 
+  >>> s.isalpha()             #checks whether the string only contains alphabetic characters or not
+  True
+  >>> s3.isalpha()
+  False
+  >>> 
+  >>> s4='12345'
+  >>> s4.isdigit()            #checks whether the string only contains numeric characters 
+  True
+  >>> s.isdigit()
+  False
+  >>> 
+  >>> s5 = u"abcd123"
+  >>> s6 = u'1234'
+  >>> 
+  >>> s5.isnumeric()
+  False
+  >>> s6.isnumeric()
+  True
+  >>> s.isnumeric()
+  Traceback (most recent call last):
+    File "<stdin>", line 1, in <module>
+  AttributeError: 'str' object has no attribute 'isnumeric'
+  >>> 
+  >>> print s3
+  aBcD@tIGer#
+  >>> 
+  >>> print s3.upper()   #returns uppercased string
+  ABCD@TIGER#
+  >>>
+  >>> s = 'ABCD123'
+  >>> print s.lower()    #returns lowercased string
+  abcd123
+  >>> 
+  >>> print s.upper()   
+  ABCD123
+  >>> 
+  >>> n = u"1234"
+  >>> s = u'1234abc'
+  >>> s2 = "1234abc"
+  >>> n.isdecimal()       #checks whether unicode string only contains decimal digits or not
+  True
+  >>> s.isdecimal()
+  False
+  >>> s2.isdecimal()
+  Traceback (most recent call last):
+    File "<stdin>", line 1, in <module>
+  AttributeError: 'str' object has no attribute 'isdecimal'
+  >>> 
+</pre>
+</div><!--row1c2 closed-->
+</div>  <!--container closed-->
+</body>
+</html>
