@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+  <style>
+          table, th,td {
+            border : 1px solid green;
+            border-collapse: collapse;
+          }
+          th {
+            padding: 5px;
+            color: blue;
+            text-align: center;
+          }
+          td {
+            padding: 5px;
+            color: black;
+          }
+          h1 {
+            color: green;
+          }
+          #txtHint{
+            margin-bottom: 40px;
+            font-size: 20px;  
+          }
+  </style>
+
+</head>
+<body>
+<div class="container">
+  
+  <div class="row">
+    <div class="col-sm-12 col-md-12">     
+            <h1>GET POSTS - A cute AJAX https request</h1>
+            <p>Easily access to all posts for the JSON representation available at <a href="https://jsonplaceholder.typicode.com/posts/">https://jsonplaceholder.typicode.com/posts/</a>
+            <form action=""> 
+                <select name="customers" onchange="Posts(this.value)" id="sel">
+                <option value="x" >Select a customer:</option>
+                <option value="1">POST1</option>
+                <option value="2">POST2</option>
+                <option value="3">POST3</option>
+                </select>
+            </form>
+            <br>
+            <div id="txtHint">Posts info will be listed here...</div>
+    </div><!--column-->
+  </div><!--row-->
+
+  <div class="row">
+   
+            <div class="col-md-6">
+              <img src="../../img/Village_Green.jpg" class="img-responsive" />
+            </div>
+            <div class="col-md-6" >
+              <img src="../../img/hill-green-nice.jpg" class="img-responsive" />
+            </div>
+             <div class="col-md-4">
+              <img src="../../img/punjab-culture-1.jpg" class="img-responsive" />
+            </div>
+            <div class="col-md-4" >
+              <img src="../../img/green_sight.jpg" class="img-responsive" />
+            </div>
+            <div class="col-md-4" >
+              <img src="../../img/nice_place.jpg" class="img-responsive" />
+            </div>
+  </div>
+  <div class="row">
+          <div class="col-md-6">
+              <img src="../../img/anime-fantasy-landscape-wallpaper-phone.png" class="img-responsive" />
+          </div>
+          <div class="col-md-3">
+              <img src="../../img/pack_village_rice.jpg" class="img-responsive" />
+          </div>
+  </div>
+</div><!--container-->
+<script>
+<!--
+function setOptions(){
+          xhttp = new XMLHttpRequest();
+          console.log("Request")
+          xhttp.onreadystatechange = function() {
+          if (this.readyState == 4 && this.status == 200) {
+            posts = JSON.parse(this.responseText)
+            var postsText="";
+            for (var i=0; i<posts.length; i++){
+              postsText+="<option value='"+posts[i]["id"]+"'>POST"+posts[i]["id"]+"</option>"
+              var option = document.createElement("option");
+              option.text = "POST"+posts[i]["id"];
+              option.value = posts[i]["id"];
+              var select = document.getElementById("sel");
+              select.appendChild(option);
+            }
+            // document.getElementById("txtHint").innerHTML = postsText;
+            console.log("successful")
+          }
+        };
+        xhttp.open("GET", "https://jsonplaceholder.typicode.com/posts/", true);
+        xhttp.send();
+}
+
+setOptions();
+
+function Posts(postId) {
+            var xhttp;    
+            if (postId == "") {
+              document.getElementById("txtHint").innerHTML = "";
+              console.log("Wrong"+postId)
+              return;
+            }
+
+              xhttp = new XMLHttpRequest();
+            xhttp.onreadystatechange = function() {
+              if (this.readyState == 4 && this.status == 200) {
+                var postAsText = this.responseText
+                console.log(post)
+                console.log(typeof post)
+                var post = JSON.parse(postAsText)
+                var htmlText='<table class="table">'+
+                              '<thead>'+
+                              '<tr>'+
+                              '<th style="width:8%">Post id</th>'+
+                              '<th style="width:8%">User id</th>'+
+                              '<th style="width:34  %">Title</th>'+
+                              '<th>Description</th>'+
+                              '</tr>'+
+                              '</thead>'+
+                              '<tbody>'+
+      '<tr>'+
+        '<td>'+post["id"]+'</td>'+
+        '<td>'+post["userId"]+'</td>'+
+        '<td>'+post["title"]+'</td>'+
+        '<td>'+post.body+'</td>'+
+      '</tr>'+
+    '</tbody>'+
+    '</table>'
+
+                document.getElementById("txtHint").innerHTML = htmlText;
+              }
+            };
+            xhttp.open("GET", "https://jsonplaceholder.typicode.com/posts/"+postId, true);
+            xhttp.send();
+}
+// -->
+</script>
+
+</body>
+</html>
