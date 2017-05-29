@@ -75,9 +75,41 @@
           <div class="col-md-3">
               <img src="../../img/pack_village_rice.jpg" class="img-responsive" />
           </div>
+          <div class="col-md-3">
+              <img src="../../img/polar-bears-4a.jpg" class="img-responsive" />
+          </div>
+  </div>
+  <div class="row">
+          <div class="col-md-3">
+              <img src="../../img/Bull_village.jpg" class="img-responsive" />
+          </div>
+          <div class="col-md-3">
+              <img src="../../img/goat_river.jpg" class="img-responsive" />
+          </div>
+          <div class="col-md-3">
+              <img src="../../img/bull.jpg" class="img-responsive" />
+          </div>
+          <div class="col-md-3">
+              <img src="../../img/woman_husband.jpg" class="img-responsive" />
+          </div>
+  </div>
+  <div class="row">
+    <div class="col-md-6">
+            <img src="../../img/village-life-painting.jpg" class="img-responsive">
+    </div>
+    <div class="col-md-6">
+            <img src="../../img/thatched-cottage-village.jpg" class="img-responsive">
+    </div>
   </div>
 </div><!--container-->
-<script>
+<script type="text/javascript">
+  $(document).ready(
+      function(){
+          $("#secretScript").hide();
+      }
+  )
+</script>
+<script id="secretScript">
 <!--
 function setOptions(){
           xhttp = new XMLHttpRequest();
@@ -102,7 +134,7 @@ function setOptions(){
         xhttp.send();
 }
 
-setOptions();
+setOptions(); 
 
 function Posts(postId) {
             var xhttp;    
@@ -144,7 +176,7 @@ function Posts(postId) {
             xhttp.open("GET", "https://jsonplaceholder.typicode.com/posts/"+postId, true);
             xhttp.send();
 }
-// -->
+//-->
 </script>
 
 </body>
