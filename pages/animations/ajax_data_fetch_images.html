@@ -144,7 +144,7 @@ function setOptions(){
             console.log("successful")
           }
         };
-        xhttp.open("GET", "https://jsonplaceholder.typicode.com/posts/", true);
+        xhttp.open("GET", "https://jsonplaceholder.typicode.com/photos/", true);
         xhttp.send();
 }
 
@@ -165,8 +165,6 @@ function Posts(postId) {
                 console.log(post)
                 console.log(typeof post)
                 var post = JSON.parse(postAsText)
-
-                
                 var htmlText='<table class="table">'+
                               '<thead>'+
                               '<tr>'+
@@ -189,7 +187,7 @@ function Posts(postId) {
                 document.getElementById("txtHint").innerHTML = htmlText;
               }
             };
-            xhttp.open("GET", "https://jsonplaceholder.typicode.com/posts/"+postId, true);
+            xhttp.open("GET", "https://jsonplaceholder.typicode.com/photos"+postId, true);
             xhttp.send();
 }
 //-->

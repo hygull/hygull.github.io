@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+  <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.6.4/angular.min.js"></script>
+
+  <style type="text/css">
+  	h4{
+  		padding:5px;
+  	}
+  	img{
+  		height: 200px;
+  		width: 200px;
+  	}
+  </style>
+<body>
+<div class="container" ng-app="myApp" ng-controller="customersCtrl">
+  <h1 style="color:green" class="text-center">Products</h1>
+
+  <!-- <div class="row">
+    <div class="col-sm-4" style="max-height: 500px;height:600px" ng-repeat="product in productsArr">
+    	<h3 class="text-center">{{product.title}}</h3>
+		<img src="{{product.image}}" class="img-responsive" height="400px" width="100%">	
+    </div>
+    
+  </div> -->
+  <div class="row" >
+  <div class="col-sm-6 col-md-3 col-xs-12" ng-repeat="product in productsArr" style="height: 600px">
+    <div class="thumbnail">
+    	<h4 >{{product.id}} - {{product.title}}</h4>
+    	<hr>
+      <img src="{{product.image}}" height="400px" />
+      <div class="caption">
+        
+
+        <p class="text-center"><a href="http://127.0.0.1:8080/products/{{product.id}}" class="btn btn-primary" role="button">View product details</a> </p>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+
+
+	<script>
+	var app = angular.module('myApp', []);
+		app.controller('customersCtrl', function($scope, $http) {
+			// $http.get("http://192.168.1.129:8080/products/").then(function (response){
+  $http({
+    method:  "get",
+    url: "http://rishikesh67.pythonanywhere.com/hygull/api/products/",
+  }).then(function(response){
+			      // $scope.myData = response.data.records;
+			      $scope.productsArr = response.data;
+
+			      // console.log(	postsArr.length)
+			      // var $scope.postsArr = response.data;
+			      
+			      // console.log($scope.postsArr.length)
+			      // for(var i=0; i<=5; i++){
+			      // 	console.log("Got",postsArr[i]["title"])
+			      // }
+			 });
+	});
+	</script>
+
+</body>
+</html>
