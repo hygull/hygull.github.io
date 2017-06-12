@@ -1,0 +1,146 @@
+
+<!DOCTYPE html>
+<html>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+  <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.4.8/angular.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.1.4/Chart.min.js"></script>
+<!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.2.1/Chart.bundle.js"></script> -->
+  <style type="text/css">
+    h2{
+      color: lightgreen;
+    }
+    p{
+      color: blue;
+    }
+    h2,p{
+      text-align: center;
+    }
+    h1{
+      color:white;
+    }
+    th{
+      font-size: 20px;
+      background-color: #64453F;
+    }
+    td{
+      font-size: 15px;
+    }
+    td:nth-child(even){
+      background-color: gray;
+            color:white;
+    }
+    td:nth-child(odd){
+      background-color: pink;
+
+    }
+    th{
+      font-weight: bolder;
+      color:white;
+    }
+    td{
+      font-weight: bold; 
+    }
+    body{
+     /*background-color:#371E1E;*/
+    }
+    p{
+      color: pink;
+    }
+    #a_link{
+      color: lightblue;
+    }
+  </style>
+<body>
+
+<div class="container">
+<!-- <center><a role="button" class="btn btn-info" href = "/api/student/mathematics/" target="_blank">Add result for a student </a></center><br> -->
+    <center><h1 style="color: green">Line Chart</h1></center>
+    <hr>
+    <br>
+        <div class="row">
+            <div class="col-md-6">
+              <canvas id="myChart1"></canvas>
+              <br>
+              <hr>
+            </div>
+            <div class="col-md-6">
+              <canvas id="myChart2"></canvas>
+              <br>
+              <hr>
+            </div>
+              
+        </div>
+        <div class="row">
+            <div class="col-md-6">
+              <canvas id="myChart3"></canvas>
+              <br>
+              <hr>
+            </div>
+            <div class="col-md-6">
+              <canvas id="myChart4"></canvas>
+              <br>
+              <hr>
+            </div>
+              
+        </div>
+
+</div>
+
+<!---->
+
+<!---->
+
+<br>
+<!-- <center><h4><a role="button" class="btn btn-success" href = "/api/student/mathematics/" target="_blank" class="btn btn success" >Add results for a student </a></h4></center><br> -->
+
+<script type="text/javascript">
+  
+  // var jsonData = $.ajax({
+  //   // url: 'http://filtron.pythonanywhere.com/api/auth-users/',
+  //   // url:'http://127.0.0.1:8000/api/auth-users/',
+  //   //url:"http://127.0.0.1:8000/api/student/mathematics/",
+  //   url:"http://filtron.pythonanywhere.com/api/student/mathematics/",
+  //   dataType: 'json',
+  // }).done(function (results) {
+      var typeArr = ["pie", "bar", "line", "polarArea"]
+
+      for(var i=1;i<=4;i++){
+
+            var ctx = document.getElementById("myChart"+i).getContext("2d");
+            var myChart = new Chart(ctx,{
+                type: typeArr[i-1],
+                data:{
+                  // labels:firstnames,
+                  labels:["enquiries","orders","deleveries","invoices","receipts"],
+                  
+                  datasets:[
+                        {
+                          label:"",
+                          data:[56, 67, 89, 90, 57],
+                          backgroundColor:[ "darkgray", "red", "green", "blue", "pink"]
+                        },
+
+                    ],
+                  options: {
+                      title: {
+                          display: true,
+                          text: 'My Users Chart',
+                          fontColor:"navy"
+                      }
+                  }
+                }
+            });
+        }
+          //Char js code ends
+
+         
+  // })
+//-->
+</script>
+</script>
+</body>
