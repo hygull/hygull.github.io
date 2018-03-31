@@ -1,10 +1,9 @@
-# Pythonframe 
-##### A website that is being especially designed for the python beginners to help them in learning Python.
-![Python logo](http://15809-presscdn-0-93.pagely.netdna-cdn.com/wp-content/uploads/2016/02/MTE5NDg0MDYxMTk4NTUwNTQz.png)
+# Groovin
 
-```
+A simple bootstrapmade templated website.
+
+***
 Theme Name: Groovin
 Theme URL: https://bootstrapmade.com/groovin-free-bootstrap-theme/
 Author: BootstrapMade
 Author URL: https://bootstrapmade.com
-```
