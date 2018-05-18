@@ -1,0 +1,73 @@
+{% load staticfiles %}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>jQuery.each demo</title>
+  <style>
+  div {
+    color: blue;
+  }
+  div#five {
+    color: red;
+  }
+  </style>
+  <script src="https://code.jquery.com/jquery-1.10.2.js"></script>
+</head>
+<body>
+ 
+<div id="one"></div>
+<div id="two"></div>
+<div id="three"></div>
+<div id="four"></div>
+<div id="five"></div>
+
+<p id='text'></p>
+
+
+<div id='photos'>
+
+</div>
+<script>
+var arr = [ "one", "two", "three", "four", "five" ];
+var obj = { one: 1, two: 2, three: 3, four: 4, five: 5 };
+ 
+jQuery.each( arr, function( i, val ) {
+  $( "#" + val ).text( "Mine is " + val + "." );
+ 
+  // Will stop running after "three"
+  return ( val !== "three" );
+});
+ 
+jQuery.each( obj, function( i, val ) {
+  $( "#" + i ).append( document.createTextNode( " - " + val ) );
+});
+</script>
+
+<script type="text/javascript">
+  $.getJSON("paws.json", function(data){
+        console.log("It's great to see you here.");
+        console.log(data);
+        var photoHTML = ''
+        // Storing pets to a variable named pets
+        var pets = data.petfinder.pets.pet; // Here pets(in paws.json) has 2 items
+
+        // Loop through pets array
+        $.each(pets, function(index, pet){
+            console.log("PETS INDEX :", index);
+            // Storing photos to a varibale named photos
+            var photos = pet.media.photos.photo;
+            // Loop through photos array
+            $.each(photos, function(index, photo){
+                console.log("PHOTO INDEX ", index);
+                console.log(photo.$t)
+                photoHTML += '<div class="picbox"><figure><img src="' + photo.$t + '" class="frame"><figcaption>' + pet.description.$t + '</figcaption></figure></div>';
+            })
+        })
+        console.log(photoHTML)
+        $('#photos').html(photoHTML);
+  })
+</script>
+ 
+</body>
+</html>

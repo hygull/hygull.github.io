@@ -1,0 +1,346 @@
+{
+  "@encoding": "iso-8859-1",
+  "@version": "1.0",
+  "petfinder": {
+    "@xmlns:xsi": "http://www.w3.org/2001/XMLSchema-instance",
+    "lastOffset": {
+      "$t": "25"
+    },
+    "pets": {
+      "pet": [
+        {
+          "options": {
+            "option": [
+              {
+                "$t": "altered"
+              },
+              {
+                "$t": "hasShots"
+              },
+              {
+                "$t": "noDogs"
+              },
+              {
+                "$t": "noCats"
+              }
+            ]
+          },
+          "status": {
+            "$t": "A"
+          },
+          "contact": {
+            "phone": {
+              "$t": "(618) 833-3647"
+            },
+            "state": {
+              "$t": "IL"
+            },
+            "address2": {
+              "$t": "N/A"
+            },
+            "email": {
+              "$t": "pawsplace1@yahoo.com"
+            },
+            "city": {
+              "$t": "Anna"
+            },
+            "zip": {
+              "$t": "62906"
+            },
+            "fax": {
+              "$t": "N/A"
+            },
+            "address1": {
+              "$t": "139 East Vienna Street"
+            }
+          },
+          "age": {
+            "$t": "Adult"
+          },
+          "size": {
+            "$t": "L"
+          },
+          "media": {
+            "photos": {
+              "photo": [
+                {
+                  "@size": "pnt",
+                  "$t": "http://photos.petfinder.com/photos/pets/26443178/1/?bust=1371662519&width=60&-pnt.jpg",
+                  "@id": "1"
+                },
+                {
+                  "@size": "fpm",
+                  "$t": "http://photos.petfinder.com/photos/pets/26443178/1/?bust=1371662519&width=95&-fpm.jpg",
+                  "@id": "1"
+                },
+                {
+                  "@size": "x",
+                  "$t": "http://photos.petfinder.com/photos/pets/26443178/1/?bust=1371662519&width=500&-x.jpg",
+                  "@id": "1"
+                },
+                {
+                  "@size": "pn",
+                  "$t": "http://photos.petfinder.com/photos/pets/26443178/1/?bust=1371662519&width=300&-pn.jpg",
+                  "@id": "1"
+                },
+                {
+                  "@size": "t",
+                  "$t": "http://photos.petfinder.com/photos/pets/26443178/1/?bust=1371662519&width=50&-t.jpg",
+                  "@id": "1"
+                },
+                {
+                  "@size": "pnt",
+                  "$t": "http://photos.petfinder.com/photos/pets/26443178/2/?bust=1371662521&width=60&-pnt.jpg",
+                  "@id": "2"
+                },
+                {
+                  "@size": "fpm",
+                  "$t": "http://photos.petfinder.com/photos/pets/26443178/2/?bust=1371662521&width=95&-fpm.jpg",
+                  "@id": "2"
+                },
+                {
+                  "@size": "x",
+                  "$t": "http://photos.petfinder.com/photos/pets/26443178/2/?bust=1371662521&width=500&-x.jpg",
+                  "@id": "2"
+                },
+                {
+                  "@size": "pn",
+                  "$t": "http://photos.petfinder.com/photos/pets/26443178/2/?bust=1371662521&width=300&-pn.jpg",
+                  "@id": "2"
+                },
+                {
+                  "@size": "t",
+                  "$t": "http://photos.petfinder.com/photos/pets/26443178/2/?bust=1371662521&width=50&-t.jpg",
+                  "@id": "2"
+                },
+                {
+                  "@size": "pnt",
+                  "$t": "http://photos.petfinder.com/photos/pets/26443178/3/?bust=1371662522&width=60&-pnt.jpg",
+                  "@id": "3"
+                },
+                {
+                  "@size": "fpm",
+                  "$t": "http://photos.petfinder.com/photos/pets/26443178/3/?bust=1371662522&width=95&-fpm.jpg",
+                  "@id": "3"
+                },
+                {
+                  "@size": "x",
+                  "$t": "http://photos.petfinder.com/photos/pets/26443178/3/?bust=1371662522&width=500&-x.jpg",
+                  "@id": "3"
+                },
+                {
+                  "@size": "pn",
+                  "$t": "http://photos.petfinder.com/photos/pets/26443178/3/?bust=1371662522&width=300&-pn.jpg",
+                  "@id": "3"
+                },
+                {
+                  "@size": "t",
+                  "$t": "http://photos.petfinder.com/photos/pets/26443178/3/?bust=1371662522&width=50&-t.jpg",
+                  "@id": "3"
+                }
+              ]
+            }
+          },
+          "id": {
+            "$t": "26443178"
+          },
+          "shelterPetId": {
+            "$t": "1"
+          },
+          "breeds": {
+            "breed": [
+              {
+                "$t": "Labrador Retriever"
+              },
+              {
+                "$t": "Pit Bull Terrier"
+              }
+            ]
+          },
+          "name": {
+            "$t": "MIKEY"
+          },
+          "sex": {
+            "$t": "M"
+          },
+          "description": {
+            "$t": "Mikey is a Lab/Pit Bull mix who was born in August of 2011,  He was adopted from PAWS after he had been found abandoned out in the middle of nowhere.  The family had him for about a year, and then they got a couple more dogs.  That didn't work out because Mikey prefers to be an only child (dog).  He does well with people, he just prefers not to share them.  He loves to cuddle, wants to be a lap dog, and he will smile for you.   He's a beautiful boy, and he has been neutered, micro-chipped, dewormed, has been tested for heartworms, is current on his routine vacinations and is on a heartworm preventative.  The adoption fee for him is $200.\n"
+          },
+          "mix": {
+            "$t": "yes"
+          },
+          "shelterId": {
+            "$t": "IL09"
+          },
+          "lastUpdate": {
+            "$t": "2013-06-19T17:21:59Z"
+          },
+          "animal": {
+            "$t": "Dog"
+          }
+        },
+        {
+          "options": {
+            "option": [
+              {
+                "$t": "altered"
+              },
+              {
+                "$t": "hasShots"
+              },
+              {
+                "$t": "housetrained"
+              }
+            ]
+          },
+          "status": {
+            "$t": "A"
+          },
+          "contact": {
+            "phone": {
+              "$t": "(618) 833-3647"
+            },
+            "state": {
+              "$t": "IL"
+            },
+            "address2": {
+              "$t": "N/A"
+            },
+            "email": {
+              "$t": "pawsplace1@yahoo.com"
+            },
+            "city": {
+              "$t": "Anna"
+            },
+            "zip": {
+              "$t": "62906"
+            },
+            "fax": {
+              "$t": "N/A"
+            },
+            "address1": {
+              "$t": "139 East Vienna Street"
+            }
+          },
+          "age": {
+            "$t": "Adult"
+          },
+          "size": {
+            "$t": "M"
+          },
+          "media": {
+            "photos": {
+              "photo": [
+                {
+                  "@size": "pnt",
+                  "$t": "http://photos.petfinder.com/photos/pets/26605681/1/?bust=1476815920&width=60&-pnt.jpg",
+                  "@id": "1"
+                },
+                {
+                  "@size": "fpm",
+                  "$t": "http://photos.petfinder.com/photos/pets/26605681/1/?bust=1476815920&width=95&-fpm.jpg",
+                  "@id": "1"
+                },
+                {
+                  "@size": "x",
+                  "$t": "http://photos.petfinder.com/photos/pets/26605681/1/?bust=1476815920&width=500&-x.jpg",
+                  "@id": "1"
+                },
+                {
+                  "@size": "pn",
+                  "$t": "http://photos.petfinder.com/photos/pets/26605681/1/?bust=1476815920&width=300&-pn.jpg",
+                  "@id": "1"
+                },
+                {
+                  "@size": "t",
+                  "$t": "http://photos.petfinder.com/photos/pets/26605681/1/?bust=1476815920&width=50&-t.jpg",
+                  "@id": "1"
+                },
+                {
+                  "@size": "pnt",
+                  "$t": "http://photos.petfinder.com/photos/pets/26605681/2/?bust=1476815921&width=60&-pnt.jpg",
+                  "@id": "2"
+                },
+                {
+                  "@size": "fpm",
+                  "$t": "http://photos.petfinder.com/photos/pets/26605681/2/?bust=1476815921&width=95&-fpm.jpg",
+                  "@id": "2"
+                },
+                {
+                  "@size": "x",
+                  "$t": "http://photos.petfinder.com/photos/pets/26605681/2/?bust=1476815921&width=500&-x.jpg",
+                  "@id": "2"
+                },
+                {
+                  "@size": "pn",
+                  "$t": "http://photos.petfinder.com/photos/pets/26605681/2/?bust=1476815921&width=300&-pn.jpg",
+                  "@id": "2"
+                },
+                {
+                  "@size": "t",
+                  "$t": "http://photos.petfinder.com/photos/pets/26605681/2/?bust=1476815921&width=50&-t.jpg",
+                  "@id": "2"
+                },
+                {
+                  "@size": "pnt",
+                  "$t": "http://photos.petfinder.com/photos/pets/26605681/3/?bust=1476815922&width=60&-pnt.jpg",
+                  "@id": "3"
+                },
+                {
+                  "@size": "fpm",
+                  "$t": "http://photos.petfinder.com/photos/pets/26605681/3/?bust=1476815922&width=95&-fpm.jpg",
+                  "@id": "3"
+                },
+                {
+                  "@size": "x",
+                  "$t": "http://photos.petfinder.com/photos/pets/26605681/3/?bust=1476815922&width=500&-x.jpg",
+                  "@id": "3"
+                },
+                {
+                  "@size": "pn",
+                  "$t": "http://photos.petfinder.com/photos/pets/26605681/3/?bust=1476815922&width=300&-pn.jpg",
+                  "@id": "3"
+                },
+                {
+                  "@size": "t",
+                  "$t": "http://photos.petfinder.com/photos/pets/26605681/3/?bust=1476815922&width=50&-t.jpg",
+                  "@id": "3"
+                }
+              ]
+            }
+          },
+          "id": {
+            "$t": "26605681"
+          },
+          "shelterPetId": {
+            "$t": "2"
+          },
+          "breeds": {
+            "breed": {
+              "$t": "Domestic Short Hair"
+            }
+          },
+          "name": {
+            "$t": "DELILAH"
+          },
+          "sex": {
+            "$t": "F"
+          },
+          "description": {
+            "$t": "Delilah is a beautiful gray tortoiseshell female who was  born around  the middle of March, 2013.; She and her brother and sisters were owner surrendered because their family didn't have their mom spayed; she had kittens; and they didn't want the kittens.; Delilah is just a gorgeous, dignified lovely lady who would like nothing more than to spend hours on your lap just purring and keeping you company!  Come get her and give her that chance today!  We guarantee you will never regret it!"
+          },
+          "mix": {
+            "$t": "yes"
+          },
+          "shelterId": {
+            "$t": "IL09"
+          },
+          "lastUpdate": {
+            "$t": "2013-07-07T12:24:24Z"
+          },
+          "animal": {
+            "$t": "Cat"
+          }
+        }
+        ]}}
+}
