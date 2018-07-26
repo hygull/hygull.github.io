@@ -1,5 +1,5 @@
 pre.prettyprint {
-    font-size: 20px;
+    font-size: 18px;
     font-family: consolas;
     border:0px;
 }
@@ -8,15 +8,24 @@ img#avtar {
 	margin-top:10px;
 }
 
-#username, #fullname  {
-	font-size: 15px;
-	color:#008040;
+#username  {
+	font-size: 14px;
 }
 
+#full_name{
+	font-size: 13px;
+	font-weight: bold;
+}
+
+
+#email {
+	font-size: 11px;
+	color:#003300;
+}
 h1#header {
 	font-family: tahoma;
 	font-weight: bold;
-	color:#0d0d0d;
+	color: #1a0600;
 }
 
 a.tags{
