@@ -1,0 +1,18 @@
+pre.prettyprint {
+    font-size: 20px;
+    font-family: consolas;
+    border:0px;
+}
+
+img#avtar {
+	margin-top:10px;
+}
+
+#username, #fullname  {
+	font-size: 15px;
+	font-family: tahoma;
+}
+
+#fullname{
+	color: #008055;
+}

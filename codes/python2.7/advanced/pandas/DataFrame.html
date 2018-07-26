@@ -1,17 +1,21 @@
 <!DOCTYPE html>
 <head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
 <!-- <script src="https://cdn.rawgit.com/google/code-prettify/master/loader/run_prettify.js?lang=css&amp;skin=sunburst"></script> -->
 <script src="https://cdn.rawgit.com/google/code-prettify/master/loader/run_prettify.js"></script>
-<style type="text/css">
-    pre.prettyprint {
-        font-size: 20px;
-        font-family: consolas;
-        /*border:0px;*/
-    }
-</style>
+<link rel="stylesheet" type="text/css" href="../../../../css/my-prettyfier-google.css">
 </head>
 <body onload='PR.prettyPrint()'>
-	<pre class='prettyprint linenums' id='code-mine'>
+
+<div class="container">
+    <div class="col-md-11 col-xs-12">
+
+    <!-- <pre class='prettyprint'> -->
+    <pre class='prettyprint linenums'>
 """
     {
         'aim': 'To use DataFrame in Python',
@@ -49,7 +53,7 @@ while True:
         
         df_store.to_json(json_backup)
         print (df_store)
-        print ("***********************************************")    	
+        print ("***********************************************")       
     except Exception as e:
         df_store = df_store.append({
             "Time": time_data,
@@ -66,10 +70,21 @@ while True:
     # If user presses Y/y then continue otherwise exit from loop
     choice = input("\n" + str(count) + " Do you want to continue the operation (Y/N): ")
     if choice == 'y' or choice == 'Y':
-    	count = count + 1
-    	continue
+        count = count + 1
+        continue
     else:
-    	break
-	</pre>
+        break
+    </pre> 
+
+    </div>
+    <div class="col-md-1 col-xs-12 text-center">
+
+        <img src="https://avatars0.githubusercontent.com/u/23253178?s=460&v=4" class="img img-circle" width="100px" id='avtar'>
+        <h6 id='fullname'>Rishikesh Agrawani</h6>
+
+        <a href='https://rishikesh67.pythonanywhere.com' id='username'>@hygull</a>
+
+    </div>
+</div>
 
 </body>
