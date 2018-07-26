@@ -10,9 +10,16 @@ img#avtar {
 
 #username, #fullname  {
 	font-size: 15px;
-	font-family: tahoma;
+	color:#008040;
 }
 
-#fullname{
-	color: #008055;
+h1#header {
+	font-family: tahoma;
+	font-weight: bold;
+	color:#0d0d0d;
+}
+
+a.tags{
+	color: #0000ff;
+	font-family: tahoma;
 }
