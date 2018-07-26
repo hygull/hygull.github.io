@@ -1,350 +1,185 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-
 <head>
+  <title>Pythofrank</title>
   <meta charset="utf-8">
-  <title>Groovin one page bootstrap template</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="" />
-  <meta name="author" content="" />
-  <!-- styles -->
-  <link rel="stylesheet" href="assets/css/fancybox/jquery.fancybox.css">
-  <link href="assets/css/bootstrap.css" rel="stylesheet" />
-  <link href="assets/css/bootstrap-theme.css" rel="stylesheet" />
-  <link rel="stylesheet" href="assets/css/slippry.css">
-  <link href="assets/css/style.css" rel="stylesheet" />
-  <link rel="stylesheet" href="assets/color/default.css">
-  <!-- =======================================================
-    Theme Name: Groovin
-    Theme URL: https://bootstrapmade.com/groovin-free-bootstrap-theme/
-    Author: BootstrapMade
-    Author URL: https://bootstrapmade.com
-  ======================================================= -->
-  <script src="assets/js/modernizr.custom.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href='css/bootstrap.min.css'>
+    <link rel="stylesheet" href='css/tooltip.css'>
+  <script src="js/jquery.min.js"></script> <!--3.1.1-->
+  <script src="js/bootstrap.min.js"></script><!--3.3.7-->
+  <!-- https://cdn.rawgit.com/google/code-prettify/master/loader/run_prettify.js -->
+  <script src="js/run_prettify.js"></script>
+  <!--My JS-->
+  <script type="text/javascript" src='js/timer.js'></script>
+  <script src='js/tooltip.js'></script>
+
+  <!--My CSS-->
+  <link rel='stylesheet' href="css/index.css" />
+  <!-- <link rel='stylesheet' href="css/sunburst.css" /> -->
+  <link rel='stylesheet' href="css/desert.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+<!--  <link rel='stylesheet' href="css/sons_of_obsidian.css" /> -->
+<!-- <link rel='stylesheet' href="css/doxy.css" /> -->
+<link rel="stylesheet" type="text/css" href="css/vertical_nav.css">
 </head>
-
 <body>
-  <header>
-
-    <div id="navigation" class="navbar navbar-inverse navbar-fixed-top default" role="navigation">
+ <!-- Fixed navbar -->
+    <nav class="navbar navbar-inverse navbar-fixed-top">
       <div class="container">
-
-        <!-- Brand and toggle get grouped for better mobile display -->
         <div class="navbar-header">
-          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1">
+          <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
+            <span class="sr-only">Toggle navigation</span>
             <span class="icon-bar"></span>
             <span class="icon-bar"></span>
             <span class="icon-bar"></span>
           </button>
-          <a class="navbar-brand" href="index.html">Groovin</a>
+          <a class="navbar-brand" style='color: white' href="#">Pythofrank</a>
         </div>
+        <div id="navbar" class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+                <li class="active"><a href="#">Home</a></li>
+                <li class="dropdown"><a href="pages/about.html">About</a></li> 
+                    <li><a href="pages/blogs.html">Blogs</a></li>
+                    <li><a href="pages/posts.html">Posts</a></li>
+                    <li><a href="pages/contact.html">Contact</a></li>
+                    <li><a href="pages/career.html">Career</a></li>
+                    <li><a href="pages/examples.html">Examples</a></li>
+                    <li><a href="pages/js-animations.html">Animations</a></li>
+          </ul>
+          <ul class="nav navbar-nav navbar-right">
+               <li><a href="pages/about_me.html"> About me</a></li>
+               <li><a href="pages/info.html">     System info</a></li>
+          </ul>
+        </div><!--/.nav-collapse -->
+      </div>
+    </nav>
+    <hr>
+<div class="container-fluid">
+  <div class="row"><!--row1-->
+<div class="col-xs-12 col-sm-2 col-md-2 col-lg-2 text-center" id='div_r1c1' style="padding:0px;"><!--r1c1-->
+      <h3 data-toggle='tooltip' title='Time is very important in our life' data-placement='bottom'><br><br></i> &nbsp; <span id='span_timer'></span></h3><br>
+ <div class="sidebar-nav">
+      <div class="navbar navbar-default" role="navigation">
+                <div class="navbar-header">
+                  <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".sidebar-navbar-collapse">
+                    <span class="sr-only">Toggle navigation</span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                  </button>
+                  <span class="visible-xs navbar-brand">All Topics</span>
+                </div>
+        <div class="navbar-collapse collapse sidebar-navbar-collapse">
+          <ul class="nav navbar-nav" id='list-group'>
+           <!--  <li class="active"><a href="#">Menu Item 1</a></li> -->
+                <li><a href="pages/what-is-python.html" class="list-group-item"><i class="fa fa-book" aria-hidden="true"></i> Python &#x2615;</a></li>
 
-        <div class="navigation">
-          <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
-            <nav>
-              <ul class="nav navbar-nav navbar-right">
-                <li class="current"><a href="#intro">Home</a></li>
-                <li><a href="#about">About</a></li>
-                <li><a href="#works">Works</a></li>
-                <li><a href="#contact">Contact</a></li>
-              </ul>
-            </nav>
-          </div>
-          <!-- /.navbar-collapse -->
-        </div>
+                <li><a href="pages/install-setup-and-code.html" class="list-group-item"><i class="fa fa-diamond" aria-hidden="true"></i> Install, Setup, Code &#x2606;</a></li>
 
-      </div>
-    </div>
+                 
+                 <li><a href="pages/interactive-mode-programming.html" class="list-group-item"><i class="fa fa-arrows-h" aria-hidden="true"></i>Programming modes &#x1F313;</a></li>
+                 
 
-  </header>
-  <!-- section intro -->
-  <section id="intro">
-    <ul id="slippry-slider">
-      <li>
-        <a href="#slide1"><img src="assets/img/slide/1.jpg" alt="Welcome to Groovin!"></a>
-      </li>
-      <li>
-        <a href="#slide2"><img src="assets/img/slide/2.jpg"  alt="This is an awesome bootstrap template"></a>
-      </li>
-      <li>
-        <a href="#slide3"><img src="assets/img/slide/3.jpg" alt="Check it out, you are going to <span class='red'>♥</span> it :)"></a>
-      </li>
-    </ul>
-  </section>
-  <!-- end intro -->
-  <!-- Section about -->
-  <section id="about" class="section">
-    <div class="container">
-      <div class="row">
-        <div class="col-md-8 col-md-offset-2">
-          <div class="heading">
-            <h3><span>About us</span></h3>
-          </div>
-          <div class="sub-heading">
-            <p>
-              Creating a visual language around the beliefs of the brands we work with.
-            </p>
-          </div>
-        </div>
-      </div>
-      <div class="row">
-        <div class="col-md-3">
-          <div class="team-box">
-            <img src="assets/img/dummies/team1.jpg" alt="" class="img-responsive" />
-            <div class="roles">
-              <h5><strong>Baby Stewards Jr</strong></h5>
-              <p>
-                CEO - Founder
-              </p>
-              <ul class="social-profile">
-                <li><a href="#"><i class="fa fa-facebook fa-lg"></i></a></li>
-                <li><a href="#"><i class="fa fa-twitter fa-lg"></i></a></li>
-                <li><a href="#"><i class="fa fa-dribbble fa-lg"></i></a></li>
-              </ul>
-            </div>
-          </div>
-        </div>
-        <div class="col-md-3">
-          <div class="team-box">
-            <img src="assets/img/dummies/team2.jpg" alt="" class="img-responsive" />
-            <div class="roles">
-              <h5><strong>Tommy Kreunichev</strong></h5>
-              <p>
-                Lead designer
-              </p>
-              <ul class="social-profile">
-                <li><a href="#"><i class="fa fa-facebook fa-lg"></i></a></li>
-                <li><a href="#"><i class="fa fa-twitter fa-lg"></i></a></li>
-                <li><a href="#"><i class="fa fa-dribbble fa-lg"></i></a></li>
-              </ul>
-            </div>
-          </div>
-        </div>
-        <div class="col-md-3">
-          <div class="team-box">
-            <img src="assets/img/dummies/team3.jpg" alt="" class="img-responsive" />
-            <div class="roles">
-              <h5><strong>Moriella Maccini</strong></h5>
-              <p>
-                Customer support
-              </p>
-              <ul class="social-profile">
-                <li><a href="#"><i class="fa fa-facebook fa-lg"></i></a></li>
-                <li><a href="#"><i class="fa fa-twitter fa-lg"></i></a></li>
-                <li><a href="#"><i class="fa fa-dribbble fa-lg"></i></a></li>
-              </ul>
-            </div>
-          </div>
-        </div>
-        <div class="col-md-3">
-          <div class="team-box">
-            <img src="assets/img/dummies/team4.jpg" alt="" class="img-responsive" />
-            <div class="roles">
-              <h5><strong>Brian James Scoothie</strong></h5>
-              <p>
-                Coffee maker
-              </p>
-              <ul class="social-profile">
-                <li><a href="#"><i class="fa fa-facebook fa-lg"></i></a></li>
-                <li><a href="#"><i class="fa fa-twitter fa-lg"></i></a></li>
-                <li><a href="#"><i class="fa fa-dribbble fa-lg"></i></a></li>
-              </ul>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
-  <!-- end section about -->
-  <!-- section works -->
-  <section id="works" class="section gray">
-    <div class="container">
-      <div class="row">
-        <div class="col-md-8 col-md-offset-2">
-          <div class="heading">
-            <h3><span>Recent works</span></h3>
-          </div>
-          <div class="sub-heading">
-            <p>
-              We have a history of doing what our name implies, creating a visual language around the beliefs of the brands we work with.
-            </p>
-          </div>
-        </div>
-      </div>
-      <div class="row">
-        <div class="col-md-12">
-          <ul class="grid effect" id="grid">
-            <li>
-              <a class="fancybox" data-fancybox-group="gallery" title="Portfolio name" href="assets/img/portfolio/1.jpg">
-								<img src="assets/img/portfolio/1.jpg" alt="" />
-							</a>
-            </li>
-            <li><a href="assets/img/portfolio/2.jpg" class="fancybox" data-fancybox-group="gallery" title="Portfolio name"><img src="assets/img/portfolio/2.jpg" alt="" /></a></li>
-            <li><a href="assets/img/portfolio/3.jpg" class="fancybox" data-fancybox-group="gallery" title="Portfolio name"><img src="assets/img/portfolio/3.jpg" alt="" /></a></li>
-            <li><a href="assets/img/portfolio/4.jpg" class="fancybox" data-fancybox-group="gallery" title="Portfolio name"><img src="assets/img/portfolio/4.jpg" alt="" /></a></li>
-            <li><a href="assets/img/portfolio/5.jpg" class="fancybox" data-fancybox-group="gallery" title="Portfolio name"><img src="assets/img/portfolio/5.jpg" alt="" /></a></li>
-            <li><a href="assets/img/portfolio/6.jpg" class="fancybox" data-fancybox-group="gallery" title="Portfolio name"><img src="assets/img/portfolio/6.jpg" alt="" /></a></li>
-            <li><a href="assets/img/portfolio/7.jpg" class="fancybox" data-fancybox-group="gallery" title="Portfolio name"><img src="assets/img/portfolio/7.jpg" alt="" /></a></li>
-            <li><a href="assets/img/portfolio/8.jpg" class="fancybox" data-fancybox-group="gallery" title="Portfolio name"><img src="assets/img/portfolio/8.jpg" alt="" /></a></li>
-            <li><a href="assets/img/portfolio/9.jpg" class="fancybox" data-fancybox-group="gallery" title="Portfolio name"><img src="assets/img/portfolio/9.jpg" alt="" /></a></li>
-            <li><a href="assets/img/portfolio/10.jpg" class="fancybox" data-fancybox-group="gallery" title="Portfolio name"><img src="assets/img/portfolio/10.jpg" alt="" /></a></li>
-            <li><a href="assets/img/portfolio/11.jpg" class="fancybox" data-fancybox-group="gallery" title="Portfolio name"><img src="assets/img/portfolio/11.jpg" alt="" /></a></li>
-            <li><a href="assets/img/portfolio/12.jpg" class="fancybox" data-fancybox-group="gallery" title="Portfolio name"><img src="assets/img/portfolio/12.jpg" alt="" /></a></li>
-            <li><a href="assets/img/portfolio/13.jpg" class="fancybox" data-fancybox-group="gallery" title="Portfolio name"><img src="assets/img/portfolio/13.jpg" alt="" /></a></li>
-            <li><a href="assets/img/portfolio/14.jpg" class="fancybox" data-fancybox-group="gallery" title="Portfolio name"><img src="assets/img/portfolio/14.jpg" alt="" /></a></li>
+                <li><a href="pages/variables.html" class="list-group-item">&#x1F6bf; IO KVC &#x1F40b;</a></li>
+                
+                 <li><a href="pages/multiline-statement.hmtl" class="list-group-item">12. Multiline statement</a></li>
+                 <li><a href="pages/quotation.html" class="list-group-item">13. Quotation</a></li>
+                 <li><a href="pages/indentation.html" class="list-group-item">5. Indentation</a></li>
+                 <li><a href="pages/what-is-suite.html" class="list-group-item">14. Suite</a></li>
+                 <li><a href="pages/writing-mulilines-in-single-line.html" class="list-group-item">15. Writing multiple statements in a single line</a></li>
+                 <li><a href="pages/numbers.html" class="list-group-item">16. Numbers</a></li>
+                 <li><a href="pages/string.html" class="list-group-item">17. String</a></li>
+                 <li><a href="pages/list.html" class="list-group-item">18. List</a></li>
+                 <li><a href="pages/tuple.html" class="list-group-item">19. Tuple</a></li>
+                 <li><a href="pages/dictionary.html" class="list-group-item">20. Dictionary</a></li>
+                 <li><a href="pages/sets.html" class="list-group-item">21. Set</a></li>
+                 <li><a href="pages/map.html" class="list-group-item">22. Map</a></li>
+                 <li><a href="pages/if-else.html" class="list-group-item">23. Decision making</a></li>
+                 <li><a href="pages/loops.html" class="list-group-item">24. Loops</a></li>
+                 <li><a href="pages/functions.html" class="list-group-item">25. Functions</a></li>
+                 <li><a href="classes.html" class="list-group-item">26. Class</a></li>
+                 <li><a href="file-handling.html" class="list-group-item">27. File handling</a></li>
+                 <li><a href="pages/exception-handling.html" class="list-group-item">28. Exception handling</a></li>
+                 <li><a href="pages/date-and-time.html" class="list-group-item">29. Date &amp; time</a></li>
+                 <li><a href="pages/working-with-files.html" class="list-group-item">30. Working with images</a></li>
           </ul>
         </div>
       </div>
     </div>
-  </section>
-  <!-- section works -->
-  <!-- section contact -->
-  <section id="contact" class="section">
-    <div class="container">
-      <div class="row">
-        <div class="col-md-8 col-md-offset-2">
-          <div class="heading">
-            <h3><span>Get in touch</span></h3>
-          </div>
-          <div class="sub-heading">
-            <p>
-              Lorem ipsum dolor sit amet, mutat paulo simul per no, assum fastidii vituperata eam no.
-            </p>
-          </div>
-        </div>
-      </div>
+                
+  </div>
+
+    <div class="col-xs-12 col-sm-10 col-md-10 col-lg-10" id='div_r1c2'><!--r1c2 starts-->
+            <center><h2 class='heading'><i class="fa fa-superpowers" aria-hidden="true"></i> &nbsp;Python - loops</h2></center><br>
+            <!-- <h5 id='h5_try_text' data-toggle='tooltip' title='Practice will make you perfect' data-placement='bottom' >Try to learn as much as possble you can</h5> -->
+            <!-- <img src='img/for_loops_2017_02_04_at_6_38_48_PM.png' alt='for loops' class="img-responsive">
+          -->
+             <p class='p_desc_text'><i class="fa fa-pencil" aria-hidden='true'></i> Loops are useful for executing a statement or a group of statements again &amp; again based the truth value(True/False) of the conditional expression.
+              <pre class='prettyprint' style="background-color:#4e504d;"><!-- #34495E -->
+
+  """
+      created_at       : 04 Feb 2017.
+      updated_at       : 08 Feb 2017.
+      aim of script    : To understand the concept of for loops in python.
+      coded by         : Rishikesh Agrawani.
+      Python version   : 2.7.12
+  """
+
+  for i in range(1,11):       #Printing natural numbers from 1 to 10
+      print i                 #Newline will be automatically appended 
+
+
+  for j in range(5,21):       #Printing numbers from 5 to 20
+      print j
+
+
+  for k in range(2,21,2):     #Printing even numbers between 1 and 21, here 2 denotes the 
+      print k                 #increment in each iteration
+
+
+  for i in range(1,11):       #Printing tables for numbers in range [1,10]
+      for j in range(1,11):   #Nested loop 
+          print i*j,"\t",
+      print "\n"              #For newline
+
+
+  for c in "Rishikesh":       #Printing all characters of string 'Rishikesh' in 1 line, each separated by tab
+      print c,"\t",           
+  print ""                    #For newline
+
+
+  for num in [1,3,7,9,11]:    #Printing all the numbers of list one by one in new lines
+      print num
+
+
+  cities  = ["Bangalore",'Raipur',"Dhamtari",'London']         #Defining list of cities 
+  for city in cities:                                          #Printing all the cities 1 by 1
+      print city
+
+  #Defining a dictionary containing the details, an example to span a line into multiple lines
+  details = {   "name"      : "Grimmy Heldon", \
+                "age"       : 45, \
+                'languages' : ['C','C++','Python','Golang','PHP','Core Java'],\
+                'profession': "Backend Developer", \
+                'is_active' : True,\
+                'fav_num'   : 67+92j
+            }
+  print details    #Printing the dictionary
+
+  for key,value in details.iteritems():     #Printing key &amp; value individually using for loop
+      print key,' => ',value
+
+  digits = [0,1,2,3,4,5,6,7,8,9]            #List of single digit numbers
+  digits_spell = ['Zero', 'One' ,'Two', "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine"] #List of spelling for single digit numbers
+  for digit,digit_spell in zip(digits,digits_spell):        #Iterating 2 lists simultaneously
+      print digit," : ",digit_spell         #0 : Zero, 1 : One, 2 : Two (and so on, in new line)
+<br>
+</pre>
     </div>
+</div><!--row1 closed-->
 
-    <div class="container">
-      <div class="row">
-        <div class="col-md-6">
-          <h4><i class="icon-envelope"></i><strong>Contact form</strong></h4>
-          <p>
-            Want to work with us or just want to say hello? Don't hesitate to get in touch!
-          </p>
-          <!-- start contact form -->
-          <div class="cform" id="contact-form">
-
-
-            <div id="sendmessage">Your message has been sent. Thank you!</div>
-            <div id="errormessage"></div>
-            <form action="" method="post" role="form" class="contactForm">
-              <div class="form-group">
-                <input type="text" name="name" class="form-control" id="name" placeholder="Your Name" data-rule="minlen:4" data-msg="Please enter at least 4 chars" />
-                <div class="validation"></div>
-              </div>
-              <div class="form-group">
-                <input type="email" class="form-control" name="email" id="email" placeholder="Your Email" data-rule="email" data-msg="Please enter a valid email" />
-                <div class="validation"></div>
-              </div>
-              <div class="form-group">
-                <input type="text" class="form-control" name="subject" id="subject" placeholder="Subject" data-rule="minlen:4" data-msg="Please enter at least 8 chars of subject" />
-                <div class="validation"></div>
-              </div>
-              <div class="form-group">
-                <textarea class="form-control" name="message" rows="5" data-rule="required" data-msg="Please write something for us" placeholder="Message"></textarea>
-                <div class="validation"></div>
-              </div>
-
-              <div class="text-center"><button type="submit" class="btn btn-lg btn-theme">Send Message</button></div>
-            </form>
-          </div>
-          <!-- END contact form -->
-        </div>
-        <div class="col-md-6">
-          <h4>Find our location</h4>
-          <p>View from google map</p>
-          <!-- map -->
-          <div id="section-map" class="clearfix">
-            <div id="google-map" data-latitude="40.713732" data-longitude="-74.0092704"></div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
-  <!-- end section contact -->
-  <footer>
-    <div class="verybottom">
-      <div class="container">
-        <div class="row">
-          <div class="col-md-12">
-            <div class="aligncenter">
-              <ul class="social-network social-circle">
-                <li><a href="#" class="icoRss" title="Rss"><i class="fa fa-rss"></i></a></li>
-                <li><a href="#" class="icoFacebook" title="Facebook"><i class="fa fa-facebook"></i></a></li>
-                <li><a href="#" class="icoTwitter" title="Twitter"><i class="fa fa-twitter"></i></a></li>
-                <li><a href="#" class="icoGoogle" title="Google +"><i class="fa fa-google-plus"></i></a></li>
-                <li><a href="#" class="icoLinkedin" title="Linkedin"><i class="fa fa-linkedin"></i></a></li>
-              </ul>
-            </div>
-          </div>
-        </div>
-        <div class="row">
-          <div class="col-md-12">
-            <div class="aligncenter">
-              <p>
-                &copy; Groovin Theme - All right reserved
-              </p>
-              <div class="credits">
-                <!--
-                  All the links in the footer should remain intact. 
-                  You can delete the links only if you purchased the pro version.
-                  Licensing information: https://bootstrapmade.com/license/
-                  Purchase the pro version with working PHP/AJAX contact form: https://bootstrapmade.com/buy/?theme=Groovin
-                -->
-                <a href="https://bootstrapmade.com/">Free Bootstrap Themes</a> by <a href="https://bootstrapmade.com/">BootstrapMade</a>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </footer>
-  <a href="#" class="scrollup"><i class="fa fa-angle-up fa-2x"></i></a>
-  <!-- javascript -->
-  <script src="assets/js/jquery-1.9.1.min.js"></script>
-  <script src="assets/js/jquery.easing.js"></script>
-  <script src="assets/js/classie.js"></script>
-  <script src="assets/js/bootstrap.js"></script>
-  <script src="assets/js/slippry.min.js"></script>
-  <script src="assets/js/nagging-menu.js"></script>
-  <script src="assets/js/jquery.nav.js"></script>
-  <script src="assets/js/jquery.scrollTo.js"></script>
-  <script src="assets/js/jquery.fancybox.pack.js"></script>
-  <script src="assets/js/jquery.fancybox-media.js"></script>
-  <script src="assets/js/masonry.pkgd.min.js"></script>
-  <script src="assets/js/imagesloaded.js"></script>
-  <script src="assets/js/jquery.nicescroll.min.js"></script>
-  <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyB8nW5dvgrbBwGptqHTlEa-erTLtpjVc8w"></script>
-  <script src="assets/js/AnimOnScroll.js"></script>
-  <script>
-    new AnimOnScroll(document.getElementById('grid'), {
-      minDuration: 0.4,
-      maxDuration: 0.7,
-      viewportFactor: 0.2
-    });
-  </script>
-  <script>
-    $(document).ready(function() {
-      $('#slippry-slider').slippry(
-        defaults = {
-          transition: 'vertical',
-          useCSS: true,
-          speed: 5000,
-          pause: 3000,
-          initSingle: false,
-          auto: true,
-          preload: 'visible',
-          pager: false,
-        }
-
-      )
-    });
-  </script>
-
-  <script src="assets/js/custom.js"></script>
-  <script src="contactform/contactform.js"></script>
+</div>  <!--container closed-->
 
 </body>
-
 </html>
