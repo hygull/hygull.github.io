@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+<!-- <script src="https://cdn.rawgit.com/google/code-prettify/master/loader/run_prettify.js?lang=css&amp;skin=sunburst"></script> -->
+<script src="https://cdn.rawgit.com/google/code-prettify/master/loader/run_prettify.js"></script>
+<link rel="stylesheet" type="text/css" href="../../../../css/my-prettyfier-google.css">
+</head>
+<body onload='PR.prettyPrint()'>
+
+<div class="container">
+    <div class="col-md-2 col-xs-12" style="background-color: #d9f2d9;">
+        <center>
+            <img src="https://avatars0.githubusercontent.com/u/23253178?s=460&v=4" class="img img-rounded" width="100%" id='avtar'>
+            <br>
+            <br>
+            <a href='https://rishikesh67.pythonanywhere.com' id='username'>@hygull</a>
+            <h4 id='fullname'>Rishikesh Agrawani</h4>
+            <p id="email">rishikesh0014051992@gmail.com</p>
+            <hr>
+        </center>
+    </div>
+    <div class="col-md-10 col-xs-12">
+        <h1 id='header'>Getting a Series from DataFrame (column 'a') where values are > 100 finnaly coverting it in a list</h1>
+        Problem link on stackoverflow is at <a href="https://stackoverflow.com/questions/51549323/creating-a-list-from-data-frame-of-value-greater-than-a-specific-value/51549720#51549720">https://stackoverflow.com/questions/51549323/creating-a-list-from-data-frame...</a><hr>
+        
+        <a href="#Python2.7" class="tags">#Python2.7</a>,
+        <a href="#pandas" class='tags'>#pandas</a>, <a href="#slicing" class='tags'>#slicing</a>, <a href="#list">#list</a> <a href="#DataFrame" class='tags'>#DataFrame</a>, <a href="#Series">#Series</a>
+        <hr>
+
+    <!-- <pre class='prettyprint'> -->
+    
+Only <code>df[df['a'] > 100].loc[:, 'a']</code> or <code>df[df['a'] > 100].loc[:, 'a'].tolist()</code> is sufficient.
+<br>
+Selecting the rows from column `a` where value is > 100.
+<hr>
+<pre class='prettyprint linenums'>
+    >>> df[df['a'] > 100].loc[:, 'a']
+    4      101
+    302    101
+    Name: a, dtype: int64
+    >>>
+    >>> type(df[df['a'] > 100].loc[:, 'a'])
+    <class 'pandas.core.series.Series'>
+</pre>
+Converting the above Series into list.
+<hr>
+<pre class='prettyprint linenums'>
+    >>> l = df[df['a'] > 100].loc[:, 'a'].tolist()
+    >>> l
+    [101, 101]
+    >>>
+    >>> type(l)
+    <class 'list'>
+    >>>
+</pre>
+
+Let's look at the above code in more detail.
+<hr>
+<pre class='prettyprint linenums'>
+    >>> import numpy as np
+    >>> import pandas as pd
+    >>>
+    >>> arr = [[100, 57, 23], [99, 56, 23],
+    ... [100, 56, 20], [101, 57, 23], [99, 50, 23],
+    ... [99, 51, 29], [101, 57, 22]]
+    >>>
+    >>> columns = [ch for ch in 'abc']
+    >>> indices = [str(n) for n in [1, 2, 3, 4, 300, 301, 302]]
+    >>>
+    >>> df = pd.DataFrame(arr, index=indices, columns=columns)
+    >>> df
+         a   b   c
+    1    100  57  23
+    2     99  56  23
+    3    100  56  20
+    4    101  57  23
+    300   99  50  23
+    301   99  51  29
+    302  101  57  22
+    >>>
+    >>> df['a'] > 100
+    1      False
+    2      False
+    3      False
+    4       True
+    300    False
+    301    False
+    302     True
+    Name: a, dtype: bool
+    >>>
+    >>> arr2 = df.loc[:,'a']
+    >>> arr2
+    1      100
+    2       99
+    3      100
+    4      101
+    300     99
+    301     99
+    302    101
+    Name: a, dtype: int64
+    >>>
+    >>> arr2 = df[df['a'] > 100]
+    >>> arr2
+         a   b   c
+    4    101  57  23
+    302  101  57  22
+    >>>
+    >>> arr3 = df[df['a'] > 100].loc[:, 'a']
+    >>> arr3
+    4      101
+    302    101
+    Name: a, dtype: int64
+    >>>
+    >>> l = arr3.tolist()
+    >>> l
+    [101, 101]
+    >>>
+        
+    </pre> 
+
+    </div>
+
+</div>
+
+</body>
