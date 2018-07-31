@@ -41,12 +41,17 @@
     <pre class='prettyprint'>
 {'abc': 'cba', 'xyz': 'zyx', '101': '101'} => {'cba': 'abc', 'zyx': 'xyz', '101': '101'}
 
+
 {'0': 0, '1': 1, '2': 2} => {'0': [0], '1': [1], '2': [2]}
+
 
 [{'G': 'M'}, {'U': 'A'}, {'D': 'L'}, {'A': 'I'}, {'L': 'N'}, {'=>': 'I'}] =>
                                         =>  ['GM', 'UA', 'DL', 'AI', 'LN', '=>I']
 
-['P', 'Gudal', 'Q', 'MaliniKesh', 'R', 'HeMKEsh'] => {'P': 'GUDAL', 'Q': 'MALINIKESH', 'R': 'HEMKESH'}
+
+['P', 'Gudal', 'Q', 'MaliniKesh', 'R', 'HeMKEsh'] => 
+                            => {'P': 'GUDAL', 'Q': 'MALINIKESH', 'R': 'HEMKESH'}
+
 
 [{'abcde': 0}, {'pbcde': 4}, {'tbcde': 2}, {'xyz': 2}] => 
                             {'a': 'a', 'p': 'e', 't': 'c', 'x': 'z'}
