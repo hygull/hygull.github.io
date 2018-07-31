@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+<!-- <script src="https://cdn.rawgit.com/google/code-prettify/master/loader/run_prettify.js?lang=css&amp;skin=sunburst"></script> -->
+<script src="https://cdn.rawgit.com/google/code-prettify/master/loader/run_prettify.js"></script>
+<link rel="stylesheet" type="text/css" href="../../../../../../css/my-prettyfier-google.css">
+</head>
+<body onload='PR.prettyPrint()'>
+
+<div class="container">
+    <div class="col-md-2 col-xs-12" style="background-color: #d9f2d9;">
+        <center>
+            <img src="https://avatars0.githubusercontent.com/u/23253178?s=460&v=4" class="img img-rounded" width="100%" id='avtar'>
+            <br>
+            <br>
+            <a href='https://rishikesh67.pythonanywhere.com' id='username'>@hygull</a>
+            <h4 id='fullname'>Rishikesh Agrawani</h4>
+            <p id="email">rishikesh0014051992@gmail.com</p>
+            <hr>
+
+            1. <a href="https://hygull.github.io/codes/python2.7/advanced/pandas/DataFrame-Series-List.html">List/Dictionary comprehension, List, Dictionary, String...</a>
+        </center>
+    </div>
+    <div class="col-md-10 col-xs-12">
+    <center>
+        <h1 id='header'>Pandas DataFrame, reading/writing on JSON file</h1>
+        <a href="#Python2.7" class="tags">#Python2.7</a>,
+        <a href="#list" class='tags'>List</a>, <a href="#list-comprehension" class='tags'>#list-comprehension</a>, <a href="#dictionary comprehension" class='tags'>#dictionary comprehension</a>
+        <hr>
+    </center>
+    <!-- <pre class='prettyprint'> -->
+    Please have a look at the below problems.<br>
+<hr>
+    <h3>PROBLEM 1:</h3>
+    Note: You have convert <code>dict1/list1</code> to <code>dict2/list2</code> i.e. <code>dict1/list1 => dict2/list2</code> using dictionary/list comprehension.
+    <hr>
+    <pre class='prettyprint'>
+{'abc': 'cba', 'xyz': 'zyx', '101': '101'} => {'cba': 'abc', 'zyx': 'xyz', '101': '101'}
+
+{'0': 0, '1': 1, '2': 2} => {'0': [0], '1': [1], '2': [2]}
+
+[{'G': 'M'}, {'U': 'A'}, {'D': 'L'}, {'A': 'I'}, {'L': 'N'}, {'=>': 'I'}] => ['GM', 'UA', 'DL', 'AI', 'LN', '=>I']
+
+['P', 'Gudal', 'Q', 'MaliniKesh', 'R', 'HeMKEsh'] => {'P': 'GUDAL', 'Q': 'MALINIKESH', 'R': 'HEMKESH'}
+
+[{'abcde': 0}, {'pbcde': 4}, {'tbcde': 2}, {'xyz': 2}] => {'a': 'a', 'p': 'e', 't': 'c', 'x': 'z'}
+    </pre> 
+
+
+<hr>
+
+    <h3>PROBLEM 2:</h3>
+    Note: You have to use dictionary comprehension in each of the problem. Dictionary is unordered so order of elements of output dictionary does not matter.
+    <hr>
+    <pre class='prettyprint'>
+'ABCD' => {'a': 1, 'b': 22, 'c': 333, 'd': 4444}
+
+'abcd' => {'A': 1, 'B': 22, 'D': 333, 'D': 4444}
+
+[65, 67, 68, 69] => {'A': 'aaaa', 'B': 'bbb', 'C': 'cc', 'D': 'd'}
+
+    </pre> 
+
+
+<hr>
+    </div>
+
+
+</div>
+
+</body>
