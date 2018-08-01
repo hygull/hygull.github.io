@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" type="image/png" href="../../../../../../img/Ball_dubai.jpg">
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+<!-- <script src="https://cdn.rawgit.com/google/code-prettify/master/loader/run_prettify.js?lang=css&amp;skin=sunburst"></script> -->
+<script src="https://cdn.rawgit.com/google/code-prettify/master/loader/run_prettify.js"></script>
+<link rel="stylesheet" type="text/css" href="../../../../../../css/my-prettyfier-google.css">
+</head>
+<body onload='PR.prettyPrint()'>
+
+<div class="container">
+    <div class="col-md-2 col-xs-12" style="background-color: #d9f2d9;">
+        <center>
+            <img src="https://avatars0.githubusercontent.com/u/23253178?s=460&v=4" class="img img-rounded" width="100%" id='avtar'>
+            <br>
+            <br>
+            <a href='https://rishikesh67.pythonanywhere.com' id='username'>@hygull</a>
+            <h4 id='fullname'>Rishikesh Agrawani</h4>
+            <p id="email">rishikesh0014051992@gmail.com</p>
+            <p id='profession'>Python developer (Senior)</p>
+            <hr>
+
+
+            <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSHjnfT72FlcfCkoScoGy1xr4jx69tCxdBsC3fF6XUfTYxZ8D9hUQ" class="img img-rounded" width="100%" id='avtar'>
+            <br>
+            <br>
+            <a href='#' id='username'>@gudal</a>
+            <h4 id='fullname'>Gudal Sharma</h4>
+            <p id="email">gudal@sjainventures.com</p>
+            <p id='profession'>Python developer (Junior)</p>
+            <hr>
+
+            1. <a href="https://hygull.github.io/codes/python2.7/advanced/pandas/DataFrame-Series-List.html">List/Dictionary comprehension, List, Dictionary, String...</a>
+            <hr>
+        </center>
+    </div>
+    <div class="col-md-10 col-xs-12">
+    <center>
+        <h1 id='header'>Dictionary, List, file handling</h1>
+        <a href="#Python2.7" class="tags">#Python2.7</a>,
+        <a href="#list" class='tags'>List</a>, <a href="#dictionary" class='tags'>#dictionary</a>, <a href="#file-handling" class='tags'>#file-handling</a>, <a href="#re" class="tags">re</a>
+        <hr>
+    </center>
+    <!-- <pre class='prettyprint'> -->
+    Please have a look at the below problems.<br>
+<hr>
+    <h3>PROBLEM 1:</h3>
+    
+    <hr>
+    <pre class='prettyprint'>
+          {
+            'full_name': 'Red one',
+            'age': 26,
+            'max_salary': 30000,
+            'is_active': True,
+            'profile_created_on': '29 July 2018'
+          }
+                    ||
+                    ||
+                    \/
+          {
+            'Full Name': 'Red one',
+            'Age': 26,
+            'Max Salary': 30000,
+            'Is Active': True,
+            'Profile Created On': '29 July 2018'
+          }
+</pre>
+<br>
+<pre class="prettyprint">
+    'D:\\Rishikesh\\Testing\\TzLatex\\test_file4\\Latex-Table-31-Jul-2018-15-57-44.pdf'
+                    ||
+                    ||
+                    \/
+    '/D/Rishikesh/Testing/TzLatex/test_file4/Latex-Table-31-Jul-2018-15-57-44.pdf'
+</pre>
+<br>
+<pre class="prettyprint"> 
+    {'2018-July-28': 29, '2017-Aug-30': 7, '2018-Sep-25': 6, '2019-Oct-24': 10}
+                    ||
+                    ||
+                    \/
+    {'28/July/2018': 30, '30/Aug/2017': 8, '25/Sep/2018': 7, '24/Oct/2019': 11}
+</pre>
+<br>
+
+<pre class="prettyprint">
+    [{'Hello'}, {'Hello': 'Google.'}, {'How'}, {'are': 'you?'}]
+                    ||
+                    ||
+                    \/
+    'Hello Hello Google. How are you?'
+</pre> 
+
+
+<hr>
+
+    <h3>PROBLEM 2:</h3><br>
+    <strong>Note:</strong> You have to use the concept of <code>file handling</code>.
+   <br><br>
+
+    <p>Let us assume you have the below contents in a file called <code>Data.txt</code></p>
+    <pre class='prettyprint'>
+'ABCD' => {'a': 1, 'b': 22, 'c': 333, 'd': 4444}
+'abcd' => {'A': 1, 'B': 22, 'C': 333, 'D': 4444}
+[65, 67, 68, 69] => {'A': 'aaaa', 'B': 'bbb', 'C': 'cc', 'D': 'd'}
+    </pre> 
+    <br>
+    <p>Write a program to read the above file and store all the details in a list so that after storing data into list, it should look something like below.</p>
+
+    <pre class="prettyprint">
+[
+    'ABCD',
+    [('a', 1), ('b', 22), ('c', 333), ('d', 4444)],
+    'abcd',
+    [('A', 1), ('B', 22), ('C', 333), ('D', 4444)],
+    [65, 67, 68, 69],
+    [('A', 'aaaa'), ('B', 'bbb'), ('C', 'cc'), ('D', 'd')]
+]   
+    </pre>
+<hr>
+<!--Problem 3-->
+    <h3>PROBLEM 3:</h3><br>
+    <strong>Note:</strong> You have to use the concept of <code>file handling</code>. This is the real time simple problem that I already coded in <strong>Dubai</strong> on 31 July 2018.
+   <br><br>
+
+    <p>Let us assume you have the below contents in a file called <code>Intro.txt</code></p>
+    <pre class='prettyprint'>
+Hello Dear,
+How are you?</pre> 
+    <br>
+    <p>Write a program to create the 27 files with the above content. The name of files will start from <code>05.html</code> and go upto <code>31.html</code> so that if someone opens the folder, he/she should see the files like below.</p>
+
+    <pre class="prettyprint">
+05.html
+06.html
+07.html
+...
+...
+10.html
+...
+...
+31.html</pre>
+<hr>
+    </div>
+
+
+</div>
+
+</body>
