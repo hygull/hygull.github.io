@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" type="image/png" href="../../../img/Ball_dubai.jpg">
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+<!-- <script src="https://cdn.rawgit.com/google/code-prettify/master/loader/run_prettify.js?lang=css&amp;skin=sunburst"></script> -->
+<script src="https://cdn.rawgit.com/google/code-prettify/master/loader/run_prettify.js"></script>
+<link rel="stylesheet" type="text/css" href="../../../css/my-prettyfier-google.css">
+</head>
+<body onload='PR.prettyPrint()'>
+
+<div class="container">
+    <div class="col-md-2 col-xs-12" style="background-color: #d9f2d9;">
+        <center>
+            <img src="https://avatars0.githubusercontent.com/u/23253178?s=460&v=4" class="img img-rounded" width="100%" id='avtar'>
+            <br>
+            <br>
+            <a href='https://rishikesh67.pythonanywhere.com' id='username'>@hygull</a>
+            <h4 id='fullname'>Rishikesh Agrawani</h4>
+            <p id="email">rishikesh0014051992@gmail.com</p>
+            <p id='profession'>Python developer (Senior)</p>
+            <hr>
+
+
+            <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSHjnfT72FlcfCkoScoGy1xr4jx69tCxdBsC3fF6XUfTYxZ8D9hUQ" class="img img-rounded" width="100%" id='avtar'>
+            <br>
+            <br>
+            <a href='#' id='username'>@gudal</a>
+            <h4 id='fullname'>Gudal Sharma</h4>
+            <p id="email">gudal@sjainventures.com</p>
+            <p id='profession'>Python developer (Junior)</p>
+            <hr>
+            1. <a href="https://hygull.github.io/codes/python2.7/advanced/pandas/DataFrame-Series-List.html">DataFrame, Series, List, pandas, Slicing...</a>
+            <hr>
+        </center>
+    </div>
+    <div class="col-md-10 col-xs-12">
+    <center>
+        <h1 id='header'>Python - operator overlaoding</h1>
+        <a href="#Python2.7" class="tags">#Python2.7</a>,
+        <a href="#operator-overloading" class='tags'>#opeartor-overloading</a>
+        <hr>
+    </center>
+    <!-- <pre class='prettyprint'> -->
+    Please have a look at the problem at <a href="https://stackoverflow.com/questions/51625861/concat-list-and-string-in-python">https://stackoverflow.com/questions/51625861/concat-list-and-string-in-python</a>.<br>
+<hr>
+    <strong>Note:</strong> You have to use operator overloading.
+    <hr>
+    <pre class='prettyprint'>
+<code>
+>>> class MyList(list):
+...     def __add__(self, string):
+...         self = list(self) + list(string)
+...         return self
+...
+>>> l = MyList([9, 5, 6, 3])
+>>> l + 'hello'
+[9, 5, 6, 3, 'h', 'e', 'l', 'l', 'o']
+>>>
+>>> l2 = l + 'Python'
+>>> l2
+[9, 5, 6, 3, 'P', 'y', 't', 'h', 'o', 'n']
+>>>
+>>> type(l2)
+<type 'list'>
+>>>
+</code></pre> 
+<hr>
+    </div>
+
+
+</div>
+
+</body>
