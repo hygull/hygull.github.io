@@ -1,3 +1,9 @@
+#exp {
+	color: gray;
+	font-weight: bold;
+	font-family: tahoma;
+}
+
 pre.prettyprint {
     font-size: 18px;
     font-family: consolas;

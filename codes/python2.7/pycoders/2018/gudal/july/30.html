@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" type="image/png" href="../../../../../../img/Ball_dubai.jpg">
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+<!-- <script src="https://cdn.rawgit.com/google/code-prettify/master/loader/run_prettify.js?lang=css&amp;skin=sunburst"></script> -->
+<script src="https://cdn.rawgit.com/google/code-prettify/master/loader/run_prettify.js"></script>
+<link rel="stylesheet" type="text/css" href="../../../../../../css/my-prettyfier-google.css">
+
+<!--Clipboard-->
+<script src="../../../../../../js/my_funcs.js"></script>
+<link rel="stylesheet" type="text/css" href="../../../../../../css/clipboard.css">
+
+</head>
+<body onload='PR.prettyPrint()'>
+
+<div class="container">
+    <div class="col-md-2 col-xs-4 col-lg-2 col-sm-2" style="background-color: #d9f2d9;">
+        <center>
+            <br>
+            <p id='exp'>By experience (DESC)</p>
+            <br>
+            <img src="../../../../../../img/logo-code-girl-300x300.jpg" class="img img-rounded" width="100%" id='avtar'>
+            <br>
+            <br>
+            <a href='#' id='username'>@niyati</a>
+            <h4 id='fullname'>Niyati Jain</h4>
+            <p id="email">niyati@sjainventures.com</p>
+            <p id='profession'>Python developer (Junior)</p>
+            <hr>
+
+            <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSHjnfT72FlcfCkoScoGy1xr4jx69tCxdBsC3fF6XUfTYxZ8D9hUQ" class="img img-rounded" width="100%" id='avtar'>
+            <br>
+            <br>
+            <a href='#' id='username'>@gudal</a>
+            <h4 id='fullname'>Gudal Sharma</h4>
+            <p id="email">gudal@sjainventures.com</p>
+            <p id='profession'>Python developer (Junior)</p>
+            <hr>
+
+            <img src="https://avatars0.githubusercontent.com/u/23253178?s=460&v=4" class="img img-rounded" width="100%" id='avtar'>
+            <br>
+            <br>
+            <a href='https://rishikesh67.pythonanywhere.com' id='username'>@hygull</a>
+            <h4 id='fullname'>Rishikesh Agrawani</h4>
+            <p id="email">rishikesh0014051992@gmail.com</p>
+            <p id='profession'>Python developer (Senior)</p>
+            <hr>
+
+
+            
+
+            
+
+            1. <a href="https://hygull.github.io/codes/python2.7/advanced/pandas/DataFrame-Series-List.html">List/Dictionary comprehension, List, Dictionary, String...</a>
+            <hr>
+        </center>
+    </div>
+    <div class="col-md-10 col-xs-8 col-lg-10 col-sm-10">
+    <center>
+        <h1 id='header'>Regular expressions, List comprehension</h1>
+        <a href="#Python2.7" class="tags">#Python2.7</a>,
+        <a href="#list" class='tags'>#list</a>, <a href="#list-comprehension" class='tags'>#list-comprehension</a>, <a href="#regular-expression" class='tags'>#regular-expression</a>, <a href="#re" class="tags">re</a>
+        <hr>
+    </center>
+    <!-- <pre class='prettyprint'> -->
+    Please have a look at the below problems.<br>
+<hr>
+    <h3>PROBLEM 1:</h3>
+    <strong>Note:</strong>You have to only use <code>re</code> module to accomplish the below tasks.
+    <hr>
+    <pre class='prettyprint' onclick="copyToClipboard(this.id)" id='pre_code1'>
+    
+    'Great10Chance23For7Job50At10Google' => 'Great Chance For Job At Google 100'
+    </pre>
+<br>
+<pre class="prettyprint" onclick="copyToClipboard(this.id)" id='pre_code2'>
+
+     'Great10Chance23For7Job50At10Google'  
+                    ||
+                    ||
+                    \/
+    [['Great', 'Chance', 'For', 'Job', 'At', 'Google'], [10, 50, 7, 23, 10]]   
+
+</pre>
+<br>
+<pre class="prettyprint" onclick="copyToClipboard(this.id)" id='pre_code3'> 
+    'AthisBCisTIGERveryNXXXveryYYYniceONLYchanceUSEtoSMALLlearnCASEsomethingLETTERS'
+                    ||
+                    ||
+                    \/
+    ['this', 'is', 'very', 'very', 'nice', 'chance', 'to', 'learn', 'something']
+
+
+</pre>
+<br>
+
+<pre class="prettyprint" onclick="copyToClipboard(this.id)" id="pre_code4">
+
+'Xes, I like Xellow dog. WhX Xou are not going Xoung man? Gudal and NiXati are coders.'
+                    ||
+                    ||
+                    \/
+'yes, I like yellow dog. Why you are not going young man? gudal and Niyati are coders.'    
+
+
+</pre> 
+
+
+<hr>
+
+    <h3>PROBLEM 2:</h3><br>
+    <strong>Note:</strong> You have to use the concept of <code>list comprehension</code> and <code>regular expression</code>.
+   <br><br>
+
+    <p>Try to use <code>re.sub()</code>, <code>re.finditer()</code>, <code>re.split()</code>, <code>re.compile()</code>, <code>re.match()</code> etc.</p>
+    <!-- <pre class='prettyprint' onclick="copyToClipboard(this.id, 'myTooltip1')" id="pre_code5" onmouseout="outFunc('myTooltip1')"> -->
+    <pre class='prettyprint'>
+     
+    '12tigers9dogs21dcuks78pigs-went-to-heaven.'
+                    ||
+                    ||
+                    \/
+    [('12', 'tigers'), ('9', 'dogs'), ('21', 'ducks'), ('78', 'pigs-went-to-heaven')]
+    </pre>
+    <!-- <span class="tooltiptext" id="myTooltip1"></span> -->
+
+    <br>
+    <p>Only use <code>re.finditer()</code> to accomplish the below task.</p>
+
+    <pre class="prettyprint" onclick="copyToClipboard(this.id)" id='pre_code6'>
+
+    'Hello 30 Google I am of 40 yet please 9 forgive me 8 to 10 for 2 hours' 
+                    ||
+                    ||
+                    \/
+    {
+        'integers': [30, 40, 9, 8, 10, 2],
+        'words': [
+            'Hello', 
+            'Google,', 
+            'I', 
+            'am', 
+            'of', 
+            'yet', 
+            'please', 
+            'forgive', 
+            'me', 
+            'to', 
+            'for', 
+            'hours' 
+        ],
+        'sum': 99,
+        'sentence': 'Hello Google I am of yet please forgive me to for hours'
+    }
+    </pre>
+<hr>
+<!--Problem 3-->
+<!--    <h3>PROBLEM 3:</h3><br>
+    <strong>Note:</strong> You have to use the concept of <code>file handling</code>. This is the real time simple problem that I already coded in <strong>Dubai</strong> on 31 July 2018.
+   <br><br>
+
+    <p>Let us assume you have the below contents in a file called <code>Intro.txt</code></p>
+    <pre class='prettyprint'>
+Hello Dear,
+How are you?</pre> 
+    <br>
+    <p>Write a program to create the 27 files with the above content. The name of files will start from <code>05.html</code> and go upto <code>31.html</code> so that if someone opens the folder, he/she should see the files like below.</p>
+
+    <pre class="prettyprint">
+05.html
+06.html
+07.html
+...
+...
+10.html
+...
+...
+31.html</pre>
+<hr>-->
+    </div>
+
+
+</div>
+
+</body>
