@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" type="image/png" href="../../../../../../img/Ball_dubai.jpg">
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+<!-- <script src="https://cdn.rawgit.com/google/code-prettify/master/loader/run_prettify.js?lang=css&amp;skin=sunburst"></script> -->
+<script src="https://cdn.rawgit.com/google/code-prettify/master/loader/run_prettify.js"></script>
+<link rel="stylesheet" type="text/css" href="../../../../../../css/my-prettyfier-google.css">
+
+<!--Clipboard-->
+<script src="../../../../../../js/my_funcs.js"></script>
+<link rel="stylesheet" type="text/css" href="../../../../../../css/clipboard.css">
+
+</head>
+<body onload='PR.prettyPrint()'>
+
+<div class="container">
+    <div class="col-md-2 col-xs-4 col-lg-2 col-sm-2" style="background-color: #d9f2d9;">
+        <center>
+            <br>
+            <p id='exp'>By experience (DESC)</p>
+            <br>
+            <img src="../../../../../../img/logo-code-girl-300x300.jpg" class="img img-rounded" width="100%" id='avtar'>
+            <br>
+            <br>
+            <a href='#' id='username'>@niyati</a>
+            <h4 id='fullname'>Niyati Jain</h4>
+            <p id="email">niyati@sjainventures.com</p>
+            <p id='profession'>Python developer (Junior)</p>
+            <hr>
+
+            <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSHjnfT72FlcfCkoScoGy1xr4jx69tCxdBsC3fF6XUfTYxZ8D9hUQ" class="img img-rounded" width="100%" id='avtar'>
+            <br>
+            <br>
+            <a href='#' id='username'>@gudal</a>
+            <h4 id='fullname'>Gudal Sharma</h4>
+            <p id="email">gudal@sjainventures.com</p>
+            <p id='profession'>Python developer (Junior)</p>
+            <hr>
+
+            <img src="https://avatars0.githubusercontent.com/u/23253178?s=460&v=4" class="img img-rounded" width="100%" id='avtar'>
+            <br>
+            <br>
+            <a href='https://rishikesh67.pythonanywhere.com' id='username'>@hygull</a>
+            <h4 id='fullname'>Rishikesh Agrawani</h4>
+            <p id="email">rishikesh0014051992@gmail.com</p>
+            <p id='profession'>Python developer (Senior)</p>
+            <hr>
+
+
+            
+
+            
+
+            1. <a href="https://hygull.github.io/codes/python2.7/advanced/pandas/DataFrame-Series-List.html">List/Dictionary comprehension, List, Dictionary, String...</a>
+            <hr>
+        </center>
+    </div>
+    <div class="col-md-10 col-xs-8 col-lg-10 col-sm-10">
+    <center>
+        <h1 id='header'><i class="fa fa-spinner fa-spin" style="font-size:30px;color:darkblue"></i> Lambda expressions</h1>
+        <i class="fa fa-linux" style="font-size:15px;color:blue"></i>
+        <a href="#Python2.7" class="tags">#Python2.7</a>,
+        <a href="#list" class='tags'>#list</a>, <a href="#list-comprehension" class='tags'>#list-comprehension</a>, <a href="#lambda-expression" class='tags'>#lambda-expression</a>
+        <hr>
+    </center>
+    <!-- <pre class='prettyprint'> -->
+    <i class="fa fa-spinner fa-spin" style="font-size:13px;color:green"></i> Please have a look at the below problems.
+    <i class="fa fa-linux" style="font-size:40px;color:green"></i>
+    <i class="fa fa-linux" style="font-size:40px;color:red"></i>
+    <i class="fa fa-linux" style="font-size:40px;color:blue"></i>
+    <i class="fa fa-linux" style="font-size:40px;color:maroon"></i>
+    <i class="fa fa-linux" style="font-size:40px;color:orange"></i>
+    <i class="fa fa-linux" style="font-size:40px;color:skyblue"></i>
+    <br>
+<hr>
+    <h3><i class="fa fa-linux" style="font-size:40px;color:darkblue"></i> PROBLEM 1:</h3>
+    <strong>Note:</strong>You have to only use <code>lambda expressions</code> module to accomplish the below tasks.
+    <hr>
+    <img src="../../../../../../img/vilages.jpeg" width="100%"><hr>
+    <br>
+    <i class="fa fa-slack" style="font-size:48px;color:red"> 1</i>
+    <pre class='prettyprint' onclick="copyToClipboard(this.id)" id='pre_code1'>
+
+    Write a lambda function to get the sum/concatenation of 2 numbers/strings.
+<hr>
+    Eg.
+        add(34, 6)       =>  40
+        add(67.1, 67.9)  =>  135.0
+        add('Hello ', 'Pycoders')  => 'Hello Pycoders' 
+    </pre>
+<br>
+<img src="../../../../../../img/old-village.jpg" width="100%"><hr>
+
+<i class="fa fa-linux" style="font-size:48px;color:green"> 2</i>
+<pre class="prettyprint" onclick="copyToClipboard(this.id)" id='pre_code2'>
+    Write a lambda function which should take 1 parameter of type integer and
+    and retuns a list containing numbers starting from 1 to parameter.
+<hr>
+    Eg.
+        get_list(5)  => [1, 2, 3, 4, 5]
+
+        get_list(9)  => [1, 2, 3, 4, 5, 6, 7, 8, 9]
+
+
+</pre>
+<br>
+
+<img src="../../../../../../img/nice-house.jpg" width="100%"><hr>
+<i class="fa fa-empire" style="font-size:48px;color:red"> 3</i>
+<pre class="prettyprint" onclick="copyToClipboard(this.id)" id='pre_code3'> 
+    Write a pyscript (Python script) which should have a lambda function. 
+ 
+    The lambda function should take 1 paramater of type dictionary.
+
+    Finally the function should return a dictionary with all the keys and values 
+    exchanged.
+
+    Have a look at the below function calls for better information.
+
+    Let's assume you have stored lambda function into a variable named <code>get_new_dict</code>.
+<hr>
+    Eg.
+        d = {'a': 10, 'c': 67, 'd': 1729, 'j': 90}
+        get_new_dict(d)   =>   {10: 'a', 67: 'c', 1729: 'd', 90: 'j'}
+
+
+</pre>
+<br>
+<img src="../../../../../../img/82.jpg" width="100%"><br>
+<i class="fa fa-signing" style="font-size:48px;color:orange"> 4</i>
+<pre class="prettyprint" onclick="copyToClipboard(this.id)" id="pre_code4">
+
+    Write a lambda function that takes a string and returns a list of integers
+    appear in a string. Assume that you've stored lambda function into a variable
+    called <code>get_numbers.</code>
+<hr>
+    Eg.
+        get_numbers('Hello90dear10,I20klp40like30')  =>  [90, 10, 20, 40, 30]
+
+        get_numbers('Finally67is60and6+1')   =>   [67, 60, 6, 1]
+
+
+</pre> 
+
+
+<hr>
+
+    <h3><i class="fa fa-linux" style="font-size:40px;color:darkblue"></i> PROBLEM 2:
+    <i class="fa fa-linux" style="font-size:40px;color:green"></i>
+    <i class="fa fa-linux" style="font-size:40px;color:red"></i>
+    <i class="fa fa-linux" style="font-size:40px;color:blue"></i>
+    <i class="fa fa-linux" style="font-size:40px;color:maroon"></i>
+    <i class="fa fa-linux" style="font-size:40px;color:orange"></i>
+    <i class="fa fa-linux" style="font-size:40px;color:skyblue"></i>
+    </h3><br>
+    <!-- <pre class='prettyprint' onclick="copyToClipboard(this.id, 'myTooltip1')" id="pre_code5" onmouseout="outFunc('myTooltip1')"> -->
+    <img src="../../../../../../img/hd-village.jpg" width="100%"><br><br>
+        <i class="fa fa-angellist" style="font-size:48px;color:maroon"> 5</i>
+    <pre class='prettyprint'>
+
+     Write a lambda function that takes a single parameter of type <code>tuple</code>
+
+     of integers and returns a <code>list</code> of even numbers available in the <code>tuple</code>.
+
+     Assume that you've stored your lambda function in a variable named <b>get_evens</b>.
+     <hr>
+     Eg.
+        get_evens((45, 22, 67, 88, 66, 21, 64, 67, 82))  => [22, 88, 66, 64, 82]
+
+        get_evens((44, 32, 12, 48, 1)) => [44, 32, 12, 48]
+    </pre>
+    <!-- <span class="tooltiptext" id="myTooltip1"></span> -->
+
+    <br>
+<img src="../../../../../../img/hen-village.jpg" width="100%"><br>
+    <br>
+    <i class="fa fa-firefox" style="font-size:48px;color:darkblue"> 6</i>
+
+    <pre class="prettyprint" onclick="copyToClipboard(this.id)" id='pre_code6'>
+
+    Write a function named adder which takes 2 lambda functions as parameter.
+
+    The first parameter(lambda function) takes 2 parameters of type numbers and
+    returns the sum.
+
+    The second parameter(lambda function) takes 2 parameters of type numbers and
+    returns the multiplication.
+
+    The adder() function takes 4 parameters, first 2 are numbers, last 2 are lambda
+    expressions.
+
+    The adder() function should return the sum of results returned by both lambda
+    functions.
+
+    So finally, have a look at the below function calls. Assume that l1, l2 are
+    lambda expressions.
+<hr>
+    Eg.
+        adder(10, 5, l1, l2)   =>   65  {which is ((10+5) + (10*5))}
+
+        adder(5, 8, l1, l2)    =>   53  {which is ((5+8) + (5*8))}
+    </pre>
+<hr>
+<!--Problem 3-->
+<!--    <h3>PROBLEM 3:</h3><br>
+    <strong>Note:</strong> You have to use the concept of <code>file handling</code>. This is the real time simple problem that I already coded in <strong>Dubai</strong> on 31 July 2018.
+   <br><br>
+
+    <p>Let us assume you have the below contents in a file called <code>Intro.txt</code></p>
+    <pre class='prettyprint'>
+Hello Dear,
+How are you?</pre> 
+    <br>
+    <p>Write a program to create the 27 files with the above content. The name of files will start from <code>05.html</code> and go upto <code>31.html</code> so that if someone opens the folder, he/she should see the files like below.</p>
+
+    <pre class="prettyprint">
+05.html
+06.html
+07.html
+...
+...
+10.html
+...
+...
+31.html</pre>
+<hr>-->
+<i class="fa fa-spinner fa-spin" style="font-size:30px;color:darkblue"></i> &raquo; &raquo; 
+    <i class="fa fa-linux" style="font-size:40px;color:green"></i>
+    <i class="fa fa-linux" style="font-size:40px;color:red"></i>
+    <i class="fa fa-linux" style="font-size:40px;color:blue"></i>
+    <i class="fa fa-linux" style="font-size:40px;color:maroon"></i>
+    <i class="fa fa-linux" style="font-size:40px;color:orange"></i>
+    <i class="fa fa-linux" style="font-size:40px;color:skyblue"></i>
+    <hr>
+    </div>
+
+
+</div>
+
+</body>
