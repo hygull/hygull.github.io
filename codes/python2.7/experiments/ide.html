@@ -83,7 +83,7 @@
 				<br>
 				<hr>
 				<!--Python code (Collected from modules)-->
-				<p style="font-family: tahoma; font-weight: bold; color: green">Combined Python Code</p>
+				<h3 style="font-family: tahoma; font-weight: bold; color: green">Combined Python Code</h3>
 				<pre class='prettyprint' id='python_code_collected' style="padding: 15px">
 
 				</pre>
@@ -92,7 +92,7 @@
 			<!-- MATLAB code (Collected from moldules)-->
 			<div class="col-md-12 col-sm-12 col-lg-12 col-xs-12">			
 				<hr>
-				<p style="font-family: tahoma; font-weight: bold; color: green">Combined MATLAB Code</p>
+				<h3 style="font-family: tahoma; font-weight: bold; color: green">Combined MATLAB Code</h3>
 				<pre class="prettyprint" id="matlab_code_collected"  style="padding: 10px">
 
 				</pre>
@@ -145,17 +145,20 @@
 			var count = document.getElementById('modules').childElementCount;
 
 			if(count != 0) {
-				count = count / 2 + 1;
+				count = count / 3 + 1;
 			} else {
 				count = 1;
 			}
-			
+
 			var text = document.createTextNode('' + count + '. ' + language)
 			p.appendChild(text);
+
+			var hr = document.createElement('hr');
 
 			var modules = document.getElementById('modules')
 			modules.appendChild(p)
 			modules.appendChild(textarea)
+			modules.appendChild(hr)
 		}
 
 		function done(id) {
@@ -195,6 +198,8 @@
 	<script>
 		$(document).ready(function(){
 		    $('[data-toggle="tooltip"]').tooltip(); 
+
+		    $('')
 		});
 	</script>
 </body>
