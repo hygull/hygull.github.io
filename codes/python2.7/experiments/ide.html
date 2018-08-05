@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<link rel="icon" type="image/png" href="../../../img/Ball_dubai.jpg">
+	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+	<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+	<link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+
+	<style type="text/css">
+		#ide_name {
+			font-family: tahoma;
+			font-weight: bold;
+		}
+	</style>
+
+	<script src="https://cdn.rawgit.com/google/code-prettify/master/loader/run_prettify.js"></script>
+	<link rel="stylesheet" type="text/css" href="../../../css/my-prettyfier-google.css">
+</head>
+<body>
+	<div class="container">
+		<div class="row">
+			<br>
+			<center>
+<!-- 				<h1 id='ide_name'>
+					<i class="fa fa-spinner fa-spin" style="font-size:40px;color:black"></i>
+					<i class="fa fa-linux" style="font-size:40px;color:maroon"></i>
+				    <i class="fa fa-linux" style="font-size:40px;color:orange"></i>
+				    <i class="fa fa-linux" style="font-size:40px;color:skyblue"></i>
+					Tz IDE     
+					<i class="fa fa-linux" style="font-size:40px;color:red"></i>
+				    <i class="fa fa-linux" style="font-size:40px;color:blue"></i>
+				    <i class="fa fa-linux" style="font-size:40px;color:skyblue"></i>
+				    <i class="fa fa-spinner fa-spin" style="font-size:40px;color:green"></i>
+    			</h1>
+    			<hr> -->
+    			<p>Add <code>MATLAB</code> code, <code>Python</code> code and combine into one to compile and get the PDF.
+    			<hr>
+			</center>
+			<h1>
+		</div>
+
+		<!--Add modules here-->
+		<div class="row text-center" id='modules'>
+				
+		</div>
+		
+		<div class="row">
+			<br>
+			<div  class="col-md-12 col-sm-12 col-lg-12 col-xs-12 text-center">
+				<button class="w3-button w3-xlarge w3-circle w3-black"  onclick="edit(this.id)" id='edit'><i class="fa fa-edit"></i></button>
+
+				<button class="w3-button w3-xlarge w3-circle w3-red w3-card-4" onclick="done(this.id)" id='done'><i class="fa fa-thumbs-up"></i></button>
+
+				<button class="w3-button w3-xlarge w3-circle w3-teal" onclick="add('matlab')" data-toggle="tooltip" title="Add MATLAB Code">+m</button>
+
+				<button class="w3-button w3-xlarge w3-circle w3-teal" onclick="add('python')" data-toggle="tooltip" title="Add Python Code">+p</button>
+				<hr>
+			</div>
+		</div>
+
+		
+
+		<!--Row: Compile button-->
+		<div class="row">
+			<div class="col-md-12 col-sm-12 col-lg-12 col-xs-12 text-center">
+				<button class="btn btn-primary" id='combine' style="padding: 10px; font-size: 15px" onclick="combine()">
+					COMBINE
+				</button>
+				<button class="btn btn-success" id='compile' style="padding: 10px; font-size: 15px" onclick="compile()">
+					COMPILE
+				</button>
+			</div>
+		</div>
+		<!--Compile button ends-->
+
+		<!--Show the collected code-->
+		<div class="row">
+
+			<div class="col-md-12 col-sm-12 col-lg-12 col-xs-12" >
+				<br>
+				<hr>
+				<!--Python code (Collected from modules)-->
+				<p style="font-family: tahoma; font-weight: bold; color: green">Combined Python Code</p>
+				<pre class='prettyprint' id='python_code_collected' style="padding: 15px">
+
+				</pre>
+			</div>
+			
+			<!-- MATLAB code (Collected from moldules)-->
+			<div class="col-md-12 col-sm-12 col-lg-12 col-xs-12">			
+				<hr>
+				<p style="font-family: tahoma; font-weight: bold; color: green">Combined MATLAB Code</p>
+				<pre class="prettyprint" id="matlab_code_collected"  style="padding: 10px">
+
+				</pre>
+			</div>
+		</div>
+	</div>
+
+	<script type="text/javascript">
+		if(!document.getElementById('modules').childElementCount) {
+			document.getElementById('compile').disabled = true
+			document.getElementById('combine').disabled = true
+		}
+
+		function add(language) {
+			// alert(language)
+			if(document.getElementById('compile').disabled == true) {
+				document.getElementById('compile').disabled = false;
+				document.getElementById('combine').disabled = false;
+			}
+
+			var textarea = document.createElement('textarea');
+			textarea.cols = '110';
+			textarea.rows = '5';
+			// var textarea = document.createElement('pre');
+			// textarea.style.height = '50px';
+			// textarea.style.width = '100%';
+			// textarea.contentEditable = true;
+			// textarea.class = 'prettyprint';
+			textarea.style.borderColor = 'blue';
+			textarea.classList.add('prettyprint-' + language)
+			textarea.placeholder = 'Write/Paste your ' + language + ' code here'
+
+			// Creating hr 
+			var p = document.createElement('p')
+			p.style.color = 'maroon'
+			p.style.fontFamily = 'tahoma';
+			p.style.fontSize = '20px';
+			// count
+			var count = document.getElementById('modules').childElementCount;
+
+			if(count != 0) {
+				count = count / 2 + 1;
+			} else {
+				count = 1;
+			}
+			var text = document.createTextNode('' + count + '. ' + language)
+			p.appendChild(text);
+			// textarea.appendChild(p)
+			document.getElementById('modules').appendChild(p)
+
+			document.getElementById('modules').appendChild(textarea)
+		}
+
+		function done(id) {
+			document.getElementById(id).disabled = true;
+		}
+
+		function edit(id) {
+			document.getElementById(id).disabled = false;
+		}
+
+		function combine() {
+			var pythonModules = document.getElementsByClassName('prettyprint-python');
+			var matlabModules = document.getElementsByClassName('prettyprint-matlab');
+
+			console.log(pythonModules)
+			console.log(matlabModules)
+
+			var pythonCode = '';
+			for(pythonModule of pythonModules) {
+				console.log(pythonModule.value);
+				pythonCode += pythonModule.value + '\n\n'; 
+			}
+			console.log(pythonCode);
+
+			var matlabCode = '';
+			for(matlabModule of matlabModules) {
+				console.log(matlabModule.value);
+				matlabCode += matlabModule.value + '\n\n';
+			}
+			console.log(matlabCode);
+
+			document.getElementById('python_code_collected').innerHTML = pythonCode;
+			document.getElementById('matlab_code_collected').innerHTML = matlabCode;
+		}
+	</script>
+
+	<script>
+		$(document).ready(function(){
+		    $('[data-toggle="tooltip"]').tooltip(); 
+		});
+	</script>
+</body>
