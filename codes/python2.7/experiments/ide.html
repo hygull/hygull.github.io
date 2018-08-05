@@ -124,7 +124,18 @@
 			textarea.style.borderColor = 'blue';
 			textarea.classList.add('prettyprint-' + language)
 			textarea.placeholder = 'Write/Paste your ' + language + ' code here'
-
+			textarea.style.paddingLeft = '2px solid green';
+			
+			switch(language) {
+				case 'python':
+					// alert(language)
+					textarea.style.borderLeft = '5px solid green';
+					break;
+				case 'matlab':
+					// alert(language)
+					textarea.style.borderLeft = '5px solid blue';
+					break;
+			}
 			// Creating hr 
 			var p = document.createElement('p')
 			p.style.color = 'maroon'
@@ -138,12 +149,13 @@
 			} else {
 				count = 1;
 			}
+			
 			var text = document.createTextNode('' + count + '. ' + language)
 			p.appendChild(text);
-			// textarea.appendChild(p)
-			document.getElementById('modules').appendChild(p)
 
-			document.getElementById('modules').appendChild(textarea)
+			var modules = document.getElementById('modules')
+			modules.appendChild(p)
+			modules.appendChild(textarea)
 		}
 
 		function done(id) {
