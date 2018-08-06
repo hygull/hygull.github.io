@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<link rel="icon" type="image/png" href="../../../img/Ball_dubai.jpg">
+	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+	<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+	<link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+
+	<style type="text/css">
+		#ide_name {
+			font-family: tahoma;
+			font-weight: bold;
+		}
+	</style>
+
+	<script src="https://cdn.rawgit.com/google/code-prettify/master/loader/run_prettify.js"></script>
+	<link rel="stylesheet" type="text/css" href="../../../css/my-prettyfier-google.css">
+</head>
+<body>
+	<div class="container">
+		<div class="row">
+			<br>
+			<center>
+<!-- 				<h1 id='ide_name'>
+					<i class="fa fa-spinner fa-spin" style="font-size:40px;color:black"></i>
+					<i class="fa fa-linux" style="font-size:40px;color:maroon"></i>
+				    <i class="fa fa-linux" style="font-size:40px;color:orange"></i>
+				    <i class="fa fa-linux" style="font-size:40px;color:skyblue"></i>
+					Tz IDE     
+					<i class="fa fa-linux" style="font-size:40px;color:red"></i>
+				    <i class="fa fa-linux" style="font-size:40px;color:blue"></i>
+				    <i class="fa fa-linux" style="font-size:40px;color:skyblue"></i>
+				    <i class="fa fa-spinner fa-spin" style="font-size:40px;color:green"></i>
+    			</h1>
+    			<hr> -->
+    			<h1 id='ide_name'>Tz IDE</h1>
+    			<p>Add <code>MATLAB</code> code, <code>Python</code> code and combine into one to compile and get the PDF.
+    			<hr>
+			</center>
+			<h1>
+		</div>
+
+		<!--Add modules here-->
+		<div class="row" id='modules'>
+				
+		</div>
+		
+		<div class="row">
+			<br>
+			<div  class="col-md-12 col-sm-12 col-lg-12 col-xs-12 text-center">
+				<button class="w3-button w3-xlarge w3-circle w3-black"  onclick="edit(this.id)" id='edit'><i class="fa fa-edit"></i></button>
+
+				<button class="w3-button w3-xlarge w3-circle w3-red w3-card-4" onclick="done(this.id)" id='done'><i class="fa fa-thumbs-up"></i></button>
+
+				<button class="w3-button w3-xlarge w3-circle w3-teal" onclick="add('matlab')" data-toggle="tooltip" title="Add MATLAB Code">+m</button>
+
+				<button class="w3-button w3-xlarge w3-circle w3-teal" onclick="add('python')" data-toggle="tooltip" title="Add Python Code">+p</button>
+				<hr>
+			</div>
+		</div>
+
+		
+
+		<!--Row: Compile button-->
+		<div class="row">
+			<div class="col-md-12 col-sm-12 col-lg-12 col-xs-12 text-center">
+				<button class="btn btn-primary" id='combine' style="padding: 10px; font-size: 15px" onclick="combine()">
+					COMBINE
+				</button>
+				<button class="btn btn-success" id='compile' style="padding: 10px; font-size: 15px" onclick="compile()">
+					COMPILE
+				</button>
+			</div>
+		</div>
+		<!--Compile button ends-->
+
+		<!--Show the collected code-->
+		<div class="row">
+
+			<div class="col-md-12 col-sm-12 col-lg-12 col-xs-12" >
+				<br>
+				<hr>
+				<!--Python code (Collected from modules)-->
+				<h3 style="font-family: tahoma; font-weight: bold; color: green">Combined Python Code</h3>
+				<pre class='prettyprint' id='python_code_collected' style="padding: 15px">
+
+				</pre>
+			</div>
+			
+			<!-- MATLAB code (Collected from moldules)-->
+			<div class="col-md-12 col-sm-12 col-lg-12 col-xs-12">			
+				<hr>
+				<h3 style="font-family: tahoma; font-weight: bold; color: green">Combined MATLAB Code</h3>
+				<pre class="prettyprint" id="matlab_code_collected"  style="padding: 10px">
+
+				</pre>
+			<hr>
+			</div>
+		</div>
+	</div>
+
+	<script type="text/javascript">
+		if(!document.getElementById('modules').childElementCount) {
+			document.getElementById('compile').disabled = true
+			document.getElementById('combine').disabled = true
+		}
+
+		function add(language) {
+			// alert(language)
+			if(document.getElementById('compile').disabled == true) {
+				document.getElementById('compile').disabled = false;
+				document.getElementById('combine').disabled = false;
+			}
+
+			var textarea = document.createElement('textarea');
+			textarea.cols = '110';
+			textarea.rows = '5';
+			// var textarea = document.createElement('pre');
+			// textarea.style.height = '50px';
+			// textarea.style.width = '100%';
+			// textarea.contentEditable = true;
+			// textarea.class = 'prettyprint';
+			textarea.style.borderColor = 'blue';
+			textarea.classList.add('prettyprint_' + language)
+			textarea.placeholder = 'Write/Paste your ' + language + ' code here'
+			textarea.style.borderLeft = '2px solid green';
+			textarea.style.paddingLeft = '6px'
+			
+			// count
+			var count = document.getElementById('modules').childElementCount;
+			// alert(count)
+			// if(count != 0) {
+				count = count + 1;
+			// } else {
+			// 	count = 1;
+			// }
+
+			switch(language) {
+				case 'python':
+					// alert(language)
+					textarea.style.borderLeft = '5px solid green';
+					textarea.style.borderColor = 'blue'
+					break;
+				case 'matlab':
+					// alert(language)
+					textarea.style.borderLeft = '5px solid blue';
+					textarea.style.borderColor = 'green'
+					break;
+			}
+			textarea.id = language + "_module" + count
+			textarea.style.width = '100%'
+			textarea.onfocusout = function() {
+				var textElem = document.getElementById(textarea.id)
+				console.log(typeof textElem)
+				console.log(textElem)
+				console.log(textarea.id)
+				console.log(textElem.scrollHeight)
+				console.log(textElem.rows)
+
+				var lines = textElem.value.split('\n')
+				var totalLines = lines.length
+
+				console.log(lines)
+				console.log(totalLines)
+
+				if(totalLines > 5) {
+					textElem.rows = totalLines + 1;
+					console.log('Height of element with id ' + textElem.id + ' changed to ' + textElem.rows)
+				} else {
+					console.log('Height of element is less than or equals 5, so height is same')
+				}
+				// textElem.rows= (25 + textElem.scrollHeight) + 'px'
+				// console.log('height set to ' + textElem.scrollHeight)
+				// console.log(textElem)
+			}
+			// Creating hr 
+			var p = document.createElement('p')
+			p.style.color = 'maroon'
+			p.style.fontFamily = 'tahoma';
+			p.style.fontSize = '20px';
+			p.style.fontWeight = 'bold'
+
+			var text = document.createTextNode('' + count + '. ' + language)
+			p.appendChild(text);
+
+			var hr = document.createElement('hr');
+
+			var modules = document.getElementById('modules')
+			// modules.appendChild(p)
+			// modules.appendChild(textarea)
+			// modules.appendChild(hr)
+
+			// Create container (column div)
+			var columnDiv = document.createElement('div');
+			columnDiv.classList.add('col-xs-12', 'col-md-10', 'col-lg-10', 'col-sm-10');
+			columnDiv.appendChild(p);
+			columnDiv.appendChild(textarea);
+			columnDiv.appendChild(hr);
+
+			modules.appendChild(columnDiv);
+		}
+
+		function done(id) {
+			document.getElementById(id).disabled = true;
+		}
+
+		function edit(id) {
+			document.getElementById(id).disabled = false;
+		}
+
+		function combine() {
+			var pythonModules = document.getElementsByClassName('prettyprint_python');
+			var matlabModules = document.getElementsByClassName('prettyprint_matlab');
+
+			console.log(pythonModules)
+			console.log(matlabModules)
+
+			var pythonCode = '';
+			var code;
+			for(pythonModule of pythonModules) {
+				code = pythonModule.value
+				console.log(code);
+				if(code.trim() == '') {
+					pythonModule.style.borderColor = 'red';
+					pythonModule.focus()
+					alert(pythonModule.style.order)
+					break
+				}
+				pythonCode += code + '\n\n'; 
+			}
+			console.log(pythonCode);
+
+			var matlabCode = '';
+			for(matlabModule of matlabModules) {
+				code = matlabModule.value
+				console.log(code);
+
+				if(code.trim() == '') {
+					matlabModule.style.borderColor = 'red';
+					matlabModule.focus()
+					// alert(pythonModule.style.order)
+					break
+				}
+				matlabCode += code + '\n\n';
+			}
+			console.log(matlabCode);
+
+			document.getElementById('python_code_collected').innerHTML = pythonCode;
+			document.getElementById('matlab_code_collected').innerHTML = matlabCode;
+		}
+
+
+		function compile() {
+			// Code to send code to server for compilation and get the link of generated PDF.
+		}
+
+		// Adjust height
+		// function adjustHeight(id) {
+		// 	alert('kivy')
+		// 	o.style.height = (25+o.scrollHeight)+"px";
+		// }
+	</script>
+
+	<script>
+		$(document).ready(function(){
+		    $('[data-toggle="tooltip"]').tooltip(); 
+
+		    $('#python_module1').change(function() {
+		    	alert('ok')
+		    	$(this).css('border-color', 'green')
+		    })
+		});
+	</script>
+</body>

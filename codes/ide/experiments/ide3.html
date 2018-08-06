@@ -22,85 +22,116 @@
 <body>
 	<div class="container">
 		<div class="row">
-			<br>
 			<center>
-<!-- 				<h1 id='ide_name'>
-					<i class="fa fa-spinner fa-spin" style="font-size:40px;color:black"></i>
-					<i class="fa fa-linux" style="font-size:40px;color:maroon"></i>
-				    <i class="fa fa-linux" style="font-size:40px;color:orange"></i>
-				    <i class="fa fa-linux" style="font-size:40px;color:skyblue"></i>
-					Tz IDE     
-					<i class="fa fa-linux" style="font-size:40px;color:red"></i>
-				    <i class="fa fa-linux" style="font-size:40px;color:blue"></i>
-				    <i class="fa fa-linux" style="font-size:40px;color:skyblue"></i>
-				    <i class="fa fa-spinner fa-spin" style="font-size:40px;color:green"></i>
-    			</h1>
-    			<hr> -->
+				<!-- 				
+					<h1 id='ide_name'>
+						<i class="fa fa-spinner fa-spin" style="font-size:40px;color:black"></i>
+						<i class="fa fa-linux" style="font-size:40px;color:maroon"></i>
+					    <i class="fa fa-linux" style="font-size:40px;color:orange"></i>
+					    <i class="fa fa-linux" style="font-size:40px;color:skyblue"></i>
+						Tz IDE     
+						<i class="fa fa-linux" style="font-size:40px;color:red"></i>
+					    <i class="fa fa-linux" style="font-size:40px;color:blue"></i>
+					    <i class="fa fa-linux" style="font-size:40px;color:skyblue"></i>
+					    <i class="fa fa-spinner fa-spin" style="font-size:40px;color:green"></i>
+	    			</h1>
+	    			<hr> 
+	    		-->
     			<h1 id='ide_name'>Tz IDE</h1>
-    			<p>Add <code>MATLAB</code> code, <code>Python</code> code and combine into one to compile and get the PDF.
+    			<!-- <p>Add <code>MATLAB</code> code, <code>Python</code> code and combine into one to compile and get the PDF. -->
     			<hr>
 			</center>
 			<h1>
 		</div>
 
-		<!--Add modules here-->
-		<div class="row" id='modules'>
-				
-		</div>
-		
-		<div class="row">
-			<br>
-			<div  class="col-md-12 col-sm-12 col-lg-12 col-xs-12 text-center">
-				<button class="w3-button w3-xlarge w3-circle w3-black"  onclick="edit(this.id)" id='edit'><i class="fa fa-edit"></i></button>
+		<ul class="nav nav-tabs">
+			<li class="active"><a data-toggle="tab" href="#home">COMPILE TO PDF</a></li>
+			<li><a data-toggle="tab" href="#menu1">GENERATE LATEX TABLE</a></li>
+			<li><a data-toggle="tab" href="#menu2">SHARE</a></li>
+			<li><a data-toggle="tab" href="#menu3">PUBLISH</a></li>
+		</ul>
 
-				<button class="w3-button w3-xlarge w3-circle w3-red w3-card-4" onclick="done(this.id)" id='done'><i class="fa fa-thumbs-up"></i></button>
-
-				<button class="w3-button w3-xlarge w3-circle w3-teal" onclick="add('matlab')" data-toggle="tooltip" title="Add MATLAB Code">+m</button>
-
-				<button class="w3-button w3-xlarge w3-circle w3-teal" onclick="add('python')" data-toggle="tooltip" title="Add Python Code">+p</button>
-				<hr>
-			</div>
-		</div>
-
-		
-
-		<!--Row: Compile button-->
-		<div class="row">
-			<div class="col-md-12 col-sm-12 col-lg-12 col-xs-12 text-center">
-				<button class="btn btn-primary" id='combine' style="padding: 10px; font-size: 15px" onclick="combine()">
-					COMBINE
-				</button>
-				<button class="btn btn-success" id='compile' style="padding: 10px; font-size: 15px" onclick="compile()">
-					COMPILE
-				</button>
-			</div>
-		</div>
-		<!--Compile button ends-->
-
-		<!--Show the collected code-->
-		<div class="row">
-
-			<div class="col-md-12 col-sm-12 col-lg-12 col-xs-12" >
+		<div class="tab-content">
+    		<div id="home" class="tab-pane fade in active">
+				<!--Row: MATLAB, Python code modules starts-->
+				<!--Add modules here-->
 				<br>
-				<hr>
-				<!--Python code (Collected from modules)-->
-				<h3 style="font-family: tahoma; font-weight: bold; color: green">Combined Python Code</h3>
-				<pre class='prettyprint' id='python_code_collected' style="padding: 15px">
+				<div class="row" id='modules'>
+						
+				</div>
+				
+				<div class="row">
+					<br>
+					<div  class="col-md-12 col-sm-12 col-lg-12 col-xs-12 text-center">
+						<button class="w3-button w3-xlarge w3-circle w3-black"  onclick="edit(this.id)" id='edit'><i class="fa fa-edit"></i></button>
 
-				</pre>
-			</div>
-			
-			<!-- MATLAB code (Collected from moldules)-->
-			<div class="col-md-12 col-sm-12 col-lg-12 col-xs-12">			
-				<hr>
-				<h3 style="font-family: tahoma; font-weight: bold; color: green">Combined MATLAB Code</h3>
-				<pre class="prettyprint" id="matlab_code_collected"  style="padding: 10px">
+						<button class="w3-button w3-xlarge w3-circle w3-red w3-card-4" onclick="done(this.id)" id='done'><i class="fa fa-thumbs-up"></i></button>
 
-				</pre>
-			<hr>
-			</div>
+						<button class="w3-button w3-xlarge w3-circle w3-teal" onclick="add('matlab')" data-toggle="tooltip" title="Add MATLAB Code">+m</button>
+
+						<button class="w3-button w3-xlarge w3-circle w3-teal" onclick="add('python')" data-toggle="tooltip" title="Add Python Code">+p</button>
+						<hr>
+					</div>
+				</div>
+
+				
+
+				<!--Row: Compile button-->
+				<div class="row">
+					<div class="col-md-12 col-sm-12 col-lg-12 col-xs-12 text-center">
+						<button class="btn btn-primary" id='combine' style="padding: 10px; font-size: 15px" onclick="combine()">
+							COMBINE
+						</button>
+						<button class="btn btn-success" id='compile' style="padding: 10px; font-size: 15px" onclick="compile()">
+							COMPILE
+						</button>
+					</div>
+				</div>
+				<!--Compile button ends-->
+
+				<!--Show the collected code-->
+				<div class="row">
+
+					<div class="col-md-12 col-sm-12 col-lg-12 col-xs-12" >
+						<br>
+						<hr>
+						<!--Python code (Collected from modules)-->
+						<h3 style="font-family: tahoma; font-weight: bold; color: green">Combined Python Code</h3>
+						<pre class='prettyprint' id='python_code_collected' style="padding: 15px">
+
+						</pre>
+					</div>
+					
+					<!-- MATLAB code (Collected from moldules)-->
+					<div class="col-md-12 col-sm-12 col-lg-12 col-xs-12">			
+						<hr>
+						<h3 style="font-family: tahoma; font-weight: bold; color: green">Combined MATLAB Code</h3>
+						<pre class="prettyprint" id="matlab_code_collected"  style="padding: 10px">
+
+						</pre>
+					<hr>
+					</div>
+				</div>
+				<!--Row: MATLAB, Python code modules ends-->	
+			</div> <!--TAB 1 ends-->
+
+			<div id="menu1" class="tab-pane fade">
+				<h3>Coming Soon</h3>
+				<p>Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.</p>
+			</div> <!--TAB 2 ends-->
+
+			<div id="menu2" class="tab-pane fade">
+				<h3>Coming Soon</h3>
+				<p>Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium, totam rem aperiam.</p>
+			</div>  <!--TAB 3 ends-->
+
+			<div id="menu3" class="tab-pane fade">
+				<h3>Coming Soon</h3>
+				<p>Eaque ipsa quae ab illo inventore veritatis et quasi architecto beatae vitae dicta sunt explicabo.</p>
+			</div>  <!--TAB 4 ends-->
 		</div>
-	</div>
+
+	</div> <!--Container ends-->
 
 	<script type="text/javascript">
 		if(!document.getElementById('modules').childElementCount) {
@@ -151,7 +182,7 @@
 					break;
 			}
 			textarea.id = language + "_module" + count
-
+			textarea.style.width = '100%'
 			textarea.onfocusout = function() {
 				var textElem = document.getElementById(textarea.id)
 				console.log(typeof textElem)

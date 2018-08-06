@@ -24,7 +24,7 @@
 		<div class="row">
 			<br>
 			<center>
-<!-- 				<h1 id='ide_name'>
+				<h1 id='ide_name'>
 					<i class="fa fa-spinner fa-spin" style="font-size:40px;color:black"></i>
 					<i class="fa fa-linux" style="font-size:40px;color:maroon"></i>
 				    <i class="fa fa-linux" style="font-size:40px;color:orange"></i>
@@ -35,7 +35,7 @@
 				    <i class="fa fa-linux" style="font-size:40px;color:skyblue"></i>
 				    <i class="fa fa-spinner fa-spin" style="font-size:40px;color:green"></i>
     			</h1>
-    			<hr> -->
+    			<hr>
     			<h1 id='ide_name'>Tz IDE</h1>
     			<p>Add <code>MATLAB</code> code, <code>Python</code> code and combine into one to compile and get the PDF.
     			<hr>
@@ -115,47 +115,73 @@
 				document.getElementById('combine').disabled = false;
 			}
 
-			var textarea = document.createElement('div');
-			// textarea.cols = '110';
-			// textarea.rows = '5';
+			var textarea = document.createElement('textarea');
+			textarea.cols = '110';
+			textarea.rows = '5';
 			// var textarea = document.createElement('pre');
 			// textarea.style.height = '50px';
 			// textarea.style.width = '100%';
-			// textarea.contentEditable = true;
-			// textarea.style.overflow = 'auto'
 			// textarea.contentEditable = true;
 			// textarea.class = 'prettyprint';
 			textarea.style.borderColor = 'blue';
 			textarea.classList.add('prettyprint_' + language)
 			textarea.placeholder = 'Write/Paste your ' + language + ' code here'
-			textarea.style.paddingLeft = '2px solid green';
+			textarea.style.borderLeft = '2px solid green';
+			textarea.style.paddingLeft = '6px'
 			
 			// count
 			var count = document.getElementById('modules').childElementCount;
-
-			if(count != 0) {
-				count = count / 3 + 1;
-			} else {
-				count = 1;
-			}
+			// alert(count)
+			// if(count != 0) {
+				count = count + 1;
+			// } else {
+			// 	count = 1;
+			// }
 
 			switch(language) {
 				case 'python':
 					// alert(language)
 					textarea.style.borderLeft = '5px solid green';
+					textarea.style.borderColor = 'blue'
 					break;
 				case 'matlab':
 					// alert(language)
 					textarea.style.borderLeft = '5px solid blue';
+					textarea.style.borderColor = 'green'
 					break;
 			}
 			textarea.id = language + "_module" + count
+			textarea.style.width = '100%'
+			textarea.onfocusout = function() {
+				var textElem = document.getElementById(textarea.id)
+				console.log(typeof textElem)
+				console.log(textElem)
+				console.log(textarea.id)
+				console.log(textElem.scrollHeight)
+				console.log(textElem.rows)
 
+				var lines = textElem.value.split('\n')
+				var totalLines = lines.length
+
+				console.log(lines)
+				console.log(totalLines)
+
+				if(totalLines > 5) {
+					textElem.rows = totalLines + 1;
+					console.log('Height of element with id ' + textElem.id + ' changed to ' + textElem.rows)
+				} else {
+					console.log('Height of element is less than or equals 5, so height is same')
+				}
+				// textElem.rows= (25 + textElem.scrollHeight) + 'px'
+				// console.log('height set to ' + textElem.scrollHeight)
+				// console.log(textElem)
+			}
 			// Creating hr 
 			var p = document.createElement('p')
 			p.style.color = 'maroon'
 			p.style.fontFamily = 'tahoma';
 			p.style.fontSize = '20px';
+			p.style.fontWeight = 'bold'
 
 			var text = document.createTextNode('' + count + '. ' + language)
 			p.appendChild(text);
@@ -230,6 +256,12 @@
 		function compile() {
 			// Code to send code to server for compilation and get the link of generated PDF.
 		}
+
+		// Adjust height
+		// function adjustHeight(id) {
+		// 	alert('kivy')
+		// 	o.style.height = (25+o.scrollHeight)+"px";
+		// }
 	</script>
 
 	<script>
