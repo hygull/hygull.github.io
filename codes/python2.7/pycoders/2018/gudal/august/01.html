@@ -1,1 +1,294 @@
-<center><h1 style='color:green'>Coming Soon</h1></center>
+<!DOCTYPE html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" type="image/png" href="../../../../../../img/Ball_dubai.jpg">
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+<!-- <script src="https://cdn.rawgit.com/google/code-prettify/master/loader/run_prettify.js?lang=css&amp;skin=sunburst"></script> -->
+<script src="https://cdn.rawgit.com/google/code-prettify/master/loader/run_prettify.js"></script>
+<link rel="stylesheet" type="text/css" href="../../../../../../css/my-prettyfier-google.css">
+
+<!--Clipboard-->
+<script src="../../../../../../js/my_funcs.js"></script>
+<!-- <link rel="stylesheet" type="text/css" href="../../../../../../css/clipboard.css"> -->
+
+</head>
+<body onload='PR.prettyPrint()'>
+
+<div class="container">
+    <div class="col-md-2 col-xs-4 col-lg-2 col-sm-2" style="background-color: #d9f2d9;">
+        <center>
+            <br>
+            <p id='exp'>By experience (DESC)</p>
+            <br>
+            <img src="../../../../../../img/logo-code-girl-300x300.jpg" class="img img-rounded" width="100%" id='avtar'>
+            <br>
+            <br>
+            <a href='#' id='username'>@niyati</a>
+            <h4 id='fullname'>Niyati Jain</h4>
+            <p id="email">niyati@sjainventures.com</p>
+            <p id='profession'>Python developer (Junior)</p>
+            <hr>
+
+            <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSHjnfT72FlcfCkoScoGy1xr4jx69tCxdBsC3fF6XUfTYxZ8D9hUQ" class="img img-rounded" width="100%" id='avtar'>
+            <br>
+            <br>
+            <a href='#' id='username'>@gudal</a>
+            <h4 id='fullname'>Gudal Sharma</h4>
+            <p id="email">gudal@sjainventures.com</p>
+            <p id='profession'>Python developer (Junior)</p>
+            <hr>
+
+            <img src="https://avatars0.githubusercontent.com/u/23253178?s=460&v=4" class="img img-rounded" width="100%" id='avtar'>
+            <br>
+            <br>
+            <a href='https://rishikesh67.pythonanywhere.com' id='username'>@hygull</a>
+            <h4 id='fullname'>Rishikesh Agrawani</h4>
+            <p id="email">rishikesh0014051992@gmail.com</p>
+            <p id='profession'>Python developer (Senior)</p>
+            <hr>
+
+
+            
+
+            
+
+            1. <a href="https://hygull.github.io/codes/python2.7/advanced/pandas/DataFrame-Series-List.html">List/Dictionary comprehension, List, Dictionary, String...</a>
+            <hr>
+        </center>
+    </div>
+    <div class="col-md-10 col-xs-8 col-lg-10 col-sm-10">
+    <center>
+        <h1 id='header'><i class="fa fa-spinner fa-spin" style="font-size:30px;color:darkblue"></i> Exception handling</h1>
+        <i class="fa fa-linux" style="font-size:15px;color:blue"></i>
+        <a href="#Python2.7" class="tags">#Python2.7</a>,
+         <a href="exception-handling" class='tags'>#exception-handling</a>, <a href="#dictionary" class='tags'>#dictionary</a>, <a href="#list-comprehension" class='tags'>#list-comprehension</a>
+        <hr>
+    </center>
+    <!-- <pre class='prettyprint'> -->
+    <i class="fa fa-spinner fa-spin" style="font-size:13px;color:green"></i> Please have a look at the below problems.
+    <i class="fa fa-linux" style="font-size:40px;color:green"></i>
+    <i class="fa fa-linux" style="font-size:40px;color:red"></i>
+    <i class="fa fa-linux" style="font-size:40px;color:blue"></i>
+    <i class="fa fa-linux" style="font-size:40px;color:maroon"></i>
+    <i class="fa fa-linux" style="font-size:40px;color:orange"></i>
+    <i class="fa fa-linux" style="font-size:40px;color:skyblue"></i>
+    <br>
+<hr>
+    <h3><i class="fa fa-linux" style="font-size:40px;color:darkblue"></i> PROBLEM 1:</h3>
+    <strong>Note:</strong>You have to use Python2's <code>Exception handling</code> concept to accomplish the below tasks. If you wish you can combine all the concepts from previous problems but using <code>Exception handling</code> is a must.
+    <hr>
+    <img src="../../../../../../img/try_except.webp" width="100%"><hr>
+    <br>
+    <i class="fa fa-slack" style="font-size:48px;color:red"> 1</i>
+    <pre class='prettyprint' id='pre_code1'>
+
+  Write a function named <b>get_result</b> which takes 2 parameters of type int, float, complex, 
+  long, string.
+
+  If both the parameters are numbers then return their sum else return their 
+  concatenation (strings).<hr>
+    Eg.
+        get_result(34, 56)            =>  90
+        get_result(5.9, 4.5)          =>  10.4
+        get_result('Hello ', 'John')  =>  'Hello John'
+        get_result(4+6j, 9+2j)        =>  (13+8j)
+        get_result('Hello ', 19)      =>  'Hello 19'
+        get_result(3.14, ' is PI')    =>  '3.14 is PI'
+    </pre>
+<br>
+<img src="../../../../../../img/Python_Exceptions_Watermark.webp" width="100%"><hr>
+
+<i class="fa fa-linux" style="font-size:48px;color:green"> 2</i>
+<pre class="prettyprint"  id='pre_code2' >
+
+  Write a function named <strong>get_value</strong> which takes 2 parameters.
+
+  First parameter is of type dictionary and 2nd parameter is a string.
+
+  If 2nd parameter matches any of the key in 1st parameter(dictionary), return the 
+  corresponding value otherwise return <code>'Not found the key'</code>.
+<hr>
+Eg.
+
+    get_value({'a': 23, 'b': 45}, 'a')               => 23
+    get_value({'any': 56, 'one': [12, 145]}, 'one')  => [12, 145]
+    get_value({'a': 23, 'b': 46}, 'c')               => 'Not found the key'
+
+
+</pre>
+<br>
+
+<img src="../../../../../../img/try_except_else.webp" width="100%"><hr>
+<i class="fa fa-empire" style="font-size:48px;color:red"> 3</i>
+<pre class="prettyprint"  id='pre_code3'> 
+    Write a function named <strong>get_file_contents</strong> that takes 1 parameter as path of any file 
+    in system.
+
+    * If file exists, return its contents as a list of lines otherwise return a string 
+    saying that <code>'File path does not exist'</code>.
+
+    * Also make sure sure to close file in case if any exception occurs.
+<hr>
+    Have a look at the below structure (Just for an example).
+    &raquo;&raquo;&raquo;
+        C:
+        |
+        +---Cpp
+        |   |
+        |   +---A.cpp
+        |   |
+        |   +---D.cpp
+        |
+        +---Python
+        |     |
+        |     +---A.py
+        |
+        +---Java
+              |
+              +---A.java
+              |
+              +---B.java 
+
+<hr>
+    Assume that <code>C:\Cpp\D.cpp</code> contains below lines of code.
+    &raquo;&raquo;&raquo;    
+        #include<stdio.h>
+        void main()
+        {
+            cout<<"Hello";
+        }
+        <hr>
+    Now have a look at the below function calls.
+    &raquo;&raquo;&raquo;
+        get_file_contents('C:\\Cpp\\D.cpp')
+                    ||
+                    ||
+                    \/
+        ['#include<stdio.h>', 'void main()', '{', 'cout<<"Hello";', '}']
+
+<hr>
+        get_file_contents('C:\\Python\\K.py')
+                    ||
+                    ||
+                    \/
+            'File path does not exist'
+
+
+</pre>
+<br>
+<img src="../../../../../../img/hut_on_the_cliff_by_apetruk-d7ej03x.jpg" width="100%"><br><br>
+<i class="fa fa-signing" style="font-size:48px;color:orange"> 4</i>
+<pre class="prettyprint" id="pre_code4">
+
+    Write a lambda function that takes a string and returns a list of integers
+    appear in a string. Assume that you've stored lambda function into a variable
+    called <code>get_numbers.</code>
+<hr>
+    Eg.
+        get_numbers('Hello90dear10,I20klp40like30')  =>  [90, 10, 20, 40, 30]
+
+        get_numbers('Finally67is60and6+1')   =>   [67, 60, 6, 1]
+
+
+</pre> 
+
+
+<hr>
+
+    <h3><i class="fa fa-linux" style="font-size:40px;color:darkblue"></i> PROBLEM 2:
+    <i class="fa fa-linux" style="font-size:40px;color:green"></i>
+    <i class="fa fa-linux" style="font-size:40px;color:red"></i>
+    <i class="fa fa-linux" style="font-size:40px;color:blue"></i>
+    <i class="fa fa-linux" style="font-size:40px;color:maroon"></i>
+    <i class="fa fa-linux" style="font-size:40px;color:orange"></i>
+    <i class="fa fa-linux" style="font-size:40px;color:skyblue"></i>
+    </h3><br>
+    <!-- <pre class='prettyprint' onclick="copyToClipboard(this.id, 'myTooltip1')" id="pre_code5" onmouseout="outFunc('myTooltip1')"> -->
+    <img src="../../../../../../img/try_except_else_finally.webp" width="100%"><br><br>
+        <i class="fa fa-angellist" style="font-size:48px;color:maroon"> 5</i>
+    <pre class='prettyprint'>
+
+     Write a lambda function that takes a single parameter of type <code>tuple</code>
+
+     of integers and returns a <code>list</code> of even numbers available in the <code>tuple</code>.
+
+     Assume that you've stored your lambda function in a variable named <b>get_evens</b>.
+     <hr>
+     Eg.
+        get_evens((45, 22, 67, 88, 66, 21, 64, 67, 82))  => [22, 88, 66, 64, 82]
+
+        get_evens((44, 32, 12, 48, 1)) => [44, 32, 12, 48]
+    </pre>
+    <!-- <span class="tooltiptext" id="myTooltip1"></span> -->
+
+    <br>
+<img src="../../../../../../img/lukasz-wiktorzak-vikingvillage.jpg" width="100%"><br>
+    <br>
+    <i class="fa fa-firefox" style="font-size:48px;color:darkblue"> 6</i>
+
+    <pre class="prettyprint" id='pre_code6'>
+
+    Write a function named adder which takes 2 lambda functions as parameter.
+
+    The first parameter(lambda function) takes 2 parameters of type numbers and
+    returns the sum.
+
+    The second parameter(lambda function) takes 2 parameters of type numbers and
+    returns the multiplication.
+
+    The adder() function takes 4 parameters, first 2 are numbers, last 2 are lambda
+    expressions.
+
+    The adder() function should return the sum of results returned by both lambda
+    functions.
+
+    So finally, have a look at the below function calls. Assume that l1, l2 are
+    lambda expressions.
+<hr>
+    Eg.
+        adder(10, 5, l1, l2)   =>   65  {which is ((10+5) + (10*5))}
+
+        adder(5, 8, l1, l2)    =>   53  {which is ((5+8) + (5*8))}
+    </pre>
+<hr>
+<!--Problem 3-->
+<!--    <h3>PROBLEM 3:</h3><br>
+    <strong>Note:</strong> You have to use the concept of <code>file handling</code>. This is the real time simple problem that I already coded in <strong>Dubai</strong> on 31 July 2018.
+   <br><br>
+
+    <p>Let us assume you have the below contents in a file called <code>Intro.txt</code></p>
+    <pre class='prettyprint'>
+Hello Dear,
+How are you?</pre> 
+    <br>
+    <p>Write a program to create the 27 files with the above content. The name of files will start from <code>05.html</code> and go upto <code>31.html</code> so that if someone opens the folder, he/she should see the files like below.</p>
+
+    <pre class="prettyprint">
+05.html
+06.html
+07.html
+...
+...
+10.html
+...
+...
+31.html</pre>
+<hr>-->
+<i class="fa fa-spinner fa-spin" style="font-size:30px;color:darkblue"></i> &raquo; &raquo; 
+    <i class="fa fa-linux" style="font-size:40px;color:green"></i>
+    <i class="fa fa-linux" style="font-size:40px;color:red"></i>
+    <i class="fa fa-linux" style="font-size:40px;color:blue"></i>
+    <i class="fa fa-linux" style="font-size:40px;color:maroon"></i>
+    <i class="fa fa-linux" style="font-size:40px;color:orange"></i>
+    <i class="fa fa-linux" style="font-size:40px;color:skyblue"></i>
+    <hr>
+    </div>
+
+
+</div>
+
+</body>
