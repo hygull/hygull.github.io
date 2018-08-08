@@ -1,0 +1,25 @@
+<html>
+<head>
+<script type="text/javascript"
+  src="dygraph.js"></script>
+<link rel="stylesheet" src="dygraph.css" />
+</head>
+<body>
+    <div class="container">
+        <div class="row">
+            <div class="col-xs-12 col-lg-6 text-center" id="graphdiv3" >
+            </div>
+        </div>
+    </div>
+<script type="text/javascript">
+    g3 = new Dygraph(
+        document.getElementById("graphdiv3"),
+        "temperatures.csv",
+        {
+            rollPeriod: 7,
+            showRoller: true
+        }
+    );
+</script>
+</body>
+</html>
