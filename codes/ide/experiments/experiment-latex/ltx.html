@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<link rel="icon" type="image/png" href="../../../../img/Ball_dubai.jpg">
+	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+	<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+	<link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+
+	<script src="https://cdn.rawgit.com/google/code-prettify/master/loader/run_prettify.js"></script>
+	<link rel="stylesheet" type="text/css" href="../../../../css/my-prettyfier-google.css">
+
+	<style type="text/css">
+		#equation {
+			min-height: 400px;
+			max-height: 500px;
+			border: 1px solid pink;
+			padding: 5px;
+			background-color:rgb(41, 43, 48);
+			color: white;
+		}
+
+		#equation:focus {
+			border:1px solid red;
+		}
+		body{
+			background-color: black;
+		}
+		h1{
+			color: white;
+		}
+	</style>
+</head>
+<body>
+	<div class="container">
+		<br>
+		<center><h1>Select symbols</h1></center>
+		<br>
+		<div class="row">
+			<div class="col-lg-1 col-md-4 col-sm-3 col-xs-3">
+				<button class="btn" style="background-color: white; border: 1px solid green" id='leftarrow' onclick="addEquation(' \\widetilde{ab}')">
+					<img src="http://www.sciweavers.org/sites/all/modules/sci_tex2img/symbols/math_com/widetilde.png">
+				</button>
+			</div>
+				
+			<div class="col-lg-1 col-md-4 col-sm-3 col-xs-3">
+				<button class="btn" style="background-color: white; border: 1px solid green" id='leftarrow' onclick="addEquation('\\overleftarrow{ba}')">
+					<img src="http://www.sciweavers.org/sites/all/modules/sci_tex2img/symbols/math_com/overleftarrow.png">
+				</button>
+			</div>
+				
+			<div class="col-lg-1 col-md-4 col-sm-3 col-xs-3">
+				<button class="btn" style="background-color: white; border: 1px solid green" id='leftarrow' onclick="addEquation('\\overline{ab}')">
+					<img src="http://www.sciweavers.org/sites/all/modules/sci_tex2img/symbols/math_com/overline.png">
+				</button>
+			</div>
+				
+			<div class="col-lg-1 col-md-4 col-sm-3 col-xs-3">
+				<button class="btn" style="background-color: white; border: 1px solid green" id='leftarrow' onclick="addEquation('\\sqrt{ab}')">
+					<img src="http://www.sciweavers.org/sites/all/modules/sci_tex2img/symbols/math_com/sqrt.png">
+				</button>
+			</div>
+			
+			<div class="col-lg-1 col-md-4 col-sm-3 col-xs-3">
+				<button class="btn" style="background-color: white; border: 1px solid green" id='leftarrow' onclick="addEquation('f\'')">
+					<img src="http://www.sciweavers.org/sites/all/modules/sci_tex2img/symbols/math_com/fdash.png">
+				</button>
+			</div>
+				
+			<div class="col-lg-1 col-md-4 col-sm-3 col-xs-3">
+				<button class="btn" style="background-color: white; border: 1px solid green" id='leftarrow' onclick="addEquation('x^{k}')">
+					<img src="http://www.sciweavers.org/sites/all/modules/sci_tex2img/symbols/math_com/xpk.png">
+				</button>
+			</div>
+
+			<div class="col-lg-1 col-md-4 col-sm-3 col-xs-3">
+				<button class="btn" style="background-color: white; border: 1px solid green" id='leftarrow' onclick="addEquation('\\lim_{a \\rightarrow b}')">
+					<img src="http://www.sciweavers.org/sites/all/modules/sci_tex2img/symbols/math_com/limit.png">
+				</button>
+			</div>
+				
+			<div class="col-lg-1 col-md-4 col-sm-3 col-xs-3">
+				<button class="btn" style="background-color: white; border: 1px solid green" id='leftarrow' onclick="addEquation('\\begin{bmatrix}a & b \\\\c & d \\end{bmatrix} ')">
+					<img src="http://www.sciweavers.org/sites/all/modules/sci_tex2img/symbols/math_com/matrix.png">
+				</button>
+			</div>
+
+			<div class="col-lg-1 col-md-4 col-sm-3 col-xs-3">
+				<button class="btn" style="background-color: white; border: 1px solid green" id='leftarrow' onclick="addEquation('\\big(a\\big)')">
+					<img src="http://www.sciweavers.org/sites/all/modules/sci_tex2img/symbols/math_com/para.png">
+				</button>
+			</div>
+				
+			<div class="col-lg-1 col-md-4 col-sm-3 col-xs-3">
+				<button class="btn" style="background-color: white; border: 1px solid green" id='leftarrow' onclick="addEquation('\\int_a^b x  ')">
+					<img src="http://www.sciweavers.org/sites/all/modules/sci_tex2img/symbols/math_com/int.png">
+				</button>
+			</div>
+
+			<div class="col-lg-1 col-md-4 col-sm-3 col-xs-3">
+				<button class="btn" style="background-color: white; border: 1px solid green" id='leftarrow' onclick="addEquation('\\sum_a^b x ')">
+					<img src="http://www.sciweavers.org/sites/all/modules/sci_tex2img/symbols/math_com/sum.png">
+				</button>
+			</div>
+				
+			<div class="col-lg-1 col-md-4 col-sm-3 col-xs-3">
+				<button class="btn" style="background-color: white; border: 1px solid green" id='leftarrow' onclick="addEquation('\\prod_a^b x')">
+					<img src="http://www.sciweavers.org/sites/all/modules/sci_tex2img/symbols/math_com/prod.png">
+				</button>
+			</div>
+			<br>
+		</div>
+
+		<!--TABS AND PILLS STARTS-->
+
+		<!--TABS AND PILLS ENDS-->
+
+		<div class="row">
+			<br>
+			<div class="col-lg-1 col-md-4 col-sm-3 col-xs-3">
+				<button class="btn" style="background-color: white; border: 1px solid green" id='leftarrow' onclick="addEquation('\\overbrace{ab}')">
+					<img src="http://www.sciweavers.org/sites/all/modules/sci_tex2img/symbols/math_com/overbrace.png">
+				</button>
+			</div>
+				
+			<div class="col-lg-1 col-md-4 col-sm-3 col-xs-3">
+				<button class="btn" style="background-color: white; border: 1px solid green" id='leftarrow' onclick="addEquation('\\bigcap_a^b x ')">
+					<img src="http://www.sciweavers.org/sites/all/modules/sci_tex2img/symbols/math_com/bigcap.png">
+				</button>
+			</div>
+				
+			<div class="col-lg-1 col-md-4 col-sm-3 col-xs-3">
+				<button class="btn" style="background-color: white; border: 1px solid green" id='leftarrow' onclick="addEquation('\\bigvee_a^b x')">
+					<img src="http://www.sciweavers.org/sites/all/modules/sci_tex2img/symbols/math_com/bigvee.png">
+				</button>
+			</div>
+				
+			<div class="col-lg-1 col-md-4 col-sm-3 col-xs-3">
+				<button class="btn" style="background-color: white; border: 1px solid green" id='leftarrow' onclick="addEquation('\\bigotimes')">
+					<img src="http://www.sciweavers.org/sites/all/modules/sci_tex2img/symbols/math_com/bigotimes.png">
+				</button>
+			</div>
+			
+			<div class="col-lg-1 col-md-4 col-sm-3 col-xs-3">
+				<button class="btn" style="background-color: white; border: 1px solid green" id='leftarrow' onclick="addEquation('\\widehat{ab}')">
+					<img src="http://www.sciweavers.org/sites/all/modules/sci_tex2img/symbols/math_com/widehat.png">
+				</button>
+			</div>
+				
+			<div class="col-lg-1 col-md-4 col-sm-3 col-xs-3">
+				<button class="btn" style="background-color: white; border: 1px solid green" id='leftarrow' onclick="addEquation('\\overrightarrow{ab}')">
+					<img src="http://www.sciweavers.org/sites/all/modules/sci_tex2img/symbols/math_com/overrightarrow.png">
+				</button>
+			</div>
+
+			<div class="col-lg-1 col-md-4 col-sm-3 col-xs-3">
+				<button class="btn" style="background-color: white; border: 1px solid green" id='leftarrow' onclick="addEquation('\\underbrace{ab} ')">
+					<img src="http://www.sciweavers.org/sites/all/modules/sci_tex2img/symbols/math_com/underbrace.png">
+				</button>
+			</div>
+				
+			<div class="col-lg-1 col-md-4 col-sm-3 col-xs-3">
+				<button class="btn" style="background-color: white; border: 1px solid green" id='leftarrow' onclick="addEquation('\\sqrt[n]{ab}')">
+					<img src="http://www.sciweavers.org/sites/all/modules/sci_tex2img/symbols/math_com/sqrtn.png">
+				</button>
+			</div>
+
+			<div class="col-lg-1 col-md-4 col-sm-3 col-xs-3">
+				<button class="btn" style="background-color: white; border: 1px solid green" id='leftarrow' onclick="addEquation('\\frac{a}{b}')">
+					<img src="http://www.sciweavers.org/sites/all/modules/sci_tex2img/symbols/math_com/frac.png">
+				</button>
+			</div>
+				
+			<div class="col-lg-1 col-md-4 col-sm-3 col-xs-3">
+				<button class="btn" style="background-color: white; border: 1px solid green" id='leftarrow' onclick="addEquation('x_{k}')">
+					<img src="http://www.sciweavers.org/sites/all/modules/sci_tex2img/symbols/math_com/xuk.png">
+				</button>
+			</div>
+
+			<div class="col-lg-1 col-md-4 col-sm-3 col-xs-3">
+				<button class="btn" style="background-color: white; border: 1px solid green" id='leftarrow' onclick="addEquation('\\frac{\\partial^nf}{\\partial x^n}')">
+					<img src="http://www.sciweavers.org/sites/all/modules/sci_tex2img/symbols/math_com/partial.png">
+				</button>
+			</div>
+				
+			<div class="col-lg-1 col-md-4 col-sm-3 col-xs-3">
+				<button class="btn" style="background-color: white; border: 1px solid green" id='leftarrow' onclick="addEquation('x =\\begin{cases}a & x = 0\\\\b & x > 0\\end{cases}')">
+					<img src="http://www.sciweavers.org/sites/all/modules/sci_tex2img/symbols/math_com/select.png">
+				</button>
+			</div>
+			
+		</div>
+
+		<div class="row">
+			<br>
+			<br>
+			<div class="col-xs-12 col-lg-12">
+				<div id="equation" contenteditable='true'>
+					
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<script type="text/javascript">
+		function addEquation(equation) {
+			let equationAlready = document.getElementById('equation').innerHTML;
+			document.getElementById('equation').innerHTML = equationAlready + '  &nbsp;' + equation;
+		}
+	</script>
+</body>
