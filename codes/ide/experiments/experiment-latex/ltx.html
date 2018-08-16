@@ -12,7 +12,16 @@
 	<script src="https://cdn.rawgit.com/google/code-prettify/master/loader/run_prettify.js"></script>
 	<link rel="stylesheet" type="text/css" href="../../../../css/my-prettyfier-google.css">
 
-	<script src='https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML' async id='mathjax_code'></script>
+<!-- 	<script src='https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML' async id='mathjax_code'></script>
+ -->
+<script type="text/javascript">
+	(function () {
+  var script = document.createElement("script");
+  script.type = "text/javascript";
+  script.src  = "https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML";
+  document.getElementsByTagName("head")[0].appendChild(script);
+})();
+</script>
 
 	<style type="text/css">
 		#equation {
@@ -42,12 +51,19 @@
 			background-color:rgb(46, 50, 40);
 			color: white;
 		}
+
+		#dev{
+			color: lightgreen;
+			font-size: 10px;
+		}
 	</style>
 </head>
 <body>
 	<div class="container">
 		<br>
-		<center><h1>Select symbols</h1></center>
+		<center><h1>MathJAX</h1>
+			<p id='dev'>@Rishikesh Agrawani</p>
+		</center>
 		<br>
 		<div class="row">
 			<div class="col-lg-1 col-md-4 col-sm-3 col-xs-3">
@@ -235,7 +251,7 @@
 			// $('#mathjax_code').load()
 			document.getElementById('renderedCode').innerHTML = '$$ ' +  equationAlready + '  ' + equation + ' $$'; 
 			// window.location.reload()
-
+			MathJax.Hub.Queue(["Typeset",MathJax.Hub,"renderedCode"]);
 		}
 	</script>
 </body>
