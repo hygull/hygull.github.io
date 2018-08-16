@@ -62,7 +62,7 @@
 	<div class="container">
 		<br>
 		<center><h1>MathJAX</h1>
-			<p id='dev'>@Rishikesh Agrawani</p>
+			<p id='dev'>@Rishikesh Agrawani, @Tamim Sir</p>
 		</center>
 		<br>
 		<div class="row">
@@ -225,7 +225,7 @@
 			<br>
 			<br>
 			<div class="col-xs-12 col-lg-12">
-				<div id="equation" contenteditable='true'>
+				<div id="equation" contenteditable='true' onkeyup="renderOnChange()">
 					
 				</div>
 			</div>
@@ -236,8 +236,6 @@
 			<br>
 			<div class="col-xs-12 col-lg-12">
 				<div id='renderedCode'>
-						
-					$$  \sqrt{ab} f' $$
 				</div>
 			</div>
 		</div>
@@ -251,6 +249,12 @@
 			// $('#mathjax_code').load()
 			document.getElementById('renderedCode').innerHTML = '$$ ' +  equationAlready + '  ' + equation + ' $$'; 
 			// window.location.reload()
+			MathJax.Hub.Queue(["Typeset",MathJax.Hub,"renderedCode"]);
+		}
+
+		function renderOnChange() {
+			let updatedEquation = document.getElementById('equation').innerHTML;
+			document.getElementById('renderedCode').innerHTML = '$$ ' +  updatedEquation + ' $$'; 
 			MathJax.Hub.Queue(["Typeset",MathJax.Hub,"renderedCode"]);
 		}
 	</script>
