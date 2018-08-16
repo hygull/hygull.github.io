@@ -54,15 +54,20 @@
 
 		#dev{
 			color: lightgreen;
-			font-size: 10px;
+			font-size: 15px;
+			font-family: serif; 
+		}
+
+		#cls {
+			margin-left: 0;
 		}
 	</style>
 </head>
 <body>
 	<div class="container">
 		<br>
-		<center><h1>MathJAX</h1>
-			<p id='dev'>@Rishikesh Agrawani, @Tamim Sir</p>
+		<center><h1>MathJAX (Write here)</h1>
+			<p id='dev'>@Tamim Sir, @Rishikesh Agrawani, 16 Aug 2018</p>
 		</center>
 		<br>
 		<div class="row">
@@ -220,9 +225,14 @@
 			
 		</div>
 
-
 		<div class="row">
 			<br>
+			<div class="col-xs-12 col-lg-12">
+				<button class="btn btn-success btn-md" onclick="clear2()" id='cls'> Clear </button> <!--clear() does not work-->
+			</div>
+		</div>
+
+		<div class="row">
 			<br>
 			<div class="col-xs-12 col-lg-12">
 				<div id="equation" contenteditable='true' onkeyup="renderOnChange()">
@@ -238,6 +248,8 @@
 				<div id='renderedCode'>
 				</div>
 			</div>
+			<br>
+			<br>
 		</div>
 	</div>
 
@@ -256,6 +268,12 @@
 			let updatedEquation = document.getElementById('equation').innerHTML;
 			document.getElementById('renderedCode').innerHTML = '$$ ' +  updatedEquation + ' $$'; 
 			MathJax.Hub.Queue(["Typeset",MathJax.Hub,"renderedCode"]);
+		}
+
+		function clear2() {
+			// alert('C')
+			document.getElementById('equation').innerHTML = '';
+			document.getElementById('renderedCode').innerHTML = '';
 		}
 	</script>
 </body>
