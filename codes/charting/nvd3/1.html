@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>NVD3 - Example 1</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+
+  <link rel="stylesheet" type="text/css" href="./nv.d3.css">
+  <script src="https://d3js.org/d3.v5.min.js"></script>
+</head>
+<body>
+
+<div class="container">
+  <div class="col-xs-12 col-lg-12 text-center">
+    <h1>NVD3</h1>    
+    <br>  
+    <div id='chart1'></div>
+  </div>
+</div>
+
+
+<script type="text/javascript">
+  d3.json('multiBarHorizontalData.json', function(data) {
+  nv.addGraph(function() {
+    var chart = nv.models.multiBarHorizontalChart()
+        .x(function(d) { return d.label })
+        .y(function(d) { return d.value })
+        .margin({top: 30, right: 20, bottom: 50, left: 175})
+        .showValues(true)           //Show bar value next to each bar.
+        .tooltips(true)             //Show tooltips on hover.
+        .transitionDuration(350)
+        .showControls(true);        //Allow user to switch between "Grouped" and "Stacked" mode.
+
+    chart.yAxis
+        .tickFormat(d3.format(',.2f'));
+
+    d3.select('#chart1 svg')
+        .datum(data)
+        .call(chart);
+
+    nv.utils.windowResize(chart.update);
+
+    return chart;
+  });
+});
+</script>
+</body>
+</html>
