@@ -254,6 +254,7 @@
 	</div>
 
 	<script type="text/javascript">
+		// No multiple line expression support
 		function addEquation(equation) {
 			let equationAlready = document.getElementById('equation').innerHTML;
 			document.getElementById('equation').innerHTML = equationAlready + '  &nbsp;' + equation;
@@ -264,10 +265,14 @@
 			MathJax.Hub.Queue(["Typeset",MathJax.Hub,"renderedCode"]);
 		}
 
-		function renderOnChange() {
+		function renderOnChange2() {
 			let updatedEquation = document.getElementById('equation').innerHTML;
 			document.getElementById('renderedCode').innerHTML = '$$ ' +  updatedEquation + ' $$'; 
 			MathJax.Hub.Queue(["Typeset",MathJax.Hub,"renderedCode"]);
+		}
+
+		function renderOnChange() {
+			setTimeout(renderOnChange2, 1000)
 		}
 
 		function clear2() {

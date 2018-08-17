@@ -14,7 +14,15 @@
 <!--Clipboard-->
 <script src="../../../../../../js/my_funcs.js"></script>
 <!-- <link rel="stylesheet" type="text/css" href="../../../../../../css/clipboard.css"> -->
+<script src='https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML' async id='mathjax_code'></script>
 
+<style type="text/css">
+    .desc {
+        font-family: serif;
+        font-size: 20px;
+        color: maroon;
+    }
+</style>
 </head>
 <body onload='PR.prettyPrint()'>
 
@@ -182,16 +190,33 @@ Eg.
 <br>
 <img src="../../../../../../img/hut_on_the_cliff_by_apetruk-d7ej03x.jpg" width="100%"><br><br>
 <i class="fa fa-signing" style="font-size:48px;color:orange"> 4</i>
+
+
+<span class="desc">Write function to solve the below integral.</span>
+
+$$ \int_a^b x^2 dx $$
+
+<span class="desc">Where <code>a</code> is lower limit, <code>b</code> is upper limit and these will be the function parameters.
+<br><br>
+ Write a function named <b>integration_solver()</b> which takes 2 integer parameters named <code>a</code> and <code>b</code> respectively.
+<br><br>
+ The function should return the final output after solving the integral.
+<br><br>
+<span class="desc"> You can check your answer at <a href="https://www.integral-calculator.com/">https://www.integral-calculator.com/</a>. Just remove the existing expression from input box and  type <code>x^2</code> there.</span>
+<br>
+<br>
+<span class="desc">Provide lower limit as <code>1</code> and lower limit as <code>3</code>, you will get final answer as <b>8.67</b> (approx.).</span>
+
+<span class="desc">Please have a focus on the following function calls and the respective results.</span>
+<br>
+<br>
+<span style="color:green;"><i class="fa fa-list-ol"></i> <b>Note:</b> Final answer should be limited upto 2 decimal places if it is a float.</span>
+<hr>
 <pre class="prettyprint" id="pre_code4">
 
-    Write a lambda function that takes a string and returns a list of integers
-    appear in a string. Assume that you've stored lambda function into a variable
-    called <code>get_numbers.</code>
-<hr>
-    Eg.
-        get_numbers('Hello90dear10,I20klp40like30')  =>  [90, 10, 20, 40, 30]
+    integration_solver(1. 3)  => 8.67
 
-        get_numbers('Finally67is60and6+1')   =>   [67, 60, 6, 1]
+    integration_solver(1. 3)  => 9
 
 
 </pre> 
@@ -210,25 +235,55 @@ Eg.
     <!-- <pre class='prettyprint' onclick="copyToClipboard(this.id, 'myTooltip1')" id="pre_code5" onmouseout="outFunc('myTooltip1')"> -->
     <img src="../../../../../../img/try_except_else_finally.webp" width="100%"><br><br>
         <i class="fa fa-angellist" style="font-size:48px;color:maroon"> 5</i>
+
+    <span class="desc"> Solve the following dictionary based problem.</span>
+    <br>
+    <br>
+    <span style="color:green;"><i class="fa fa-list-ol"></i> <b>Note:</b> Order of elements in the output dictionary does not matter as <code>dictionary</code> is an unordered sequence in Python.</span><br><br>
+    <span style="color:#006600"><i class="fa fa-file-text"></i> Keys will be always string and values will always be either an <code>integer</code> or <code>list of inetegers.</code></span>
+    <hr>
     <pre class='prettyprint'>
+    (1) :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+        [
+            {'key1': 12, 'key2': 45},
+            {'key1': 76, 'key2': 40, 'key4': 70},
+            {'key4': 81, 'key3': 98 }
+        ]
 
-     Write a lambda function that takes a single parameter of type <code>tuple</code>
+                ||
+                ||
+                \/
+        {
+            'key1': 88,
+            'key2': 95,
+            'key3': 98,
+            'key4': 151
+        }
 
-     of integers and returns a <code>list</code> of even numbers available in the <code>tuple</code>.
+    (2) :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+        [
+            {'a': [12, 24], 'b': 45, 'c': 90},
+            {'a': 36, 'b': [90, 45]},
+            {'c': [1900], 'a', [12, 24]}
+            {'d': [34, 12]}
+        ]
 
-     Assume that you've stored your lambda function in a variable named <b>get_evens</b>.
-     <hr>
-     Eg.
-        get_evens((45, 22, 67, 88, 66, 21, 64, 67, 82))  => [22, 88, 66, 64, 82]
-
-        get_evens((44, 32, 12, 48, 1)) => [44, 32, 12, 48]
+                ||
+                ||
+                \/
+        {
+            'a': 108,
+            'b': 180,
+            'c': 1990
+            'd': 46
+        }
     </pre>
     <!-- <span class="tooltiptext" id="myTooltip1"></span> -->
 
     <br>
 <img src="../../../../../../img/lukasz-wiktorzak-vikingvillage.jpg" width="100%"><br>
     <br>
-    <i class="fa fa-firefox" style="font-size:48px;color:darkblue"> 6</i>
+<!--     <i class="fa fa-firefox" style="font-size:48px;color:darkblue"> 6</i>
 
     <pre class="prettyprint" id='pre_code6'>
 
@@ -254,7 +309,7 @@ Eg.
 
         adder(5, 8, l1, l2)    =>   53  {which is ((5+8) + (5*8))}
     </pre>
-<hr>
+<hr> -->
 <!--Problem 3-->
 <!--    <h3>PROBLEM 3:</h3><br>
     <strong>Note:</strong> You have to use the concept of <code>file handling</code>. This is the real time simple problem that I already coded in <strong>Dubai</strong> on 31 July 2018.
@@ -287,7 +342,7 @@ How are you?</pre>
     <i class="fa fa-linux" style="font-size:40px;color:skyblue"></i>
     <hr>
     </div>
-
+<br>
 
 </div>
 
