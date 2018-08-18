@@ -9,7 +9,10 @@
   <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
 
   <link rel="stylesheet" type="text/css" href="./nv.d3.css">
+
   <script src="https://d3js.org/d3.v5.min.js"></script>
+
+  <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/nvd3/1.8.6/nv.d3.js"></script>
 </head>
 <body>
 
@@ -23,6 +26,7 @@
 
 
 <script type="text/javascript">
+  console.log('Working to draw a chart in front of you.')
   d3.json('multiBarHorizontalData.json', function(data) {
   nv.addGraph(function() {
     var chart = nv.models.multiBarHorizontalChart()
