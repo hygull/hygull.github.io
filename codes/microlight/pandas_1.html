@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<link rel="icon" type="image/png" href="../../img/Ball_dubai.jpg">
+	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+	<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+
+	<script src="microlight.js"></script>
+
+	<style type="text/css">
+		.microlight {
+		    font-family : monospace;
+		    white-space : pre;
+		}
+	</style>
+</head>
+<body>
+
+	<div class="container">
+		<div class="row">
+			<div class="col-xs-12 col-lg-12 microlight">
+import pandas as pd
+# For Series (columns)
+
+def get_total_occurrences_of_numbers_in_column(s):
+    count = 0
+    index = 0
+    size = s.size
+    d = {}
+
+    # print(size)
+    while index < size:
+        c = 0
+        # print(df.nums[index])
+
+        while (index < size) and (s[index] < 0): # 
+            c = c + 1
+            index += 1
+
+        if c > 1:
+            count += 1
+
+            if c in d:     # {}
+                d[c] += 1  # {3: 2} => 3 consecutives 2 times...continue with next check
+            else:
+                d[c] = 1;  # {3: 1} => 3 consectives 1 time...continue with next check
+    
+        index += 1
+    
+    return (count, d)
+
+
+def get_counts(df):
+    counts = []
+    indices = []
+    all_counts = {}
+
+    for column in df.columns:
+        indices.append(column) 
+        count, d = get_total_occurrences_of_numbers_in_column(df[column])
+        
+        all_counts[column] = d;  # {'col1': {2: 3, 4: 2}} => for col1, 2 consecutives 3 times, 4 consecutives 2 times 
+        counts.append(count)
+
+    new_df = pd.DataFrame(counts, index=indices, columns=["count"])
+    return (new_df, all_counts)
+
+# -ve numbers
+col1 = [12, 11, -4, -3, -1, 0, -3, -2, 9, -1, 2, -3, 5]    # 2 times (13 numbers)
+col2 = [-1, -3, -6, -7, 8, -5, -3, 9, 12, 10, -4, -6, -6]  # 3 times
+col3 = [12, 4, 5, 6, 4, 1, 2, 3, 4, 5, 3, 9, 0]            # 0 times
+col4 = [-1, 2, -3, 4, 5, -6, 7, -8, 9, -10, 11, -12, 13]   # 0 times
+col5 = [-12, -3, 4, 3, -5, -6, 0, -4, -5, 6, -6, -7, 0]    # 4 times
+
+
+df3 = pd.DataFrame({'col1': col1, "col2": col2, "col3": col3, "col4": col4, "col5": col5})
+df3 # same as MATLAB, add ; at the end to suppress the output
+
+print(df3)
+
+df, all_counts = get_counts(df3)
+
+print(df)
+print(all_counts)
+			</div>
+		</div>
+	</div>
+</body>
