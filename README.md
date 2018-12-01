@@ -51,13 +51,13 @@ Name: fullname, dtype: object
 >>> df.fullname.apply(lambda x: x.split()[1]).index
 RangeIndex(start=0, stop=5, step=1)
 >>>
->>> df.fullname.apply(lambda x: x.split()[1]).index.name == "" # last names
+>>> df.fullname.apply(lambda x: x.split()[1]).index.name == "" 
 False
 >>>
->>> df.fullname.apply(lambda x: x.split()[1]).index.name == None # last names
+>>> df.fullname.apply(lambda x: x.split()[1]).index.name == None 
 True
 >>>
->>> df.fullname.apply(lambda x: x.split()[1]).index.name is None # last names
+>>> df.fullname.apply(lambda x: x.split()[1]).index.name is None 
 True
 >>>
 ```
@@ -119,13 +119,13 @@ Index: []
 >>>
 ```
 
-### Example 5
+#### Example 5
 
 > Adding 1 more column named `joining_date`
 >
 > `df.joining_date` syntax will not work
 
-```python
+```bash
 >>> df["joining_date"] = pd.to_datetime(pd.date_range('2017/08/09', periods=5))
 >>>
 >>> df
@@ -135,5 +135,57 @@ Index: []
 2      T W   70  349995   2017-08-11
 3      U Y   34   99995   2017-08-12
 4      P C   56  459995   2017-08-13
+>>>
+```
+## `query()` method's usage in place of `df.loc[ df.age < 50 ]` like statements
+
+#### Example 6
+
+```matlab
+>>> df.query('age < 50')
+  fullname  age  salary joining_date
+0      A X   14  299995   2017-08-09
+3      U Y   34   99995   2017-08-12
+>>>
+>>> df.query('age > 50')
+  fullname  age  salary joining_date
+1      B M   56  399995   2017-08-10
+2      T W   70  349995   2017-08-11
+4      P C   56  459995   2017-08-13
+>>>
+>>> df.query('age == 50')
+Empty DataFrame
+Columns: [fullname, age, salary, joining_date]
+Index: []
+>>>
+>>> df
+  fullname  age  salary joining_date
+0      A X   14  299995   2017-08-09
+1      B M   56  399995   2017-08-10
+2      T W   70  349995   2017-08-11
+3      U Y   34   99995   2017-08-12
+4      P C   56  459995   2017-08-13
+>>>
+>>> df.loc[0]
+fullname                        A X
+age                              14
+salary                       299995
+joining_date    2017-08-09 00:00:00
+Name: 0, dtype: object
+>>>
+>>> df.loc[0,'age']
+14
+>>> df.loc[0,'age'] = 50
+>>> df
+  fullname  age  salary joining_date
+0      A X   50  299995   2017-08-09
+1      B M   56  399995   2017-08-10
+2      T W   70  349995   2017-08-11
+3      U Y   34   99995   2017-08-12
+4      P C   56  459995   2017-08-13
+>>>
+>>> df.query('age == 50')
+  fullname  age  salary joining_date
+0      A X   50  299995   2017-08-09
 >>>
 ```
