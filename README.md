@@ -4,9 +4,9 @@
 
 ## Use of apply() on pandas Series, DataFrame
 
-> ##Example 1
+#### Example 1
 
-```bash
+```py
 >>> import pandas as pd
 >>>
 >>> df = pd.DataFrame({
@@ -41,9 +41,9 @@ Name: fullname, dtype: object
 >>>
 ```
 
-> ##Example 2
+#### Example 2
 
-```bash
+```python
 >>> df.fullname.apply(lambda x: x.split()[1]).name # last names
 'fullname'
 >>>
@@ -62,9 +62,9 @@ True
 >>>
 ```
 
-> #Example 3
+#### Example 3
 
-```bash
+```py
 >>> # Sum of all salaries
 ...
 >>> df.salary.sum()
@@ -95,9 +95,9 @@ Index: []
 >>>
 ```
 
-> #Example 4
+#### Example 4
 
-```sh
+```python
 >>> df
   fullname  age  salary
 0      A X   14  300000
@@ -116,5 +116,24 @@ Index: []
 2      T W   70  349995
 3      U Y   34   99995
 4      P C   56  459995
+>>>
+```
+
+### Example 5
+
+> Adding 1 more column named `joining_date`
+>
+> `df.joining_date` syntax will not work
+
+```python
+>>> df["joining_date"] = pd.to_datetime(pd.date_range('2017/08/09', periods=5))
+>>>
+>>> df
+  fullname  age  salary joining_date
+0      A X   14  299995   2017-08-09
+1      B M   56  399995   2017-08-10
+2      T W   70  349995   2017-08-11
+3      U Y   34   99995   2017-08-12
+4      P C   56  459995   2017-08-13
 >>>
 ```
