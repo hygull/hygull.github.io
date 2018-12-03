@@ -25,6 +25,7 @@ function getDimesionValue(what) {
         } else {
             if(/^\d+$/.test(value)) {
                 value = Number(value);
+                break;
             } else {
                 extraMessage = " (The entered one does not seem like an integer)";
                 continue;
@@ -73,13 +74,13 @@ function drop(ev) {
         // Creating dynamic code for table based on the value of rows and columns
         // Finally append the table as new child of body element
 
-        let newTable = "<table>\n"; 
+        let newTable = "<table width='100%''>\n"; 
 
         for(let row = 0; row < rows; ++row) {
             newTable += "\t<tr>\n";
 
-            for(let column; column < columns; ++column) {
-                newTable += "\t\t<td></td>\n"
+            for(let column = 0; column < columns; ++column) {
+                newTable += "\t\t<td contenteditable='true'></td>\n"
             }
 
             newTable += "\t</tr>\n";
@@ -88,7 +89,7 @@ function drop(ev) {
         newTable += "</table>\n";
 
         console.log(newTable);
-        $("body").append(newTable); // Appended table
+        $("#div2").append(newTable); // Appended table
 
         console.log("Done!!!")
     } else {
