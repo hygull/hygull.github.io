@@ -221,11 +221,11 @@ Name: 0, dtype: object
 >>>
 ```
 
-#### `at()` method on Series
+## `at()` method on Series
 
 #### Example 8 
 
-```matlab
+```python
 >>> s = pd.Series([1, 3, 4, 5, 99, 33, 45, 56, 67, 88])
 >>> s
 0     1
@@ -248,5 +248,89 @@ dtype: int64
 >>>
 >>> s.at[4]
 99
+>>>
+```
+
+## sort_values() method on Series
+
+#### Example 9
+
+```python
+>>> s.sort_values()
+0     1
+1     3
+2     4
+3     5
+5    33
+6    45
+7    56
+8    67
+9    88
+4    99
+dtype: int64
+>>> s
+0     1
+1     3
+2     4
+3     5
+4    99
+5    33
+6    45
+7    56
+8    67
+9    88
+dtype: int64
+>>> s.sort_values(ascending=False)
+4    99
+9    88
+8    67
+7    56
+6    45
+5    33
+3     5
+2     4
+1     3
+0     1
+dtype: int64
+>>> s
+0     1
+1     3
+2     4
+3     5
+4    99
+5    33
+6    45
+7    56
+8    67
+9    88
+dtype: int64
+>>>
+>>> s.sort_values(ascending=False, inplace=True)
+>>> s
+4    99
+9    88
+8    67
+7    56
+6    45
+5    33
+3     5
+2     4
+1     3
+0     1
+dtype: int64
+>>>
+>>> s.sort_values(ascending=True, inplace=True)
+>>> s
+0     1
+1     3
+2     4
+3     5
+5    33
+6    45
+7    56
+8    67
+9    88
+4    99
+dtype: int64
 >>>
 ```
