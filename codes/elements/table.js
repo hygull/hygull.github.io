@@ -65,27 +65,33 @@ function drop(ev) {
     // var data = ev.dataTransfer.getData("text");
     // ev.target.appendChild(document.getElementById(data));
 
-	let {rows, columns} = getTableDimesions();
+    let dimesions = getTableDimesions();
 
-    // Creating dynamic code for table based on the value of rows and columns
-    // Finally append the table as new child of body element
+	if(dimesions !== null) {
+        let {rows, columns} = dimesions;
 
-    let newTable = "<table>\n"; 
+        // Creating dynamic code for table based on the value of rows and columns
+        // Finally append the table as new child of body element
 
-    for(let row = 0; row < rows; ++row) {
-        newTable += "\t<tr>\n";
+        let newTable = "<table>\n"; 
 
-        for(let column; column < columns; ++column) {
-            newTable += "\t\t<td></td>\n"
+        for(let row = 0; row < rows; ++row) {
+            newTable += "\t<tr>\n";
+
+            for(let column; column < columns; ++column) {
+                newTable += "\t\t<td></td>\n"
+            }
+
+            newTable += "\t</tr>\n";
         }
 
-        newTable += "\t</tr>\n";
+        newTable += "</table>\n";
+
+        console.log(newTable);
+        $("body").append(newTable); // Appended table
+
+        console.log("Done!!!")
+    } else {
+        alert("Noting (no table) will be added");
     }
-
-    newTable += "</table>\n";
-
-    console.log(newTable);
-    $("body").append(newTable); // Appended table
-
-    console.log("Done!!!")
 }
