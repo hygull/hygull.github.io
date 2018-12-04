@@ -74,7 +74,7 @@ function drop(ev) {
         // Creating dynamic code for table based on the value of rows and columns
         // Finally append the table as new child of body element
 
-        let newTable = "<table width='100%''>\n"; 
+        let newTable = "<table width='100%' style='resize: both; overflow: auto;'>\n"; 
 
         for(let row = 0; row < rows; ++row) {
             newTable += "\t<tr>\n";
