@@ -130,6 +130,9 @@
 
 <script type="text/javascript">
     function drawChart(type = 'line', callType = 0) {
+        console('Draw again...');
+        console.log(type);
+
         if(callType == 1) {
           $('#myHasalaChart1').empty();
         }
@@ -172,7 +175,7 @@
 
     drawChart('line'); // Call
 
-    $("select.type").change(function(){
+    $("select#type1").change(function(){
         var type = $(this).children("option:selected").val();
         drawChart(type, 1);
     });
