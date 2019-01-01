@@ -129,8 +129,29 @@
 </div> <!--Container ends here-->
 
 <script type="text/javascript">
+    function getRGB(r, g, b) {
+        let colorVals = {r: r, g: g, b: b};
+        let colorVal = 0;
+
+        for(let key in colorVals) {
+          if(colorVals[key] < 0) {
+            colorVal = 200;
+          } else {
+            if(colorVals[key] > 255) {
+              colorVal = 125;
+            } else {
+              colorVal += 5;
+            }
+          }
+
+          colorVals[key] = colorVal;
+        }
+
+        return colorVals;
+    }
+
     function drawChart(type = 'line', callType = 0) {
-        console('Draw again...');
+        console.log('Draw again...');
         console.log(type);
 
         if(callType == 1) {
@@ -141,17 +162,25 @@
 
         let labels = []; 
         let data = []; 
+        let backgroundColors = [];
+        let r, g, b;
 
-        for(let i = 1, j = 500; i <= 31 ; i++) {
+        for(let i = 1, j = 500, r = 0, g = 127, b = 255 ; i <= 31 ; i++) {
             labels.push(i);
-            
-            if(i % 2 == 0)
-               j += 300
-            else
-               j -= 250
                
             data.push(j);
+            backgroundColors.push(`rgb(${r}, ${g}, ${b})`);
+
+            if(i % 2 == 0) {
+               j += 15;
+               ({r, g, b} = getRGB(r, g, b));
+            } else {
+               j -= 10;
+               ({r, g, b} = getRGB(r, g, b));
+            }
         }
+
+        console.log(backgroundColors);
 
         let chart = new Chart(ctx, {
             // The type of chart we want to create
@@ -162,7 +191,7 @@
                 labels: labels,
                 datasets: [{
                     label: "My first dataset",
-                    backgroundColor: 'rgb(255, 99, 132)',
+                    backgroundColor: backgroundColors,
                     borderColor: 'rgb(255, 99, 132)',
                     data: data,
                 }]
