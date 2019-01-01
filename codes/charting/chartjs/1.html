@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.4.0/Chart.min.js"></script>
+</head>
+<body>
+
+<div class="container">
+  <div class="row">
+    <div class="col-lg-12 col-xs-12">
+        <h2>Hasala - Transaction charts</h2>
+        <hr> 
+    </div>
+  </div>
+
+  <!-- Chart 1-->
+  <div class="row">
+    <hr>
+    <h2>1 - Date vs total amount transferred/day (contributions of all machines on that day)</h2>
+    <hr> 
+
+
+    <div class="col-lg-4 col-xs-12">
+      <div class="form-group">
+          <label for="year">Type of chart</label>
+          <select class="form-control type" id='type1'>     
+            <!-- <option>--SELECT TYPE OF CHART--</option>  -->
+            <option value='line'>LINE</option> 
+            <option value='bar'>BAR</option>       
+          </select>
+      </div>
+    </div>
+
+    <div class="col-lg-4 col-xs-12">
+      <div class="form-group">
+          <label for="year">Year</label>
+          <select class="form-control year" id="year1">
+                <!--    <option>--SELECT YEAR--</option>   -->       
+          </select>
+      </div>
+    </div>
+
+    <div class="col-lg-4 col-xs-12">
+      <div class="form-group">
+          <label for="month">Month</label>
+          <select class="form-control month" id="month1">  
+          <!--    <option>--SELECT MONTH--</option>   -->         
+          </select>
+      </div>
+    </div>
+
+
+    <div class="col-lg-12 col-xs-12">
+        <canvas id="myHasalaChart1"></canvas>
+    </div>
+  </div>
+  
+  <!--Chart 2-->
+  <div class="row">
+    <hr>
+    <h2>2 - Date vs total amount transferred/day (from a particular machine)</h2>
+    <hr>
+
+    <div class="col-lg-3 col-xs-12">
+      <div class="form-group">
+          <label for="machine">Name of machine</label>
+          <select class="form-control" id="machine">  
+             <!-- <option>--SELECT MACHINE--</option> -->
+             <!-- Name of machines from database -->
+
+             <option>Dtrans Machine 1</option>
+             <option>JbnCv Machine 2</option>
+             <option>DboyDc Machine 3</option>       
+          </select>
+      </div>
+    </div>
+
+    <div class="col-lg-3 col-xs-12">
+      <div class="form-group">
+          <label for="type">Type of chart</label>
+          <select class="form-control type" id='type2'>     
+            <!-- <option>--SELECT TYPE OF CHART--</option>  -->
+            <option value='line'>LINE</option> 
+            <option value='bar'>BAR</option>       
+          </select>
+      </div>
+    </div>
+
+    <div class="col-lg-3 col-xs-12">
+      <div class="form-group">
+          <label for='year2'>Year</label>
+          <select class="form-control year" id="year2">
+             <!-- <option>--SELECT YEAR--</option> -->
+          </select>
+      </div>
+    </div>
+
+    <div class="col-lg-3 col-xs-12">
+      <div class="form-group">
+          <label for="month">Month</label>
+          <select class="form-control month" id="month2" >  
+             <!-- <option>--SELECT MONTH--</option> -->
+          </select>
+      </div>
+    </div>
+
+
+    <div class="col-lg-12 col-xs-12">
+        <canvas id="myHasalaChart2"></canvas>
+    </div>
+  </div>
+
+  <!--Chart 3-->
+  <div class="row">
+    <hr>
+    <h2>3 - Machine names vs their contributions for any day</h2>
+    <hr>
+
+    
+    <div class="col-lg-12 col-xs-12">
+        <canvas id="myHasalaChart3"></canvas>
+    </div>
+  </div>
+</div> <!--Container ends here-->
+
+<script type="text/javascript">
+    function drawChart(type = 'line', callType = 0) {
+        if(callType == 1) {
+          $('myHasalaChart1').empty();
+        }
+
+        let ctx = document.getElementById('myHasalaChart1').getContext('2d');
+
+        let labels = []; 
+        let data = []; 
+
+        for(let i = 1, j = 500; i <= 31 ; i++) {
+            labels.push(i);
+            
+            if(i % 2 == 0)
+               j += 300
+            else
+               j -= 250
+               
+            data.push(j);
+        }
+
+        let chart = new Chart(ctx, {
+            // The type of chart we want to create
+            type: type,
+
+            // The data for our dataset
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: "My first dataset",
+                    backgroundColor: 'rgb(255, 99, 132)',
+                    borderColor: 'rgb(255, 99, 132)',
+                    data: data,
+                }]
+            },
+
+            // Configuration options go here
+            options: {}
+        });
+    };
+
+    drawChart('line'); // Call
+
+    $("select.type").change(function(){
+        var type = $(this).children("option:selected").val();
+        drawChart(type, 1);
+    });
+</script>
+
+<script type="text/javascript">
+    (function() {
+        const year = $('.year');
+
+        const y = (new Date()).getFullYear();
+        // Let's start it from 2015 to current year
+        let i = y;
+
+        for( ;i >= 2015; ) {
+            console.log(i + 'j');
+            year.append("<option onclick = 'sendYear(" + i + ")'>" + i +"</option>");
+            i--;
+        }
+    })();
+
+    (function() {
+        const month = $('.month');
+
+        for(let i = 1; i <= 12; i++) {
+          if(('' + i).length == 1)
+            t = '0';
+          else
+            t = '';
+
+          month.append("<option onclick = 'sendMonth(" + i + ")'>" + (t + i) + "</option>");
+        }
+    })();
+</script>
+
+
+<script type="text/javascript">
+  function isLeapYear(year) {
+    if(year % 4 !== 0) {
+      return false;
+    } else {
+      if(year % 100 !== 0) {
+        return true;
+      } else {
+        if(year % 400 === 0) {
+          return true;
+        } else {
+          return false;
+        }
+      }
+    }
+  }
+
+  function getDays(year = (new Date()).getFullYear(), month = 1) {
+      let obj = {
+        1: 31,
+        2: isLeapYear(year)? 29: 28,
+        3: 31,
+        4: 30,
+        5: 31,
+        6: 30,
+        7: 31,
+        8: 31,
+        9: 30,
+        10: 31,
+        11: 30,
+        12: 31
+      }
+
+      return Object.values(obj);
+  }
+</script>
+
+</body>
+</html>

@@ -59,6 +59,70 @@
                 <div id="div2" ondrop="drop(event)" ondragover="allowDrop(event)"></div>
             </div>
         </div>
+
+
+
+        <div class="row">
+          <div col-md-12>
+<pre>
+  <code>
+# Table module - Generator (HTML)
+
++-----+
+| | | |
++-----+
+| | | |
++-----+
+
+       \\
+        \/
+
+Requirements (Code implementation):
+
+- Once user will drag the table icon from the icon bar and drop into the 
+  work area, it should ask for basic things like 
+
+    `number of rows`
+    `number of columns`
+
+- Finally, based on the entries dynamically create a beautiful table whose
+  tables & cells can be resizable. Cells can be editable.
+
+
+Once we implemented the above functionality, we will go further to add extra
+feature as mentioned below.
+
+[Note: If user chooses CSV upload option then do not ask for rows/columns]
+
+- Drag event should also ask for CSV file upload (So user is free to choose)
+  any of the option.
+
+- Once the upload will occur, get the path of CSV and path the PATH to Node
+  API and get an array of values as 2D array (An array of arrays).
+
+- In case of improper csv file specification, you will get `null` as return 
+  value.
+
+- Finally, the UI developer will either generate dynamic table based on 
+  returned 2d array or again make an API call to get the related HTML code
+  for table.
+
+- It's better to use your own logic if you need extra customizations and 
+  styles.
+
+
+Next requirements (Code implementation)
+========================================
+
+- Providing options on right (like PHOTOSHOP) for modifying the attributes
+  (width, height etc.) of elements (table, figure).
+
+
+- Add other features that you think to be added.
+  </code>
+</pre>
+          </div>
+        </div>
     </div>
 
 
