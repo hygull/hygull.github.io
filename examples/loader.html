@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>Loader Example</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.0/css/bootstrap.min.css">
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.0/jquery.min.js"></script>
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.0/js/bootstrap.min.js"></script>
+<style>
+.loader {
+  border: 16px solid  blue;
+  border-radius: 50%;
+  border-top: 16px solid #ccddff;
+  width: 120px;
+  height: 120px;
+  -webkit-animation: spin 5s linear infinite; /* Safari */
+  animation: spin 5s linear infinite;
+}
+
+/* Safari */
+@-webkit-keyframes spin {
+  0% { -webkit-transform: rotate(0deg); }
+  100% { -webkit-transform: rotate(360deg); }
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.running2 {
+  border: 16px solid green;
+  border-top: 16px solid lightgreen;
+  -webkit-animation: spin 1s linear infinite; /* Safari */
+  animation: spin 1s linear infinite;
+}
+</style>
+</head>
+<body>
+
+<div class="container">
+<br>
+<br>
+	<div class = 'col-md-4'>
+    <div class="loader running"></div>
+     <p>Running...</p>
+    </div>
+    
+    <div class = 'col-md-4'>
+    <div class="loader"></div>
+    <p>Waiting...</p>
+    </div>
+    
+    <div class = 'col-md-4'>
+    <div class="loader"></div>
+    <p>Waiting...</p>
+    </div>
+    
+    <div class = 'col-md-4'>
+    <div class="loader"></div>
+    <p>Waiting...</p>
+    </div>
+    
+    <div class = 'col-md-4'>
+    <div class="loader"></div>
+    <p>Waiting...</p>
+    </div>
+
+</div>
+
+
+<script>
+let loaders = document.getElementsByClassName('col-md-4')
+//console.log(loaders.length)
+let imgLink = 'https://img.icons8.com/office/2x/ok.png'
+let time =3000
+for(let i=0; i < loaders.length; i++) {
+   //console.log
+   time += 3000
+   setTimeout(function() {
+   	   loaders[i].innerHTML = '<img src="' + imgLink + '">';
+   }, time)
+}
+
+</script>
+</body>
+</html>
