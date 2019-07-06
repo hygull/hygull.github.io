@@ -1,6 +1,8 @@
 #login-img {
 	width: 20%; 
-	height: 20%
+	height: 20%;
+	animation-duration: 4s;
+	/*visibility: hidden;*/
 }
 
 input[type='checkbox'] {
