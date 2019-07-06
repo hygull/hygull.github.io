@@ -12,11 +12,12 @@
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"></script>
 <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
+<script src="https://unpkg.com/sweetalert/dist/sweetalert.min.js"></script>
 
 </head>
 <body>
     <nav class="navbar navbar-expand-lg navbar navbar-dark bg-primary">
-        <a href="#" class="navbar-brand">Callexo Tell</a>
+        <a href="#" class="navbar-brand">CallexoTel</a>
         <button type="button" class="navbar-toggler" data-toggle="collapse" data-target="#navbarCollapse2">
             <span class="navbar-toggler-icon"></span>
         </button>
@@ -46,10 +47,10 @@
                 <img src="https://image.flaticon.com/icons/png/512/1891/1891028.png" class="img img-responsive" id='login-img' data-toggle='tooltip' title="LOGIN PLEASE">
             </center>
                 <hr>
-                <form action="#" class="was-validated" onsubmit="event.preventDefault()">
+                <form action="#" class="was-validated" onsubmit="login(event)">
                     <div class="form-group">
-                      <label for="uname">EMAIL/PHONE &raquo;</label>
-                      <input type="text" class="form-control" id="uname" placeholder="Enter email/phone" name="uname" required autofocus data-toggle='tooltip' title="Email/phone" autocomplete="off">
+                      <label for="email_or_phone">EMAIL/PHONE &raquo;</label>
+                      <input type="text" class="form-control" id="email_or_phone" placeholder="Enter email/phone" name="email_or_phone" required autofocus data-toggle='tooltip' title="Email/phone" autocomplete="off">
                       <div class="valid-feedback">Email/phone looks good</div>
                       <div class="invalid-feedback">Please enter email/phone number</div>
                     </div>
@@ -77,6 +78,9 @@
 </body>
 
 <script type="text/javascript" src="js/tooltip.js"> </script>
+
+<script type="text/javascript" src="js/alerts.js"></script> <!--login.js should follow this line-->
+<script type="text/javascript" src="js/login.js"> </script>
 </html>                            
 
 
