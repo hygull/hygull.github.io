@@ -1,0 +1,8 @@
+#login-img {
+	width: 20%; 
+	height: 20%
+}
+
+input[type='checkbox'] {
+    cursor: pointer;
+}
