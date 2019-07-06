@@ -2,11 +2,11 @@ function login(event) {
 	event.preventDefault()
 	// Write logic, API call etc.
 
-	sweetAlertSuccess('Login successfull', 'Click OK/Cancel to visit your accounts/home page')
+	sweetAlertSuccess('Login successful', 'Click OK/Cancel to visit your accounts/home page')
 }
 
 
-function changeIcons(secs=3000) {
+function changeIcons(secs=4000) {
 	let icons = getIcons(type='login', count=5)
 	let i = 0
 	console.log(icons)
