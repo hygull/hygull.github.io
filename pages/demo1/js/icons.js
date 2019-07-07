@@ -7,9 +7,11 @@ var loginIcons = [
 ]
 
 var registerIcons = [
-	'https://image.flaticon.com/icons/png/512/1891/1891028.png',
 	'https://img.icons8.com/dusk/344/sms-token.png',
-	
+	'https://img.icons8.com/clouds/344/phone-book.png',
+	'https://img.icons8.com/clouds/344/phone-time.png',
+	'https://img.icons8.com/bubbles/344/phone-crown.png',
+	'https://image.flaticon.com/icons/png/512/1891/1891028.png'
 ]
 
 function getIcons(type, count=5) {
