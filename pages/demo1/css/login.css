@@ -15,5 +15,10 @@ input[type='checkbox'], #login-span-rem {
 
 
 i.fa, i.fas {
-	color: green;
+	color: #00134d;
+	cursor: pointer;
 } 
+
+i.fa:hover, i.fas:hover {
+	color: green;
+}
