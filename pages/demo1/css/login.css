@@ -12,3 +12,8 @@ input[type='checkbox'], #login-span-rem {
 .login-swicth-link {
 	font-size: 12px;
 }
+
+
+i.fa, i.fas {
+	color: green;
+} 
