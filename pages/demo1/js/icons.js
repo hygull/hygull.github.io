@@ -7,7 +7,7 @@ var loginIcons = [
 ]
 
 var registerIcons = [
-	'https://image.flaticon.com/icons/png/512/1891/1891028.png'
+	'https://image.flaticon.com/icons/png/512/1891/1891028.png',
 	'https://img.icons8.com/dusk/344/sms-token.png',
 	
 ]
