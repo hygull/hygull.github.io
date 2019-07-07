@@ -49,13 +49,14 @@
                 <hr>
                 <form action="#" class="was-validated" onsubmit="login(event)">
                     <div class="form-group">
-                      <label for="email_or_phone">EMAIL/PHONE &raquo;</label>
+                      <label for="email_or_phone"><i class="fa fa-envelope" aria-hidden="true"></i> EMAIL/PHONE &raquo;</label>
                       <input type="text" class="form-control" id="email_or_phone" placeholder="Enter email/phone" name="email_or_phone" required autofocus data-toggle='tooltip' title="Email/phone" autocomplete="off">
                       <div class="valid-feedback">Email/phone looks good</div>
                       <div class="invalid-feedback">Please enter email/phone number</div>
                     </div>
                     <div class="form-group">
-                      <label for="pwd">PASSWORD &raquo;</label>
+                      <label for="pwd"><i class="fa fa-key" aria-hidden="true"></i>
+PASSWORD &raquo;</label>
                       <input type="password" class="form-control" id="pwd" placeholder="Enter password" name="pswd" required data-toggle='tooltip' title="Password" autocomplete="off">
                       <div class="valid-feedback">Password looks good</div>
                       <div class="invalid-feedback">Please enter password</div>
@@ -76,9 +77,43 @@
 
                 <a href="register.html" class="login-swicth-link" data-toggle='tooltip' title="Create new account"><i class="fa fa-user-plus fa-1x" aria-hidden="true"></i> Don't have an account (Register)</a>
                 <br>
-                <a href="register.html" class="login-swicth-link" data-toggle='tooltip' title="Reset password">
-                <i class='fas fa-history'></i>  &nbsp;Forgot password
-                </a>
+                <span data-toggle='tooltip' title="Reset password" >
+                    <a href="javascript:void(0)" class="login-swicth-link" data-toggle='modal' data-target='#myModal'>
+                    <i class='fas fa-history'></i>  &nbsp;Forgot password
+                    </a>
+                </span>
+            </div>
+        </div>
+
+        <!---------- BS4 MODAL ---------->
+        <div class="modal fade" id="myModal">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+
+                    <!-- Modal Header -->
+                    <div class="modal-header">
+                      <h4 class="modal-title">Reset password</h4>
+                      <button type="button" class="close" data-dismiss="modal">&times;</button>
+                    </div>
+
+                    <!-- Modal body -->
+                    <div class="modal-body">
+                        <form action="#" class="was-validated" onsubmit="resetPassword(event)">
+                            <div class="form-group">
+                              <label for="email_or_phone_reset"><i class="fa fa-envelope" aria-hidden="true"></i> EMAIL/PHONE &raquo;</label>
+                              <input type="text" class="form-control" id="email_or_phone_reset" placeholder="Enter email/phone" name="email_or_phone_reset" required autofocus data-toggle='tooltip' title="Email/phone" autocomplete="off">
+                              <div class="valid-feedback">Email/phone looks good</div>
+                              <div class="invalid-feedback">Please enter email/phone number</div>
+                            </div>
+
+                        </form>
+                    </div>
+
+                    <!-- Modal footer -->
+                    <div class="modal-footer">
+                      <button type="button" class="btn btn-secondary btn-success" data-dismiss="modal">SEND ME</button>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
