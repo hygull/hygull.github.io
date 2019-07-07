@@ -88,7 +88,7 @@
 
                     <div class="form-group">
                       <label for="mobile_number"><i class="fa fa-phone" aria-hidden="true"></i> MOBILE NUMBER* &raquo;</label>
-                      <input type="text" class="form-control" id="mobile_number" placeholder="Enter mobile number" name="mobile_number" required autofocus data-toggle='tooltip' title="Mobile number" autocomplete="off">
+                      <input type="text" class="form-control" id="mobile_number" placeholder="Enter mobile number" name="mobile_number" required autofocus data-toggle='tooltip' title="Mobile number" autocomplete="off" onkeyup='this.value=this.value.replace(/\D+/g, "")' maxlength="15">
                       <div class="valid-feedback">Mobile number looks good</div>
                       <div class="invalid-feedback">Please enter mobile number</div>
                     </div>
