@@ -5,6 +5,10 @@
 	/*visibility: hidden;*/
 }
 
-input[type='checkbox'] {
+input[type='checkbox'], #login-span-rem {
     cursor: pointer;
+}
+
+.login-swicth-link {
+	font-size: 12px;
 }
