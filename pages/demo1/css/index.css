@@ -7,3 +7,12 @@
     margin-bottom: 20px;
 }
 
+
+.index-company-image {
+    max-height: 135px;
+    min-height: 135px;
+}
+/*
+.card {
+    min-height: 380px;
+}*/
