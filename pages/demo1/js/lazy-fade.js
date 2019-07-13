@@ -1,4 +1,5 @@
 // http://jquery.eisbehr.de/lazy/#about
+
     $(function() {
         $('.lazy').lazy({
           effect: "fadeIn",

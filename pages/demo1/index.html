@@ -126,22 +126,22 @@
 
             <div class="col-md-4 col-lg-3 col-xl-3 col-12 col-sm-4">
                   <div class="card">
-                    <img data-src="https://timedotcom.files.wordpress.com/2016/09/googles-18th-birthday-5661535679545344-hp2x.gif" class="img img-responsive index-detail-image index-company-image lazy">
+                    <img data-src="https://www.verdict.co.uk/wp-content/uploads/2018/09/shutterstock_1160472559-1440x960.jpg" class="img img-responsive index-detail-image index-company-image lazy">
                     <div class="card-body">
                       <h4 class="card-title">Google</h4>
-                      <p class="card-text">Some example text some example text. John Doe is an architect and engineer</p>
-                      <a href="#" class="btn btn-success btn-block">Google's full detail</a>
+                      <p class="card-text">Google LLC is an American multinational technology company that specializes in Internet-related services and products.</p>
+                      <a href="https://en.wikipedia.org/wiki/Google" class="btn btn-success btn-block">Google's full detail</a>
                     </div>
                   </div>
                   <br>
             </div>
             <div class="col-md-4 col-lg-3 col-xl-3 col-12 col-sm-4">
                   <div class="card">
-                    <img data-src="https://images.livemint.com/rf/Image-621x414/LiveMint/Period2/2018/03/27/Photos/Processed/microsoft-k4sF--621x414@LiveMint.jpg" class="img img-responsive index-detail-image index-company-image lazy">
+                    <img data-src="./images/companies/microsoft-k4sF--621x414@LiveMint.jpg" class="img img-responsive index-detail-image index-company-image lazy">
                     <div class="card-body">
                       <h4 class="card-title">Microsoft</h4>
-                      <p class="card-text">Some example text some example text. John Doe is an architect and engineer</p>
-                      <a href="#" class="btn btn-success btn-block">Microsoft's full detail</a>
+                      <p class="card-text">Microsoft Corporation is an American multinational technology company with headquarters in Redmond, Washington.</p>
+                      <a href="https://en.wikipedia.org/wiki/Microsoft" class="btn btn-success btn-block">Microsoft's full detail</a>
                     </div>
                   </div>
                   <br>
@@ -149,11 +149,11 @@
 
             <div class="col-md-4 col-lg-3 col-xl-3 col-12 col-sm-4">
                   <div class="card">
-                    <img data-src="https://upload.wikimedia.org/wikipedia/commons/thumb/c/c8/Zendesk_logo.svg/1200px-Zendesk_logo.svg.png" class="img img-responsive index-detail-image index-company-image lazy">
+                    <img data-src="https://www.templestreet.ie/wp-content/uploads/2014/07/Zendesk-logo.jpg" class="img img-responsive index-detail-image index-company-image lazy">
                     <div class="card-body">
                       <h4 class="card-title">ZenDesk</h4>
-                      <p class="card-text">Some example text some example text. John Doe is an architect and engineer</p>
-                      <a href="#" class="btn btn-success btn-block">Zendesk's full detail</a>
+                      <p class="card-text">Zendesk Inc. is a customer service software company headquartered in San Francisco, California, USA.<br/><br/></p>
+                      <a href="https://en.wikipedia.org/wiki/Zendesk" class="btn btn-success btn-block">Zendesk's full detail</a>
                     </div>
                   </div>
                   <br>
@@ -161,11 +161,11 @@
 
             <div class="col-md-4 col-lg-3 col-xl-3 col-12 col-sm-4">
                   <div class="card">
-                    <img data-src="https://timedotcom.files.wordpress.com/2016/06/tesla-solar-city-elon-musk.jpeg" class="img img-responsive index-detail-image index-company-image lazy">
+                    <img data-src="./images/companies/tesla-solar-city-elon-musk.jpeg" class="img img-responsive index-detail-image index-company-image lazy">
                     <div class="card-body">
                       <h4 class="card-title">Tesla</h4>
-                      <p class="card-text">Some example text some example text. John Doe is an architect and engineer</p>
-                      <a href="#" class="btn btn-success btn-block">Tesla's full detail</a>
+                      <p class="card-text">Tesla, Inc. is an American automotive and energy company based in Palo Alto, California. <br/><br></p>
+                      <a href="https://en.wikipedia.org/wiki/Tesla,_Inc." class="btn btn-success btn-block">Tesla's full detail</a>
                     </div>
                   </div>
                   <br>
@@ -186,7 +186,19 @@
     <!-- cdnjs -->
     <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jquery.lazy/1.7.9/jquery.lazy.min.js"></script>
     <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jquery.lazy/1.7.9/jquery.lazy.plugins.min.js"></script>
-                
     <script type="text/javascript" src="./js/lazy-fade.js"></script>
+
+    <script type="text/javascript">
+        $(document).on('scroll', function() {
+            console.log('Scroll')
+
+            // $('.lazy').fadeOut(3000, function(){
+                // console.log('fadeOut - fadIn')
+
+                $('.lazy').fadeIn(3000)
+            // })
+        })        
+    </script>
+
 </body>
 </html>
