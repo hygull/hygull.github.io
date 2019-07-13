@@ -3,8 +3,8 @@
 }
 
 .index-gap {
-    margin-top: 20px;
-    margin-bottom: 20px;
+    margin-top: 25px;
+    margin-bottom: 25px;
 }
 
 
@@ -19,7 +19,7 @@
 
 
 .card:hover {
-    border: 0.3px solid gray; 
+    border: 0.4px solid gray; 
     box-shadow:  5px 10px 18px #e6e6e6;
 }
 
@@ -28,4 +28,12 @@
         max-height: 160px;
         min-height: 160px;
     }
+}
+
+* {
+    font-family: tahoma;
+}
+
+.index-heading {
+    font-family: serif;
 }
