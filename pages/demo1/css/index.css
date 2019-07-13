@@ -28,6 +28,10 @@
         max-height: 160px;
         min-height: 160px;
     }
+
+    .index-heading {
+        font-size: 30px;
+    }
 }
 
 * {
