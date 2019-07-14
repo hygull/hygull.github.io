@@ -21,7 +21,11 @@
 .card:hover {
     border: 0.4px solid gray; 
     box-shadow:  5px 10px 18px #e6e6e6;
+    font-family: 'Poppins', sans-serif;
+
+
 }
+
 
 @media only screen and (max-width: 600px){
     .index-company-image {
@@ -36,8 +40,22 @@
 
 * {
     font-family: tahoma;
+    /*font-family: 'Poppins', sans-serif;*/
 }
 
 .index-heading {
     font-family: serif;
+    /*font-family: 'Montserrat', sans-serif;*/
+}
+
+.footer-up * {
+    color: white;
+}
+
+.footer-down {
+    color: white;
+}
+
+.footer-detail {
+    padding: 10px;
 }

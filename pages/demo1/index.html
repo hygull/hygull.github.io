@@ -11,6 +11,7 @@
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"></script>
 <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
+<!-- <link href="https://fonts.googleapis.com/css?family=Poppins&display=swap" rel="stylesheet"> -->
 <script src="https://unpkg.com/sweetalert/dist/sweetalert.min.js"></script>
   <style>
   /* Make the image fully responsive */
@@ -43,11 +44,11 @@
 
         <div class="collapse navbar-collapse" id="navbarCollapse2">
             <div class="navbar-nav">
-                <a href="index.html#index-about" class="nav-item nav-link">About</a> <!-- About us section-->
-                <a href="index.html#index-what-we-offer" class="nav-item nav-link">What we offer</a> <!-- What we offer section -->
-                <a href="index.html#index-contact" class="nav-item nav-link">Contact</a> <!-- Contact page -->
+                <a href="#index-about" class="nav-item nav-link nav-item-scroll">About</a> <!-- About us section-->
+                <a href="#index-what-we-offer" class="nav-item nav-link nav-item-scroll">What we offer</a> <!-- What we offer section -->
+                <a href="#index-contact" class="nav-item nav-link nav-item-scroll">Contact</a> <!-- Contact page -->
 
-                <a href="index.html#index-targeting-customers" class="nav-item nav-link">Targeting customers</a>
+                <a href="#index-targeting-customers" class="nav-item nav-link nav-item-scroll">Targeting customers</a>
             </div>
 
             <div class="navbar-nav navbar-right ml-auto">
@@ -117,7 +118,11 @@
 
             <!--Column 12-->
             <div class="col-md-6 col-lg-6 col-xl-6 col-12 col-sm-6">
-        
+                <h3>Who we are?</h3>
+
+                <p>
+                  We are a company who provide the facility of call masking with call recording. 
+                </p>
             </div>
         </div>
 
@@ -136,7 +141,14 @@
 
             <!-- Column 21 -->
             <div class="col-md-6 col-lg-6 col-xl-6 col-12 col-sm-6">
+              <ul>
+                <li>We mask calls</li>
 
+                <li>
+                  We record calls
+                </li>
+                <li>We take care of all the basic details of calls</li>
+              </ul>
             </div>
             <!-- Column 22 -->
             <div class="col-md-6 col-lg-6 col-xl-6 col-12 col-sm-6">
@@ -170,14 +182,14 @@
 
 
         <!--GAP-->
-        <div class="row">
+        <div class="row" id='index-targeting-customers'>
             <div class="index-gap"></div>
         </div>
 
 
 
         <!--Row 3-->
-        <div class="row" id='index-targeting-customers'>
+        <div class="row">
             <div class="col-md-12 col-lg-12 col-xl-12 col-12 col-sm-12">
                 <h1 class='index-heading'><i class="fas fa-bezier-curve"></i> Targeting customers</h1>
                 <hr>
@@ -242,6 +254,45 @@
 
     </div>
 
+    <!--Container fluid-->
+    <div class="container-fluid footer-up" style="background:#4d4d4d;min-height: 400px; padding: 10px">
+      <div class="row" >
+        <!-- Col 1-->
+        <div class="offset-md-2 col-md-2 col-sm-3 col-6">
+            <h5>Services</h5>
+            <hr>
+        </div>
+
+        <!--Col 2-->
+        <div  class="col-md-2 col-sm-3 col-6">
+            <h5>Address</h5>
+            <hr>
+        </div>
+
+        <!--Col 3-->
+        <div class="col-md-3 col-sm-3 col-6"">
+          <h5>Social Media</h5>
+          <hr>
+        </div>
+
+        <!--Col 3-->
+        <div class="col-md-3 col-sm-3 col-6"">
+          <h5>Pay us</h5>
+          <hr>
+        </div>
+      </div>
+    </div>
+
+    <div class="container-fluid footer-down">
+      <div class="row" style="background:#262626; min-height: 60px">
+        <div class="col-12 col-xl-12 text-center footer-detail">
+          ©Copyright 2019, CallExoTel, <a href="tel:+91 7854123400">+91 7854123400</a>
+          <br>
+          Bangalore (Karnataka), India
+        </div>
+      </div>
+    </div>
+
     <!-- cdnjs -->
     <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jquery.lazy/1.7.9/jquery.lazy.min.js"></script>
     <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jquery.lazy/1.7.9/jquery.lazy.plugins.min.js"></script>
@@ -249,17 +300,29 @@
 
     <script type="text/javascript">
         /*
-        $(document).on('scroll', function() {
-            console.log('Scroll')
+          $(document).on('scroll', function() {
+              console.log('Scroll')
 
-            $('.lazy').fadeOut('slow', function(){
-                console.log('fadeOut - fadIn')
+              $('.lazy').fadeOut('slow', function(){
+                  console.log('fadeOut - fadIn')
+                  $('.lazy').fadeIn(2000)
+              })
+          })
+        */ 
 
-                $('.lazy').fadeIn(2000)
-            })
-        })
-        */        
     </script>
 
+
+    <script type="text/javascript">
+      $("a.nav-item-scroll").click(function(e) {
+        e.preventDefault();
+        
+        var position = $($(this).attr("href")).offset().top;
+
+        $("body, html").animate({
+          scrollTop: position
+        }, 1500/* speed */ );
+      });
+    </script>
 </body>
 </html>
