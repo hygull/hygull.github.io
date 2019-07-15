@@ -48,12 +48,24 @@
     /*font-family: 'Montserrat', sans-serif;*/
 }
 
-.footer-up * {
-    color: white;
+.footer-up {
+    /*color: white;*/
+    background:#4d4d4d;
+    min-height: 400px; 
+    padding: 10px
 }
 
+
+.footer-up * {
+    color: white
+}
+
+.footer-up i {
+    color: #f2f2f2;
+}
 .footer-down {
     color: white;
+    background:#262626; min-height: 60px
 }
 
 .footer-detail {
