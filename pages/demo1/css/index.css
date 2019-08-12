@@ -71,3 +71,50 @@
 .footer-detail {
     padding: 10px;
 }
+
+
+/* Make the image fully responsive */
+.carousel-inner img {
+    width: 100%;
+    height: 600px;
+}
+
+@media only screen and (max-width: 600px) {
+  .carousel-inner img {
+    width: 100%;
+    height: 300px;
+  }
+}
+
+@media only screen and (max-width: 900px) {
+  .carousel-inner img {
+    width: 100%;
+    height: 400px;
+  }
+}
+
+/* Form styles */
+#login-img {
+    width: 20%; 
+    height: 20%;
+    animation-duration: 4s;
+    /*visibility: hidden;*/
+}
+
+input[type='checkbox'], #login-span-rem {
+    cursor: pointer;
+}
+
+.login-swicth-link {
+    font-size: 12px;
+}
+
+
+i.fa, i.fas {
+    color: #00134d;
+    cursor: pointer;
+} 
+
+i.fa:hover, i.fas:hover {
+    color: green;
+}
