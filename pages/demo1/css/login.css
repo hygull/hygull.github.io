@@ -22,3 +22,7 @@ i.fa, i.fas {
 i.fa:hover, i.fas:hover {
 	color: green;
 }
+
+body {
+	line-height: 1.1
+}
