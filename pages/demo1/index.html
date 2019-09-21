@@ -14,7 +14,9 @@
 <!-- <link href="https://fonts.googleapis.com/css?family=Poppins&display=swap" rel="stylesheet"> -->
 <script src="https://unpkg.com/sweetalert/dist/sweetalert.min.js"></script>
 
-<link rel="stylesheet" type="text/css" href="./css/css/index.css">
+<link rel="stylesheet" type="text/css" href="./css/index.css">
+
+
 </head>
 <body>
     <nav class="navbar navbar-expand-lg navbar navbar-dark bg-primary fixed-top ">
@@ -361,6 +363,23 @@
           scrollTop: position
         }, 1500 /* speed */ );
       });
+    </script>
+
+    <script type="text/javascript">
+      $(document).ready(function(){
+            $('head').append($(`<style type="text/css">
+                @media only screen and (max-width: 600px) {
+                  .im-checkout-layout .layout-vertical {
+                      width: 75%;
+
+                  }
+
+                  body {
+                    line-height: 1.1;
+                  }
+                }
+          </style>`))
+          });
     </script>
 </body>
 </html>
