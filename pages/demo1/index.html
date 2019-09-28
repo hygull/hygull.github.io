@@ -263,7 +263,7 @@
     <div class="container-fluid footer-up">
       <div class="row" >
         <!-- Col 1-->
-        <div class="offset-md-2 col-md-2 col-sm-3 col-6">
+        <div class="col-xl-3 col-lg-3 col-md-4 col-sm-6 col-12">
             <h5><i class="fas fa-cloud-sun-rain"></i> SERVICES</h5>
             <hr>
             <span>
@@ -274,10 +274,11 @@
                 <li>Security in channels</li>
               </ul>
             </span>
+            <hr>
         </div>
 
         <!--Col 2-->
-        <div  class="col-md-2 col-sm-3 col-6">
+        <div  class="col-xl-3 col-lg-3 col-md-4 col-sm-6 col-12">
             <h5><i class="fas fa-book"></i> ADDRESS</h5>
             <hr>
             <span>
@@ -292,10 +293,11 @@
               <b><u>New branch office</u></b>
               Near Masjid Bilal, Bavdhan Road, Lantana Gardens, Bavdhan, Pune, Maharashtra
             </span>
+            <hr>
         </div>
 
         <!--Col 3-->
-        <div class="col-md-3 col-sm-3 col-6">
+        <div class="col-xl-3 col-lg-3 col-md-4 col-sm-6 col-12">
           <h5><i class="far fa-snowflake"></i> SOCIAL MEDIA</h5>
           <hr>
 
@@ -303,11 +305,11 @@
           <a href="https://twitter.com" class="btn btn-block btn-info"><i class="fab fa-twitter" aria-hidden="true"></i> TWITTER</a>
           <a href="https://linkedin.com" class="btn btn-block btn-primary"><i class="fab fa-linkedin" aria-hidden="true"></i> LINKEDIN</a>
           <a href="https://instagram.com" class="btn btn-block btn-warning"><i class="fab fa-instagram" aria-hidden="true"></i> INSTAGRAM</a>
-
+          <hr>
         </div>
 
         <!--Col 3-->
-        <div class="col-md-3 col-sm-3 col-6">
+        <div class="col-xl-3 col-lg-3 col-md-4 col-sm-6 col-12">
           <h5><i class="fab fa-cc-amazon-pay"></i> PAY US</h5>
           <hr>
           
@@ -367,16 +369,35 @@
     <script type="text/javascript">
       $(document).ready(function(){
             $('head').append($(`<style type="text/css">
+
                 @media only screen and (max-width: 600px) {
                   .im-checkout-layout .layout-vertical {
-                      width: 75%;
+                      
+                  }
 
+                  element.style {
+                    width: 380px;
+                  }
+                }
+
+                @media only screen and (max-width: 1250px) {
+
+                  .im-checkout {
+                    max-width: 280px
+                  }
+                }
+
+
+                @media only screen and (max-width: 1200px) {
+
+                  .im-checkout {
+                    max-width: 260px
                   }
                 }
 
                 body {
                     line-height: 1.1;
-                  }
+                }
           </style>`))
           });
     </script>
