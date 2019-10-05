@@ -25,3 +25,12 @@
   padding: 10px 0;
   height: 150px;
 }
+
+
+/* Modal Content (image) */
+.modal-content {
+  margin: auto;
+  display: block;
+  width: 80%;
+  max-width: 100%;  /*700px;*/
+}
