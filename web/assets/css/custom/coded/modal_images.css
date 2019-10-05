@@ -1,0 +1,27 @@
+/* https://www.w3schools.com/howto/tryit.asp?filename=tryhow_css_modal_img */
+
+.hygull-img-cls {
+	width:100%
+}
+
+
+/* Copied from befcoded, #myImg -> .hygull-img-cls, #caption -> hygull-caption-cls */
+.hygull-img-cls {
+  border-radius: 5px;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+.hygull-img-cls:hover {opacity: 0.7;}
+
+/* Caption of Modal Image */
+.hygull-caption-cls {
+  margin: auto;
+  display: block;
+  width: 80%;
+  max-width: 700px;
+  text-align: center;
+  color: #ccc;
+  padding: 10px 0;
+  height: 150px;
+}

@@ -1,20 +1,27 @@
-// Get the modal
-var modal = document.getElementById("myModal");
+function updateImagesAndModalsInDOM(modalConfigs) {
+	for(let modalConfig of modalConfigs) {
+		// Get the modal
+		var modal = document.getElementById(modalConfig.modalId); // "myModal"
 
-// Get the image and insert it inside the modal - use its "alt" text as a caption
-var img = document.getElementById("myImg");
-var modalImg = document.getElementById("img01");
-var captionText = document.getElementById("caption");
-img.onclick = function(){
-  modal.style.display = "block";
-  modalImg.src = this.src;
-  captionText.innerHTML = this.alt;
-}
+		// Get the image and insert it inside the modal - use its "alt" text as a caption
+		var img = document.getElementById(modalConfig.imageId); // "myImg"
+		var modalImg = document.getElementById(modalConfig.modalImageId); // "img01"
+		var captionText = document.getElementById(modalConfig["modalCaptionId"]); // "caption"
 
-// Get the <span> element that closes the modal
-var span = document.getElementsByClassName("close")[0];
+		img.onclick = function(){
+		  modal.style.display = "block";
+		  modalImg.src = this.src;
+		  captionText.innerHTML = this.alt;
+		}
 
-// When the user clicks on <span> (x), close the modal
-span.onclick = function() { 
-  modal.style.display = "none";
+		// // Get the <span> element that closes the modal
+		// var span = document.getElementsByClassName("close")[0];
+
+		// // When the user clicks on <span> (x), close the modal
+		// span.onclick = function() { 
+		//   modal.style.display = "none";
+		// }
+
+		addEventListenerToSpanCloseElement(modal)
+	}
 }
