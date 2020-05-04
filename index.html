@@ -108,24 +108,26 @@
     <script type="text/javascript" src="web/assets/js/custom/coded/modal_images_list.js"></script>
     <script type="text/javascript">
         $.each(modalImages, function(i, path) {
-            // Add to container 1 
-            let parts = path.split('/')
-            let divImageContainer1 = $(`
-                <div class="col-12 col-sm-4 col-md-6 col-lg-4 col-xl-4">
-                    <img id="hygull-img-00${i + 1}" src="${path}" alt="${parts[parts.length - 1]}" class="hygull-img-cls" style="height:300px">
-                </div>
-            `)
-            $('#hygull-container-01 .row').append(divImageContainer1)
+            if(path.indexOf(".svg") === -1) {
+                // Add to container 1 
+                let parts = path.split('/')
+                let divImageContainer1 = $(`
+                    <div class="col-12 col-sm-4 col-md-6 col-lg-4 col-xl-4">
+                        <img id="hygull-img-00${i + 1}" src="${path}" alt="${parts[parts.length - 1]}" class="hygull-img-cls" style="height:300px">
+                    </div>
+                `)
+                $('#hygull-container-01 .row').append(divImageContainer1)
 
-            // Add to container 2
-            let divImageContainer2 = $(`
-                <div id="hygull-modal-00${i + 1}" class="modal hygull-modal-cls">
-                    <span class="close">&times;</span>
-                    <img class="modal-content" id="hygull-modal-img-00${i + 1}">
-                    <div id="hygull-caption-00${i + 1}" class="hygull-caption-cls"></div>
-                </div>
-            `)
-            $('#hygull-container-02').append(divImageContainer2)
+                // Add to container 2
+                let divImageContainer2 = $(`
+                    <div id="hygull-modal-00${i + 1}" class="modal hygull-modal-cls">
+                        <span class="close">&times;</span>
+                        <img class="modal-content" id="hygull-modal-img-00${i + 1}">
+                        <div id="hygull-caption-00${i + 1}" class="hygull-caption-cls"></div>
+                    </div>
+                `)
+                $('#hygull-container-02').append(divImageContainer2)
+            }
         })
 
     </script>
