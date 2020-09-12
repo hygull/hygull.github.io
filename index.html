@@ -1,136 +1,142 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title>Home Page</title>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-
-    <!--https://maxcdn.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css-->
-    <link rel="stylesheet" href="web/assets/css/bootstrap4.3.1.min.css">
-
-    <!--https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js-->
-    <script src="web/assets/js/jquery3.4.1.min.js"></script>
-
-    <!--https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js-->
-    <script src="web/assets/js/popper1.14.7.min.js"></script>
-
-    <!--https://maxcdn.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap4.3.1.min.js-->
-    <script src="web/assets/js/bootstrap4.3.1.min.js"></script>
-
-    <link rel="stylesheet" type="text/css" href="web/assets/css/custom/befcoded/modal_images.css">
-
-    <link rel="stylesheet" type="text/css" href="web/assets/css/custom/coded/modal_images.css">
+  <title>Bootstrap Example</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
 </head>
 <body>
 
-    <!--https://www.w3schools.com/howto/tryit.asp?filename=tryhow_css_modal_img-->
-    <div class="container" id="hygull-container-01">
-        <div class="row">
-            <div class="col-12 col-sm-4 col-md-6 col-lg-4 col-xl-4">
-                <img id="hygull-img-01" src="https://raw.githubusercontent.com/hygull/fileserver/master/2019/screenshots/get_numbers_from.png" alt="Numbers from text (Regex in Python), re module" class="hygull-img-cls">
-            </div>
+<div class="container">
+  <!--
+  <h2>Alerts</h2>
+  <p>The a element with class="close" and data-dismiss="alert" is used to close the alert box.</p>
+  <p>The alert-dismissible class adds some extra padding to the close button.</p>
 
-            <div class="col-12 col-sm-4 col-md-6 col-lg-4 col-xl-4">
-                <img id="hygull-img-02" src="https://raw.githubusercontent.com/hygull/fileserver/master/2019/screenshots/update_images_and_modal_in_dom.png" alt="Get modal configurations (Modal images, JS), 1st" class="hygull-img-cls">
-            </div>
 
-            <div class="col-12 col-sm-4 col-md-6 col-lg-4 col-xl-4">
-                <img id="hygull-img-03" src="https://raw.githubusercontent.com/hygull/fileserver/master/2019/screenshots/get_modal_configs_1.png" alt="Get modal configurations (Modal images), 1st" class="hygull-img-cls">
-            </div>
+  -->
+  <div class="row text-center">
+      <h2>4 Lines<h2>
+  </div>
+  <div class="row">
+    <div class="col-md-6">
+            <div class="alert alert-success alert-dismissible">
+              <a href="#" class="close" data-dismiss="alert" aria-label="close">&times;</a>
 
-            <div class="col-12 col-sm-4 col-md-6 col-lg-4 col-xl-4">
-                <img id="hygull-img-04" src="https://raw.githubusercontent.com/hygull/fileserver/master/2019/screenshots/get_modal_configs_2.png" alt="Get modal configurations (Modal images), 2nd" class="hygull-img-cls">
+              <audio controls>
+                  <source src="binaries/audios/KiYuHiMain/01_t_voice6262484697536790913.ogg" type="audio/ogg">
+                    
+                    <source src="horse.mp3" type="audio/mpeg">
+                    Your browser does not support the audio element.
+              </audio>
             </div>
-
-            <div class="col-12 col-sm-4 col-md-6 col-lg-4 col-xl-4">
-                <img id="hygull-img-05" src="https://raw.githubusercontent.com/hygull/fileserver/master/2019/screenshots/func_name_inside.png" alt="Getting name of function inside (Python)" class="hygull-img-cls">
-            </div>
-
-            <div class="col-12 col-sm-4 col-md-6 col-lg-4 col-xl-4">
-                <img id="hygull-img-06" src="https://raw.githubusercontent.com/hygull/fileserver/master/2019/screenshots/list_comprehension_ex1.png" alt="Using list comprehension to get squares, evens, odds" class="hygull-img-cls">
-            </div>
-            
-            <div class="col-12 col-sm-4 col-md-6 col-lg-4 col-xl-4">
-                <img id="hygull-img-07" src="https://raw.githubusercontent.com/hygull/fileserver/master/2019/screenshots/exception_handling_ex1.png" alt="Exception handling, try, except, else, finally blocks" class="hygull-img-cls">
-            </div>
-        </div>
     </div>
 
-    <div class="container" id="hygull-container-02">
-        <!-- The Modal -->
-        <div id="hygull-modal-01" class="modal hygull-modal-cls">
-            <span class="close">&times;</span>
-            <img class="modal-content" id="hygull-modal-img-01">
-            <div id="hygull-caption-01" class="hygull-caption-cls"></div>
-        </div>
-
-        <div id="hygull-modal-02" class="modal hygull-modal-cls">
-            <span class="close">&times;</span>
-            <img class="modal-content" id="hygull-modal-img-02">
-            <div id="hygull-caption-02" class="hygull-caption-cls"></div>
-        </div>
-
-        <div id="hygull-modal-03" class="modal hygull-modal-cls">
-            <span class="close">&times;</span>
-            <img class="modal-content" id="hygull-modal-img-03">
-            <div id="hygull-caption-03" class="hygull-caption-cls"></div>
-        </div>
-
-        <div id="hygull-modal-04" class="modal hygull-modal-cls">
-            <span class="close">&times;</span>
-            <img class="modal-content" id="hygull-modal-img-04">
-            <div id="hygull-caption-04" class="hygull-caption-cls"></div>
-        </div>
-
-        <div id="hygull-modal-05" class="modal hygull-modal-cls">
-            <span class="close">&times;</span>
-            <img class="modal-content" id="hygull-modal-img-05">
-            <div id="hygull-caption-05" class="hygull-caption-cls"></div>
-        </div>
-
-        <div id="hygull-modal-06" class="modal hygull-modal-cls">
-            <span class="close">&times;</span>
-            <img class="modal-content" id="hygull-modal-img-06">
-            <div id="hygull-caption-06" class="hygull-caption-cls"></div>
-        </div>
-
-        <div id="hygull-modal-07" class="modal hygull-modal-cls">
-            <span class="close">&times;</span>
-            <img class="modal-content" id="hygull-modal-img-07">
-            <div id="hygull-caption-07" class="hygull-caption-cls"></div>
+    <div class="col-md-6">
+         <div class="alert alert-info alert-dismissible">
+          <a href="#" class="close" data-dismiss="alert" aria-label="close">&times;</a>
+           <strong>कि यूँ ही मैं आँखेँ बंद कर यूँ ही जगता रहूँ।</strong>
         </div>
     </div>
+  </div>
 
-    <script type="text/javascript" src="web/assets/js/custom/befcoded/modal_images.js"></script>
+  <div class="row">
+    <div class="col-md-6">
+            <div class="alert alert-success alert-dismissible">
+              <a href="#" class="close" data-dismiss="alert" aria-label="close">&times;</a>
 
-    <script type="text/javascript" src="web/assets/js/custom/coded/modal_images.js"></script>
+              <audio controls>
+                  <source src="binaries/audios/KiYuHiMain/02_t_voice6262484697536790914.ogg" type="audio/ogg">
+                    
+                    <source src="horse.mp3" type="audio/mpeg">
+                    Your browser does not support the audio element.
+              </audio>
+            </div>
+    </div>
 
-    <script type="text/javascript" src="web/assets/js/custom/coded/modal_images_list.js"></script>
-    <script type="text/javascript">
-        $.each(modalImages, function(i, path) {
-            if(path.indexOf(".svg") === -1) {
-                // Add to container 1 
-                let parts = path.split('/')
-                let divImageContainer1 = $(`
-                    <div class="col-12 col-sm-4 col-md-6 col-lg-4 col-xl-4">
-                        <img id="hygull-img-00${i + 1}" src="${path}" alt="${parts[parts.length - 1]}" class="hygull-img-cls" style="height:300px">
-                    </div>
-                `)
-                $('#hygull-container-01 .row').append(divImageContainer1)
+    <div class="col-md-6">
+         <div class="alert alert-info alert-dismissible">
+          <a href="#" class="close" data-dismiss="alert" aria-label="close">&times;</a>
+           <strong>या कहूँ कुछ बातें अब मैं या चुप ही लगता रहूँ।</strong>
+        </div>
+    </div>
+  </div>
 
-                // Add to container 2
-                let divImageContainer2 = $(`
-                    <div id="hygull-modal-00${i + 1}" class="modal hygull-modal-cls">
-                        <span class="close">&times;</span>
-                        <img class="modal-content" id="hygull-modal-img-00${i + 1}">
-                        <div id="hygull-caption-00${i + 1}" class="hygull-caption-cls"></div>
-                    </div>
-                `)
-                $('#hygull-container-02').append(divImageContainer2)
-            }
-        })
+  <div class="row">
+    <div class="col-md-6">
+            <div class="alert alert-success alert-dismissible">
+              <a href="#" class="close" data-dismiss="alert" aria-label="close">&times;</a>
 
-    </script>
+              <audio controls>
+                  <source src="binaries/audios/KiYuHiMain/03_t_voice6262484697536790915.ogg" type="audio/ogg">
+                    
+                    <source src="horse.mp3" type="audio/mpeg">
+                    Your browser does not support the audio element.
+              </audio>
+            </div>
+    </div>
+
+    <div class="col-md-6">
+         <div class="alert alert-info alert-dismissible">
+          <a href="#" class="close" data-dismiss="alert" aria-label="close">&times;</a>
+           <strong>वजह मुझे याद हो तो याद करके वो भी बता दूँ।</strong>
+        </div>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="col-md-6">
+            <div class="alert alert-success alert-dismissible">
+              <a href="#" class="close" data-dismiss="alert" aria-label="close">&times;</a>
+
+              <audio controls>
+                  <source src="binaries/audios/KiYuHiMain/04_t_voice6262484697536790921.ogg" type="audio/ogg">
+                    
+                    <source src="horse.mp3" type="audio/mpeg">
+                    Your browser does not support the audio element.
+              </audio>
+            </div>
+    </div>
+
+    <div class="col-md-6">
+         <div class="alert alert-info alert-dismissible">
+          <a href="#" class="close" data-dismiss="alert" aria-label="close">&times;</a>
+           <strong>कसम दो चार खा, सब छानकर पूरी खुशियाँ जुटा दूँ।</strong>
+        </div>
+    </div>
+  </div>
+
+<!--
+  <div class="alert alert-success alert-dismissible">
+    <a href="#" class="close" data-dismiss="alert" aria-label="close">&times;</a>
+
+    <audio controls>
+        <source src="binaries/audios/KiYuHiMain/04t_voice6262484697536790917.ogg" type="audio/ogg">
+          
+          <source src="horse.mp3" type="audio/mpeg">
+        Your browser does not support the audio element.
+    </audio>
+
+    <strong>कि यूँ ही मैं आँखेँ बंद कर यूँ ही जगता रहूँ।</strong>
+  </div>
+  <div class="alert alert-info alert-dismissible">
+    <a href="#" class="close" data-dismiss="alert" aria-label="close">&times;</a>
+    <strong>Info!</strong> This alert box could indicate a neutral informative change or action.
+  </div>
+  <div class="alert alert-warning alert-dismissible">
+    <a href="#" class="close" data-dismiss="alert" aria-label="close">&times;</a>
+    <strong>Warning!</strong> This alert box could indicate a warning that might need attention.
+  </div>
+  <div class="alert alert-danger alert-dismissible">
+    <a href="#" class="close" data-dismiss="alert" aria-label="close">&times;</a>
+    <strong>Danger!</strong> This alert box could indicate a dangerous or potentially negative action.
+  </div>
+-->
+</div>
 
 </body>
 </html>
+
