@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Bash Notes</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@500;700&display=swap">
+<link rel="stylesheet" href="../../assets/tutorial.css">
+</head>
+<body data-track="bash">
+
+<header class="topbar">
+  <div class="topbar-in">
+    <a class="brand" href="../../../index.html">Learnings</a>
+    <nav class="tracks" aria-label="Tutorials">
+      <a href="bash-notes.html" aria-current="page">Bash Notes</a>
+      <a href="../../../archive.html">Archive</a>
+    </nav>
+    <div class="tools">
+      <button class="btn" id="menu" type="button" aria-expanded="false">Chapters</button>
+      <input id="q" type="search" placeholder="Search chapters" aria-label="Search chapters">
+      <button class="btn" id="theme" type="button">Dark mode</button>
+    </div>
+  </div>
+</header>
+
+<div class="shell">
+  <aside class="side">
+    <p class="side-label">Bash chapters</p>
+    <nav id="toc" aria-label="Chapters"></nav>
+  </aside>
+
+  <main>
+    <div class="page-head">
+      <p class="eyebrow">Command line</p>
+      <h1>Bash Notes</h1>
+      <p class="lead">Small things about the Bash shell that save time or prevent accidents, written down as they come up. The first topic is the <code>!</code> history shortcuts and the <code>histverify</code> setting that makes them safe. Commands were checked on Bash 3.2, the version that ships with macOS, and work the same on newer versions.</p>
+    </div>
+
+    <div class="chapters">
+
+      <section class="chapter" id="history-expansion">
+        <h2>History expansion with !</h2>
+        <p>Bash remembers every command you run. Type <code>history</code> to see the list with a number beside each one. A <code>!</code> at the prompt pulls a command, or part of one, back out of that list. Bash replaces the shortcut with the real text before running the line.</p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>You type</th><th>Bash runs</th></tr></thead>
+            <tbody>
+              <tr><td><code>!!</code></td><td>The previous command</td></tr>
+              <tr><td><code>sudo !!</code></td><td>The previous command, with <code>sudo</code> in front</td></tr>
+              <tr><td><code>!515</code></td><td>Command number 515 from <code>history</code></td></tr>
+              <tr><td><code>!-2</code></td><td>The command before the previous one</td></tr>
+              <tr><td><code>!git</code></td><td>The most recent command that started with <code>git</code></td></tr>
+              <tr><td><code>!$</code></td><td>The last word of the previous command</td></tr>
+              <tr><td><code>!*</code></td><td>All the arguments of the previous command</td></tr>
+              <tr><td><code>^old^new</code></td><td>The previous command with the first <code>old</code> replaced by <code>new</code></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>The usual use of <code>!$</code> is to reuse a path:</p>
+        <script type="text/plain" data-lang="bash">
+mkdir -p projects/bank-demo
+cd !$                  # runs: cd projects/bank-demo
+        </script>
+        <p>And <code>^old^new</code> fixes a typo without retyping the line:</p>
+        <script type="text/plain" data-lang="bash">
+ecoh "deploy finished"     # bash: ecoh: command not found
+^ecoh^echo                 # runs: echo "deploy finished"
+        </script>
+        <p class="note"><b>Space matters:</b> <code>!git</code> is history expansion. <code>! git status</code>, with a space, is something else: it runs the command normally and only flips its success or failure code.</p>
+      </section>
+
+      <section class="chapter" id="risk">
+        <h2>Why it is risky</h2>
+        <p>By default Bash runs the expanded line the moment you press Enter. You never see what the shortcut turned into until it has already run.</p>
+        <p>A harmless example. After <code>ls -alrth</code>, the last word is <code>-alrth</code>, so <code>!$</code> alone tries to run that as a command:</p>
+        <script type="text/plain" data-lang="text" data-file="Terminal session">
+$ ls -alrth
+total 48
+drwxr-xr-x   5 rishikesh  staff   160B Nov 17 21:03 learnings
+...
+$ !$
+-alrth
+bash: -alrth: command not found
+        </script>
+        <p>The dangerous version is the same mistake with a different history. <code>!rm</code> or <code>!git</code> runs the most recent matching command, which may be the <code>rm -rf build</code> or <code>git push --force</code> from yesterday, in whatever folder you are in now.</p>
+        <p class="note"><b>The problem in one line:</b> you are running a command you have not read.</p>
+      </section>
+
+      <section class="chapter" id="histverify">
+        <h2>histverify: look before it runs</h2>
+        <p><code>histverify</code> is a Bash option. When it is on, pressing Enter after a history shortcut does not run anything. Bash puts the expanded command back on the prompt so you can read it, edit it, and press Enter a second time to run it.</p>
+        <script type="text/plain" data-lang="bash">
+shopt -s histverify    # turn it on (s = set)
+        </script>
+        <script type="text/plain" data-lang="text" data-file="Terminal session">
+$ ls -alrth
+...
+$ !!                   # press Enter
+$ ls -alrth            # Bash shows the real command and waits
+                       # press Enter again to run it, or Ctrl+C to cancel
+        </script>
+        <p>To check the current setting, or turn it off again:</p>
+        <script type="text/plain" data-lang="bash">
+shopt histverify       # prints: histverify  on   (or off)
+shopt -u histverify    # turn it off (u = unset)
+        </script>
+        <p class="note"><b>Cost:</b> one extra Enter. <b>Benefit:</b> no history shortcut can run a command you did not see first.</p>
+      </section>
+
+      <section class="chapter" id="permanent">
+        <h2>Make it permanent</h2>
+        <p><code>shopt -s histverify</code> lasts only for the current terminal window. To have it in every new shell, add the line to your Bash startup file.</p>
+        <script type="text/plain" data-lang="bash">
+echo 'shopt -s histverify' >> ~/.bashrc
+source ~/.bashrc       # apply to the current window too
+        </script>
+        <p>On macOS, Terminal opens login shells, which read <code>~/.bash_profile</code> instead of <code>~/.bashrc</code>. Either put the line in <code>~/.bash_profile</code>, or make that file load the other one:</p>
+        <script type="text/plain" data-lang="bash" data-file="~/.bash_profile">
+[ -f ~/.bashrc ] && source ~/.bashrc
+        </script>
+      </section>
+
+      <section class="chapter" id="preview">
+        <h2>Preview without changing settings</h2>
+        <p>Two ways to see an expansion on a machine where <code>histverify</code> is off.</p>
+        <h3>Print only, with :p</h3>
+        <p>Add <code>:p</code> to any history shortcut. Bash prints the command and does not run it. The printed command becomes the latest history entry, so <code>!!</code> then runs it.</p>
+        <script type="text/plain" data-lang="bash">
+!git:p                 # prints the last git command, runs nothing
+!!                     # happy with it? this runs it
+        </script>
+        <h3>Expand as you type, with magic-space</h3>
+        <p>With this binding, pressing Space after a history shortcut expands it in place, before you press Enter.</p>
+        <script type="text/plain" data-lang="bash" data-file="~/.bashrc">
+bind 'Space: magic-space'
+        </script>
+      </section>
+
+      <section class="chapter" id="tidy-history">
+        <h2>Keep history tidy</h2>
+        <p>Repeating a command adds it to history every time, so <code>history</code> fills up with runs of the same line and <code>!-2</code> stops meaning what you expect.</p>
+        <script type="text/plain" data-lang="text" data-file="history">
+  512  ls
+  513  ls
+  514  ls
+  515  ls -alrth
+  516  ls -alrth
+        </script>
+        <p><code>HISTCONTROL</code> tells Bash what to leave out.</p>
+        <script type="text/plain" data-lang="bash" data-file="~/.bashrc">
+export HISTCONTROL=ignoreboth
+# ignoredups   skip a command identical to the one just before it
+# ignorespace  skip any command typed with a leading space
+# ignoreboth   both of the above
+        </script>
+        <p class="note"><b>Tip:</b> with <code>ignorespace</code> active, start a command with a space when it contains something you do not want saved, such as a password or a token.</p>
+      </section>
+
+      <section class="chapter" id="zsh">
+        <h2>The same thing in zsh</h2>
+        <p>macOS uses zsh as the default shell since Catalina. The <code>!</code> shortcuts work the same way, but <code>shopt</code> does not exist there. The matching option is <code>HIST_VERIFY</code>.</p>
+        <script type="text/plain" data-lang="bash" data-file="~/.zshrc">
+setopt HIST_VERIFY        # same behaviour as histverify
+setopt HIST_IGNORE_DUPS   # same as HISTCONTROL=ignoredups
+        </script>
+        <p>Not sure which shell you are in? Ask it:</p>
+        <script type="text/plain" data-lang="bash">
+echo $0                # bash, -bash, zsh or -zsh
+        </script>
+      </section>
+
+    </div>
+  </main>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script src="../../assets/tutorial.js"></script>
+</body>
+</html>

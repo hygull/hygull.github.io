@@ -1,0 +1,583 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Python Design Principles</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@500;700&display=swap">
+<link rel="stylesheet" href="../../assets/tutorial.css">
+</head>
+<body data-track="python">
+
+<header class="topbar">
+  <div class="topbar-in">
+    <a class="brand" href="../../../index.html">Learnings</a>
+    <nav class="tracks" aria-label="Tutorials">
+      <a href="design-principles.html" aria-current="page">Design Principles</a>
+      <a href="design-patterns.html">Design Patterns</a>
+      <a href="../../../archive.html">Archive</a>
+    </nav>
+    <div class="tools">
+      <button class="btn" id="menu" type="button" aria-expanded="false">Chapters</button>
+      <input id="q" type="search" placeholder="Search chapters" aria-label="Search chapters">
+      <button class="btn" id="theme" type="button">Dark mode</button>
+    </div>
+  </div>
+</header>
+
+<div class="shell">
+  <aside class="side">
+    <p class="side-label">Principles</p>
+    <nav id="toc" aria-label="Chapters"></nav>
+  </aside>
+
+  <main>
+    <div class="page-head">
+      <p class="eyebrow">Python design, part 1 of 2</p>
+      <h1>Python Design Principles</h1>
+      <p class="lead">Design principles are habits that keep code easy to change. Each chapter shows one principle on the same small bank: first the code that breaks it, then the fix. Examples run on Python 3.9 or newer with only the standard library.</p>
+    </div>
+
+    <div class="chapters">
+
+      <section class="chapter" id="bank">
+        <h2>The bank we will use</h2>
+        <p>Every example builds on two classes: a <code>Person</code> and an <code>Account</code>. Save this as <code>bank.py</code>. Later chapters import from it and change only what the principle is about.</p>
+        <script type="text/plain" data-lang="py" data-file="bank.py">
+from dataclasses import dataclass
+
+
+@dataclass
+class Person:
+    name: str
+
+    @property
+    def first_name(self):
+        return self.name.split()[0]
+
+
+@dataclass
+class Account:
+    owner: Person
+    balance: float = 0
+
+    def deposit(self, amount):
+        if amount <= 0:
+            raise ValueError("Amount must be positive")
+        self.balance += amount
+
+    def withdraw(self, amount):
+        if amount > self.balance:
+            raise ValueError("Insufficient funds")
+        self.balance -= amount
+
+
+rishikesh = Person("Rishikesh Agrawani")
+sandhya = Person("Sandhya Agrawani")        # mother
+subhash = Person("Subhash Agrawani")        # father
+malinikesh = Person("Malinikesh Agrawani")  # sister
+hemkesh = Person("Hemkesh Agrawani")        # brother
+        </script>
+        <script type="text/plain" data-lang="py" data-file="main.py">
+from bank import Account, rishikesh
+
+account = Account(rishikesh, 1000)
+account.deposit(500)
+account.withdraw(200)
+print(account.balance)   # 1300
+        </script>
+        <p class="note"><b>How to read the chapters:</b> <code>before.py</code> is the code that works today but will hurt later. <code>after.py</code> is the same feature with the principle applied.</p>
+      </section>
+
+      <section class="chapter" id="srp">
+        <h2>Single responsibility</h2>
+        <p>A class should have one reason to change. If the bank changes its rules, its statement layout and its storage, three different people will want to edit this one class.</p>
+        <script type="text/plain" data-lang="py" data-file="before.py" data-norun>
+class AccountManager:
+    def __init__(self, account):
+        self.account = account
+
+    def deposit(self, amount):              # banking rule
+        self.account.balance += amount
+
+    def statement(self):                    # presentation
+        return f"{self.account.owner.name}: Rs {self.account.balance}"
+
+    def save(self):                         # storage
+        with open("accounts.txt", "a") as file:
+            file.write(self.statement() + "\n")
+        </script>
+        <p>Split it by reason to change. <code>Account</code> keeps the money rules, one class formats, one class stores.</p>
+        <script type="text/plain" data-lang="py" data-file="after.py">
+from bank import Account, sandhya
+
+
+class StatementFormatter:
+    def format(self, account):
+        return f"{account.owner.name}: Rs {account.balance}"
+
+
+class FileStore:
+    def __init__(self, path):
+        self.path = path
+
+    def save(self, line):
+        with open(self.path, "a") as file:
+            file.write(line + "\n")
+
+
+account = Account(sandhya, 5000)
+line = StatementFormatter().format(account)
+print(line)   # Sandhya Agrawani: Rs 5000
+FileStore("accounts.txt").save(line)
+        </script>
+        <p class="note"><b>Test:</b> describe the class in one sentence. If you need the word "and", it is doing more than one job.</p>
+      </section>
+
+      <section class="chapter" id="ocp">
+        <h2>Open/closed</h2>
+        <p>Code should be open for extension and closed for modification. Adding a new kind of account should mean adding code, not editing code that already works.</p>
+        <script type="text/plain" data-lang="py" data-file="before.py">
+def interest(kind, balance):
+    if kind == "savings":
+        return balance * 0.04
+    elif kind == "fixed":
+        return balance * 0.07
+    raise ValueError(kind)   # every new account type edits this function
+        </script>
+        <p>Let each account type carry its own rate. The function never changes again.</p>
+        <script type="text/plain" data-lang="py" data-file="after.py">
+from bank import Account, subhash
+
+
+class SavingsAccount(Account):
+    rate = 0.04
+
+
+class FixedDeposit(Account):
+    rate = 0.07
+
+
+class SeniorCitizenAccount(Account):   # new type, no old code touched
+    rate = 0.075
+
+
+def interest(account):
+    return account.balance * account.rate
+
+
+print(interest(SavingsAccount(subhash, 10000)))         # 400.0
+print(interest(SeniorCitizenAccount(subhash, 10000)))   # 750.0
+        </script>
+        <p class="note"><b>Signal:</b> a growing <code>if/elif</code> chain on a "type" value is usually asking to become separate classes or a dictionary of functions.</p>
+      </section>
+
+      <section class="chapter" id="lsp">
+        <h2>Liskov substitution</h2>
+        <p>Anywhere a parent class works, a child class must work too. A fixed deposit that inherits <code>withdraw()</code> and then refuses to do it breaks every function written for <code>Account</code>.</p>
+        <script type="text/plain" data-lang="py" data-file="before.py">
+from bank import Account, hemkesh, malinikesh
+
+
+class FixedDeposit(Account):
+    def withdraw(self, amount):
+        raise NotImplementedError("Locked until maturity")
+
+
+def pay_school_fees(account):
+    account.withdraw(2000)
+
+
+pay_school_fees(Account(hemkesh, 5000))             # fine
+# pay_school_fees(FixedDeposit(malinikesh, 5000))   # NotImplementedError
+        </script>
+        <p>Do not inherit a promise you cannot keep. Put <code>withdraw()</code> only on the classes that support it.</p>
+        <script type="text/plain" data-lang="py" data-file="after.py">
+from dataclasses import dataclass
+from bank import Person, hemkesh, malinikesh
+
+
+@dataclass
+class Deposit:                  # money can only go in
+    owner: Person
+    balance: float = 0
+
+    def deposit(self, amount):
+        self.balance += amount
+
+
+class Withdrawable(Deposit):    # money can also come out
+    def withdraw(self, amount):
+        if amount > self.balance:
+            raise ValueError("Insufficient funds")
+        self.balance -= amount
+
+
+class SavingsAccount(Withdrawable): ...
+class FixedDeposit(Deposit): ...
+
+
+def pay_school_fees(account: Withdrawable):
+    account.withdraw(2000)
+
+
+savings = SavingsAccount(hemkesh, 5000)
+pay_school_fees(savings)
+print(savings.balance)                               # 3000
+print(hasattr(FixedDeposit(malinikesh), "withdraw"))  # False
+        </script>
+        <p class="note"><b>Signal:</b> a subclass method that raises <code>NotImplementedError</code>, or does nothing, means the inheritance is wrong.</p>
+      </section>
+
+      <section class="chapter" id="isp">
+        <h2>Interface segregation</h2>
+        <p>Do not force a class to implement methods it does not need. One large interface for every bank product makes a home loan pretend it can accept deposits.</p>
+        <script type="text/plain" data-lang="py" data-file="before.py">
+from abc import ABC, abstractmethod
+
+
+class BankProduct(ABC):
+    @abstractmethod
+    def deposit(self, amount): ...
+    @abstractmethod
+    def withdraw(self, amount): ...
+    @abstractmethod
+    def pay_emi(self, amount): ...
+
+
+class HomeLoan(BankProduct):
+    def pay_emi(self, amount): print(f"EMI paid: {amount}")
+    def deposit(self, amount): raise NotImplementedError    # forced to exist
+    def withdraw(self, amount): raise NotImplementedError   # forced to exist
+        </script>
+        <p>Use several small interfaces. In Python a <code>Protocol</code> describes "anything with this method" without inheritance.</p>
+        <script type="text/plain" data-lang="py" data-file="after.py">
+from typing import Protocol
+from bank import subhash
+
+
+class CanDeposit(Protocol):
+    def deposit(self, amount): ...
+
+
+class CanWithdraw(Protocol):
+    def withdraw(self, amount): ...
+
+
+class CanRepay(Protocol):
+    def pay_emi(self, amount): ...
+
+
+class HomeLoan:                       # implements only what a loan does
+    def __init__(self, borrower, outstanding):
+        self.borrower = borrower
+        self.outstanding = outstanding
+
+    def pay_emi(self, amount):
+        self.outstanding -= amount
+
+
+def collect_emi(product: CanRepay, amount):
+    product.pay_emi(amount)
+
+
+loan = HomeLoan(subhash, 500000)
+collect_emi(loan, 12000)
+print(loan.outstanding)   # 488000
+        </script>
+      </section>
+
+      <section class="chapter" id="dip">
+        <h2>Dependency inversion</h2>
+        <p>High-level rules should not depend on low-level details. Both should depend on an abstraction. Here the transfer rule is welded to SMS, so it cannot send email and cannot be tested without sending a message.</p>
+        <script type="text/plain" data-lang="py" data-file="before.py">
+class SmsSender:
+    def send(self, to, text):
+        print(f"SMS to {to}: {text}")
+
+
+class TransferService:
+    def __init__(self):
+        self.sender = SmsSender()   # the detail is created inside
+        </script>
+        <p>Describe what the service needs, and pass the real thing in from outside. This is also called dependency injection.</p>
+        <script type="text/plain" data-lang="py" data-file="after.py">
+from typing import Protocol
+from bank import Account, rishikesh, sandhya
+
+
+class Notifier(Protocol):
+    def send(self, to, text): ...
+
+
+class SmsNotifier:
+    def send(self, to, text):
+        print(f"SMS to {to}: {text}")
+
+
+class EmailNotifier:
+    def send(self, to, text):
+        print(f"Email to {to}: {text}")
+
+
+class TransferService:
+    def __init__(self, notifier: Notifier):
+        self.notifier = notifier
+
+    def transfer(self, source, target, amount):
+        source.withdraw(amount)
+        target.deposit(amount)
+        self.notifier.send(target.owner.first_name,
+                           f"Rs {amount} received from {source.owner.first_name}")
+
+
+mine, mothers = Account(rishikesh, 9000), Account(sandhya, 1000)
+TransferService(EmailNotifier()).transfer(mine, mothers, 2500)
+# Email to Sandhya: Rs 2500 received from Rishikesh
+print(mine.balance, mothers.balance)   # 6500 3500
+        </script>
+        <p class="note"><b>Payoff:</b> in a test, pass a fake notifier that stores messages in a list. No SMS, no network, and the transfer rule is still fully tested.</p>
+      </section>
+
+      <section class="chapter" id="dry">
+        <h2>DRY: don't repeat yourself</h2>
+        <p>Every rule should live in one place. Here the rule "an amount is a positive number" is written twice, so one day it will be fixed in one method and forgotten in the other.</p>
+        <script type="text/plain" data-lang="py" data-file="before.py">
+class Account:
+    def __init__(self, balance=0):
+        self.balance = balance
+
+    def deposit(self, amount):
+        if not isinstance(amount, (int, float)) or amount <= 0:
+            raise ValueError("Amount must be a positive number")
+        self.balance += amount
+
+    def withdraw(self, amount):
+        if not isinstance(amount, (int, float)) or amount <= 0:
+            raise ValueError("Amount must be a positive number")
+        self.balance -= amount
+        </script>
+        <script type="text/plain" data-lang="py" data-file="after.py">
+def positive(amount):
+    if not isinstance(amount, (int, float)) or amount <= 0:
+        raise ValueError("Amount must be a positive number")
+    return amount
+
+
+class Account:
+    def __init__(self, balance=0):
+        self.balance = balance
+
+    def deposit(self, amount):
+        self.balance += positive(amount)
+
+    def withdraw(self, amount):
+        self.balance -= positive(amount)
+
+
+account = Account(100)
+account.deposit(50)
+print(account.balance)   # 150
+        </script>
+        <p class="note"><b>Careful:</b> DRY is about repeated knowledge, not repeated characters. Two lines that look alike but change for different reasons should stay separate.</p>
+      </section>
+
+      <section class="chapter" id="kiss">
+        <h2>KISS: keep it simple</h2>
+        <p>The simplest code that solves the problem is the easiest to read, test and fix. This check needs one comparison, not two classes and a lambda.</p>
+        <script type="text/plain" data-lang="py" data-file="before.py">
+class BalanceChecker:
+    def check(self, account, amount):
+        return (lambda b, a: True if b - a >= 0 else False)(account.balance, amount)
+
+
+class BalanceCheckerFactory:
+    def create(self):
+        return BalanceChecker()
+        </script>
+        <script type="text/plain" data-lang="py" data-file="after.py">
+from bank import Account, malinikesh
+
+
+def can_pay(account, amount):
+    return account.balance >= amount
+
+
+print(can_pay(Account(malinikesh, 800), 500))   # True
+        </script>
+        <p class="note"><b>Rule of thumb:</b> start with a function. Reach for a class when there is state to keep, and for a pattern when the simple version has actually become painful.</p>
+      </section>
+
+      <section class="chapter" id="yagni">
+        <h2>YAGNI: you aren't gonna need it</h2>
+        <p>Build what is needed today. Features added "for later" must be tested and maintained now, and the guess about later is usually wrong.</p>
+        <script type="text/plain" data-lang="py" data-file="before.py">
+class Account:
+    def __init__(self, owner, balance=0, currency="INR", exchange_rates=None,
+                 loyalty_tier=None, crypto_wallet=None):   # nobody asked for these
+        self.owner = owner
+        self.balance = balance
+        self.currency = currency
+        self.exchange_rates = exchange_rates or {}
+        self.loyalty_tier = loyalty_tier
+        self.crypto_wallet = crypto_wallet
+        </script>
+        <p>The class from chapter 1 already does everything the bank needs. When foreign currency really arrives, adding it is one small change made with real requirements in hand.</p>
+        <script type="text/plain" data-lang="py" data-file="after.py">
+from bank import Account, hemkesh
+
+account = Account(hemkesh, 300)
+account.deposit(200)
+print(account.balance)   # 500
+        </script>
+      </section>
+
+      <section class="chapter" id="composition">
+        <h2>Composition over inheritance</h2>
+        <p>Inheritance says "is a". Composition says "has a". When features can be mixed freely, inheritance needs one class per combination.</p>
+        <script type="text/plain" data-lang="py" data-file="before.py" data-norun>
+class SavingsAccount(Account): ...
+class SavingsAccountWithOverdraft(SavingsAccount): ...
+class SavingsAccountWithOverdraftAndSms(SavingsAccountWithOverdraft): ...
+class CurrentAccountWithOverdraftAndSms(CurrentAccount): ...   # and so on
+        </script>
+        <p>Make the feature its own small object and hand it to the account.</p>
+        <script type="text/plain" data-lang="py" data-file="after.py">
+from dataclasses import dataclass, field
+from bank import Person, rishikesh
+
+
+class NoOverdraft:
+    limit = 0
+
+
+class Overdraft:
+    def __init__(self, limit):
+        self.limit = limit
+
+
+@dataclass
+class Account:
+    owner: Person
+    balance: float = 0
+    overdraft: object = field(default_factory=NoOverdraft)
+
+    def withdraw(self, amount):
+        if amount > self.balance + self.overdraft.limit:
+            raise ValueError("Insufficient funds")
+        self.balance -= amount
+
+
+current = Account(rishikesh, 1000, overdraft=Overdraft(5000))
+current.withdraw(3000)
+print(current.balance)   # -2000
+        </script>
+        <p class="note"><b>When to inherit:</b> only when the child truly is a kind of the parent and keeps all of its promises (see Liskov substitution).</p>
+      </section>
+
+      <section class="chapter" id="tell">
+        <h2>Tell, don't ask</h2>
+        <p>Do not ask an object for its data and then make its decision for it. Tell it what you want and let it apply its own rules.</p>
+        <script type="text/plain" data-lang="py" data-file="before.py">
+def transfer(source, target, amount):
+    if source.balance >= amount:    # asking, then deciding for the account
+        source.balance -= amount
+        target.balance += amount
+        </script>
+        <script type="text/plain" data-lang="py" data-file="after.py">
+from bank import Account, subhash, malinikesh
+
+
+def transfer(source, target, amount):
+    source.withdraw(amount)   # the account checks its own balance
+    target.deposit(amount)    # the account checks the amount
+
+
+fathers, sisters = Account(subhash, 20000), Account(malinikesh, 0)
+transfer(fathers, sisters, 7000)
+print(fathers.balance, sisters.balance)   # 13000 7000
+        </script>
+        <h3>The Law of Demeter</h3>
+        <p>A close relative: talk to your direct neighbour, not to its internals. Long dotted chains break when anything in the middle changes.</p>
+        <script type="text/plain" data-lang="py" data-file="demeter.py">
+from bank import Account, sandhya
+
+account = Account(sandhya, 100)
+
+print("Hello " + account.owner.name.split()[0])   # reaches into how a name is stored
+print("Hello " + account.owner.first_name)        # asks the owner; prints Hello Sandhya
+        </script>
+      </section>
+
+      <section class="chapter" id="encapsulation">
+        <h2>Encapsulation</h2>
+        <p>Keep data private and expose behaviour. If anyone can assign to <code>balance</code>, none of the rules in <code>deposit()</code> and <code>withdraw()</code> can be trusted.</p>
+        <script type="text/plain" data-lang="py" data-file="before.py">
+from bank import Account, malinikesh
+
+account = Account(malinikesh, 100)
+account.balance = 1_000_000   # no rule stops this
+        </script>
+        <p>A leading underscore marks the attribute as internal. A <code>property</code> without a setter makes it readable but not assignable.</p>
+        <script type="text/plain" data-lang="py" data-file="after.py">
+from bank import malinikesh
+
+
+class Account:
+    def __init__(self, owner, balance=0):
+        self.owner = owner
+        self._balance = balance
+
+    @property
+    def balance(self):
+        return self._balance
+
+    def deposit(self, amount):
+        if amount <= 0:
+            raise ValueError("Amount must be positive")
+        self._balance += amount
+
+
+account = Account(malinikesh, 100)
+account.deposit(400)
+print(account.balance)   # 500
+
+try:
+    account.balance = 1_000_000
+except AttributeError:
+    print("Blocked")     # Blocked
+        </script>
+      </section>
+
+      <section class="chapter" id="summary">
+        <h2>Quick reference</h2>
+        <p>One question to ask for each principle while reviewing code.</p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Principle</th><th>Ask yourself</th></tr></thead>
+            <tbody>
+              <tr><td>Single responsibility</td><td>Can I describe this class without saying "and"?</td></tr>
+              <tr><td>Open/closed</td><td>Can I add a new case without editing old code?</td></tr>
+              <tr><td>Liskov substitution</td><td>Does every subclass keep every promise of its parent?</td></tr>
+              <tr><td>Interface segregation</td><td>Is any class forced to implement a method it does not use?</td></tr>
+              <tr><td>Dependency inversion</td><td>Can I swap this dependency for a fake in a test?</td></tr>
+              <tr><td>DRY</td><td>Is this rule written in exactly one place?</td></tr>
+              <tr><td>KISS</td><td>Is there a simpler version that does the same job?</td></tr>
+              <tr><td>YAGNI</td><td>Does anyone need this today?</td></tr>
+              <tr><td>Composition over inheritance</td><td>Is this "is a", or really "has a"?</td></tr>
+              <tr><td>Tell, don't ask</td><td>Am I making a decision that belongs to another object?</td></tr>
+              <tr><td>Encapsulation</td><td>Can outside code break this object's rules?</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>The first five are known together as <b>SOLID</b>. Principles tell you what good code looks like. Design patterns are named, reusable ways to get there. Continue with <a href="design-patterns.html">Python Design Patterns</a>, which uses the same bank.</p>
+      </section>
+
+    </div>
+  </main>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script src="../../assets/tutorial.js"></script>
+</body>
+</html>

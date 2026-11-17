@@ -1,0 +1,748 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Python Design Patterns</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@500;700&display=swap">
+<link rel="stylesheet" href="../../assets/tutorial.css">
+</head>
+<body data-track="python">
+
+<header class="topbar">
+  <div class="topbar-in">
+    <a class="brand" href="../../../index.html">Learnings</a>
+    <nav class="tracks" aria-label="Tutorials">
+      <a href="design-principles.html">Design Principles</a>
+      <a href="design-patterns.html" aria-current="page">Design Patterns</a>
+      <a href="../../../archive.html">Archive</a>
+    </nav>
+    <div class="tools">
+      <button class="btn" id="menu" type="button" aria-expanded="false">Chapters</button>
+      <input id="q" type="search" placeholder="Search chapters" aria-label="Search chapters">
+      <button class="btn" id="theme" type="button">Dark mode</button>
+    </div>
+  </div>
+</header>
+
+<div class="shell">
+  <aside class="side">
+    <p class="side-label">Patterns</p>
+    <nav id="toc" aria-label="Chapters"></nav>
+  </aside>
+
+  <main>
+    <div class="page-head">
+      <p class="eyebrow">Python design, part 2 of 2</p>
+      <h1>Python Design Patterns</h1>
+      <p class="lead">A design pattern is a named solution to a problem that keeps coming back. Sixteen patterns, each shown in a few lines on the same small bank, with the problem it solves and the shortcut Python gives you. Examples run on Python 3.9 or newer with only the standard library.</p>
+    </div>
+
+    <div class="chapters">
+
+      <section class="chapter" id="bank">
+        <h2>The bank we will use</h2>
+        <p>The same two classes as in <a href="design-principles.html">Design Principles</a>. Save this as <code>bank.py</code>. Every pattern imports from it.</p>
+        <script type="text/plain" data-lang="py" data-file="bank.py">
+from dataclasses import dataclass
+
+
+@dataclass
+class Person:
+    name: str
+
+    @property
+    def first_name(self):
+        return self.name.split()[0]
+
+
+@dataclass
+class Account:
+    owner: Person
+    balance: float = 0
+
+    def deposit(self, amount):
+        if amount <= 0:
+            raise ValueError("Amount must be positive")
+        self.balance += amount
+
+    def withdraw(self, amount):
+        if amount > self.balance:
+            raise ValueError("Insufficient funds")
+        self.balance -= amount
+
+
+rishikesh = Person("Rishikesh Agrawani")
+sandhya = Person("Sandhya Agrawani")        # mother
+subhash = Person("Subhash Agrawani")        # father
+malinikesh = Person("Malinikesh Agrawani")  # sister
+hemkesh = Person("Hemkesh Agrawani")        # brother
+        </script>
+        <p>Patterns come in three families:</p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Family</th><th>Answers</th><th>In this tutorial</th></tr></thead>
+            <tbody>
+              <tr><td>Creational</td><td>How are objects made?</td><td>Factory, Builder, Singleton, Prototype</td></tr>
+              <tr><td>Structural</td><td>How do objects fit together?</td><td>Adapter, Decorator, Facade, Proxy, Composite</td></tr>
+              <tr><td>Behavioural</td><td>How do objects talk and share work?</td><td>Strategy, Observer, Command, State, Template Method, Chain of Responsibility, Iterator</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="chapter" id="factory">
+        <h2>Factory</h2>
+        <p><b>Problem:</b> the caller knows the kind of account as a string, from a form or an API, and should not need to know which class that means.</p>
+        <p>A factory is one function that picks the class and returns the object.</p>
+        <script type="text/plain" data-lang="py" data-file="factory.py">
+from bank import Account, sandhya
+
+
+class SavingsAccount(Account):
+    rate = 0.04
+
+
+class CurrentAccount(Account):
+    rate = 0.0
+
+
+class SeniorAccount(Account):
+    rate = 0.075
+
+
+ACCOUNT_TYPES = {
+    "savings": SavingsAccount,
+    "current": CurrentAccount,
+    "senior": SeniorAccount,
+}
+
+
+def open_account(kind, owner, balance=0):
+    if kind not in ACCOUNT_TYPES:
+        raise ValueError(f"Unknown account type: {kind}")
+    return ACCOUNT_TYPES[kind](owner, balance)
+
+
+account = open_account("senior", sandhya, 20000)
+print(type(account).__name__, account.rate)   # SeniorAccount 0.075
+        </script>
+        <p class="note"><b>Python shortcut:</b> classes are objects, so a dictionary from name to class replaces the class hierarchy of factories that other languages need.</p>
+      </section>
+
+      <section class="chapter" id="builder">
+        <h2>Builder</h2>
+        <p><b>Problem:</b> an object has many optional parts and must be valid before anyone uses it. A loan needs an amount and a term, and may have guarantors and insurance.</p>
+        <p>A builder collects the parts step by step and checks them once in <code>build()</code>.</p>
+        <script type="text/plain" data-lang="py" data-file="builder.py">
+from dataclasses import dataclass, field
+from bank import Person, rishikesh, subhash, sandhya
+
+
+@dataclass
+class Loan:
+    applicant: Person
+    amount: int = 0
+    years: int = 0
+    guarantors: list = field(default_factory=list)
+    insured: bool = False
+
+
+class LoanBuilder:
+    def __init__(self, applicant):
+        self._loan = Loan(applicant)
+
+    def amount(self, rupees):
+        self._loan.amount = rupees
+        return self               # returning self allows chaining
+
+    def years(self, years):
+        self._loan.years = years
+        return self
+
+    def guarantor(self, person):
+        self._loan.guarantors.append(person)
+        return self
+
+    def insured(self):
+        self._loan.insured = True
+        return self
+
+    def build(self):
+        if self._loan.amount <= 0 or self._loan.years <= 0:
+            raise ValueError("Amount and years are required")
+        return self._loan
+
+
+loan = (LoanBuilder(rishikesh)
+        .amount(2500000)
+        .years(20)
+        .guarantor(subhash)
+        .guarantor(sandhya)
+        .insured()
+        .build())
+
+print(loan.amount, [person.first_name for person in loan.guarantors])
+# 2500000 ['Subhash', 'Sandhya']
+        </script>
+        <p class="note"><b>Python shortcut:</b> for most objects, keyword arguments with defaults are enough. Use a builder when construction has steps or validation across several fields.</p>
+      </section>
+
+      <section class="chapter" id="singleton">
+        <h2>Singleton</h2>
+        <p><b>Problem:</b> the whole program must share one object, such as the bank's settings.</p>
+        <script type="text/plain" data-lang="py" data-file="singleton.py">
+class BankSettings:
+    _instance = None
+
+    def __new__(cls):
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+            cls._instance.daily_limit = 50000
+        return cls._instance
+
+
+first = BankSettings()
+second = BankSettings()
+second.daily_limit = 100000
+
+print(first is second, first.daily_limit)   # True 100000
+        </script>
+        <p class="note"><b>Python shortcut:</b> a module is already a singleton. Put <code>daily_limit = 50000</code> in <code>settings.py</code> and <code>import settings</code> everywhere. Use this pattern sparingly: shared global state makes tests depend on each other.</p>
+      </section>
+
+      <section class="chapter" id="prototype">
+        <h2>Prototype</h2>
+        <p><b>Problem:</b> new objects should start as a copy of a prepared one. Every student account opens with the same balance and perks.</p>
+        <script type="text/plain" data-lang="py" data-file="prototype.py">
+import copy
+from dataclasses import dataclass, field
+from bank import Account, hemkesh, malinikesh
+
+
+@dataclass
+class StudentAccount(Account):
+    perks: list = field(default_factory=list)
+
+
+template = StudentAccount(owner=None, balance=500,
+                          perks=["Free debit card", "No minimum balance"])
+
+
+def open_from(template, owner):
+    account = copy.deepcopy(template)   # deep: the perks list is copied too
+    account.owner = owner
+    return account
+
+
+brothers = open_from(template, hemkesh)
+sisters = open_from(template, malinikesh)
+sisters.perks.append("Travel card")
+
+print(len(brothers.perks), len(sisters.perks), len(template.perks))   # 2 3 2
+        </script>
+        <p class="note"><b>Watch out:</b> <code>copy.copy()</code> is shallow, so both accounts would share one <code>perks</code> list and the travel card would appear on both.</p>
+      </section>
+
+      <section class="chapter" id="adapter">
+        <h2>Adapter</h2>
+        <p><b>Problem:</b> code you cannot change has the wrong interface. The old UPI library wants an ID and paise, while the bank works with people and rupees.</p>
+        <p>An adapter wraps the old object and translates the call.</p>
+        <script type="text/plain" data-lang="py" data-file="adapter.py">
+from bank import sandhya
+
+
+class OldUpiGateway:                    # third-party code, cannot be edited
+    def send_money(self, upi_id, paise):
+        return f"Sent {paise} paise to {upi_id}"
+
+
+class UpiAdapter:                       # gives it the interface we want
+    def __init__(self, gateway, upi_ids):
+        self.gateway = gateway
+        self.upi_ids = upi_ids
+
+    def pay(self, person, rupees):
+        return self.gateway.send_money(self.upi_ids[person.name], rupees * 100)
+
+
+payments = UpiAdapter(OldUpiGateway(), {sandhya.name: "sandhya@upi"})
+print(payments.pay(sandhya, 250))   # Sent 25000 paise to sandhya@upi
+        </script>
+      </section>
+
+      <section class="chapter" id="decorator">
+        <h2>Decorator</h2>
+        <p><b>Problem:</b> add behaviour to an object without changing its class, and allow several additions to be stacked.</p>
+        <p>A decorator wraps an object, has the same methods, and does something extra before or after passing the call on.</p>
+        <script type="text/plain" data-lang="py" data-file="decorator.py">
+from bank import Account, rishikesh
+
+
+class Wrapper:
+    def __init__(self, account):
+        self._account = account
+
+    def __getattr__(self, name):        # anything not overridden passes through
+        return getattr(self._account, name)
+
+
+class Logged(Wrapper):
+    def withdraw(self, amount):
+        print(f"LOG withdraw {amount}")
+        self._account.withdraw(amount)
+
+
+class WithFee(Wrapper):
+    def withdraw(self, amount):
+        self._account.withdraw(amount + 10)
+
+
+account = Logged(WithFee(Account(rishikesh, 1000)))
+account.withdraw(200)    # LOG withdraw 200
+print(account.balance)   # 790
+        </script>
+        <h3>Function decorators</h3>
+        <p>Python has the same idea built into the language for functions, written with <code>@</code>.</p>
+        <script type="text/plain" data-lang="py" data-file="audited.py">
+import functools
+from bank import Account, rishikesh, hemkesh
+
+
+def audited(func):
+    @functools.wraps(func)
+    def wrapper(source, target, amount):
+        print(f"AUDIT {func.__name__}: {source.owner.first_name} -> "
+              f"{target.owner.first_name}, Rs {amount}")
+        return func(source, target, amount)
+    return wrapper
+
+
+@audited
+def transfer(source, target, amount):
+    source.withdraw(amount)
+    target.deposit(amount)
+
+
+transfer(Account(rishikesh, 5000), Account(hemkesh, 0), 1500)
+# AUDIT transfer: Rishikesh -> Hemkesh, Rs 1500
+        </script>
+      </section>
+
+      <section class="chapter" id="facade">
+        <h2>Facade</h2>
+        <p><b>Problem:</b> one task needs several subsystems in the right order. A transfer must pass KYC and fraud checks, move the money and write the ledger.</p>
+        <p>A facade gives callers one simple method and hides the steps behind it.</p>
+        <script type="text/plain" data-lang="py" data-file="facade.py">
+from bank import Account, subhash, hemkesh
+
+
+class KycCheck:
+    def verified(self, person):
+        return True
+
+
+class FraudCheck:
+    def safe(self, amount):
+        return amount <= 100000
+
+
+class Ledger:
+    def __init__(self):
+        self.entries = []
+
+    def record(self, text):
+        self.entries.append(text)
+
+
+class Bank:                             # the facade
+    def __init__(self):
+        self.kyc = KycCheck()
+        self.fraud = FraudCheck()
+        self.ledger = Ledger()
+
+    def transfer(self, source, target, amount):
+        if not self.kyc.verified(source.owner):
+            raise PermissionError("KYC pending")
+        if not self.fraud.safe(amount):
+            raise PermissionError("Needs manual review")
+        source.withdraw(amount)
+        target.deposit(amount)
+        self.ledger.record(
+            f"{source.owner.first_name} -> {target.owner.first_name}: {amount}")
+
+
+bank = Bank()
+bank.transfer(Account(subhash, 40000), Account(hemkesh, 0), 15000)
+print(bank.ledger.entries)   # ['Subhash -> Hemkesh: 15000']
+        </script>
+      </section>
+
+      <section class="chapter" id="proxy">
+        <h2>Proxy</h2>
+        <p><b>Problem:</b> control access to an object. A debit card stands in front of the account and lets a withdrawal through only with the right PIN.</p>
+        <script type="text/plain" data-lang="py" data-file="proxy.py">
+from bank import Account, sandhya
+
+
+class DebitCard:
+    def __init__(self, account, pin):
+        self._account = account
+        self._pin = pin
+
+    @property
+    def balance(self):
+        return self._account.balance
+
+    def withdraw(self, amount, pin):
+        if pin != self._pin:
+            raise PermissionError("Wrong PIN")
+        self._account.withdraw(amount)
+
+
+card = DebitCard(Account(sandhya, 3000), pin="4321")
+card.withdraw(1000, pin="4321")
+print(card.balance)   # 2000
+
+try:
+    card.withdraw(1000, pin="0000")
+except PermissionError as error:
+    print(error)      # Wrong PIN
+        </script>
+        <p class="note"><b>Proxy or decorator?</b> Both wrap an object. A decorator adds behaviour. A proxy decides whether, when or how the real object is reached: permissions, caching, lazy loading.</p>
+      </section>
+
+      <section class="chapter" id="composite">
+        <h2>Composite</h2>
+        <p><b>Problem:</b> treat one item and a group of items the same way. A family's money is a tree: the family holds groups, and groups hold accounts.</p>
+        <p>Give the group the same <code>balance</code> attribute as a single account, and let it add up its children.</p>
+        <script type="text/plain" data-lang="py" data-file="composite.py">
+from bank import Account, rishikesh, sandhya, subhash, malinikesh, hemkesh
+
+
+class Portfolio:
+    def __init__(self, name, *items):
+        self.name = name
+        self.items = items              # accounts or other portfolios
+
+    @property
+    def balance(self):
+        return sum(item.balance for item in self.items)
+
+
+parents = Portfolio("Parents",
+                    Account(subhash, 80000), Account(sandhya, 60000))
+children = Portfolio("Children",
+                     Account(rishikesh, 30000), Account(malinikesh, 20000),
+                     Account(hemkesh, 10000))
+family = Portfolio("Agrawani family", parents, children)
+
+print(parents.balance, children.balance, family.balance)   # 140000 60000 200000
+        </script>
+      </section>
+
+      <section class="chapter" id="strategy">
+        <h2>Strategy</h2>
+        <p><b>Problem:</b> one job can be done in several ways, and the choice is made at run time. Interest can be simple or compound.</p>
+        <p>Put each way in its own interchangeable piece and pass in the one you want.</p>
+        <script type="text/plain" data-lang="py" data-file="strategy.py">
+from bank import Account, subhash
+
+
+def simple(balance, rate, years):
+    return balance * rate * years
+
+
+def compound(balance, rate, years):
+    return balance * (1 + rate) ** years - balance
+
+
+class InterestCalculator:
+    def __init__(self, strategy):
+        self.strategy = strategy
+
+    def interest(self, account, rate, years):
+        return round(self.strategy(account.balance, rate, years))
+
+
+account = Account(subhash, 100000)
+print(InterestCalculator(simple).interest(account, 0.07, 3))     # 21000
+print(InterestCalculator(compound).interest(account, 0.07, 3))   # 22504
+        </script>
+        <p class="note"><b>Python shortcut:</b> functions can be passed around like any value, so a strategy is usually a plain function. Use a class when the strategy needs its own settings or several methods.</p>
+      </section>
+
+      <section class="chapter" id="observer">
+        <h2>Observer</h2>
+        <p><b>Problem:</b> when something happens, several other parts need to know, and the source should not have to know who they are. A deposit triggers an SMS and a passbook entry.</p>
+        <script type="text/plain" data-lang="py" data-file="observer.py">
+from dataclasses import dataclass, field
+from bank import Account, malinikesh
+
+
+@dataclass
+class WatchedAccount(Account):
+    listeners: list = field(default_factory=list)
+
+    def deposit(self, amount):
+        super().deposit(amount)
+        for listener in self.listeners:
+            listener(self, amount)
+
+
+def sms(account, amount):
+    print(f"SMS to {account.owner.first_name}: Rs {amount} credited")
+
+
+def passbook(account, amount):
+    print(f"Passbook: +{amount}, balance {account.balance}")
+
+
+account = WatchedAccount(malinikesh, 1000)
+account.listeners += [sms, passbook]
+account.deposit(500)
+# SMS to Malinikesh: Rs 500 credited
+# Passbook: +500, balance 1500
+        </script>
+        <p class="note"><b>Payoff:</b> adding an email alert is one new function and one line to register it. <code>WatchedAccount</code> does not change.</p>
+      </section>
+
+      <section class="chapter" id="command">
+        <h2>Command</h2>
+        <p><b>Problem:</b> you want to queue, log or undo actions. That is impossible while an action is only a method call that has already happened.</p>
+        <p>Turn each action into an object that knows how to do itself and how to reverse itself.</p>
+        <script type="text/plain" data-lang="py" data-file="command.py">
+from bank import Account, hemkesh
+
+
+class Deposit:
+    def __init__(self, account, amount):
+        self.account, self.amount = account, amount
+
+    def execute(self):
+        self.account.deposit(self.amount)
+
+    def undo(self):
+        self.account.withdraw(self.amount)
+
+
+class Withdraw:
+    def __init__(self, account, amount):
+        self.account, self.amount = account, amount
+
+    def execute(self):
+        self.account.withdraw(self.amount)
+
+    def undo(self):
+        self.account.deposit(self.amount)
+
+
+class Teller:
+    def __init__(self):
+        self.history = []
+
+    def run(self, command):
+        command.execute()
+        self.history.append(command)
+
+    def undo_last(self):
+        self.history.pop().undo()
+
+
+account = Account(hemkesh, 1000)
+teller = Teller()
+teller.run(Deposit(account, 500))
+teller.run(Withdraw(account, 300))
+print(account.balance)   # 1200
+
+teller.undo_last()       # reverses the withdrawal
+print(account.balance)   # 1500
+        </script>
+      </section>
+
+      <section class="chapter" id="state">
+        <h2>State</h2>
+        <p><b>Problem:</b> an object behaves differently depending on its condition, and every method is filling up with <code>if self.status == ...</code> checks.</p>
+        <p>Move the behaviour for each condition into its own class and let the account hold the current one.</p>
+        <script type="text/plain" data-lang="py" data-file="state.py">
+from dataclasses import dataclass, field
+from bank import Account, rishikesh
+
+
+class Active:
+    def withdraw(self, account, amount):
+        Account.withdraw(account, amount)
+
+
+class Frozen:
+    def withdraw(self, account, amount):
+        raise PermissionError("Account is frozen")
+
+
+@dataclass
+class StatefulAccount(Account):
+    state: object = field(default_factory=Active)
+
+    def withdraw(self, amount):
+        self.state.withdraw(self, amount)
+
+
+account = StatefulAccount(rishikesh, 5000)
+account.withdraw(1000)
+account.state = Frozen()
+
+try:
+    account.withdraw(1000)
+except PermissionError as error:
+    print(error)         # Account is frozen
+
+print(account.balance)   # 4000
+        </script>
+        <p class="note"><b>State or strategy?</b> The shape is the same. A strategy is chosen by the caller and usually stays. A state changes during the object's life, often by itself.</p>
+      </section>
+
+      <section class="chapter" id="template">
+        <h2>Template method</h2>
+        <p><b>Problem:</b> several variants share the same steps in the same order, and differ only in a few of them. Every statement has a header, rows and a footer, whatever the format.</p>
+        <p>The parent class fixes the order. Subclasses fill in or replace individual steps.</p>
+        <script type="text/plain" data-lang="py" data-file="template_method.py">
+from bank import Account, rishikesh
+
+
+class Statement:
+    def __init__(self, account, entries):
+        self.account, self.entries = account, entries
+
+    def render(self):                           # the fixed skeleton
+        lines = [self.header()]
+        lines += [self.row(text, amount) for text, amount in self.entries]
+        lines.append(self.footer())
+        return "\n".join(lines)
+
+    def header(self):
+        return f"Statement for {self.account.owner.name}"
+
+    def footer(self):
+        return f"Balance: {self.account.balance}"
+
+    def row(self, text, amount):
+        raise NotImplementedError
+
+
+class TextStatement(Statement):
+    def row(self, text, amount):
+        return f"{text:<10}{amount:>8}"
+
+
+class CsvStatement(Statement):
+    def header(self):
+        return "item,amount"
+
+    def row(self, text, amount):
+        return f"{text},{amount}"
+
+
+entries = [("Salary", 50000), ("Rent", -15000)]
+print(CsvStatement(Account(rishikesh, 35000), entries).render())
+# item,amount
+# Salary,50000
+# Rent,-15000
+# Balance: 35000
+        </script>
+      </section>
+
+      <section class="chapter" id="chain">
+        <h2>Chain of responsibility</h2>
+        <p><b>Problem:</b> a request should be handled by the first one able to, and the sender should not need to know who that is. A large withdrawal climbs from teller to manager to director.</p>
+        <script type="text/plain" data-lang="py" data-file="chain.py">
+class Approver:
+    def __init__(self, title, limit, boss=None):
+        self.title, self.limit, self.boss = title, limit, boss
+
+    def approve(self, amount):
+        if amount <= self.limit:
+            return f"{self.title} approved Rs {amount}"
+        if self.boss:
+            return self.boss.approve(amount)    # pass it up the chain
+        return f"Rs {amount} rejected"
+
+
+director = Approver("Director", 5000000)
+manager = Approver("Manager", 500000, boss=director)
+teller = Approver("Teller", 50000, boss=manager)
+
+print(teller.approve(20000))      # Teller approved Rs 20000
+print(teller.approve(300000))     # Manager approved Rs 300000
+print(teller.approve(90000000))   # Rs 90000000 rejected
+        </script>
+      </section>
+
+      <section class="chapter" id="iterator">
+        <h2>Iterator</h2>
+        <p><b>Problem:</b> let callers loop over a collection without knowing how it is stored inside.</p>
+        <p>Python builds this into the language: define <code>__iter__</code> and the object works in <code>for</code> loops, <code>sum()</code>, <code>list()</code> and comprehensions.</p>
+        <script type="text/plain" data-lang="py" data-file="iterator.py">
+class Passbook:
+    def __init__(self):
+        self._entries = []              # callers never touch this list
+
+    def add(self, text, amount):
+        self._entries.append((text, amount))
+
+    def __iter__(self):
+        return iter(self._entries)
+
+    def credits(self):                  # a generator is an iterator for free
+        for text, amount in self._entries:
+            if amount > 0:
+                yield text, amount
+
+
+passbook = Passbook()
+passbook.add("Salary", 50000)
+passbook.add("Rent", -15000)
+passbook.add("Gift from Sandhya", 2000)
+
+print(sum(amount for _, amount in passbook))    # 37000
+print([text for text, _ in passbook.credits()])
+# ['Salary', 'Gift from Sandhya']
+        </script>
+      </section>
+
+      <section class="chapter" id="choose">
+        <h2>Which pattern to pick</h2>
+        <p>Start from the problem, not from the pattern.</p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>You need to</th><th>Pattern</th></tr></thead>
+            <tbody>
+              <tr><td>Create the right class from a name or setting</td><td><a href="#factory">Factory</a></td></tr>
+              <tr><td>Assemble an object with many optional parts</td><td><a href="#builder">Builder</a></td></tr>
+              <tr><td>Share exactly one object everywhere</td><td><a href="#singleton">Singleton</a></td></tr>
+              <tr><td>Start new objects as copies of a prepared one</td><td><a href="#prototype">Prototype</a></td></tr>
+              <tr><td>Use code whose interface does not fit</td><td><a href="#adapter">Adapter</a></td></tr>
+              <tr><td>Add stackable behaviour without subclassing</td><td><a href="#decorator">Decorator</a></td></tr>
+              <tr><td>Hide several steps behind one call</td><td><a href="#facade">Facade</a></td></tr>
+              <tr><td>Control access to an object</td><td><a href="#proxy">Proxy</a></td></tr>
+              <tr><td>Treat one item and a group alike</td><td><a href="#composite">Composite</a></td></tr>
+              <tr><td>Swap the way a job is done</td><td><a href="#strategy">Strategy</a></td></tr>
+              <tr><td>Tell others when something happens</td><td><a href="#observer">Observer</a></td></tr>
+              <tr><td>Queue, log or undo actions</td><td><a href="#command">Command</a></td></tr>
+              <tr><td>Change behaviour as an object's condition changes</td><td><a href="#state">State</a></td></tr>
+              <tr><td>Share fixed steps with a few variable ones</td><td><a href="#template">Template method</a></td></tr>
+              <tr><td>Pass a request along until someone handles it</td><td><a href="#chain">Chain of responsibility</a></td></tr>
+              <tr><td>Loop over a collection without exposing it</td><td><a href="#iterator">Iterator</a></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><b>Remember KISS and YAGNI:</b> a pattern is worth its extra classes only when the problem it solves is really there. If a plain function does the job, use the function. See <a href="design-principles.html">Design Principles</a>.</p>
+      </section>
+
+    </div>
+  </main>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script src="../../assets/tutorial.js"></script>
+</body>
+</html>

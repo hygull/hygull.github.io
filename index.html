@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Rishikesh Agrawani | Learnings</title>
-<meta name="description" content="Short, ordered tutorials on React, Next.js and turning designs into code.">
+<meta name="description" content="Short tutorials with runnable code: React, Next.js, design to code, Python design principles and patterns, and Bash.">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@500;700&display=swap">
 <link rel="stylesheet" href="learnings/assets/tutorial.css">
 </head>
@@ -24,96 +24,190 @@
 </header>
 
 <main class="hub" id="hub">
-  <p class="eyebrow">Frontend learning path</p>
-  <h1>React to Next Path</h1>
-  <p class="lead">Four short tutorials, meant to be read in order. Each one explains a concept in a few lines, shows the code, and gives the command to run. Learn React first, then Next, use the comparison to lock in what Next changed, and finish with the design skills that turn a Figma file into components.</p>
+  <p class="eyebrow">Short tutorials with runnable code</p>
+  <h1>Learnings</h1>
+  <p class="lead">Notes written while learning, kept short on purpose. Each tutorial explains a concept in a few lines, shows the code, and tells you how to run it. Pick a path and read it in order.</p>
+  <ul class="chips jump">
+    <li><a href="#frontend">Frontend: React to Next</a></li>
+    <li><a href="#python">Python: design principles and patterns</a></li>
+    <li><a href="#bash">Command line: Bash</a></li>
+  </ul>
 
-  <div class="track-list">
+  <section class="group" id="frontend">
+    <p class="eyebrow">Frontend learning path</p>
+    <h2>React to Next</h2>
+    <p>Four tutorials. Learn React first, then Next, use the comparison to lock in what Next changed, and finish with the design skills that turn a Figma file into components.</p>
 
-    <div class="track react">
-      <div>
-        <p class="step">Step 1</p>
-        <h2><a href="learnings/React/docs/react-tutorial.html">React Essentials</a></h2>
-        <p class="path">learnings/React/docs/react-tutorial.html</p>
+    <div class="track-list">
+
+      <div class="track react">
+        <div>
+          <p class="step">Step 1</p>
+          <h3><a href="learnings/React/docs/react-tutorial.html">React Essentials</a></h3>
+          <p class="path">learnings/React/docs/react-tutorial.html</p>
+        </div>
+        <div>
+          <p>Components, props, state, effects, hooks, context, routing with React Router, auth with a protected route, styling, and turning a Figma file into components.</p>
+          <ul class="chips">
+            <li><a href="learnings/React/docs/react-tutorial.html#setup">Setup</a></li>
+            <li><a href="learnings/React/docs/react-tutorial.html#components">Components</a></li>
+            <li><a href="learnings/React/docs/react-tutorial.html#state">State</a></li>
+            <li><a href="learnings/React/docs/react-tutorial.html#effects">Data fetching</a></li>
+            <li><a href="learnings/React/docs/react-tutorial.html#hooks">Hooks</a></li>
+            <li><a href="learnings/React/docs/react-tutorial.html#routing">Routing</a></li>
+            <li><a href="learnings/React/docs/react-tutorial.html#auth">Auth</a></li>
+            <li><a href="learnings/React/docs/react-tutorial.html#figma">Figma</a></li>
+          </ul>
+        </div>
       </div>
-      <div>
-        <p>Components, props, state, effects, hooks, context, routing with React Router, auth with a protected route, styling, and turning a Figma file into components.</p>
-        <ul class="chips">
-          <li><a href="learnings/React/docs/react-tutorial.html#setup">Setup</a></li>
-          <li><a href="learnings/React/docs/react-tutorial.html#components">Components</a></li>
-          <li><a href="learnings/React/docs/react-tutorial.html#state">State</a></li>
-          <li><a href="learnings/React/docs/react-tutorial.html#effects">Data fetching</a></li>
-          <li><a href="learnings/React/docs/react-tutorial.html#hooks">Hooks</a></li>
-          <li><a href="learnings/React/docs/react-tutorial.html#routing">Routing</a></li>
-          <li><a href="learnings/React/docs/react-tutorial.html#auth">Auth</a></li>
-          <li><a href="learnings/React/docs/react-tutorial.html#figma">Figma</a></li>
-        </ul>
+
+      <div class="track next">
+        <div>
+          <p class="step">Step 2</p>
+          <h3><a href="learnings/Next/docs/next-tutorial.html">Next.js Essentials</a></h3>
+          <p class="path">learnings/Next/docs/next-tutorial.html</p>
+        </div>
+        <div>
+          <p>File based pages and layouts, server and client components, data fetching and caching, Server Actions, API routes, cookie based auth, images, fonts, SEO and deployment.</p>
+          <ul class="chips">
+            <li><a href="learnings/Next/docs/next-tutorial.html#pages">Pages</a></li>
+            <li><a href="learnings/Next/docs/next-tutorial.html#layouts">Layouts</a></li>
+            <li><a href="learnings/Next/docs/next-tutorial.html#server-client">Server and client</a></li>
+            <li><a href="learnings/Next/docs/next-tutorial.html#data">Data</a></li>
+            <li><a href="learnings/Next/docs/next-tutorial.html#actions">Server Actions</a></li>
+            <li><a href="learnings/Next/docs/next-tutorial.html#auth">Auth</a></li>
+            <li><a href="learnings/Next/docs/next-tutorial.html#figma">Figma</a></li>
+            <li><a href="learnings/Next/docs/next-tutorial.html#build">Deploy</a></li>
+          </ul>
+        </div>
       </div>
+
+      <div class="track">
+        <div>
+          <p class="step">Step 3</p>
+          <h3><a href="learnings/Next_React/docs/react-vs-next.html">React vs Next.js</a></h3>
+          <p class="path">learnings/Next_React/docs/react-vs-next.html</p>
+        </div>
+        <div>
+          <p>Seventeen tasks shown side by side, React on the left and Next on the right, each with one line on what Next added. Only topics where Next changed something.</p>
+          <ul class="chips">
+            <li><a href="learnings/Next_React/docs/react-vs-next.html#routing">Routing</a></li>
+            <li><a href="learnings/Next_React/docs/react-vs-next.html#data">Data fetching</a></li>
+            <li><a href="learnings/Next_React/docs/react-vs-next.html#forms">Forms</a></li>
+            <li><a href="learnings/Next_React/docs/react-vs-next.html#auth">Auth</a></li>
+            <li><a href="learnings/Next_React/docs/react-vs-next.html#images">Images</a></li>
+            <li><a href="learnings/Next_React/docs/react-vs-next.html#rendering">Rendering</a></li>
+            <li><a href="learnings/Next_React/docs/react-vs-next.html#choose">Which to pick</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="track design">
+        <div>
+          <p class="step">Step 4</p>
+          <h3><a href="learnings/Design/docs/design-to-code.html">Design to Code</a></h3>
+          <p class="path">learnings/Design/docs/design-to-code.html</p>
+        </div>
+        <div>
+          <p>Reading a Figma file, design tokens, spacing, typography, color, responsive layout, states, a reusable component kit, accessibility, and the Figma MCP and Code Connect workflow.</p>
+          <ul class="chips">
+            <li><a href="learnings/Design/docs/design-to-code.html#read-figma">Read Figma</a></li>
+            <li><a href="learnings/Design/docs/design-to-code.html#tokens">Tokens</a></li>
+            <li><a href="learnings/Design/docs/design-to-code.html#spacing">Spacing</a></li>
+            <li><a href="learnings/Design/docs/design-to-code.html#states">States</a></li>
+            <li><a href="learnings/Design/docs/design-to-code.html#component-api">Component API</a></li>
+            <li><a href="learnings/Design/docs/design-to-code.html#kit">Component kit</a></li>
+            <li><a href="learnings/Design/docs/design-to-code.html#figma-mcp">Figma MCP</a></li>
+            <li><a href="learnings/Design/docs/design-to-code.html#code-connect">Code Connect</a></li>
+          </ul>
+        </div>
+      </div>
+
     </div>
+  </section>
 
-    <div class="track next">
-      <div>
-        <p class="step">Step 2</p>
-        <h2><a href="learnings/Next/docs/next-tutorial.html">Next.js Essentials</a></h2>
-        <p class="path">learnings/Next/docs/next-tutorial.html</p>
+  <section class="group" id="python">
+    <p class="eyebrow">Python learning path</p>
+    <h2>Python Design</h2>
+    <p>Two tutorials built on one small bank. Every example is a few lines long, runs with only the standard library, and reuses the same <code>Person</code> and <code>Account</code> classes.</p>
+
+    <div class="track-list">
+
+      <div class="track python">
+        <div>
+          <p class="step">Step 1</p>
+          <h3><a href="learnings/Python/docs/design-principles.html">Design Principles</a></h3>
+          <p class="path">learnings/Python/docs/design-principles.html</p>
+        </div>
+        <div>
+          <p>SOLID, DRY, KISS, YAGNI, composition over inheritance, tell don't ask and encapsulation. Each one shown as the code that breaks it, then the fix.</p>
+          <ul class="chips">
+            <li><a href="learnings/Python/docs/design-principles.html#srp">Single responsibility</a></li>
+            <li><a href="learnings/Python/docs/design-principles.html#ocp">Open/closed</a></li>
+            <li><a href="learnings/Python/docs/design-principles.html#lsp">Liskov</a></li>
+            <li><a href="learnings/Python/docs/design-principles.html#isp">Interface segregation</a></li>
+            <li><a href="learnings/Python/docs/design-principles.html#dip">Dependency inversion</a></li>
+            <li><a href="learnings/Python/docs/design-principles.html#dry">DRY</a></li>
+            <li><a href="learnings/Python/docs/design-principles.html#composition">Composition</a></li>
+            <li><a href="learnings/Python/docs/design-principles.html#summary">Quick reference</a></li>
+          </ul>
+        </div>
       </div>
-      <div>
-        <p>File based pages and layouts, server and client components, data fetching and caching, Server Actions, API routes, cookie based auth, images, fonts, SEO and deployment.</p>
-        <ul class="chips">
-          <li><a href="learnings/Next/docs/next-tutorial.html#pages">Pages</a></li>
-          <li><a href="learnings/Next/docs/next-tutorial.html#layouts">Layouts</a></li>
-          <li><a href="learnings/Next/docs/next-tutorial.html#server-client">Server and client</a></li>
-          <li><a href="learnings/Next/docs/next-tutorial.html#data">Data</a></li>
-          <li><a href="learnings/Next/docs/next-tutorial.html#actions">Server Actions</a></li>
-          <li><a href="learnings/Next/docs/next-tutorial.html#auth">Auth</a></li>
-          <li><a href="learnings/Next/docs/next-tutorial.html#figma">Figma</a></li>
-          <li><a href="learnings/Next/docs/next-tutorial.html#build">Deploy</a></li>
-        </ul>
+
+      <div class="track python">
+        <div>
+          <p class="step">Step 2</p>
+          <h3><a href="learnings/Python/docs/design-patterns.html">Design Patterns</a></h3>
+          <p class="path">learnings/Python/docs/design-patterns.html</p>
+        </div>
+        <div>
+          <p>Sixteen creational, structural and behavioural patterns, each with the problem it solves, a small example and the shortcut Python gives you.</p>
+          <ul class="chips">
+            <li><a href="learnings/Python/docs/design-patterns.html#factory">Factory</a></li>
+            <li><a href="learnings/Python/docs/design-patterns.html#builder">Builder</a></li>
+            <li><a href="learnings/Python/docs/design-patterns.html#adapter">Adapter</a></li>
+            <li><a href="learnings/Python/docs/design-patterns.html#decorator">Decorator</a></li>
+            <li><a href="learnings/Python/docs/design-patterns.html#composite">Composite</a></li>
+            <li><a href="learnings/Python/docs/design-patterns.html#strategy">Strategy</a></li>
+            <li><a href="learnings/Python/docs/design-patterns.html#observer">Observer</a></li>
+            <li><a href="learnings/Python/docs/design-patterns.html#command">Command</a></li>
+            <li><a href="learnings/Python/docs/design-patterns.html#choose">Which to pick</a></li>
+          </ul>
+        </div>
       </div>
+
     </div>
+  </section>
 
-    <div class="track">
-      <div>
-        <p class="step">Step 3</p>
-        <h2><a href="learnings/Next_React/docs/react-vs-next.html">React vs Next.js</a></h2>
-        <p class="path">learnings/Next_React/docs/react-vs-next.html</p>
+  <section class="group" id="bash">
+    <p class="eyebrow">Command line</p>
+    <h2>Bash</h2>
+    <p>Notes on the shell, added as they come up. Each topic is a few short chapters with commands you can paste into a terminal.</p>
+
+    <div class="track-list">
+
+      <div class="track bash">
+        <div>
+          <p class="step">Topic 1</p>
+          <h3><a href="learnings/Bash/docs/bash-notes.html">History and histverify</a></h3>
+          <p class="path">learnings/Bash/docs/bash-notes.html</p>
+        </div>
+        <div>
+          <p>What <code>!!</code>, <code>!$</code> and <code>!git</code> really do, why they can run a command you have not read, and the one setting that shows it to you first.</p>
+          <ul class="chips">
+            <li><a href="learnings/Bash/docs/bash-notes.html#history-expansion">The ! shortcuts</a></li>
+            <li><a href="learnings/Bash/docs/bash-notes.html#risk">The risk</a></li>
+            <li><a href="learnings/Bash/docs/bash-notes.html#histverify">histverify</a></li>
+            <li><a href="learnings/Bash/docs/bash-notes.html#permanent">Make it permanent</a></li>
+            <li><a href="learnings/Bash/docs/bash-notes.html#preview">Preview</a></li>
+            <li><a href="learnings/Bash/docs/bash-notes.html#tidy-history">Tidy history</a></li>
+            <li><a href="learnings/Bash/docs/bash-notes.html#zsh">zsh</a></li>
+          </ul>
+        </div>
       </div>
-      <div>
-        <p>Seventeen tasks shown side by side, React on the left and Next on the right, each with one line on what Next added. Only topics where Next changed something.</p>
-        <ul class="chips">
-          <li><a href="learnings/Next_React/docs/react-vs-next.html#routing">Routing</a></li>
-          <li><a href="learnings/Next_React/docs/react-vs-next.html#data">Data fetching</a></li>
-          <li><a href="learnings/Next_React/docs/react-vs-next.html#forms">Forms</a></li>
-          <li><a href="learnings/Next_React/docs/react-vs-next.html#auth">Auth</a></li>
-          <li><a href="learnings/Next_React/docs/react-vs-next.html#images">Images</a></li>
-          <li><a href="learnings/Next_React/docs/react-vs-next.html#rendering">Rendering</a></li>
-          <li><a href="learnings/Next_React/docs/react-vs-next.html#choose">Which to pick</a></li>
-        </ul>
-      </div>
+
     </div>
-
-    <div class="track design">
-      <div>
-        <p class="step">Step 4</p>
-        <h2><a href="learnings/Design/docs/design-to-code.html">Design to Code</a></h2>
-        <p class="path">learnings/Design/docs/design-to-code.html</p>
-      </div>
-      <div>
-        <p>Reading a Figma file, design tokens, spacing, typography, color, responsive layout, states, a reusable component kit, accessibility, and the Figma MCP and Code Connect workflow.</p>
-        <ul class="chips">
-          <li><a href="learnings/Design/docs/design-to-code.html#read-figma">Read Figma</a></li>
-          <li><a href="learnings/Design/docs/design-to-code.html#tokens">Tokens</a></li>
-          <li><a href="learnings/Design/docs/design-to-code.html#spacing">Spacing</a></li>
-          <li><a href="learnings/Design/docs/design-to-code.html#states">States</a></li>
-          <li><a href="learnings/Design/docs/design-to-code.html#component-api">Component API</a></li>
-          <li><a href="learnings/Design/docs/design-to-code.html#kit">Component kit</a></li>
-          <li><a href="learnings/Design/docs/design-to-code.html#figma-mcp">Figma MCP</a></li>
-          <li><a href="learnings/Design/docs/design-to-code.html#code-connect">Code Connect</a></li>
-        </ul>
-      </div>
-    </div>
-
-  </div>
+  </section>
 </main>
 
 <script src="learnings/assets/tutorial.js"></script>
