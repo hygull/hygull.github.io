@@ -35,7 +35,7 @@
     <div class="page-head">
       <p class="eyebrow">Python design, part 1 of 2</p>
       <h1>Python Design Principles</h1>
-      <p class="lead">Design principles are habits that keep code easy to change. Each chapter shows one principle on the same small bank: first the code that breaks it, then the fix. Examples run on Python 3.9 or newer with only the standard library.</p>
+      <p class="lead">Design principles are habits that keep code easy to change. They come in two groups: the five SOLID principles for designing classes, and six general rules of thumb. Each chapter shows one principle on the same small bank: first the code that breaks it, then the fix. Examples run on Python 3.9 or newer with only the standard library.</p>
     </div>
 
     <div class="chapters">
@@ -89,8 +89,22 @@ print(account.balance)   # 1300
         <p class="note"><b>How to read the chapters:</b> <code>before.py</code> is the code that works today but will hurt later. <code>after.py</code> is the same feature with the principle applied.</p>
       </section>
 
+      <section class="chapter part" id="solid">
+        <h2>SOLID principles</h2>
+        <p class="kind">Group 1 of 2 &middot; five rules for designing classes</p>
+        <p>SOLID is an acronym for five principles about how classes should be shaped and how they should depend on each other. They were collected by Robert C. Martin, and each letter stands for one principle.</p>
+        <ul>
+          <li><b>S</b>: <a href="#srp">Single responsibility</a>, one class does one job</li>
+          <li><b>O</b>: <a href="#ocp">Open/closed</a>, add new behaviour without editing old code</li>
+          <li><b>L</b>: <a href="#lsp">Liskov substitution</a>, a child class can stand in for its parent</li>
+          <li><b>I</b>: <a href="#isp">Interface segregation</a>, many small interfaces beat one large one</li>
+          <li><b>D</b>: <a href="#dip">Dependency inversion</a>, depend on abstractions, not on details</li>
+        </ul>
+      </section>
+
       <section class="chapter" id="srp">
         <h2>Single responsibility</h2>
+        <p class="kind"><a href="#solid">SOLID principle</a></p>
         <p>A class should have one reason to change. If the bank changes its rules, its statement layout and its storage, three different people will want to edit this one class.</p>
         <script type="text/plain" data-lang="py" data-file="before.py" data-norun>
 class AccountManager:
@@ -136,6 +150,7 @@ FileStore("accounts.txt").save(line)
 
       <section class="chapter" id="ocp">
         <h2>Open/closed</h2>
+        <p class="kind"><a href="#solid">SOLID principle</a></p>
         <p>Code should be open for extension and closed for modification. Adding a new kind of account should mean adding code, not editing code that already works.</p>
         <script type="text/plain" data-lang="py" data-file="before.py">
 def interest(kind, balance):
@@ -174,6 +189,7 @@ print(interest(SeniorCitizenAccount(subhash, 10000)))   # 750.0
 
       <section class="chapter" id="lsp">
         <h2>Liskov substitution</h2>
+        <p class="kind"><a href="#solid">SOLID principle</a></p>
         <p>Anywhere a parent class works, a child class must work too. A fixed deposit that inherits <code>withdraw()</code> and then refuses to do it breaks every function written for <code>Account</code>.</p>
         <script type="text/plain" data-lang="py" data-file="before.py">
 from bank import Account, hemkesh, malinikesh
@@ -231,6 +247,7 @@ print(hasattr(FixedDeposit(malinikesh), "withdraw"))  # False
 
       <section class="chapter" id="isp">
         <h2>Interface segregation</h2>
+        <p class="kind"><a href="#solid">SOLID principle</a></p>
         <p>Do not force a class to implement methods it does not need. One large interface for every bank product makes a home loan pretend it can accept deposits.</p>
         <script type="text/plain" data-lang="py" data-file="before.py">
 from abc import ABC, abstractmethod
@@ -289,6 +306,7 @@ print(loan.outstanding)   # 488000
 
       <section class="chapter" id="dip">
         <h2>Dependency inversion</h2>
+        <p class="kind"><a href="#solid">SOLID principle</a></p>
         <p>High-level rules should not depend on low-level details. Both should depend on an abstraction. Here the transfer rule is welded to SMS, so it cannot send email and cannot be tested without sending a message.</p>
         <script type="text/plain" data-lang="py" data-file="before.py">
 class SmsSender:
@@ -339,8 +357,23 @@ print(mine.balance, mothers.balance)   # 6500 3500
         <p class="note"><b>Payoff:</b> in a test, pass a fake notifier that stores messages in a list. No SMS, no network, and the transfer rule is still fully tested.</p>
       </section>
 
+      <section class="chapter part" id="general">
+        <h2>General principles</h2>
+        <p class="kind">Group 2 of 2 &middot; rules of thumb for any code</p>
+        <p>These are shorter and older than SOLID, and they apply to functions and scripts as much as to classes. The first three are about how much code to write. The last three are about where data and decisions should live.</p>
+        <ul>
+          <li><a href="#dry">DRY</a>: write each rule once</li>
+          <li><a href="#kiss">KISS</a>: prefer the simplest thing that works</li>
+          <li><a href="#yagni">YAGNI</a>: do not build for needs you do not have yet</li>
+          <li><a href="#composition">Composition over inheritance</a>: build objects from parts</li>
+          <li><a href="#tell">Tell, don't ask</a>: let an object make its own decisions</li>
+          <li><a href="#encapsulation">Encapsulation</a>: keep data private, expose behaviour</li>
+        </ul>
+      </section>
+
       <section class="chapter" id="dry">
         <h2>DRY: don't repeat yourself</h2>
+        <p class="kind"><a href="#general">General principle</a></p>
         <p>Every rule should live in one place. Here the rule "an amount is a positive number" is written twice, so one day it will be fixed in one method and forgotten in the other.</p>
         <script type="text/plain" data-lang="py" data-file="before.py">
 class Account:
@@ -384,6 +417,7 @@ print(account.balance)   # 150
 
       <section class="chapter" id="kiss">
         <h2>KISS: keep it simple</h2>
+        <p class="kind"><a href="#general">General principle</a></p>
         <p>The simplest code that solves the problem is the easiest to read, test and fix. This check needs one comparison, not two classes and a lambda.</p>
         <script type="text/plain" data-lang="py" data-file="before.py">
 class BalanceChecker:
@@ -410,6 +444,7 @@ print(can_pay(Account(malinikesh, 800), 500))   # True
 
       <section class="chapter" id="yagni">
         <h2>YAGNI: you aren't gonna need it</h2>
+        <p class="kind"><a href="#general">General principle</a></p>
         <p>Build what is needed today. Features added "for later" must be tested and maintained now, and the guess about later is usually wrong.</p>
         <script type="text/plain" data-lang="py" data-file="before.py">
 class Account:
@@ -434,6 +469,7 @@ print(account.balance)   # 500
 
       <section class="chapter" id="composition">
         <h2>Composition over inheritance</h2>
+        <p class="kind"><a href="#general">General principle</a></p>
         <p>Inheritance says "is a". Composition says "has a". When features can be mixed freely, inheritance needs one class per combination.</p>
         <script type="text/plain" data-lang="py" data-file="before.py" data-norun>
 class SavingsAccount(Account): ...
@@ -477,6 +513,7 @@ print(current.balance)   # -2000
 
       <section class="chapter" id="tell">
         <h2>Tell, don't ask</h2>
+        <p class="kind"><a href="#general">General principle</a></p>
         <p>Do not ask an object for its data and then make its decision for it. Tell it what you want and let it apply its own rules.</p>
         <script type="text/plain" data-lang="py" data-file="before.py">
 def transfer(source, target, amount):
@@ -511,6 +548,7 @@ print("Hello " + account.owner.first_name)        # asks the owner; prints Hello
 
       <section class="chapter" id="encapsulation">
         <h2>Encapsulation</h2>
+        <p class="kind"><a href="#general">General principle</a></p>
         <p>Keep data private and expose behaviour. If anyone can assign to <code>balance</code>, none of the rules in <code>deposit()</code> and <code>withdraw()</code> can be trusted.</p>
         <script type="text/plain" data-lang="py" data-file="before.py">
 from bank import Account, malinikesh
