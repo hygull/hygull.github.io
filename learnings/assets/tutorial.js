@@ -101,6 +101,7 @@
     a.href = "#" + ch.id;
     a.textContent = title;
     li.appendChild(a);
+    if (ch.classList.contains("part")) li.className = "toc-part";
     list.appendChild(li);
     links[ch.id] = a;
     items.push({ chapter: ch, li: li, text: ch.textContent.toLowerCase() });

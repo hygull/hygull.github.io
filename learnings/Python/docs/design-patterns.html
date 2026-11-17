@@ -35,7 +35,7 @@
     <div class="page-head">
       <p class="eyebrow">Python design, part 2 of 2</p>
       <h1>Python Design Patterns</h1>
-      <p class="lead">A design pattern is a named solution to a problem that keeps coming back. Sixteen patterns, each shown in a few lines on the same small bank, with the problem it solves and the shortcut Python gives you. Examples run on Python 3.9 or newer with only the standard library.</p>
+      <p class="lead">A design pattern is a named solution to a problem that keeps coming back. All 23 classic patterns, grouped into their three families: creational, structural and behavioural. Each one is shown in a few lines on the same small bank, with the problem it solves and the shortcut Python gives you. Examples run on Python 3.9 or newer with only the standard library.</p>
     </div>
 
     <div class="chapters">
@@ -78,21 +78,42 @@ subhash = Person("Subhash Agrawani")        # father
 malinikesh = Person("Malinikesh Agrawani")  # sister
 hemkesh = Person("Hemkesh Agrawani")        # brother
         </script>
-        <p>Patterns come in three families:</p>
+      </section>
+
+      <section class="chapter" id="families">
+        <h2>What the three families mean</h2>
+        <p>The classic catalogue has 23 patterns. It comes from the 1994 book <i>Design Patterns</i>, whose four authors are known as the Gang of Four. They sorted the patterns by the kind of problem each one solves, which gives three families.</p>
         <div class="scroll">
           <table>
-            <thead><tr><th>Family</th><th>Answers</th><th>In this tutorial</th></tr></thead>
+            <thead><tr><th>Family</th><th>The word means</th><th>Question it answers</th><th>In our bank</th></tr></thead>
             <tbody>
-              <tr><td>Creational</td><td>How are objects made?</td><td>Factory, Builder, Singleton, Prototype</td></tr>
-              <tr><td>Structural</td><td>How do objects fit together?</td><td>Adapter, Decorator, Facade, Proxy, Composite</td></tr>
-              <tr><td>Behavioural</td><td>How do objects talk and share work?</td><td>Strategy, Observer, Command, State, Template Method, Chain of Responsibility, Iterator</td></tr>
+              <tr><td><a href="#creational">Creational</a></td><td>About <b>creating</b> objects</td><td>Who decides which object gets made, and how?</td><td>Opening the right kind of account, putting a loan together</td></tr>
+              <tr><td><a href="#structural">Structural</a></td><td>About <b>structure</b>: how objects are joined into larger pieces</td><td>How do separate pieces fit together?</td><td>A card in front of an account, a family portfolio of accounts</td></tr>
+              <tr><td><a href="#behavioural">Behavioural</a></td><td>About <b>behaviour</b>: how objects talk and share work while the program runs</td><td>Who does what, and how do they tell each other?</td><td>Approvals, alerts, undo, interest rules</td></tr>
             </tbody>
           </table>
         </div>
+        <p class="note"><b>Picture a house:</b> creational is how the bricks and rooms get made. Structural is how the rooms are joined into a house. Behavioural is how the people living in it talk to each other and share the chores.</p>
+        <p>The rest of this page follows that order. Every pattern chapter is labelled with its family.</p>
+      </section>
+
+      <section class="chapter part" id="creational">
+        <h2>Creational patterns</h2>
+        <p class="kind">Family 1 of 3 &middot; how objects are made</p>
+        <p>Writing <code>Account(owner)</code> is the simplest way to create an object, and usually the right one. It stops being enough when the code that needs the object should not know its exact class, when the object takes several steps to put together, or when only one copy is allowed to exist.</p>
+        <p>Creational patterns move the decision about <b>what gets made and how</b> into one place, so the rest of the program just asks for an object and uses it.</p>
+        <ul>
+          <li><a href="#factory">Factory method</a>: pick the right class for the caller</li>
+          <li><a href="#abstract-factory">Abstract factory</a>: make a set of objects that belong together</li>
+          <li><a href="#builder">Builder</a>: assemble a complex object step by step</li>
+          <li><a href="#prototype">Prototype</a>: make new objects by copying a prepared one</li>
+          <li><a href="#singleton">Singleton</a>: allow exactly one object of a class</li>
+        </ul>
       </section>
 
       <section class="chapter" id="factory">
-        <h2>Factory</h2>
+        <h2>Factory method</h2>
+        <p class="kind"><a href="#creational">Creational pattern</a></p>
         <p><b>Problem:</b> the caller knows the kind of account as a string, from a form or an API, and should not need to know which class that means.</p>
         <p>A factory is one function that picks the class and returns the object.</p>
         <script type="text/plain" data-lang="py" data-file="factory.py">
@@ -127,11 +148,99 @@ def open_account(kind, owner, balance=0):
 account = open_account("senior", sandhya, 20000)
 print(type(account).__name__, account.rate)   # SeniorAccount 0.075
         </script>
+        <h3>The classic form: a subclass decides</h3>
+        <p>In the textbook version the parent class runs the steps and calls a method, the factory method, that each subclass overrides to say which class to create.</p>
+        <script type="text/plain" data-lang="py" data-file="factory_method.py">
+from bank import Account, hemkesh, sandhya
+
+
+class StudentAccount(Account): ...
+class SeniorAccount(Account): ...
+
+
+class Branch:
+    bonus = 0
+
+    def create_account(self, owner):        # the factory method
+        raise NotImplementedError
+
+    def open(self, owner):                  # same steps in every branch
+        account = self.create_account(owner)
+        account.deposit(self.bonus)
+        return account
+
+
+class CampusBranch(Branch):
+    bonus = 100
+
+    def create_account(self, owner):
+        return StudentAccount(owner)
+
+
+class SeniorBranch(Branch):
+    bonus = 500
+
+    def create_account(self, owner):
+        return SeniorAccount(owner)
+
+
+for branch, person in ((CampusBranch(), hemkesh), (SeniorBranch(), sandhya)):
+    account = branch.open(person)
+    print(type(account).__name__, account.balance)
+# StudentAccount 100
+# SeniorAccount 500
+        </script>
         <p class="note"><b>Python shortcut:</b> classes are objects, so a dictionary from name to class replaces the class hierarchy of factories that other languages need.</p>
+      </section>
+
+      <section class="chapter" id="abstract-factory">
+        <h2>Abstract factory</h2>
+        <p class="kind"><a href="#creational">Creational pattern</a></p>
+        <p><b>Problem:</b> some objects only make sense together. A premium customer gets a premium account <i>and</i> a platinum card. Mixing a premium account with a classic card would be a bug.</p>
+        <p>An abstract factory is an object that makes a whole matching set. Choose the factory once and everything it produces belongs together.</p>
+        <script type="text/plain" data-lang="py" data-file="abstract_factory.py">
+from bank import Account, hemkesh, subhash
+
+
+class SavingsAccount(Account): ...
+class PremiumAccount(Account): ...
+
+
+class Card:
+    def __init__(self, name, limit):
+        self.name, self.limit = name, limit
+
+
+class RegularKit:
+    def account(self, owner):
+        return SavingsAccount(owner)
+
+    def card(self):
+        return Card("Classic", 25000)
+
+
+class PremiumKit:
+    def account(self, owner):
+        return PremiumAccount(owner)
+
+    def card(self):
+        return Card("Platinum", 200000)
+
+
+def welcome(kit, owner):                    # works with any kit
+    account, card = kit.account(owner), kit.card()
+    return f"{owner.first_name}: {type(account).__name__} + {card.name} card"
+
+
+print(welcome(RegularKit(), hemkesh))   # Hemkesh: SavingsAccount + Classic card
+print(welcome(PremiumKit(), subhash))   # Subhash: PremiumAccount + Platinum card
+        </script>
+        <p class="note"><b>Factory method or abstract factory?</b> A factory method makes one object. An abstract factory makes a family of related objects and guarantees they match.</p>
       </section>
 
       <section class="chapter" id="builder">
         <h2>Builder</h2>
+        <p class="kind"><a href="#creational">Creational pattern</a></p>
         <p><b>Problem:</b> an object has many optional parts and must be valid before anyone uses it. A loan needs an amount and a term, and may have guarantors and insurance.</p>
         <p>A builder collects the parts step by step and checks them once in <code>build()</code>.</p>
         <script type="text/plain" data-lang="py" data-file="builder.py">
@@ -188,31 +297,9 @@ print(loan.amount, [person.first_name for person in loan.guarantors])
         <p class="note"><b>Python shortcut:</b> for most objects, keyword arguments with defaults are enough. Use a builder when construction has steps or validation across several fields.</p>
       </section>
 
-      <section class="chapter" id="singleton">
-        <h2>Singleton</h2>
-        <p><b>Problem:</b> the whole program must share one object, such as the bank's settings.</p>
-        <script type="text/plain" data-lang="py" data-file="singleton.py">
-class BankSettings:
-    _instance = None
-
-    def __new__(cls):
-        if cls._instance is None:
-            cls._instance = super().__new__(cls)
-            cls._instance.daily_limit = 50000
-        return cls._instance
-
-
-first = BankSettings()
-second = BankSettings()
-second.daily_limit = 100000
-
-print(first is second, first.daily_limit)   # True 100000
-        </script>
-        <p class="note"><b>Python shortcut:</b> a module is already a singleton. Put <code>daily_limit = 50000</code> in <code>settings.py</code> and <code>import settings</code> everywhere. Use this pattern sparingly: shared global state makes tests depend on each other.</p>
-      </section>
-
       <section class="chapter" id="prototype">
         <h2>Prototype</h2>
+        <p class="kind"><a href="#creational">Creational pattern</a></p>
         <p><b>Problem:</b> new objects should start as a copy of a prepared one. Every student account opens with the same balance and perks.</p>
         <script type="text/plain" data-lang="py" data-file="prototype.py">
 import copy
@@ -244,8 +331,49 @@ print(len(brothers.perks), len(sisters.perks), len(template.perks))   # 2 3 2
         <p class="note"><b>Watch out:</b> <code>copy.copy()</code> is shallow, so both accounts would share one <code>perks</code> list and the travel card would appear on both.</p>
       </section>
 
+      <section class="chapter" id="singleton">
+        <h2>Singleton</h2>
+        <p class="kind"><a href="#creational">Creational pattern</a></p>
+        <p><b>Problem:</b> the whole program must share one object, such as the bank's settings.</p>
+        <script type="text/plain" data-lang="py" data-file="singleton.py">
+class BankSettings:
+    _instance = None
+
+    def __new__(cls):
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+            cls._instance.daily_limit = 50000
+        return cls._instance
+
+
+first = BankSettings()
+second = BankSettings()
+second.daily_limit = 100000
+
+print(first is second, first.daily_limit)   # True 100000
+        </script>
+        <p class="note"><b>Python shortcut:</b> a module is already a singleton. Put <code>daily_limit = 50000</code> in <code>settings.py</code> and <code>import settings</code> everywhere. Use this pattern sparingly: shared global state makes tests depend on each other.</p>
+      </section>
+
+      <section class="chapter part" id="structural">
+        <h2>Structural patterns</h2>
+        <p class="kind">Family 2 of 3 &middot; how objects fit together</p>
+        <p>Once objects exist, they have to be connected. Structural patterns describe ways to <b>wrap, combine or stand in front of</b> objects so that pieces written separately can work together.</p>
+        <p>The common idea is that you change how things are joined, not the classes themselves. An account stays an account. What changes is what you put around it or next to it.</p>
+        <ul>
+          <li><a href="#adapter">Adapter</a>: make an object with the wrong interface usable</li>
+          <li><a href="#bridge">Bridge</a>: let two things vary without multiplying classes</li>
+          <li><a href="#composite">Composite</a>: treat one item and a group of items alike</li>
+          <li><a href="#decorator">Decorator</a>: wrap an object to add behaviour</li>
+          <li><a href="#facade">Facade</a>: put one simple door in front of many parts</li>
+          <li><a href="#flyweight">Flyweight</a>: share one object instead of making many copies</li>
+          <li><a href="#proxy">Proxy</a>: stand in front of an object and control access to it</li>
+        </ul>
+      </section>
+
       <section class="chapter" id="adapter">
         <h2>Adapter</h2>
+        <p class="kind"><a href="#structural">Structural pattern</a></p>
         <p><b>Problem:</b> code you cannot change has the wrong interface. The old UPI library wants an ID and paise, while the bank works with people and rupees.</p>
         <p>An adapter wraps the old object and translates the call.</p>
         <script type="text/plain" data-lang="py" data-file="adapter.py">
@@ -271,8 +399,81 @@ print(payments.pay(sandhya, 250))   # Sent 25000 paise to sandhya@upi
         </script>
       </section>
 
+      <section class="chapter" id="bridge">
+        <h2>Bridge</h2>
+        <p class="kind"><a href="#structural">Structural pattern</a></p>
+        <p><b>Problem:</b> two things vary independently. The bank has kinds of alert (deposit, low balance) and ways to send them (SMS, email). One subclass per combination means 2 &times; 2 classes today and 3 &times; 3 tomorrow.</p>
+        <p>A bridge keeps the two sides as separate small hierarchies and connects them with a reference. Each side grows without touching the other.</p>
+        <script type="text/plain" data-lang="py" data-file="bridge.py">
+from bank import Account, rishikesh, sandhya
+
+
+class Sms:                                  # side 1: how it is sent
+    def send(self, person, text):
+        print(f"SMS to {person.first_name}: {text}")
+
+
+class Email:
+    def send(self, person, text):
+        print(f"Email to {person.first_name}: {text}")
+
+
+class Alert:                                # side 2: what is said
+    def __init__(self, channel):
+        self.channel = channel              # the bridge
+
+
+class DepositAlert(Alert):
+    def notify(self, account, amount):
+        self.channel.send(account.owner, f"Rs {amount} credited")
+
+
+class LowBalanceAlert(Alert):
+    def notify(self, account):
+        self.channel.send(account.owner, f"Balance is low: Rs {account.balance}")
+
+
+DepositAlert(Sms()).notify(Account(sandhya, 9000), 2000)
+# SMS to Sandhya: Rs 2000 credited
+LowBalanceAlert(Email()).notify(Account(rishikesh, 150))
+# Email to Rishikesh: Balance is low: Rs 150
+        </script>
+        <p class="note"><b>Count the classes:</b> four combinations from four small classes. Adding WhatsApp is one more class, and every alert can use it immediately.</p>
+      </section>
+
+      <section class="chapter" id="composite">
+        <h2>Composite</h2>
+        <p class="kind"><a href="#structural">Structural pattern</a></p>
+        <p><b>Problem:</b> treat one item and a group of items the same way. A family's money is a tree: the family holds groups, and groups hold accounts.</p>
+        <p>Give the group the same <code>balance</code> attribute as a single account, and let it add up its children.</p>
+        <script type="text/plain" data-lang="py" data-file="composite.py">
+from bank import Account, rishikesh, sandhya, subhash, malinikesh, hemkesh
+
+
+class Portfolio:
+    def __init__(self, name, *items):
+        self.name = name
+        self.items = items              # accounts or other portfolios
+
+    @property
+    def balance(self):
+        return sum(item.balance for item in self.items)
+
+
+parents = Portfolio("Parents",
+                    Account(subhash, 80000), Account(sandhya, 60000))
+children = Portfolio("Children",
+                     Account(rishikesh, 30000), Account(malinikesh, 20000),
+                     Account(hemkesh, 10000))
+family = Portfolio("Agrawani family", parents, children)
+
+print(parents.balance, children.balance, family.balance)   # 140000 60000 200000
+        </script>
+      </section>
+
       <section class="chapter" id="decorator">
         <h2>Decorator</h2>
+        <p class="kind"><a href="#structural">Structural pattern</a></p>
         <p><b>Problem:</b> add behaviour to an object without changing its class, and allow several additions to be stacked.</p>
         <p>A decorator wraps an object, has the same methods, and does something extra before or after passing the call on.</p>
         <script type="text/plain" data-lang="py" data-file="decorator.py">
@@ -331,6 +532,7 @@ transfer(Account(rishikesh, 5000), Account(hemkesh, 0), 1500)
 
       <section class="chapter" id="facade">
         <h2>Facade</h2>
+        <p class="kind"><a href="#structural">Structural pattern</a></p>
         <p><b>Problem:</b> one task needs several subsystems in the right order. A transfer must pass KYC and fraud checks, move the money and write the ledger.</p>
         <p>A facade gives callers one simple method and hides the steps behind it.</p>
         <script type="text/plain" data-lang="py" data-file="facade.py">
@@ -378,8 +580,45 @@ print(bank.ledger.entries)   # ['Subhash -> Hemkesh: 15000']
         </script>
       </section>
 
+      <section class="chapter" id="flyweight">
+        <h2>Flyweight</h2>
+        <p class="kind"><a href="#structural">Structural pattern</a></p>
+        <p><b>Problem:</b> a huge number of objects repeat the same data. A million accounts belong to a few hundred branches, and each one does not need its own copy of the branch details.</p>
+        <p>A flyweight is one shared object that many others point to. A small function hands out the existing one and only creates it the first time.</p>
+        <script type="text/plain" data-lang="py" data-file="flyweight.py">
+from bank import Account, rishikesh, sandhya, subhash, malinikesh, hemkesh
+
+
+class Branch:
+    def __init__(self, code, name):
+        self.code, self.name = code, name
+
+
+_branches = {}
+
+
+def branch(code, name):
+    if code not in _branches:               # create once
+        _branches[code] = Branch(code, name)
+    return _branches[code]                  # share afterwards
+
+
+family = [rishikesh, sandhya, subhash, malinikesh, hemkesh]
+accounts = []
+for person in family:
+    account = Account(person, 1000)
+    account.branch = branch("MAIN001", "Main Branch")
+    accounts.append(account)
+
+print(len(accounts), len(_branches))                # 5 1
+print(accounts[0].branch is accounts[4].branch)     # True
+        </script>
+        <p class="note"><b>Python shortcut:</b> put <code>@functools.lru_cache</code> on a function that builds the object and you get the same sharing without writing the dictionary. Shared objects must not be modified, because every holder would see the change.</p>
+      </section>
+
       <section class="chapter" id="proxy">
         <h2>Proxy</h2>
+        <p class="kind"><a href="#structural">Structural pattern</a></p>
         <p><b>Problem:</b> control access to an object. A debit card stands in front of the account and lets a withdrawal through only with the right PIN.</p>
         <script type="text/plain" data-lang="py" data-file="proxy.py">
 from bank import Account, sandhya
@@ -412,103 +651,56 @@ except PermissionError as error:
         <p class="note"><b>Proxy or decorator?</b> Both wrap an object. A decorator adds behaviour. A proxy decides whether, when or how the real object is reached: permissions, caching, lazy loading.</p>
       </section>
 
-      <section class="chapter" id="composite">
-        <h2>Composite</h2>
-        <p><b>Problem:</b> treat one item and a group of items the same way. A family's money is a tree: the family holds groups, and groups hold accounts.</p>
-        <p>Give the group the same <code>balance</code> attribute as a single account, and let it add up its children.</p>
-        <script type="text/plain" data-lang="py" data-file="composite.py">
-from bank import Account, rishikesh, sandhya, subhash, malinikesh, hemkesh
-
-
-class Portfolio:
-    def __init__(self, name, *items):
-        self.name = name
-        self.items = items              # accounts or other portfolios
-
-    @property
-    def balance(self):
-        return sum(item.balance for item in self.items)
-
-
-parents = Portfolio("Parents",
-                    Account(subhash, 80000), Account(sandhya, 60000))
-children = Portfolio("Children",
-                     Account(rishikesh, 30000), Account(malinikesh, 20000),
-                     Account(hemkesh, 10000))
-family = Portfolio("Agrawani family", parents, children)
-
-print(parents.balance, children.balance, family.balance)   # 140000 60000 200000
-        </script>
+      <section class="chapter part" id="behavioural">
+        <h2>Behavioural patterns</h2>
+        <p class="kind">Family 3 of 3 &middot; how objects talk and share work</p>
+        <p>Behavioural patterns are about what happens <b>while the program runs</b>: which object is responsible for a piece of work, how objects tell each other that something happened, and how a step can be swapped without rewriting the code that calls it.</p>
+        <p>This is the largest family, because most of what a program does is objects passing work and messages to each other.</p>
+        <ul>
+          <li><a href="#chain">Chain of responsibility</a>: pass a request along until someone handles it</li>
+          <li><a href="#command">Command</a>: turn an action into an object you can store and undo</li>
+          <li><a href="#interpreter">Interpreter</a>: run instructions written in a tiny language</li>
+          <li><a href="#iterator">Iterator</a>: loop over a collection without seeing inside it</li>
+          <li><a href="#mediator">Mediator</a>: let objects talk through one hub, not to each other</li>
+          <li><a href="#memento">Memento</a>: save an object's state and restore it later</li>
+          <li><a href="#observer">Observer</a>: tell everyone who is interested when something happens</li>
+          <li><a href="#state">State</a>: change behaviour when the object's condition changes</li>
+          <li><a href="#strategy">Strategy</a>: swap the way a job is done</li>
+          <li><a href="#template">Template method</a>: fix the steps, let subclasses fill some in</li>
+          <li><a href="#visitor">Visitor</a>: add a new operation without touching the classes</li>
+        </ul>
       </section>
 
-      <section class="chapter" id="strategy">
-        <h2>Strategy</h2>
-        <p><b>Problem:</b> one job can be done in several ways, and the choice is made at run time. Interest can be simple or compound.</p>
-        <p>Put each way in its own interchangeable piece and pass in the one you want.</p>
-        <script type="text/plain" data-lang="py" data-file="strategy.py">
-from bank import Account, subhash
+      <section class="chapter" id="chain">
+        <h2>Chain of responsibility</h2>
+        <p class="kind"><a href="#behavioural">Behavioural pattern</a></p>
+        <p><b>Problem:</b> a request should be handled by the first one able to, and the sender should not need to know who that is. A large withdrawal climbs from teller to manager to director.</p>
+        <script type="text/plain" data-lang="py" data-file="chain.py">
+class Approver:
+    def __init__(self, title, limit, boss=None):
+        self.title, self.limit, self.boss = title, limit, boss
+
+    def approve(self, amount):
+        if amount <= self.limit:
+            return f"{self.title} approved Rs {amount}"
+        if self.boss:
+            return self.boss.approve(amount)    # pass it up the chain
+        return f"Rs {amount} rejected"
 
 
-def simple(balance, rate, years):
-    return balance * rate * years
+director = Approver("Director", 5000000)
+manager = Approver("Manager", 500000, boss=director)
+teller = Approver("Teller", 50000, boss=manager)
 
-
-def compound(balance, rate, years):
-    return balance * (1 + rate) ** years - balance
-
-
-class InterestCalculator:
-    def __init__(self, strategy):
-        self.strategy = strategy
-
-    def interest(self, account, rate, years):
-        return round(self.strategy(account.balance, rate, years))
-
-
-account = Account(subhash, 100000)
-print(InterestCalculator(simple).interest(account, 0.07, 3))     # 21000
-print(InterestCalculator(compound).interest(account, 0.07, 3))   # 22504
+print(teller.approve(20000))      # Teller approved Rs 20000
+print(teller.approve(300000))     # Manager approved Rs 300000
+print(teller.approve(90000000))   # Rs 90000000 rejected
         </script>
-        <p class="note"><b>Python shortcut:</b> functions can be passed around like any value, so a strategy is usually a plain function. Use a class when the strategy needs its own settings or several methods.</p>
-      </section>
-
-      <section class="chapter" id="observer">
-        <h2>Observer</h2>
-        <p><b>Problem:</b> when something happens, several other parts need to know, and the source should not have to know who they are. A deposit triggers an SMS and a passbook entry.</p>
-        <script type="text/plain" data-lang="py" data-file="observer.py">
-from dataclasses import dataclass, field
-from bank import Account, malinikesh
-
-
-@dataclass
-class WatchedAccount(Account):
-    listeners: list = field(default_factory=list)
-
-    def deposit(self, amount):
-        super().deposit(amount)
-        for listener in self.listeners:
-            listener(self, amount)
-
-
-def sms(account, amount):
-    print(f"SMS to {account.owner.first_name}: Rs {amount} credited")
-
-
-def passbook(account, amount):
-    print(f"Passbook: +{amount}, balance {account.balance}")
-
-
-account = WatchedAccount(malinikesh, 1000)
-account.listeners += [sms, passbook]
-account.deposit(500)
-# SMS to Malinikesh: Rs 500 credited
-# Passbook: +500, balance 1500
-        </script>
-        <p class="note"><b>Payoff:</b> adding an email alert is one new function and one line to register it. <code>WatchedAccount</code> does not change.</p>
       </section>
 
       <section class="chapter" id="command">
         <h2>Command</h2>
+        <p class="kind"><a href="#behavioural">Behavioural pattern</a></p>
         <p><b>Problem:</b> you want to queue, log or undo actions. That is impossible while an action is only a method call that has already happened.</p>
         <p>Turn each action into an object that knows how to do itself and how to reverse itself.</p>
         <script type="text/plain" data-lang="py" data-file="command.py">
@@ -560,8 +752,180 @@ print(account.balance)   # 1500
         </script>
       </section>
 
+      <section class="chapter" id="interpreter">
+        <h2>Interpreter</h2>
+        <p class="kind"><a href="#behavioural">Behavioural pattern</a></p>
+        <p><b>Problem:</b> people who do not write Python need to describe what should happen. Standing instructions arrive as plain text, one per line.</p>
+        <p>An interpreter defines a tiny language and runs it. Here every line is a verb and an amount, and a dictionary maps each verb to the method that carries it out.</p>
+        <script type="text/plain" data-lang="py" data-file="interpreter.py">
+from bank import Account, rishikesh
+
+
+def run(script, account):
+    verbs = {"DEPOSIT": account.deposit, "WITHDRAW": account.withdraw}
+    for number, line in enumerate(script.strip().splitlines(), start=1):
+        verb, amount = line.split()
+        if verb not in verbs:
+            raise SyntaxError(f"Line {number}: unknown instruction {verb}")
+        verbs[verb](int(amount))
+
+
+account = Account(rishikesh, 1000)
+run("""
+DEPOSIT 5000
+WITHDRAW 1200
+WITHDRAW 300
+""", account)
+print(account.balance)   # 4500
+        </script>
+        <p class="note"><b>Keep it tiny:</b> this pattern suits very small languages such as rules, filters or scripts like this one. For anything bigger, use an existing format (JSON, YAML) or a parsing library.</p>
+      </section>
+
+      <section class="chapter" id="iterator">
+        <h2>Iterator</h2>
+        <p class="kind"><a href="#behavioural">Behavioural pattern</a></p>
+        <p><b>Problem:</b> let callers loop over a collection without knowing how it is stored inside.</p>
+        <p>Python builds this into the language: define <code>__iter__</code> and the object works in <code>for</code> loops, <code>sum()</code>, <code>list()</code> and comprehensions.</p>
+        <script type="text/plain" data-lang="py" data-file="iterator.py">
+class Passbook:
+    def __init__(self):
+        self._entries = []              # callers never touch this list
+
+    def add(self, text, amount):
+        self._entries.append((text, amount))
+
+    def __iter__(self):
+        return iter(self._entries)
+
+    def credits(self):                  # a generator is an iterator for free
+        for text, amount in self._entries:
+            if amount > 0:
+                yield text, amount
+
+
+passbook = Passbook()
+passbook.add("Salary", 50000)
+passbook.add("Rent", -15000)
+passbook.add("Gift from Sandhya", 2000)
+
+print(sum(amount for _, amount in passbook))    # 37000
+print([text for text, _ in passbook.credits()])
+# ['Salary', 'Gift from Sandhya']
+        </script>
+      </section>
+
+      <section class="chapter" id="mediator">
+        <h2>Mediator</h2>
+        <p class="kind"><a href="#behavioural">Behavioural pattern</a></p>
+        <p><b>Problem:</b> many objects need to interact, and if each one knows all the others, every new object means editing all of them.</p>
+        <p>A mediator is a hub in the middle. Each object knows only the hub, and the hub decides who else is involved.</p>
+        <script type="text/plain" data-lang="py" data-file="mediator.py">
+from bank import Account, rishikesh, sandhya, subhash, hemkesh
+
+
+class FamilyHub:
+    def __init__(self):
+        self.accounts = {}
+
+    def join(self, account):
+        self.accounts[account.owner.first_name] = account
+
+    def send(self, sender, receiver, amount):
+        self.accounts[sender].withdraw(amount)
+        self.accounts[receiver].deposit(amount)
+        for name in self.accounts:          # everyone else is told
+            if name not in (sender, receiver):
+                print(f"{name} sees: {sender} sent Rs {amount} to {receiver}")
+
+
+hub = FamilyHub()
+for person in (subhash, sandhya, rishikesh, hemkesh):
+    hub.join(Account(person, 10000))
+
+hub.send("Subhash", "Hemkesh", 2000)
+# Sandhya sees: Subhash sent Rs 2000 to Hemkesh
+# Rishikesh sees: Subhash sent Rs 2000 to Hemkesh
+print(hub.accounts["Hemkesh"].balance)   # 12000
+        </script>
+        <p class="note"><b>Mediator or facade?</b> A facade is a one-way front door: callers use it, and the parts behind it do not know it exists. A mediator sits between equals that all talk through it.</p>
+      </section>
+
+      <section class="chapter" id="memento">
+        <h2>Memento</h2>
+        <p class="kind"><a href="#behavioural">Behavioural pattern</a></p>
+        <p><b>Problem:</b> you want to go back to how an object was, without the outside world poking at its internals. Three bills are paid in a batch, and if one fails, none of them should count.</p>
+        <p>A memento is a snapshot the object makes of itself and can later restore from.</p>
+        <script type="text/plain" data-lang="py" data-file="memento.py">
+from dataclasses import dataclass
+from bank import Account, sandhya
+
+
+@dataclass(frozen=True)
+class Snapshot:                             # frozen: cannot be edited
+    balance: float
+
+
+class SafeAccount(Account):
+    def save(self):
+        return Snapshot(self.balance)
+
+    def restore(self, snapshot):
+        self.balance = snapshot.balance
+
+
+account = SafeAccount(sandhya, 10000)
+checkpoint = account.save()
+
+try:
+    for bill in (3000, 4000, 5000):         # the third one cannot be paid
+        account.withdraw(bill)
+except ValueError:
+    account.restore(checkpoint)
+
+print(account.balance)   # 10000
+        </script>
+        <p class="note"><b>Memento or command?</b> Both give you undo. A command remembers the <i>action</i> and reverses it. A memento remembers the <i>state</i> and puts it back, which is simpler when many things changed at once.</p>
+      </section>
+
+      <section class="chapter" id="observer">
+        <h2>Observer</h2>
+        <p class="kind"><a href="#behavioural">Behavioural pattern</a></p>
+        <p><b>Problem:</b> when something happens, several other parts need to know, and the source should not have to know who they are. A deposit triggers an SMS and a passbook entry.</p>
+        <script type="text/plain" data-lang="py" data-file="observer.py">
+from dataclasses import dataclass, field
+from bank import Account, malinikesh
+
+
+@dataclass
+class WatchedAccount(Account):
+    listeners: list = field(default_factory=list)
+
+    def deposit(self, amount):
+        super().deposit(amount)
+        for listener in self.listeners:
+            listener(self, amount)
+
+
+def sms(account, amount):
+    print(f"SMS to {account.owner.first_name}: Rs {amount} credited")
+
+
+def passbook(account, amount):
+    print(f"Passbook: +{amount}, balance {account.balance}")
+
+
+account = WatchedAccount(malinikesh, 1000)
+account.listeners += [sms, passbook]
+account.deposit(500)
+# SMS to Malinikesh: Rs 500 credited
+# Passbook: +500, balance 1500
+        </script>
+        <p class="note"><b>Payoff:</b> adding an email alert is one new function and one line to register it. <code>WatchedAccount</code> does not change.</p>
+      </section>
+
       <section class="chapter" id="state">
         <h2>State</h2>
+        <p class="kind"><a href="#behavioural">Behavioural pattern</a></p>
         <p><b>Problem:</b> an object behaves differently depending on its condition, and every method is filling up with <code>if self.status == ...</code> checks.</p>
         <p>Move the behaviour for each condition into its own class and let the account hold the current one.</p>
         <script type="text/plain" data-lang="py" data-file="state.py">
@@ -601,8 +965,41 @@ print(account.balance)   # 4000
         <p class="note"><b>State or strategy?</b> The shape is the same. A strategy is chosen by the caller and usually stays. A state changes during the object's life, often by itself.</p>
       </section>
 
+      <section class="chapter" id="strategy">
+        <h2>Strategy</h2>
+        <p class="kind"><a href="#behavioural">Behavioural pattern</a></p>
+        <p><b>Problem:</b> one job can be done in several ways, and the choice is made at run time. Interest can be simple or compound.</p>
+        <p>Put each way in its own interchangeable piece and pass in the one you want.</p>
+        <script type="text/plain" data-lang="py" data-file="strategy.py">
+from bank import Account, subhash
+
+
+def simple(balance, rate, years):
+    return balance * rate * years
+
+
+def compound(balance, rate, years):
+    return balance * (1 + rate) ** years - balance
+
+
+class InterestCalculator:
+    def __init__(self, strategy):
+        self.strategy = strategy
+
+    def interest(self, account, rate, years):
+        return round(self.strategy(account.balance, rate, years))
+
+
+account = Account(subhash, 100000)
+print(InterestCalculator(simple).interest(account, 0.07, 3))     # 21000
+print(InterestCalculator(compound).interest(account, 0.07, 3))   # 22504
+        </script>
+        <p class="note"><b>Python shortcut:</b> functions can be passed around like any value, so a strategy is usually a plain function. Use a class when the strategy needs its own settings or several methods.</p>
+      </section>
+
       <section class="chapter" id="template">
         <h2>Template method</h2>
+        <p class="kind"><a href="#behavioural">Behavioural pattern</a></p>
         <p><b>Problem:</b> several variants share the same steps in the same order, and differ only in a few of them. Every statement has a header, rows and a footer, whatever the format.</p>
         <p>The parent class fixes the order. Subclasses fill in or replace individual steps.</p>
         <script type="text/plain" data-lang="py" data-file="template_method.py">
@@ -651,62 +1048,46 @@ print(CsvStatement(Account(rishikesh, 35000), entries).render())
         </script>
       </section>
 
-      <section class="chapter" id="chain">
-        <h2>Chain of responsibility</h2>
-        <p><b>Problem:</b> a request should be handled by the first one able to, and the sender should not need to know who that is. A large withdrawal climbs from teller to manager to director.</p>
-        <script type="text/plain" data-lang="py" data-file="chain.py">
-class Approver:
-    def __init__(self, title, limit, boss=None):
-        self.title, self.limit, self.boss = title, limit, boss
-
-    def approve(self, amount):
-        if amount <= self.limit:
-            return f"{self.title} approved Rs {amount}"
-        if self.boss:
-            return self.boss.approve(amount)    # pass it up the chain
-        return f"Rs {amount} rejected"
+      <section class="chapter" id="visitor">
+        <h2>Visitor</h2>
+        <p class="kind"><a href="#behavioural">Behavioural pattern</a></p>
+        <p><b>Problem:</b> you keep needing new reports over the same set of classes (interest this month, tax next month) and do not want to add a method to every class each time.</p>
+        <p>Each class gets one <code>accept()</code> method that hands itself to a visitor. Every new report is then a new visitor class, and the account classes never change again.</p>
+        <script type="text/plain" data-lang="py" data-file="visitor.py">
+from bank import Account, subhash
 
 
-director = Approver("Director", 5000000)
-manager = Approver("Manager", 500000, boss=director)
-teller = Approver("Teller", 50000, boss=manager)
+class Savings(Account):
+    def accept(self, visitor):
+        return visitor.savings(self)
 
-print(teller.approve(20000))      # Teller approved Rs 20000
-print(teller.approve(300000))     # Manager approved Rs 300000
-print(teller.approve(90000000))   # Rs 90000000 rejected
+
+class FixedDeposit(Account):
+    def accept(self, visitor):
+        return visitor.fixed_deposit(self)
+
+
+class InterestReport:
+    def savings(self, account):
+        return account.balance * 0.04
+
+    def fixed_deposit(self, account):
+        return account.balance * 0.07
+
+
+class TaxReport:                            # a new operation, no class edited
+    def savings(self, account):
+        return 0
+
+    def fixed_deposit(self, account):
+        return account.balance * 0.07 * 0.10
+
+
+holdings = [Savings(subhash, 50000), FixedDeposit(subhash, 200000)]
+print(round(sum(item.accept(InterestReport()) for item in holdings)))   # 16000
+print(round(sum(item.accept(TaxReport()) for item in holdings)))        # 1400
         </script>
-      </section>
-
-      <section class="chapter" id="iterator">
-        <h2>Iterator</h2>
-        <p><b>Problem:</b> let callers loop over a collection without knowing how it is stored inside.</p>
-        <p>Python builds this into the language: define <code>__iter__</code> and the object works in <code>for</code> loops, <code>sum()</code>, <code>list()</code> and comprehensions.</p>
-        <script type="text/plain" data-lang="py" data-file="iterator.py">
-class Passbook:
-    def __init__(self):
-        self._entries = []              # callers never touch this list
-
-    def add(self, text, amount):
-        self._entries.append((text, amount))
-
-    def __iter__(self):
-        return iter(self._entries)
-
-    def credits(self):                  # a generator is an iterator for free
-        for text, amount in self._entries:
-            if amount > 0:
-                yield text, amount
-
-
-passbook = Passbook()
-passbook.add("Salary", 50000)
-passbook.add("Rent", -15000)
-passbook.add("Gift from Sandhya", 2000)
-
-print(sum(amount for _, amount in passbook))    # 37000
-print([text for text, _ in passbook.credits()])
-# ['Salary', 'Gift from Sandhya']
-        </script>
+        <p class="note"><b>Python shortcut:</b> <code>functools.singledispatch</code> lets you write one function per class without any <code>accept()</code> methods. Use a visitor when new operations are common and new classes are rare. If it is the other way round, ordinary methods are simpler.</p>
       </section>
 
       <section class="chapter" id="choose">
@@ -714,24 +1095,31 @@ print([text for text, _ in passbook.credits()])
         <p>Start from the problem, not from the pattern.</p>
         <div class="scroll">
           <table>
-            <thead><tr><th>You need to</th><th>Pattern</th></tr></thead>
+            <thead><tr><th>You need to</th><th>Pattern</th><th>Family</th></tr></thead>
             <tbody>
-              <tr><td>Create the right class from a name or setting</td><td><a href="#factory">Factory</a></td></tr>
-              <tr><td>Assemble an object with many optional parts</td><td><a href="#builder">Builder</a></td></tr>
-              <tr><td>Share exactly one object everywhere</td><td><a href="#singleton">Singleton</a></td></tr>
-              <tr><td>Start new objects as copies of a prepared one</td><td><a href="#prototype">Prototype</a></td></tr>
-              <tr><td>Use code whose interface does not fit</td><td><a href="#adapter">Adapter</a></td></tr>
-              <tr><td>Add stackable behaviour without subclassing</td><td><a href="#decorator">Decorator</a></td></tr>
-              <tr><td>Hide several steps behind one call</td><td><a href="#facade">Facade</a></td></tr>
-              <tr><td>Control access to an object</td><td><a href="#proxy">Proxy</a></td></tr>
-              <tr><td>Treat one item and a group alike</td><td><a href="#composite">Composite</a></td></tr>
-              <tr><td>Swap the way a job is done</td><td><a href="#strategy">Strategy</a></td></tr>
-              <tr><td>Tell others when something happens</td><td><a href="#observer">Observer</a></td></tr>
-              <tr><td>Queue, log or undo actions</td><td><a href="#command">Command</a></td></tr>
-              <tr><td>Change behaviour as an object's condition changes</td><td><a href="#state">State</a></td></tr>
-              <tr><td>Share fixed steps with a few variable ones</td><td><a href="#template">Template method</a></td></tr>
-              <tr><td>Pass a request along until someone handles it</td><td><a href="#chain">Chain of responsibility</a></td></tr>
-              <tr><td>Loop over a collection without exposing it</td><td><a href="#iterator">Iterator</a></td></tr>
+              <tr><td>Create the right class from a name or setting</td><td><a href="#factory">Factory method</a></td><td>Creational</td></tr>
+              <tr><td>Make a set of objects that must match</td><td><a href="#abstract-factory">Abstract factory</a></td><td>Creational</td></tr>
+              <tr><td>Assemble an object with many optional parts</td><td><a href="#builder">Builder</a></td><td>Creational</td></tr>
+              <tr><td>Start new objects as copies of a prepared one</td><td><a href="#prototype">Prototype</a></td><td>Creational</td></tr>
+              <tr><td>Share exactly one object everywhere</td><td><a href="#singleton">Singleton</a></td><td>Creational</td></tr>
+              <tr><td>Use code whose interface does not fit</td><td><a href="#adapter">Adapter</a></td><td>Structural</td></tr>
+              <tr><td>Combine two things that vary independently</td><td><a href="#bridge">Bridge</a></td><td>Structural</td></tr>
+              <tr><td>Treat one item and a group alike</td><td><a href="#composite">Composite</a></td><td>Structural</td></tr>
+              <tr><td>Add stackable behaviour without subclassing</td><td><a href="#decorator">Decorator</a></td><td>Structural</td></tr>
+              <tr><td>Hide several steps behind one call</td><td><a href="#facade">Facade</a></td><td>Structural</td></tr>
+              <tr><td>Stop storing the same data thousands of times</td><td><a href="#flyweight">Flyweight</a></td><td>Structural</td></tr>
+              <tr><td>Control access to an object</td><td><a href="#proxy">Proxy</a></td><td>Structural</td></tr>
+              <tr><td>Pass a request along until someone handles it</td><td><a href="#chain">Chain of responsibility</a></td><td>Behavioural</td></tr>
+              <tr><td>Queue, log or undo actions</td><td><a href="#command">Command</a></td><td>Behavioural</td></tr>
+              <tr><td>Run instructions written as text</td><td><a href="#interpreter">Interpreter</a></td><td>Behavioural</td></tr>
+              <tr><td>Loop over a collection without exposing it</td><td><a href="#iterator">Iterator</a></td><td>Behavioural</td></tr>
+              <tr><td>Stop objects from all knowing each other</td><td><a href="#mediator">Mediator</a></td><td>Behavioural</td></tr>
+              <tr><td>Save state and roll back to it</td><td><a href="#memento">Memento</a></td><td>Behavioural</td></tr>
+              <tr><td>Tell others when something happens</td><td><a href="#observer">Observer</a></td><td>Behavioural</td></tr>
+              <tr><td>Change behaviour as an object's condition changes</td><td><a href="#state">State</a></td><td>Behavioural</td></tr>
+              <tr><td>Swap the way a job is done</td><td><a href="#strategy">Strategy</a></td><td>Behavioural</td></tr>
+              <tr><td>Share fixed steps with a few variable ones</td><td><a href="#template">Template method</a></td><td>Behavioural</td></tr>
+              <tr><td>Add operations without editing the classes</td><td><a href="#visitor">Visitor</a></td><td>Behavioural</td></tr>
             </tbody>
           </table>
         </div>
