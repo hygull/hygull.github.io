@@ -1,0 +1,606 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Design to Code</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@500;700&display=swap">
+<link rel="stylesheet" href="../../assets/tutorial.css">
+</head>
+<body data-track="design">
+
+<header class="topbar">
+  <div class="topbar-in">
+    <a class="brand" href="../../../index.html">Learnings</a>
+    <nav class="tracks" aria-label="Tutorials">
+      <a href="../../React/docs/react-tutorial.html">React</a>
+      <a href="../../Next/docs/next-tutorial.html">Next.js</a>
+      <a href="../../Next_React/docs/react-vs-next.html">React vs Next</a>
+      <a href="design-to-code.html" aria-current="page">Design</a>
+      <a href="../../../archive.html">Archive</a>
+    </nav>
+    <div class="tools">
+      <button class="btn" id="menu" type="button" aria-expanded="false">Chapters</button>
+      <input id="q" type="search" placeholder="Search chapters" aria-label="Search chapters">
+      <button class="btn" id="theme" type="button">Dark mode</button>
+    </div>
+  </div>
+</header>
+
+<div class="shell">
+  <aside class="side">
+    <p class="side-label">Design chapters</p>
+    <nav id="toc" aria-label="Chapters"></nav>
+  </aside>
+
+  <main>
+    <div class="page-head">
+      <p class="eyebrow">Tutorial 4 of 4</p>
+      <h1>Design to Code</h1>
+      <p class="lead">The design skills a frontend developer needs: how to read a Figma file, turn it into tokens and components, and build a small reusable component kit. Components use Tailwind and work the same in React and Next.</p>
+    </div>
+
+    <div class="chapters">
+
+      <section class="chapter" id="read-figma">
+        <h2>Read a Figma file like a developer</h2>
+        <p>Switch to <b>Dev Mode</b> (the <code>&lt;/&gt;</code> toggle, or Shift + D). Click any layer and the Inspect panel shows its size, spacing, colors and text style. Hold Alt and hover another layer to see the distance between them.</p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Figma term</th><th>What it means for you</th></tr></thead>
+            <tbody>
+              <tr><td>Frame</td><td>A container: a <code>div</code>, a section or a whole screen</td></tr>
+              <tr><td>Auto layout</td><td>Flexbox. Direction, gap, padding and alignment map one to one</td></tr>
+              <tr><td>Component</td><td>A reusable piece: one component file in your code</td></tr>
+              <tr><td>Variant / property</td><td>A prop: <code>size</code>, <code>variant</code>, <code>disabled</code></td></tr>
+              <tr><td>Instance</td><td>A usage of the component: <code>&lt;Button /&gt;</code></td></tr>
+              <tr><td>Variables / styles</td><td>Design tokens: named colors, spacing, radius, text styles</td></tr>
+              <tr><td>Constraints, Fill, Hug</td><td>Responsive behavior: Fill = <code>flex: 1</code> or <code>width: 100%</code>, Hug = size of content</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><b>Habit:</b> before writing code, list the components and tokens the screen uses. Build those first, then the screen is mostly assembly.</p>
+      </section>
+
+      <section class="chapter" id="tokens">
+        <h2>Design tokens</h2>
+        <p>A token is a named design decision. You write <code>bg-primary</code>, not <code>#0b7285</code>, so a rebrand or dark mode is a change in one file. Copy the names from Figma's Variables panel.</p>
+        <script type="text/plain" data-lang="css" data-file="globals.css (Tailwind 4)">
+@import "tailwindcss";
+
+@theme {
+  /* color: name by role, not by shade */
+  --color-primary: #0b7285;
+  --color-primary-hover: #095c6b;
+  --color-surface: #ffffff;
+  --color-text: #151b27;
+  --color-muted: #586377;
+  --color-border: #dbe1ec;
+  --color-danger: #c62828;
+
+  /* shape */
+  --radius-control: 8px;
+  --radius-card: 12px;
+}
+/* usage: className="bg-primary text-white rounded-control" */
+        </script>
+        <p>Without Tailwind, the same idea is plain CSS variables on <code>:root</code> and <code>var(--color-primary)</code> in your styles.</p>
+      </section>
+
+      <section class="chapter" id="spacing">
+        <h2>Spacing and layout</h2>
+        <p>Good layouts use a small set of spacing values, almost always multiples of 4: 4, 8, 12, 16, 24, 32, 48. If Figma shows 15 or 17, it is probably meant to be 16. Tailwind's scale is the same grid: <code>p-4</code> is 16px, <code>gap-6</code> is 24px.</p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Auto layout setting</th><th>CSS</th><th>Tailwind</th></tr></thead>
+            <tbody>
+              <tr><td>Horizontal</td><td><code>display: flex</code></td><td><code>flex</code></td></tr>
+              <tr><td>Vertical</td><td><code>flex-direction: column</code></td><td><code>flex flex-col</code></td></tr>
+              <tr><td>Gap 16</td><td><code>gap: 16px</code></td><td><code>gap-4</code></td></tr>
+              <tr><td>Padding 24</td><td><code>padding: 24px</code></td><td><code>p-6</code></td></tr>
+              <tr><td>Space between</td><td><code>justify-content: space-between</code></td><td><code>justify-between</code></td></tr>
+              <tr><td>Wrap</td><td><code>flex-wrap: wrap</code></td><td><code>flex-wrap</code></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <ul>
+          <li>Use <code>gap</code> on the parent for space between siblings. Avoid margins on children.</li>
+          <li>Related things sit close together, unrelated things get more space. Spacing is how a page shows grouping.</li>
+          <li>Use flex for a row or a column, grid for rows and columns together (card grids, page shells).</li>
+        </ul>
+        <script type="text/plain" data-lang="tsx" data-file="A responsive card grid">
+<div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+  {items.map((item) => <Card key={item.id} title={item.name} />)}
+</div>
+        </script>
+      </section>
+
+      <section class="chapter" id="type">
+        <h2>Typography</h2>
+        <p>Use a fixed scale of sizes, not arbitrary numbers. Five or six steps cover a whole app.</p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Role</th><th>Size / line height</th><th>Tailwind</th></tr></thead>
+            <tbody>
+              <tr><td>Page title</td><td>30 / 36, bold</td><td><code>text-3xl font-bold</code></td></tr>
+              <tr><td>Section title</td><td>20 / 28, semibold</td><td><code>text-xl font-semibold</code></td></tr>
+              <tr><td>Body</td><td>16 / 24</td><td><code>text-base</code></td></tr>
+              <tr><td>Secondary text</td><td>14 / 20, muted color</td><td><code>text-sm text-muted</code></td></tr>
+              <tr><td>Label, caption</td><td>12 / 16, medium</td><td><code>text-xs font-medium</code></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <ul>
+          <li>Hierarchy comes from size, weight and color together. Do not use more than two font families.</li>
+          <li>Keep paragraphs around 60 to 70 characters wide: <code>max-w-prose</code>.</li>
+          <li>Body text below 14px is hard to read. On phones keep inputs at 16px so iOS does not zoom.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="color">
+        <h2>Color and contrast</h2>
+        <ul>
+          <li><b>One primary color</b> for the main action on a screen. If everything is colored, nothing stands out.</li>
+          <li><b>Neutrals do most of the work:</b> background, surface, border, text, muted text.</li>
+          <li><b>Semantic colors</b> carry meaning: success, warning, danger. Never rely on color alone, add an icon or text.</li>
+          <li><b>Contrast:</b> text needs a ratio of at least 4.5:1 against its background (3:1 for large text). Check it in Chrome DevTools by clicking the color swatch.</li>
+        </ul>
+        <p>Dark mode is the same tokens with different values, which is why components must never contain raw hex codes.</p>
+        <script type="text/plain" data-lang="css" data-file="globals.css">
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-surface: #151b28;
+    --color-text: #e6eaf2;
+    --color-muted: #9ba6ba;
+    --color-border: #283146;
+    --color-primary: #5fd0e6;
+  }
+}
+        </script>
+      </section>
+
+      <section class="chapter" id="responsive">
+        <h2>Responsive design</h2>
+        <p>Write the phone layout first, then add changes at wider breakpoints. In Tailwind an unprefixed class applies everywhere and <code>md:</code> applies from 768px up.</p>
+        <script type="text/plain" data-lang="tsx">
+// stacked on phones, side by side from 768px
+<div className="flex flex-col gap-4 md:flex-row md:gap-8">
+  <aside className="md:w-64">Filters</aside>
+  <main className="min-w-0 flex-1">Results</main>
+</div>
+        </script>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Prefix</th><th>From</th><th>Typical device</th></tr></thead>
+            <tbody>
+              <tr><td>none</td><td>0</td><td>Phone</td></tr>
+              <tr><td><code>sm:</code></td><td>640px</td><td>Large phone</td></tr>
+              <tr><td><code>md:</code></td><td>768px</td><td>Tablet</td></tr>
+              <tr><td><code>lg:</code></td><td>1024px</td><td>Laptop</td></tr>
+              <tr><td><code>xl:</code></td><td>1280px</td><td>Desktop</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><b>Ask the designer:</b> if Figma only has a desktop frame, ask what stacks, what hides and what scrolls on a phone. Do not guess silently.</p>
+      </section>
+
+      <section class="chapter" id="states">
+        <h2>Design every state</h2>
+        <p>A mockup usually shows the happy path. Real components have more states, and missing ones are the most common gap between design and code.</p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>For controls</th><th>For data views</th></tr></thead>
+            <tbody>
+              <tr><td>Default</td><td>Loading (skeleton or spinner)</td></tr>
+              <tr><td>Hover</td><td>Empty (no data yet, with a next step)</td></tr>
+              <tr><td>Focus (keyboard)</td><td>Error (what failed, how to retry)</td></tr>
+              <tr><td>Active / pressed</td><td>Partial (some rows, long text, missing image)</td></tr>
+              <tr><td>Disabled</td><td>Success (confirmation after an action)</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <script type="text/plain" data-lang="tsx" data-file="States in Tailwind">
+<button className="
+  bg-primary text-white
+  hover:bg-primary-hover
+  focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary
+  active:scale-95
+  disabled:cursor-not-allowed disabled:opacity-50
+">
+  Save
+</button>
+        </script>
+      </section>
+
+      <section class="chapter" id="component-api">
+        <h2>Design a component's API</h2>
+        <p>A good component mirrors the Figma component: each Figma property becomes one prop with the same options. Rules that keep components reusable:</p>
+        <ul>
+          <li>Variants are a fixed list (<code>"primary" | "secondary"</code>), not free-form class strings.</li>
+          <li>Extend the native element's props, so <code>onClick</code>, <code>type</code>, <code>disabled</code> and <code>aria-*</code> work for free.</li>
+          <li>Content goes in <code>children</code>. Layout around the component (margins, position) belongs to the parent.</li>
+          <li>Accept <code>className</code> as an escape hatch for one-off adjustments.</li>
+        </ul>
+        <script type="text/plain" data-lang="tsx" data-file="components/ui/Button.tsx">
+import type { ButtonHTMLAttributes } from "react";
+
+type Variant = "primary" | "secondary" | "danger";
+type Size = "sm" | "md" | "lg";
+
+type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
+  variant?: Variant;
+  size?: Size;
+  isLoading?: boolean;
+};
+
+const VARIANTS: Record<Variant, string> = {
+  primary: "bg-primary text-white hover:bg-primary-hover",
+  secondary: "border border-border bg-surface text-text hover:bg-black/5",
+  danger: "bg-danger text-white hover:opacity-90",
+};
+
+const SIZES: Record<Size, string> = {
+  sm: "h-8 px-3 text-sm",
+  md: "h-10 px-4 text-sm",
+  lg: "h-12 px-6 text-base",
+};
+
+export function Button({
+  variant = "primary",
+  size = "md",
+  isLoading = false,
+  disabled,
+  className = "",
+  children,
+  ...rest
+}: ButtonProps) {
+  return (
+    <button
+      disabled={disabled || isLoading}
+      className={`inline-flex items-center justify-center gap-2 rounded-control font-medium
+        focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary
+        disabled:cursor-not-allowed disabled:opacity-50
+        ${VARIANTS[variant]} ${SIZES[size]} ${className}`}
+      {...rest}
+    >
+      {isLoading ? "Saving..." : children}
+    </button>
+  );
+}
+
+// usage
+<Button variant="secondary" size="sm" onClick={onCancel}>Cancel</Button>
+        </script>
+      </section>
+
+      <section class="chapter" id="kit">
+        <h2>A starter component kit</h2>
+        <p>These few components cover most screens. Keep them in <code>components/ui/</code>.</p>
+
+        <h3>TextField: label, input and error together</h3>
+        <script type="text/plain" data-lang="tsx" data-file="components/ui/TextField.tsx">
+import { useId, type InputHTMLAttributes } from "react";
+
+type TextFieldProps = InputHTMLAttributes<HTMLInputElement> & {
+  label: string;
+  error?: string;
+};
+
+export function TextField({ label, error, ...rest }: TextFieldProps) {
+  const id = useId();
+  return (
+    <div className="flex flex-col gap-1">
+      <label htmlFor={id} className="text-sm font-medium">{label}</label>
+      <input
+        id={id}
+        aria-invalid={Boolean(error)}
+        aria-describedby={error ? `${id}-error` : undefined}
+        className={`h-10 rounded-control border px-3 text-base
+          ${error ? "border-danger" : "border-border"}`}
+        {...rest}
+      />
+      {error && <p id={`${id}-error`} className="text-sm text-danger">{error}</p>}
+    </div>
+  );
+}
+
+// usage
+<TextField label="Email" type="email" name="email" error={errors.email} />
+        </script>
+
+        <h3>Card: a surface with optional title</h3>
+        <script type="text/plain" data-lang="tsx" data-file="components/ui/Card.tsx">
+import type { ReactNode } from "react";
+
+export function Card({ title, children }: { title?: string; children: ReactNode }) {
+  return (
+    <section className="rounded-card border border-border bg-surface p-6">
+      {title && <h3 className="mb-3 text-lg font-semibold">{title}</h3>}
+      {children}
+    </section>
+  );
+}
+        </script>
+
+        <h3>Badge: status at a glance</h3>
+        <script type="text/plain" data-lang="tsx" data-file="components/ui/Badge.tsx">
+type Tone = "neutral" | "success" | "warning" | "danger";
+
+const TONES: Record<Tone, string> = {
+  neutral: "bg-black/10 text-text",
+  success: "bg-green-100 text-green-800",
+  warning: "bg-amber-100 text-amber-800",
+  danger: "bg-red-100 text-red-800",
+};
+
+export function Badge({ tone = "neutral", children }: { tone?: Tone; children: string }) {
+  return (
+    <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${TONES[tone]}`}>
+      {children}
+    </span>
+  );
+}
+        </script>
+
+        <h3>Modal: built on the native dialog element</h3>
+        <p>The browser's <code>&lt;dialog&gt;</code> gives you focus trapping, Escape to close and a backdrop without a library.</p>
+        <script type="text/plain" data-lang="tsx" data-file="components/ui/Modal.tsx">
+"use client";   // needed in Next, harmless in plain React
+import { useEffect, useRef, type ReactNode } from "react";
+
+type ModalProps = {
+  isOpen: boolean;
+  onClose: () => void;
+  title: string;
+  children: ReactNode;
+};
+
+export function Modal({ isOpen, onClose, title, children }: ModalProps) {
+  const ref = useRef<HTMLDialogElement>(null);
+
+  useEffect(() => {
+    const dialog = ref.current;
+    if (!dialog) return;
+    if (isOpen && !dialog.open) dialog.showModal();
+    if (!isOpen && dialog.open) dialog.close();
+  }, [isOpen]);
+
+  return (
+    <dialog
+      ref={ref}
+      onClose={onClose}
+      className="m-auto w-full max-w-md rounded-card p-6 backdrop:bg-black/50"
+    >
+      <h2 className="mb-4 text-xl font-semibold">{title}</h2>
+      {children}
+    </dialog>
+  );
+}
+        </script>
+
+        <h3>Skeleton and EmptyState: the forgotten states</h3>
+        <script type="text/plain" data-lang="tsx" data-file="components/ui/Skeleton.tsx + EmptyState.tsx">
+export function Skeleton({ className = "" }: { className?: string }) {
+  return <div className={`animate-pulse rounded-control bg-black/10 ${className}`} />;
+}
+// usage: <Skeleton className="h-6 w-40" />
+
+import type { ReactNode } from "react";
+
+export function EmptyState({ title, hint, action }: { title: string; hint: string; action?: ReactNode }) {
+  return (
+    <div className="flex flex-col items-center gap-2 p-12 text-center">
+      <p className="text-lg font-semibold">{title}</p>
+      <p className="text-sm text-muted">{hint}</p>
+      {action}
+    </div>
+  );
+}
+// usage: <EmptyState title="No reports yet" hint="Create your first report to see it here."
+//                    action={<Button>New report</Button>} />
+        </script>
+      </section>
+
+      <section class="chapter" id="a11y">
+        <h2>Accessibility basics</h2>
+        <p>Most of accessibility is using the right HTML element. These six habits cover the majority of issues:</p>
+        <ul>
+          <li>Something that does an action is a <code>&lt;button&gt;</code>. Something that goes to a URL is an <code>&lt;a&gt;</code>. Never a clickable <code>&lt;div&gt;</code>.</li>
+          <li>Every input has a <code>&lt;label&gt;</code> linked by <code>htmlFor</code>. A placeholder is not a label.</li>
+          <li>Every image has <code>alt</code>. Use <code>alt=""</code> for purely decorative ones.</li>
+          <li>Never remove the focus outline without replacing it. Test the page using only Tab, Enter and Escape.</li>
+          <li>Icon-only buttons need a name: <code>&lt;button aria-label="Close"&gt;</code>.</li>
+          <li>One <code>&lt;h1&gt;</code> per page, then headings in order. Screen readers navigate by them.</li>
+        </ul>
+        <script type="text/plain" data-lang="tsx" data-file="Before and after">
+// Before: not focusable, no keyboard support, no name
+<div className="icon" onClick={onClose}><XIcon /></div>
+<input placeholder="Email" />
+<img src="/chart.png" />
+
+// After
+<button type="button" aria-label="Close" onClick={onClose}><XIcon aria-hidden="true" /></button>
+<label htmlFor="email">Email</label>
+<input id="email" type="email" />
+<img src="/chart.png" alt="Sales grew 12% from March to April" />
+        </script>
+        <p>Click targets should be at least 40 by 40 pixels, larger on touch screens.</p>
+        <h3>Check it</h3>
+        <ul>
+          <li>Chrome DevTools, Lighthouse tab, Accessibility audit: catches missing labels, alt text and low contrast.</li>
+          <li>Unplug the mouse and complete the main task with the keyboard.</li>
+          <li>Add the lint plugin so mistakes fail early: <code>npm install -D eslint-plugin-jsx-a11y</code> (already included in the Next ESLint config).</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="icons">
+        <h2>Icons and assets</h2>
+        <script type="text/plain" data-lang="bash">
+npm install lucide-react
+        </script>
+        <script type="text/plain" data-lang="tsx">
+import { Search } from "lucide-react";
+
+<Search className="size-5 text-muted" aria-hidden="true" />
+        </script>
+        <ul>
+          <li>Icons: use one icon library, or export from Figma as SVG. Set <code>fill="currentColor"</code> so the icon takes the text color.</li>
+          <li>Photos and illustrations: export at 2x as WebP. In Next use <code>next/image</code>.</li>
+          <li>Logos: SVG, never PNG.</li>
+        </ul>
+        <h3>An icon exported from Figma as a component</h3>
+        <p>Paste the exported SVG into a component, replace the fixed color with <code>currentColor</code>, and pass props through so size and color come from the parent.</p>
+        <script type="text/plain" data-lang="tsx" data-file="components/icons/CheckIcon.tsx">
+import type { SVGProps } from "react";
+
+export function CheckIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" width="20" height="20" fill="none"
+         stroke="currentColor" strokeWidth="2" aria-hidden="true" {...props}>
+      <path d="M5 13l4 4L19 7" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+// usage: takes the text color of its parent
+<span className="text-green-700"><CheckIcon /> Saved</span>
+        </script>
+        <p>Note the JSX spelling: <code>strokeWidth</code>, not <code>stroke-width</code>. Keep the <code>viewBox</code>, it is what lets the icon scale.</p>
+      </section>
+
+      <section class="chapter" id="figma-mcp">
+        <h2>Figma to code with an AI agent</h2>
+        <p>The Figma MCP server lets a coding agent read the selected frame: its layout, variables, components and a screenshot. Connect once:</p>
+        <script type="text/plain" data-lang="bash">
+claude mcp add --transport http figma https://mcp.figma.com/mcp
+        </script>
+        <p>In Figma, right click a frame and choose <b>Copy link to selection</b>. Then give the agent a specific prompt:</p>
+        <script type="text/plain" data-lang="text" data-file="Prompt">
+Implement this Figma frame as app/settings/page.tsx:
+<figma link>
+
+- Reuse components from components/ui (Button, TextField, Card).
+- Use the tokens in globals.css, no raw hex values.
+- Mobile first. Stack the two columns below md.
+- Add loading, empty and error states.
+        </script>
+        <p class="note"><b>What makes the output good:</b> a tidy Figma file. Auto layout everywhere, named layers, real components and variables. A frame made of loose rectangles produces absolutely positioned junk.</p>
+        <p>Always review the result against the design at phone and desktop widths. Treat generated code as a first draft.</p>
+      </section>
+
+      <section class="chapter" id="code-connect">
+        <h2>Code Connect: link Figma components to yours</h2>
+        <p>Code Connect tells Figma which code component matches each Figma component. Dev Mode then shows your real import and props, and AI agents reuse your component and do not invent a new one.</p>
+        <script type="text/plain" data-lang="bash">
+npm install -D @figma/code-connect
+        </script>
+        <script type="text/plain" data-lang="tsx" data-file="components/ui/Button.figma.tsx">
+import figma from "@figma/code-connect";
+import { Button } from "./Button";
+
+figma.connect(Button, "https://www.figma.com/design/FILE_KEY/App?node-id=1-2", {
+  props: {
+    label: figma.string("Label"),
+    variant: figma.enum("Variant", { Primary: "primary", Secondary: "secondary" }),
+    isDisabled: figma.boolean("Disabled"),
+  },
+  example: ({ label, variant, isDisabled }) => (
+    <Button variant={variant} disabled={isDisabled}>{label}</Button>
+  ),
+});
+        </script>
+        <script type="text/plain" data-lang="bash">
+npx figma connect publish     # needs a Figma access token
+        </script>
+        <p>The left side of each mapping is the property name in Figma, the right side is your prop value. This is why matching names between design and code pays off.</p>
+      </section>
+
+      <section class="chapter" id="libraries">
+        <h2>Do not build everything yourself</h2>
+        <p>Dropdowns, date pickers, comboboxes and tooltips are hard to get right. Use a library for those and write only the simple pieces by hand.</p>
+        <h3>shadcn/ui</h3>
+        <p>Copies accessible, Tailwind-styled components into your repo, so you own and can edit the code.</p>
+        <script type="text/plain" data-lang="bash">
+npx shadcn@latest init
+npx shadcn@latest add button dialog dropdown-menu
+        </script>
+        <p>The files land in <code>components/ui/</code>. Import and use them like your own:</p>
+        <script type="text/plain" data-lang="tsx">
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+
+<DropdownMenu>
+  <DropdownMenuTrigger asChild>
+    <Button variant="outline">Options</Button>
+  </DropdownMenuTrigger>
+  <DropdownMenuContent>
+    <DropdownMenuItem onSelect={onRename}>Rename</DropdownMenuItem>
+    <DropdownMenuItem onSelect={onDelete}>Delete</DropdownMenuItem>
+  </DropdownMenuContent>
+</DropdownMenu>
+        </script>
+        <p>To match your Figma file, edit the color variables shadcn adds to <code>globals.css</code>. Every component picks them up.</p>
+        <h3>Storybook</h3>
+        <p>A workshop that shows each component alone, in every variant and state. Useful for reviewing against Figma with a designer.</p>
+        <script type="text/plain" data-lang="bash">
+npm create storybook@latest
+npm run storybook             # http://localhost:6006
+        </script>
+        <p>A story is one named state of a component. Write one per variant the Figma component has.</p>
+        <script type="text/plain" data-lang="tsx" data-file="components/ui/Button.stories.tsx">
+import type { Meta, StoryObj } from "@storybook/react-vite";   // "@storybook/nextjs" in a Next app
+import { Button } from "./Button";
+
+const meta: Meta<typeof Button> = {
+  component: Button,
+  args: { children: "Save" },          // defaults for every story
+};
+export default meta;
+
+type Story = StoryObj<typeof Button>;
+
+export const Primary: Story = {};
+export const Secondary: Story = { args: { variant: "secondary" } };
+export const Loading: Story = { args: { isLoading: true } };
+export const Disabled: Story = { args: { disabled: true } };
+        </script>
+        <h3>When to use what</h3>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Need</th><th>Reach for</th></tr></thead>
+            <tbody>
+              <tr><td>Button, card, badge, input</td><td>Write it yourself (the kit above)</td></tr>
+              <tr><td>Dropdown, dialog, tabs, tooltip, combobox</td><td>shadcn/ui</td></tr>
+              <tr><td>Date picker, data table, charts</td><td>A dedicated library (react-day-picker, TanStack Table, Recharts)</td></tr>
+              <tr><td>Form state and validation</td><td>React Hook Form with Zod</td></tr>
+              <tr><td>Reviewing components with a designer</td><td>Storybook</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="chapter" id="checklist">
+        <h2>Handoff checklist</h2>
+        <p>Run through this before calling a screen done.</p>
+        <ul>
+          <li>Colors, spacing and radius come from tokens, with no raw values in components.</li>
+          <li>Spacing matches Figma at the three widths: phone, tablet, desktop.</li>
+          <li>Hover, focus, disabled, loading, empty and error states exist.</li>
+          <li>Long text, missing images and zero items do not break the layout.</li>
+          <li>The page works with the keyboard only, and focus is always visible.</li>
+          <li>Text contrast passes 4.5:1 in light and dark mode.</li>
+          <li>Repeated UI was extracted into <code>components/ui</code>, not copied.</li>
+          <li>You compared the browser and the Figma frame side by side at 100% zoom.</li>
+        </ul>
+      </section>
+
+    </div>
+  </main>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script src="../../assets/tutorial.js"></script>
+</body>
+</html>
