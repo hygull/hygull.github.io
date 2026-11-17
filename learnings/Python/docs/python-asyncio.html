@@ -1,0 +1,849 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Python Async IO</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@500;700&display=swap">
+<link rel="stylesheet" href="../../assets/tutorial.css">
+</head>
+<body data-track="python">
+
+<header class="topbar">
+  <div class="topbar-in">
+    <a class="brand" href="../../../index.html">Learnings</a>
+    <nav class="tracks" aria-label="Python paths">
+      <a href="../../../index.html#python-basics">Python Basics</a>
+      <a href="../../../index.html#python-advanced" aria-current="true">Python Advanced</a>
+      <a href="../../../index.html#python-practice">Python in Practice</a>
+      <a href="../../../index.html#python-design">Python Design</a>
+      <a href="../../../archive.html">Archive</a>
+    </nav>
+    <div class="tools">
+      <button class="btn" id="menu" type="button" aria-expanded="false">Chapters</button>
+      <input id="q" type="search" placeholder="Search chapters" aria-label="Search chapters">
+      <button class="btn" id="theme" type="button">Dark mode</button>
+    </div>
+  </div>
+</header>
+
+<div class="shell">
+  <aside class="side">
+    <p class="side-label">Async IO</p>
+    <nav id="toc" aria-label="Chapters"></nav>
+  </aside>
+
+  <main>
+    <div class="page-head">
+      <p class="eyebrow">Python advanced, part 4 of 5</p>
+      <h1>Python Async IO</h1>
+      <p class="lead">A lot of programs spend most of their time waiting: for a web server, a database, a file on another machine. <code>asyncio</code> is the standard library module that lets one thread wait for many such things at the same time. This page builds it up step by step, using a small bank and slow "network calls" that are faked with <code>asyncio.sleep</code>, so every example runs without a network.</p>
+    </div>
+
+    <div class="chapters">
+
+      <section class="chapter part" id="part-idea">
+        <h2>The idea</h2>
+        <p class="kind">Part 1 of 4 &middot; what async code is and how to start it</p>
+        <p>Before any of the tools make sense, you need three things: the problem async code solves, the picture of one loop serving many waiting jobs, and the two keywords <code>async</code> and <code>await</code>.</p>
+        <ul>
+          <li><a href="#problem">The problem: waiting in a queue</a></li>
+          <li><a href="#event-loop">One thread, one event loop</a></li>
+          <li><a href="#coroutines">async def makes a coroutine</a></li>
+          <li><a href="#run">asyncio.run and await</a></li>
+          <li><a href="#sequential">await alone is still one after another</a></li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="problem">
+        <h2>The problem: waiting in a queue</h2>
+        <p>Rishikesh has an account in three banks and wants all three balances. Each bank takes a moment to answer. Ordinary code asks the first bank, waits, asks the second, waits, and so on, so the waits add up.</p>
+        <script type="text/plain" data-lang="py" data-file="slow_sync.py">
+import time
+
+BALANCES = {"City Bank": 5000, "North Bank": 12000, "Village Bank": 800}
+
+def fetch_balance(bank, delay):
+    time.sleep(delay)              # stands in for a slow network call
+    return BALANCES[bank]
+
+start = time.perf_counter()
+a = fetch_balance("City Bank", 0.2)
+b = fetch_balance("North Bank", 0.3)
+c = fetch_balance("Village Bank", 0.1)
+elapsed = time.perf_counter() - start
+
+print(a, b, c)                           # 5000 12000 800
+print(f"took about {elapsed:.1f} s")     # took about 0.6 s
+        </script>
+        <p>The program did no real work for those 0.6 seconds. It only waited. Work that is mostly waiting for something outside the program is called <b>I/O-bound</b> (I/O means input and output). The <a href="python-concurrency.html">threads and processes</a> page solved this with one thread per call. Async IO solves it with a single thread.</p>
+      </section>
+
+      <section class="chapter" id="event-loop">
+        <h2>One thread, one event loop</h2>
+        <p>Think of one waiter serving many tables. The waiter takes an order, hands it to the kitchen, and does not stand there until the food is ready. He moves on to the next table and comes back when the kitchen rings the bell.</p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Restaurant</th><th>asyncio</th><th>In plain words</th></tr></thead>
+            <tbody>
+              <tr><td>The waiter</td><td>The <b>event loop</b></td><td>A loop that picks the next job that is ready and runs it for a while</td></tr>
+              <tr><td>A table being served</td><td>A <b>task</b></td><td>One job the loop is looking after</td></tr>
+              <tr><td>"Your food is cooking, I will be back"</td><td><code>await</code></td><td>The point where a job says "I am waiting, run someone else"</td></tr>
+              <tr><td>The kitchen bell</td><td>The awaited thing finishes</td><td>The loop puts the job back in line and continues it after the <code>await</code></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>There is only one waiter, so only one job runs at any instant. Jobs take turns, and a turn ends only at an <code>await</code>. This is called <b>cooperative</b> multitasking: each job has to hand control back by itself.</p>
+        <p class="note"><b>Concept:</b> <b>Concurrent</b> means several jobs are in progress over the same period. <b>Parallel</b> means several jobs run at the very same instant on different CPU cores. asyncio is concurrent, not parallel.</p>
+      </section>
+
+      <section class="chapter" id="coroutines">
+        <h2>async def makes a coroutine</h2>
+        <p>A function defined with <code>async def</code> is a <b>coroutine function</b>. Calling it does not run its body. It returns a <b>coroutine object</b>: a paused job that will run only when something awaits it or gives it to the event loop. This is the same idea as a <a href="python-iterators-generators.html">generator</a>, which also does nothing until you ask for a value.</p>
+        <script type="text/plain" data-lang="py" data-file="coroutine_object.py">
+import asyncio
+
+async def fetch_balance(bank):
+    print("asking", bank)             # not printed below: the body never runs
+    await asyncio.sleep(0.1)
+    return 5000
+
+job = fetch_balance("City Bank")      # looks like a call, but nothing has run
+
+print(type(job).__name__)                            # coroutine
+print(asyncio.iscoroutinefunction(fetch_balance))    # True
+
+job.close()    # throw the unused coroutine away (needed only in this demo)
+        </script>
+        <p class="note"><b>Trap:</b> If you write <code>fetch_balance("City Bank")</code> on a line by itself and forget <code>await</code>, nothing happens and nothing fails. Python only prints a warning later: <code>RuntimeWarning: coroutine 'fetch_balance' was never awaited</code>. When you see that message, look for a missing <code>await</code>.</p>
+      </section>
+
+      <section class="chapter" id="run">
+        <h2>asyncio.run and await</h2>
+        <p><code>asyncio.run(main())</code> is the entry point. It starts an event loop, runs the coroutine <code>main()</code> until it finishes, closes the loop and returns the result. Inside a coroutine, <code>await something</code> means "pause me here until <code>something</code> is done, then give me its result".</p>
+        <script type="text/plain" data-lang="py" data-file="first_run.py">
+import asyncio
+
+async def fetch_balance(bank):
+    await asyncio.sleep(0.1)          # pause here; the loop is free meanwhile
+    return 5000
+
+async def main():
+    print("asking City Bank")
+    balance = await fetch_balance("City Bank")
+    print("balance:", balance)
+    return "done"
+
+print(asyncio.run(main()))
+        </script>
+        <script type="text/plain" data-lang="text" data-file="Output">
+asking City Bank
+balance: 5000
+done
+        </script>
+        <p class="note"><b>Rules:</b> <code>await</code> is allowed only inside an <code>async def</code> function. Call <code>asyncio.run()</code> once, at the top of the program, from ordinary code. Calling it from inside a running coroutine raises <code>RuntimeError</code>. Things you can put after <code>await</code> are called <b>awaitables</b>: coroutines, tasks and futures.</p>
+      </section>
+
+      <section class="chapter" id="sequential">
+        <h2>await alone is still one after another</h2>
+        <p>Rewriting the first example with <code>async</code> and <code>await</code> does not make it faster. Each <code>await</code> finishes before the next line starts, so the three waits still add up. The gain is only that the loop <i>could</i> run other jobs during each wait, and here there are none.</p>
+        <script type="text/plain" data-lang="py" data-file="sequential.py">
+import asyncio
+import time
+
+BALANCES = {"City Bank": 5000, "North Bank": 12000, "Village Bank": 800}
+
+async def fetch_balance(bank, delay):
+    await asyncio.sleep(delay)
+    return BALANCES[bank]
+
+async def main():
+    start = time.perf_counter()
+    a = await fetch_balance("City Bank", 0.2)      # wait 0.2 s, then...
+    b = await fetch_balance("North Bank", 0.3)     # wait 0.3 s, then...
+    c = await fetch_balance("Village Bank", 0.1)   # wait 0.1 s
+    elapsed = time.perf_counter() - start
+    print(a, b, c)                           # 5000 12000 800
+    print(f"took about {elapsed:.1f} s")     # took about 0.6 s
+
+asyncio.run(main())
+        </script>
+      </section>
+
+      <section class="chapter part" id="part-together">
+        <h2>Running things together</h2>
+        <p class="kind">Part 2 of 4 &middot; starting several jobs and collecting what they return</p>
+        <p>The speed comes from starting several coroutines before waiting for any of them. These chapters show the tools for that, and what to do when a job fails, takes too long or is no longer needed.</p>
+        <ul>
+          <li><a href="#gather">asyncio.gather</a>: run several and get all results</li>
+          <li><a href="#tasks">asyncio.create_task</a>: start a job in the background</li>
+          <li><a href="#gather-errors">Errors inside gather</a>: one failure should not hide the rest</li>
+          <li><a href="#timeouts">Timeouts</a>: give up on a slow job</li>
+          <li><a href="#as-completed">asyncio.as_completed</a>: handle results as they arrive</li>
+          <li><a href="#cancel">Cancelling a task</a>: stop a job from outside</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="gather">
+        <h2>Running together with gather</h2>
+        <p><code>asyncio.gather(a, b, c)</code> starts all the coroutines you pass in and waits until every one has finished. While one is paused at its <code>await</code>, the loop runs the others, so the total time is about the longest single wait, not the sum.</p>
+        <script type="text/plain" data-lang="py" data-file="gather.py">
+import asyncio
+import time
+
+BALANCES = {"City Bank": 5000, "North Bank": 12000, "Village Bank": 800}
+
+async def fetch_balance(bank, delay):
+    await asyncio.sleep(delay)
+    return BALANCES[bank]
+
+async def main():
+    start = time.perf_counter()
+    results = await asyncio.gather(
+        fetch_balance("City Bank", 0.2),
+        fetch_balance("North Bank", 0.3),
+        fetch_balance("Village Bank", 0.1),
+    )
+    elapsed = time.perf_counter() - start
+    print(results)                           # [5000, 12000, 800]
+    print(f"took about {elapsed:.1f} s")     # took about 0.3 s
+    print(elapsed < 0.5)                     # True
+
+asyncio.run(main())
+        </script>
+        <p class="note"><b>Concept:</b> The results come back as a list in the same order as the arguments, not in the order the jobs finished. Village Bank answered first, but its balance is still last in the list.</p>
+      </section>
+
+      <section class="chapter" id="tasks">
+        <h2>Tasks: start now, collect later</h2>
+        <p>A <b>Task</b> is a coroutine that has been handed to the event loop to run. <code>asyncio.create_task(coro)</code> makes one and returns at once. The task starts running the next time your code reaches an <code>await</code>, and you can await the task later to get its result.</p>
+        <script type="text/plain" data-lang="py" data-file="create_task.py">
+import asyncio
+
+async def fetch_balance(bank, delay):
+    print("  asking", bank)
+    await asyncio.sleep(delay)
+    return 5000
+
+async def main():
+    task = asyncio.create_task(fetch_balance("City Bank", 0.1))
+    print("task created, done yet?", task.done())
+
+    await asyncio.sleep(0.2)       # main pauses, so the task gets to run
+    print("after the pause, done yet?", task.done())
+
+    print("result:", await task)   # already finished, so this returns at once
+    print("again:", task.result())
+
+asyncio.run(main())
+        </script>
+        <script type="text/plain" data-lang="text" data-file="Output">
+task created, done yet? False
+  asking City Bank
+after the pause, done yet? True
+result: 5000
+again: 5000
+        </script>
+        <p><code>gather</code> wraps each coroutine in a task for you. Use <code>create_task</code> yourself when a job should run in the background while your coroutine carries on with something else.</p>
+        <p class="note"><b>Caution:</b> Keep the task in a variable or a list until it is done. The loop itself holds only a weak reference to it, which means a task that nothing else points to can be removed by Python's memory cleanup before it finishes.</p>
+      </section>
+
+      <section class="chapter" id="gather-errors">
+        <h2>Errors inside gather</h2>
+        <p>By default, the first exception raised in any job comes straight out of <code>await asyncio.gather(...)</code> and you lose the other results. With <code>return_exceptions=True</code>, <code>gather</code> never raises: a failed job puts its exception object in the result list, in its normal position.</p>
+        <script type="text/plain" data-lang="py" data-file="gather_errors.py">
+import asyncio
+
+BALANCES = {"City Bank": 5000, "North Bank": 12000}
+
+async def fetch_balance(bank, delay):
+    await asyncio.sleep(delay)
+    if bank not in BALANCES:
+        raise ConnectionError(f"{bank} is offline")
+    return BALANCES[bank]
+
+async def main():
+    banks = ["City Bank", "Village Bank", "North Bank"]
+
+    try:
+        await asyncio.gather(*(fetch_balance(b, 0.1) for b in banks))
+    except ConnectionError as error:
+        print("gather raised:", error)
+
+    results = await asyncio.gather(
+        *(fetch_balance(b, 0.1) for b in banks), return_exceptions=True
+    )
+    for bank, result in zip(banks, results):
+        if isinstance(result, Exception):
+            print(f"{bank}: failed ({result})")
+        else:
+            print(f"{bank}: {result}")
+
+asyncio.run(main())
+        </script>
+        <script type="text/plain" data-lang="text" data-file="Output">
+gather raised: Village Bank is offline
+City Bank: 5000
+Village Bank: failed (Village Bank is offline)
+North Bank: 12000
+        </script>
+        <p class="note"><b>Concept:</b> In the default mode the other jobs are not stopped when one fails. They keep running in the background, and their results are simply thrown away.</p>
+      </section>
+
+      <section class="chapter" id="timeouts">
+        <h2>Timeouts with wait_for</h2>
+        <p>A network call can hang for a long time. <code>asyncio.wait_for(job, timeout=seconds)</code> waits for the job, but if the time runs out it cancels the job and raises <code>asyncio.TimeoutError</code>.</p>
+        <script type="text/plain" data-lang="py" data-file="wait_for.py">
+import asyncio
+
+async def fetch_balance(bank, delay):
+    await asyncio.sleep(delay)
+    return 5000
+
+async def main():
+    fast = await asyncio.wait_for(fetch_balance("City Bank", 0.1), timeout=0.3)
+    print("City Bank:", fast)                 # City Bank: 5000
+
+    try:
+        await asyncio.wait_for(fetch_balance("Slow Bank", 0.5), timeout=0.2)
+    except asyncio.TimeoutError:
+        print("Slow Bank: gave up waiting")   # Slow Bank: gave up waiting
+
+asyncio.run(main())
+        </script>
+        <p class="note"><b>Version:</b> From Python 3.11, <code>asyncio.TimeoutError</code> is the same class as the built-in <code>TimeoutError</code>. Writing <code>except asyncio.TimeoutError</code> works on every version.</p>
+      </section>
+
+      <section class="chapter" id="as-completed">
+        <h2>Results as they arrive</h2>
+        <p><code>gather</code> makes you wait for the slowest job before you see anything. <code>asyncio.as_completed(jobs)</code> hands the jobs back one at a time in the order they finish, so you can show each answer as soon as it is ready.</p>
+        <script type="text/plain" data-lang="py" data-file="as_completed.py">
+import asyncio
+
+BALANCES = {"City Bank": 5000, "North Bank": 12000, "Village Bank": 800}
+
+async def fetch_balance(bank, delay):
+    await asyncio.sleep(delay)
+    return bank, BALANCES[bank]          # return the name too
+
+async def main():
+    jobs = [
+        fetch_balance("City Bank", 0.2),
+        fetch_balance("North Bank", 0.3),
+        fetch_balance("Village Bank", 0.1),
+    ]
+    for next_done in asyncio.as_completed(jobs):
+        bank, balance = await next_done
+        print(bank, balance)
+
+asyncio.run(main())
+        </script>
+        <script type="text/plain" data-lang="text" data-file="Output">
+Village Bank 800
+City Bank 5000
+North Bank 12000
+        </script>
+        <p class="note"><b>Tip:</b> The order is no longer the order you passed in, so each job must say who it is. That is why <code>fetch_balance</code> returns the bank name together with the balance here.</p>
+      </section>
+
+      <section class="chapter" id="cancel">
+        <h2>Cancelling a task</h2>
+        <p><code>task.cancel()</code> asks a task to stop. At the task's next <code>await</code>, Python raises <code>asyncio.CancelledError</code> inside it. The task may catch that to clean up, but it should then re-raise it with a bare <code>raise</code> so the cancel really happens.</p>
+        <script type="text/plain" data-lang="py" data-file="cancel.py">
+import asyncio
+
+async def watch_account(owner):
+    try:
+        while True:                       # runs for ever unless cancelled
+            print("checking the account of", owner)
+            await asyncio.sleep(0.1)
+    except asyncio.CancelledError:
+        print("watcher is closing its connection")
+        raise                             # let the cancel go through
+
+async def main():
+    task = asyncio.create_task(watch_account("Hemkesh"))
+    await asyncio.sleep(0.25)
+    task.cancel()
+    try:
+        await task
+    except asyncio.CancelledError:
+        print("cancelled:", task.cancelled())
+
+asyncio.run(main())
+        </script>
+        <script type="text/plain" data-lang="text" data-file="Output">
+checking the account of Hemkesh
+checking the account of Hemkesh
+checking the account of Hemkesh
+watcher is closing its connection
+cancelled: True
+        </script>
+      </section>
+
+      <section class="chapter part" id="part-coordination">
+        <h2>Coordination</h2>
+        <p class="kind">Part 3 of 4 &middot; many tasks sharing limits, data and work</p>
+        <p>Once many tasks run together they start to share things: a server that allows only a few connections, a balance that two tasks both change, a list of jobs to hand out. asyncio has its own versions of the tools you met on the <a href="python-concurrency.html">threads page</a>, plus async forms of <code>with</code> and <code>for</code>.</p>
+        <ul>
+          <li><a href="#semaphore">asyncio.Semaphore</a>: only N at a time</li>
+          <li><a href="#lock">asyncio.Lock</a>: races still exist between awaits</li>
+          <li><a href="#queue">asyncio.Queue</a>: producers and consumers</li>
+          <li><a href="#async-with">async with</a>: set up and clean up with awaits</li>
+          <li><a href="#async-for">async for</a>: async generators and comprehensions</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="semaphore">
+        <h2>Limiting how many run at once</h2>
+        <p>Starting a thousand requests at once can get you blocked by the server. A <b>semaphore</b> is a counter of free places. <code>async with limit:</code> takes a place, or waits if none is free, and gives the place back at the end of the block.</p>
+        <script type="text/plain" data-lang="py" data-file="semaphore.py">
+import asyncio
+import time
+
+running = 0      # how many fetches are inside the bank right now
+most = 0         # the highest value "running" ever reached
+
+async def fetch_balance(owner, limit):
+    global running, most
+    async with limit:                 # at most 2 tasks get past this line
+        running += 1
+        most = max(most, running)
+        await asyncio.sleep(0.1)
+        running -= 1
+    return owner
+
+async def main():
+    limit = asyncio.Semaphore(2)
+    family = ["Rishikesh", "Sandhya", "Subhash", "Malinikesh", "Hemkesh"]
+    start = time.perf_counter()
+    await asyncio.gather(*(fetch_balance(name, limit) for name in family))
+    elapsed = time.perf_counter() - start
+    print("most at the same time:", most)    # most at the same time: 2
+    print(f"took about {elapsed:.1f} s")     # took about 0.3 s
+
+asyncio.run(main())
+        </script>
+        <p>Five fetches of 0.1 seconds, two at a time, need three rounds: about 0.3 seconds. Without the semaphore they would all run together and finish in about 0.1.</p>
+        <p class="note"><b>Tip:</b> Create semaphores, locks and queues inside a coroutine, as <code>main()</code> does here, not at the top of the file. On Python 3.9 and older, one created before the loop starts gets tied to a different loop and fails when used.</p>
+      </section>
+
+      <section class="chapter" id="lock">
+        <h2>Races between awaits, and Lock</h2>
+        <p>With one thread, two tasks can never run at the same instant. A <b>race</b> (two jobs spoiling each other's work on shared data) can still happen, because another task may run whenever yours pauses at an <code>await</code>. Below, both withdrawals check the balance, both pause, and both then take the money.</p>
+        <script type="text/plain" data-lang="py" data-file="race.py">
+import asyncio
+
+balance = 100
+
+async def withdraw(name, amount):
+    global balance
+    if balance >= amount:                 # 1. check
+        await asyncio.sleep(0.01)         # 2. pause (ask the bank's database)
+        balance -= amount                 # 3. update, using a stale check
+        print(name, "took", amount)
+    else:
+        print(name, "was refused")
+
+async def main():
+    await asyncio.gather(withdraw("Sandhya", 80), withdraw("Subhash", 80))
+    print("balance:", balance)
+
+asyncio.run(main())
+        </script>
+        <script type="text/plain" data-lang="text" data-file="Output">
+Sandhya took 80
+Subhash took 80
+balance: -60
+        </script>
+        <p>An <code>asyncio.Lock</code> lets only one task at a time into the block under <code>async with lock:</code>. The second task now waits at the door until the first has finished its check and its update.</p>
+        <script type="text/plain" data-lang="py" data-file="lock.py">
+import asyncio
+
+balance = 100
+
+async def withdraw(name, amount, lock):
+    global balance
+    async with lock:                      # one task at a time from here
+        if balance >= amount:
+            await asyncio.sleep(0.01)
+            balance -= amount
+            print(name, "took", amount)
+        else:
+            print(name, "was refused")
+
+async def main():
+    lock = asyncio.Lock()
+    await asyncio.gather(
+        withdraw("Sandhya", 80, lock), withdraw("Subhash", 80, lock)
+    )
+    print("balance:", balance)
+
+asyncio.run(main())
+        </script>
+        <script type="text/plain" data-lang="text" data-file="Output">
+Sandhya took 80
+Subhash was refused
+balance: 20
+        </script>
+        <p class="note"><b>Concept:</b> Code between two <code>await</code>s runs without interruption. So a check and an update with no <code>await</code> between them are safe without a lock. That is a real advantage over threads, where a switch can happen on any line.</p>
+      </section>
+
+      <section class="chapter" id="queue">
+        <h2>Producer and consumer with Queue</h2>
+        <p>An <code>asyncio.Queue</code> is a waiting line shared by tasks. A <b>producer</b> puts work in, and <b>consumers</b> take work out. <code>await queue.get()</code> pauses while the queue is empty, and <code>await queue.join()</code> pauses until every item taken has been marked with <code>task_done()</code>.</p>
+        <script type="text/plain" data-lang="py" data-file="queue_tellers.py">
+import asyncio
+
+async def producer(queue):
+    for amount in [100, 250, 40, 75]:
+        await queue.put(amount)
+    print("4 deposits are waiting")
+
+async def teller(name, queue):
+    while True:
+        amount = await queue.get()        # pauses while the queue is empty
+        await asyncio.sleep(0.05)         # handling a deposit takes time
+        print(name, "handled", amount)
+        queue.task_done()
+
+async def main():
+    queue = asyncio.Queue()
+    tellers = [asyncio.create_task(teller(f"teller {n}", queue)) for n in (1, 2)]
+    await producer(queue)
+    await queue.join()                    # wait until all 4 are handled
+    for task in tellers:
+        task.cancel()                     # the tellers loop for ever: stop them
+    print("all deposits handled")
+
+asyncio.run(main())
+        </script>
+        <script type="text/plain" data-lang="text" data-file="Output">
+4 deposits are waiting
+teller 1 handled 100
+teller 2 handled 250
+teller 1 handled 40
+teller 2 handled 75
+all deposits handled
+        </script>
+        <p class="note"><b>Tip:</b> <code>asyncio.Queue(maxsize=10)</code> makes <code>put</code> pause when the queue is full. That stops a fast producer from piling up more work than the consumers can handle.</p>
+      </section>
+
+      <section class="chapter" id="async-with">
+        <h2>async with</h2>
+        <p>A normal <code>with</code> block runs set-up code on the way in and clean-up code on the way out. <code>async with</code> does the same when the set-up or clean-up itself has to wait, such as opening and closing a network connection. The object provides <code>__aenter__</code> and <code>__aexit__</code>, both written with <code>async def</code>.</p>
+        <script type="text/plain" data-lang="py" data-file="async_with.py">
+import asyncio
+
+class BankConnection:
+    def __init__(self, bank):
+        self.bank = bank
+
+    async def __aenter__(self):
+        await asyncio.sleep(0.05)             # connecting takes time
+        print("connected to", self.bank)
+        return self
+
+    async def __aexit__(self, exc_type, exc, tb):
+        await asyncio.sleep(0.05)             # so does saying goodbye
+        print("closed", self.bank)
+
+    async def balance(self, owner):
+        await asyncio.sleep(0.05)
+        return 5000
+
+async def main():
+    async with BankConnection("City Bank") as conn:
+        print("Rishikesh has", await conn.balance("Rishikesh"))
+
+asyncio.run(main())
+        </script>
+        <script type="text/plain" data-lang="text" data-file="Output">
+connected to City Bank
+Rishikesh has 5000
+closed City Bank
+        </script>
+        <p class="note"><b>Tip:</b> You already used <code>async with</code> on <code>Semaphore</code> and <code>Lock</code>. For your own code, <code>contextlib.asynccontextmanager</code> builds one from a single async function with a <code>yield</code> in the middle.</p>
+      </section>
+
+      <section class="chapter" id="async-for">
+        <h2>async for and async generators</h2>
+        <p>An <b>async generator</b> is an <code>async def</code> function that contains <code>yield</code>. It can <code>await</code> between the values it hands out. You read it with <code>async for</code>, which pauses while the next value is on its way. Comprehensions accept <code>async for</code> too.</p>
+        <script type="text/plain" data-lang="py" data-file="async_for.py">
+import asyncio
+
+async def statement(owner):
+    for amount in [500, -120, 300, -45]:
+        await asyncio.sleep(0.05)         # each line arrives from the bank
+        yield amount
+
+async def double(amount):
+    await asyncio.sleep(0.01)
+    return amount * 2
+
+async def main():
+    async for amount in statement("Malinikesh"):
+        print(amount, end=" ")
+    print()                               # 500 -120 300 -45
+
+    deposits = [a async for a in statement("Malinikesh") if a > 0]
+    print(deposits)                       # [500, 300]
+
+    doubled = [await double(a) for a in deposits]
+    print(doubled)                        # [1000, 600]
+
+asyncio.run(main())
+        </script>
+        <p class="note"><b>Caution:</b> <code>[await f(x) for x in items]</code> awaits one item after another. It is short to write but it is not concurrent. Use <code>asyncio.gather</code> when the calls should run together.</p>
+      </section>
+
+      <section class="chapter part" id="part-pitfalls">
+        <h2>Pitfalls and choosing</h2>
+        <p class="kind">Part 4 of 4 &middot; what goes wrong, and when to use something else</p>
+        <p>asyncio depends on every task giving control back quickly. These chapters show what happens when one does not, how to hand such work to threads or processes, and how to choose between the three ways of doing several things at once.</p>
+        <ul>
+          <li><a href="#blocking">Blocking the loop</a>: the biggest mistake</li>
+          <li><a href="#to-thread">asyncio.to_thread and run_in_executor</a>: the fix</li>
+          <li><a href="#mixing">Mixing with threads and processes</a></li>
+          <li><a href="#compare">asyncio, threading or multiprocessing</a></li>
+          <li><a href="#newer">Newer tools: TaskGroup and timeout</a></li>
+          <li><a href="#libraries">Libraries you will meet</a></li>
+          <li><a href="#mistakes">Common mistakes</a></li>
+          <li><a href="#reference">Quick reference</a></li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="blocking">
+        <h2>The biggest mistake: blocking the loop</h2>
+        <p>The loop can switch tasks only at an <code>await</code>. A call that waits without <code>await</code>, such as <code>time.sleep()</code>, a normal file or network call, or a long calculation, holds the only thread. Every other task freezes until it returns. Below, a ticker should print every 0.1 seconds.</p>
+        <script type="text/plain" data-lang="py" data-file="blocking.py">
+import asyncio
+import time
+
+async def ticker():
+    for n in range(3):
+        print("  tick", n)
+        await asyncio.sleep(0.1)
+
+async def bad_report():
+    print("  report started")
+    time.sleep(0.3)                # blocks: nobody else can run
+    print("  report finished")
+
+async def good_report():
+    print("  report started")
+    await asyncio.sleep(0.25)      # pauses: the ticker keeps going
+    print("  report finished")
+
+async def main():
+    print("with time.sleep:")
+    await asyncio.gather(ticker(), bad_report())
+    print("with asyncio.sleep:")
+    await asyncio.gather(ticker(), good_report())
+
+asyncio.run(main())
+        </script>
+        <script type="text/plain" data-lang="text" data-file="Output">
+with time.sleep:
+  tick 0
+  report started
+  report finished
+  tick 1
+  tick 2
+with asyncio.sleep:
+  tick 0
+  report started
+  tick 1
+  tick 2
+  report finished
+        </script>
+        <p>In the first run the ticker is stuck after <code>tick 0</code> until the report is finished. In a real server that means every user waits because of one slow request.</p>
+        <p class="note"><b>Rule:</b> Inside <code>async def</code>, anything slow must be awaited. If a library has no async version, or the work is heavy calculation, move it off the loop as the next chapter shows.</p>
+      </section>
+
+      <section class="chapter" id="to-thread">
+        <h2>The fix: to_thread and run_in_executor</h2>
+        <p><code>asyncio.to_thread(func, *args)</code> (Python 3.9+) runs an ordinary blocking function in a separate thread and gives you something to <code>await</code>. The loop stays free while the thread waits. The older spelling is <code>loop.run_in_executor(None, func, *args)</code>, where <code>None</code> means "use the default thread pool".</p>
+        <script type="text/plain" data-lang="py" data-file="to_thread.py">
+import asyncio
+import time
+
+def build_report(owner):           # ordinary blocking code, not async
+    time.sleep(0.25)
+    return f"report for {owner}"
+
+async def ticker():
+    for n in range(3):
+        print("tick", n)
+        await asyncio.sleep(0.1)
+
+async def main():
+    report, _ = await asyncio.gather(
+        asyncio.to_thread(build_report, "Sandhya"), ticker()
+    )
+    print(report)
+
+    loop = asyncio.get_running_loop()
+    report = await loop.run_in_executor(None, build_report, "Subhash")
+    print(report)
+
+asyncio.run(main())
+        </script>
+        <script type="text/plain" data-lang="text" data-file="Output">
+tick 0
+tick 1
+tick 2
+report for Sandhya
+report for Subhash
+        </script>
+        <p>The ticker kept ticking while the report was being built, because the blocking <code>time.sleep</code> ran in another thread.</p>
+      </section>
+
+      <section class="chapter" id="mixing">
+        <h2>Mixing with threads and processes</h2>
+        <p>Threads help with blocking I/O, but because of the GIL (the lock that lets only one thread run Python code at a time) they do not speed up heavy calculation. For that, give <code>run_in_executor</code> a <code>ProcessPoolExecutor</code>. The work then runs in other processes on other CPU cores, and the loop awaits the answers.</p>
+        <script type="text/plain" data-lang="py" data-file="process_pool.py">
+import asyncio
+from concurrent.futures import ProcessPoolExecutor
+
+def sum_of_squares(n):             # heavy calculation, no waiting
+    return sum(i * i for i in range(n))
+
+async def main():
+    loop = asyncio.get_running_loop()
+    with ProcessPoolExecutor(max_workers=2) as pool:
+        jobs = [
+            loop.run_in_executor(pool, sum_of_squares, n)
+            for n in (1_000, 300_000)
+        ]
+        results = await asyncio.gather(*jobs)
+    print(results)                 # [332833500, 8999955000050000]
+
+if __name__ == "__main__":         # required when a program starts processes
+    asyncio.run(main())
+        </script>
+        <p>Going the other way, a normal thread that needs to start a coroutine on a running loop uses <code>asyncio.run_coroutine_threadsafe(coro, loop)</code>. Most asyncio objects are not safe to touch from other threads, so do not call their methods directly from one.</p>
+      </section>
+
+      <section class="chapter" id="compare">
+        <h2>asyncio, threading or multiprocessing</h2>
+        <p>All three let a program do several things over the same period. They differ in who decides when to switch and in what kind of work they speed up.</p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th></th><th>asyncio</th><th>threading</th><th>multiprocessing</th></tr></thead>
+            <tbody>
+              <tr><td><b>Runs on</b></td><td>One thread, one event loop</td><td>Many threads, one process</td><td>Many processes</td></tr>
+              <tr><td><b>Who switches jobs</b></td><td>Your code, at each <code>await</code></td><td>The operating system, at any moment</td><td>The operating system, at any moment</td></tr>
+              <tr><td><b>Truly parallel</b></td><td>No</td><td>No for Python code (GIL)</td><td>Yes, one core per process</td></tr>
+              <tr><td><b>Good for</b></td><td>Very many network waits at once</td><td>Some blocking I/O calls, old libraries</td><td>Heavy calculation</td></tr>
+              <tr><td><b>Cost per job</b></td><td>Tiny: thousands of tasks are fine</td><td>Medium: hundreds of threads</td><td>High: a handful of processes</td></tr>
+              <tr><td><b>Shared data</b></td><td>Shared; races only across an <code>await</code></td><td>Shared; races on any line</td><td>Not shared; data is copied between processes</td></tr>
+              <tr><td><b>Main catch</b></td><td>One blocking call freezes everything; needs async libraries</td><td>Locks and hard-to-find races</td><td>Slow start, arguments must be picklable</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>A simple way to choose: lots of network waiting and async libraries available, use asyncio. A few blocking calls in an ordinary program, use threads. Work that keeps the CPU busy, use processes. They also combine, as the last two chapters showed.</p>
+      </section>
+
+      <section class="chapter" id="newer">
+        <h2>Newer tools: TaskGroup and timeout</h2>
+        <p>Python 3.11 added two tidier tools. <code>asyncio.TaskGroup</code> is an <code>async with</code> block that waits for all tasks started inside it and, if one fails, cancels the rest. <code>asyncio.timeout(seconds)</code> puts a time limit on a whole block. This snippet is not run on this page because it needs Python 3.11 or newer.</p>
+        <script type="text/plain" data-lang="py" data-file="python_311.py" data-norun>
+import asyncio
+
+async def fetch_balance(bank, delay):
+    await asyncio.sleep(delay)
+    return 5000
+
+async def main():
+    async with asyncio.TaskGroup() as group:          # Python 3.11+
+        city = group.create_task(fetch_balance("City Bank", 0.2))
+        north = group.create_task(fetch_balance("North Bank", 0.3))
+    print(city.result(), north.result())   # both are done after the block
+
+    try:
+        async with asyncio.timeout(0.1):              # Python 3.11+
+            await fetch_balance("Slow Bank", 0.5)
+    except TimeoutError:
+        print("gave up waiting")
+
+asyncio.run(main())
+        </script>
+        <p class="note"><b>Tip:</b> On 3.11 and later, prefer <code>TaskGroup</code> over <code>gather</code> for new code. With <code>gather</code>, the other jobs keep running after one fails. A task group stops them for you.</p>
+      </section>
+
+      <section class="chapter" id="libraries">
+        <h2>Libraries you will meet</h2>
+        <p>The standard library gives you the loop, but most ordinary I/O libraries block. Real async programs use libraries written for asyncio. These are third-party packages, so they are listed here by name only.</p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Library</th><th>What it is for</th></tr></thead>
+            <tbody>
+              <tr><td><code>aiohttp</code></td><td>HTTP client and web server built on asyncio</td></tr>
+              <tr><td><code>httpx</code></td><td>HTTP client with both a normal and an async interface</td></tr>
+              <tr><td><code>asyncpg</code></td><td>Fast async driver for PostgreSQL databases</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><b>Caution:</b> A blocking library such as <code>requests</code> called inside a coroutine blocks the loop exactly like <code>time.sleep</code>. Use an async library, or wrap the call in <code>asyncio.to_thread</code>.</p>
+      </section>
+
+      <section class="chapter" id="mistakes">
+        <h2>Common mistakes</h2>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Mistake</th><th>What you see</th><th>Fix</th></tr></thead>
+            <tbody>
+              <tr><td>Calling a coroutine function without <code>await</code></td><td>Nothing runs; <code>RuntimeWarning: coroutine ... was never awaited</code></td><td>Add <code>await</code>, or pass it to <code>gather</code> or <code>create_task</code></td></tr>
+              <tr><td>Using <code>time.sleep</code> or other blocking calls in a coroutine</td><td>All tasks freeze together</td><td><code>await asyncio.sleep()</code>, an async library, or <code>asyncio.to_thread</code></td></tr>
+              <tr><td>Awaiting jobs one by one and expecting speed</td><td>Total time is the sum of the waits</td><td><code>asyncio.gather</code> or tasks</td></tr>
+              <tr><td>Using <code>await</code> outside <code>async def</code></td><td><code>SyntaxError</code></td><td>Put the code in a coroutine and start it with <code>asyncio.run</code></td></tr>
+              <tr><td>Calling <code>asyncio.run</code> inside a running loop</td><td><code>RuntimeError</code></td><td>Just <code>await</code> the coroutine</td></tr>
+              <tr><td>Not keeping a reference to a task</td><td>The task may vanish before it finishes</td><td>Store it in a variable, list or set</td></tr>
+              <tr><td>Catching <code>CancelledError</code> and not re-raising</td><td>The task cannot be cancelled</td><td>Clean up, then <code>raise</code></td></tr>
+              <tr><td>Check, <code>await</code>, then update shared data</td><td>Wrong totals now and then</td><td><code>asyncio.Lock</code> around the whole step</td></tr>
+              <tr><td>Starting thousands of requests at once</td><td>Server errors or a ban</td><td><code>asyncio.Semaphore</code></td></tr>
+              <tr><td>Using <code>threading.Lock</code> or <code>queue.Queue</code> in coroutines</td><td>They block the loop</td><td>The <code>asyncio</code> versions</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="chapter" id="reference">
+        <h2>Quick reference</h2>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Write this</th><th>To do this</th></tr></thead>
+            <tbody>
+              <tr><td><code>async def f(): ...</code></td><td>Define a coroutine function</td></tr>
+              <tr><td><code>asyncio.run(main())</code></td><td>Start the event loop and run <code>main</code> to the end</td></tr>
+              <tr><td><code>x = await job</code></td><td>Pause until <code>job</code> is done and take its result</td></tr>
+              <tr><td><code>await asyncio.sleep(s)</code></td><td>Pause for <code>s</code> seconds without blocking the loop</td></tr>
+              <tr><td><code>await asyncio.gather(a, b)</code></td><td>Run together, get a list of results in argument order</td></tr>
+              <tr><td><code>gather(..., return_exceptions=True)</code></td><td>Get exceptions as results instead of raising the first one</td></tr>
+              <tr><td><code>t = asyncio.create_task(coro)</code></td><td>Start a job in the background</td></tr>
+              <tr><td><code>t.done()</code>, <code>t.result()</code>, <code>t.cancel()</code></td><td>Ask if a task finished, read its result, ask it to stop</td></tr>
+              <tr><td><code>await asyncio.wait_for(job, timeout=s)</code></td><td>Give up after <code>s</code> seconds with <code>asyncio.TimeoutError</code></td></tr>
+              <tr><td><code>for d in asyncio.as_completed(jobs): await d</code></td><td>Take results in the order they finish</td></tr>
+              <tr><td><code>asyncio.Semaphore(n)</code></td><td>Let at most <code>n</code> tasks into a block</td></tr>
+              <tr><td><code>asyncio.Lock()</code></td><td>Let one task at a time into a block</td></tr>
+              <tr><td><code>asyncio.Queue()</code></td><td>Pass work from producers to consumers</td></tr>
+              <tr><td><code>async with x:</code></td><td>Enter and leave a block with awaited set-up and clean-up</td></tr>
+              <tr><td><code>async for v in agen():</code></td><td>Loop over values that arrive over time</td></tr>
+              <tr><td><code>await asyncio.to_thread(func, arg)</code></td><td>Run blocking code in a thread (3.9+)</td></tr>
+              <tr><td><code>await loop.run_in_executor(pool, func, arg)</code></td><td>Run code in a thread pool or process pool</td></tr>
+              <tr><td><code>asyncio.TaskGroup()</code>, <code>asyncio.timeout(s)</code></td><td>Safer grouping and timeouts (3.11+)</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>Next comes the last page of this path, a tour of the remaining advanced features: <a href="python-power-features.html">Python Power Features</a>.</p>
+      </section>
+
+    </div>
+  </main>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script src="../../assets/tutorial.js"></script>
+</body>
+</html>

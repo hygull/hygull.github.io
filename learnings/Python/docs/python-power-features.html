@@ -1,0 +1,1054 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Python Power Features</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@500;700&display=swap">
+<link rel="stylesheet" href="../../assets/tutorial.css">
+</head>
+<body data-track="python">
+
+<header class="topbar">
+  <div class="topbar-in">
+    <a class="brand" href="../../../index.html">Learnings</a>
+    <nav class="tracks" aria-label="Python paths">
+      <a href="../../../index.html#python-basics">Python Basics</a>
+      <a href="../../../index.html#python-advanced" aria-current="true">Python Advanced</a>
+      <a href="../../../index.html#python-practice">Python in Practice</a>
+      <a href="../../../index.html#python-design">Python Design</a>
+      <a href="../../../archive.html">Archive</a>
+    </nav>
+    <div class="tools">
+      <button class="btn" id="menu" type="button" aria-expanded="false">Chapters</button>
+      <input id="q" type="search" placeholder="Search chapters" aria-label="Search chapters">
+      <button class="btn" id="theme" type="button">Dark mode</button>
+    </div>
+  </div>
+</header>
+
+<div class="shell">
+  <aside class="side">
+    <p class="side-label">Power Features</p>
+    <nav id="toc" aria-label="Chapters"></nav>
+  </aside>
+
+  <main>
+    <div class="page-head">
+      <p class="eyebrow">Python advanced, part 5 of 5</p>
+      <h1>Python Power Features</h1>
+      <p class="lead">This page is a tour of the remaining features an experienced Python developer is expected to know: context managers, special methods, attribute control, class machinery, the handy parts of <code>functools</code> and <code>collections</code>, type hints and some newer syntax. Each chapter is short: the idea, one small example from a family bank, and a note where it helps.</p>
+    </div>
+
+    <div class="chapters">
+
+      <section class="chapter part" id="part-context">
+        <h2>Context managers</h2>
+        <p class="kind">Part 1 of 6 &middot; set-up and clean-up that cannot be forgotten</p>
+        <p>A <b>context manager</b> is an object that knows what to do when a <code>with</code> block starts and when it ends. It puts the clean-up next to the set-up, and the clean-up runs even if the block fails.</p>
+        <ul>
+          <li><a href="#with">What with does</a></li>
+          <li><a href="#cm-class">Writing one as a class</a>: a transaction that rolls back</li>
+          <li><a href="#cm-generator">The short way</a>: <code>contextlib.contextmanager</code></li>
+          <li><a href="#cm-helpers">Ready-made helpers</a>: <code>suppress</code>, <code>closing</code>, <code>ExitStack</code></li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="with">
+        <h2>What with does</h2>
+        <p><code>with open(...) as f:</code> opens the file, runs the block, and closes the file when the block ends, whether it ends normally or with an error. It is a short form of <code>try</code> and <code>finally</code>.</p>
+        <script type="text/plain" data-lang="py" data-file="with_file.py">
+with open("ledger.txt", "w") as f:
+    f.write("Rishikesh Agrawani,5000\n")
+print(f.closed)                  # True
+
+f = open("ledger.txt")           # the same thing written by hand
+try:
+    print(f.read().strip())      # Rishikesh Agrawani,5000
+finally:
+    f.close()                    # runs even if the read fails
+        </script>
+        <p class="note"><b>Concept:</b> Python calls <code>__enter__()</code> on the object when the block starts, and the value it returns is what <code>as</code> names. It calls <code>__exit__()</code> when the block ends. Any object with these two methods works in a <code>with</code> statement.</p>
+      </section>
+
+      <section class="chapter" id="cm-class">
+        <h2>A context manager as a class</h2>
+        <p>A bank <b>transaction</b> is a group of changes that must all happen or not happen at all. This one remembers the balance on the way in. If the block raises an error, it puts the old balance back, which is called a <b>rollback</b>.</p>
+        <script type="text/plain" data-lang="py" data-file="transaction.py">
+class Account:
+    def __init__(self, owner, balance):
+        self.owner = owner
+        self.balance = balance
+
+class Transaction:
+    def __init__(self, account):
+        self.account = account
+
+    def __enter__(self):
+        self.saved = self.account.balance     # remember the starting point
+        return self.account                   # this is what "as" receives
+
+    def __exit__(self, exc_type, exc, traceback):
+        if exc_type is not None:              # the block raised an error
+            self.account.balance = self.saved
+            print("rolled back:", exc)
+        return False                          # False: do not hide the error
+
+acc = Account("Rishikesh Agrawani", 1000)
+
+with Transaction(acc) as a:
+    a.balance -= 300
+print(acc.balance)
+
+try:
+    with Transaction(acc) as a:
+        a.balance -= 500
+        raise ConnectionError("the other bank did not answer")
+except ConnectionError:
+    pass
+print(acc.balance)
+        </script>
+        <script type="text/plain" data-lang="text" data-file="Output">
+700
+rolled back: the other bank did not answer
+700
+        </script>
+        <p class="note"><b>Concept:</b> <code>__exit__</code> receives the error's class, the error object and its traceback, or three <code>None</code> values if the block ended normally. Returning <code>True</code> swallows the error. Return <code>False</code> (or nothing) unless you really mean to hide it.</p>
+      </section>
+
+      <section class="chapter" id="cm-generator">
+        <h2>The short way: contextmanager</h2>
+        <p><code>contextlib.contextmanager</code> is a <a href="python-decorators.html">decorator</a> that turns a <a href="python-iterators-generators.html">generator function</a> into a context manager. The code before <code>yield</code> is the set-up, the yielded value goes to <code>as</code>, and the code after <code>yield</code> is the clean-up.</p>
+        <script type="text/plain" data-lang="py" data-file="contextmanager.py">
+from contextlib import contextmanager
+
+@contextmanager
+def transaction(account):
+    saved = account["balance"]
+    try:
+        yield account                 # the with block runs here
+    except Exception:
+        account["balance"] = saved    # an error came out of the block
+        raise                         # pass it on to the caller
+    finally:
+        print("transaction closed")
+
+acc = {"owner": "Sandhya Agrawani", "balance": 2000}
+
+try:
+    with transaction(acc) as a:
+        a["balance"] -= 2500
+        if a["balance"] < 0:
+            raise ValueError("not enough money")
+except ValueError as error:
+    print("failed:", error)
+
+print(acc["balance"])
+        </script>
+        <script type="text/plain" data-lang="text" data-file="Output">
+transaction closed
+failed: not enough money
+2000
+        </script>
+        <p class="note"><b>Tip:</b> Always put the <code>yield</code> inside <code>try</code> when there is clean-up to do. An error in the <code>with</code> block is raised at the <code>yield</code> line, so without <code>try</code> the code after it would be skipped.</p>
+      </section>
+
+      <section class="chapter" id="cm-helpers">
+        <h2>suppress, closing and ExitStack</h2>
+        <p><code>contextlib</code> also has ready-made context managers. <code>suppress</code> ignores the errors you name. <code>closing</code> calls <code>close()</code> on any object at the end. <code>ExitStack</code> holds a number of context managers that is known only while the program runs and closes all of them together.</p>
+        <script type="text/plain" data-lang="py" data-file="contextlib_helpers.py">
+import os
+from contextlib import suppress, closing, ExitStack
+
+with suppress(FileNotFoundError):         # same as try / except / pass
+    os.remove("no_such_file.txt")
+print("still running")                    # still running
+
+class Vault:
+    def close(self):
+        print("vault closed")
+
+with closing(Vault()):
+    print("vault in use")
+
+names = ["sandhya", "subhash", "hemkesh"]
+with ExitStack() as stack:
+    files = [stack.enter_context(open(f"{n}.txt", "w")) for n in names]
+    for f in files:
+        f.write("0\n")
+print(all(f.closed for f in files))       # True
+        </script>
+        <script type="text/plain" data-lang="text" data-file="Output">
+still running
+vault in use
+vault closed
+True
+        </script>
+      </section>
+
+      <section class="chapter part" id="part-dunder">
+        <h2>Special methods</h2>
+        <p class="kind">Part 2 of 6 &middot; making your objects work with built-in syntax</p>
+        <p>Methods whose names start and end with two underscores, such as <code>__init__</code>, are <b>special methods</b>, often called "dunder" methods (short for double underscore). You do not call them yourself. Python calls them when your object is used with <code>print</code>, <code>==</code>, <code>+</code>, <code>len()</code>, <code>in</code> and so on.</p>
+        <ul>
+          <li><a href="#repr-str">__repr__ and __str__</a>: how an object is shown</li>
+          <li><a href="#eq-hash">__eq__ and __hash__</a>: equality, sets and dict keys</li>
+          <li><a href="#ordering">Ordering</a>: <code>&lt;</code>, <code>sorted</code> and <code>total_ordering</code></li>
+          <li><a href="#container">Container methods</a>: <code>len</code>, <code>in</code>, <code>[]</code></li>
+          <li><a href="#arithmetic">Arithmetic</a>: <code>+</code> and <code>sum</code> for a Money class</li>
+          <li><a href="#bool-call">__bool__ and __call__</a>: truth and objects you can call</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="repr-str">
+        <h2>__repr__ and __str__</h2>
+        <p>Without help, printing an object shows something like <code>&lt;__main__.Money object at 0x10a3f&gt;</code>. <code>__repr__</code> gives the text for developers, ideally the code that would rebuild the object. <code>__str__</code> gives the friendly text for users, and is what <code>print</code> and f-strings use.</p>
+        <script type="text/plain" data-lang="py" data-file="money_repr.py">
+class Money:
+    def __init__(self, amount, currency="INR"):
+        self.amount = amount
+        self.currency = currency
+
+    def __repr__(self):
+        return f"Money({self.amount!r}, {self.currency!r})"
+
+    def __str__(self):
+        return f"{self.amount:,} {self.currency}"
+
+m = Money(150000)
+print(m)                  # 150,000 INR
+print(repr(m))            # Money(150000, 'INR')
+print([m, Money(20)])     # [Money(150000, 'INR'), Money(20, 'INR')]
+print(f"Balance: {m}")    # Balance: 150,000 INR
+        </script>
+        <p class="note"><b>Tip:</b> If you write only one, write <code>__repr__</code>. Python falls back to it when <code>__str__</code> is missing, and it is what you see inside lists and in the debugger.</p>
+      </section>
+
+      <section class="chapter" id="eq-hash">
+        <h2>__eq__ and __hash__</h2>
+        <p>By default <code>==</code> on your own objects is true only for the very same object. <code>__eq__</code> lets you say that two objects with the same values are equal. <code>__hash__</code> returns a number used by sets and dict keys to find objects quickly, and equal objects must return the same number.</p>
+        <script type="text/plain" data-lang="py" data-file="money_eq.py">
+class Money:
+    def __init__(self, amount, currency="INR"):
+        self.amount = amount
+        self.currency = currency
+
+    def __eq__(self, other):
+        if not isinstance(other, Money):
+            return NotImplemented         # "I do not know how to compare"
+        return (self.amount, self.currency) == (other.amount, other.currency)
+
+    def __hash__(self):
+        return hash((self.amount, self.currency))
+
+a, b = Money(500), Money(500)
+print(a == b)                    # True
+print(a is b)                    # False
+print(a == Money(500, "USD"))    # False
+print(a == 500)                  # False
+print(len({a, b}))               # 1
+        </script>
+        <p class="note"><b>Caution:</b> A class that defines <code>__eq__</code> but not <code>__hash__</code> becomes unhashable: its objects can no longer go in a set or be dict keys. Build the hash from the same fields as the equality, and only from fields that do not change.</p>
+      </section>
+
+      <section class="chapter" id="ordering">
+        <h2>Ordering with total_ordering</h2>
+        <p>To use <code>&lt;</code>, <code>sorted()</code>, <code>min()</code> and <code>max()</code>, a class needs comparison methods. Writing all of <code>__lt__</code>, <code>__le__</code>, <code>__gt__</code> and <code>__ge__</code> is tedious. With <code>functools.total_ordering</code> you write <code>__eq__</code> and one of them, and the decorator fills in the rest.</p>
+        <script type="text/plain" data-lang="py" data-file="money_order.py">
+from functools import total_ordering
+
+@total_ordering
+class Money:
+    def __init__(self, amount):
+        self.amount = amount
+
+    def __repr__(self):
+        return f"Money({self.amount})"
+
+    def __eq__(self, other):
+        return self.amount == other.amount
+
+    def __lt__(self, other):              # "less than"
+        return self.amount < other.amount
+
+wallet = [Money(800), Money(12000), Money(5000)]
+print(sorted(wallet))             # [Money(800), Money(5000), Money(12000)]
+print(max(wallet))                # Money(12000)
+print(Money(5) >= Money(5))       # True
+print(Money(5) > Money(9))        # False
+        </script>
+      </section>
+
+      <section class="chapter" id="container">
+        <h2>Container methods: len, in and []</h2>
+        <p>Three methods make an object behave like a collection. <code>__len__</code> answers <code>len(x)</code>, <code>__contains__</code> answers <code>item in x</code>, and <code>__getitem__</code> answers <code>x[key]</code>. Add <code>__iter__</code> and it works in a <code>for</code> loop too.</p>
+        <script type="text/plain" data-lang="py" data-file="bank_container.py">
+class Bank:
+    def __init__(self):
+        self._balances = {}
+
+    def open(self, owner, balance):
+        self._balances[owner] = balance
+
+    def __len__(self):
+        return len(self._balances)
+
+    def __contains__(self, owner):
+        return owner in self._balances
+
+    def __getitem__(self, owner):
+        return self._balances[owner]
+
+    def __iter__(self):
+        return iter(self._balances)
+
+bank = Bank()
+bank.open("Malinikesh", 9000)
+bank.open("Hemkesh", 900)
+
+print(len(bank))              # 2
+print("Hemkesh" in bank)      # True
+print("Subhash" in bank)      # False
+print(bank["Malinikesh"])     # 9000
+print(list(bank))             # ['Malinikesh', 'Hemkesh']
+        </script>
+      </section>
+
+      <section class="chapter" id="arithmetic">
+        <h2>Arithmetic: + for Money</h2>
+        <p><code>a + b</code> calls <code>a.__add__(b)</code>. If that does not know what to do, Python tries the right-hand object with <code>b.__radd__(a)</code>. That second method is what makes <code>sum()</code> work, because <code>sum</code> starts by adding the first item to the number <code>0</code>.</p>
+        <script type="text/plain" data-lang="py" data-file="money_add.py">
+class Money:
+    def __init__(self, amount):
+        self.amount = amount
+
+    def __repr__(self):
+        return f"Money({self.amount})"
+
+    def __add__(self, other):
+        if isinstance(other, Money):
+            return Money(self.amount + other.amount)   # a new object
+        return NotImplemented
+
+    def __radd__(self, other):            # called for: 0 + Money
+        if other == 0:
+            return self
+        return NotImplemented
+
+    def __mul__(self, times):
+        return Money(self.amount * times)
+
+print(Money(500) + Money(250))                   # Money(750)
+print(Money(100) * 3)                            # Money(300)
+print(sum([Money(5000), Money(12000), Money(800)]))   # Money(17800)
+
+try:
+    Money(500) + 20
+except TypeError:
+    print("cannot add Money and a plain number")
+        </script>
+        <p class="note"><b>Concept:</b> Returning <code>NotImplemented</code> tells Python "not my job, ask the other object". If nobody can do it, Python raises <code>TypeError</code> for you. Other operators follow the same pattern: <code>__sub__</code>, <code>__mul__</code>, <code>__truediv__</code>, and <code>__iadd__</code> for <code>+=</code>.</p>
+      </section>
+
+      <section class="chapter" id="bool-call">
+        <h2>__bool__ and __call__</h2>
+        <p><code>__bool__</code> decides whether an object counts as true in <code>if obj:</code>. <code>__call__</code> lets you use an object like a function, <code>obj(...)</code>, which is handy for a function that needs to remember settings.</p>
+        <script type="text/plain" data-lang="py" data-file="bool_call.py">
+class Account:
+    def __init__(self, owner, balance):
+        self.owner = owner
+        self.balance = balance
+
+    def __bool__(self):
+        return self.balance > 0           # an empty account is "false"
+
+class Interest:
+    def __init__(self, percent):
+        self.percent = percent
+
+    def __call__(self, balance):
+        return balance * self.percent // 100
+
+print(bool(Account("Subhash", 7000)))     # True
+if not Account("Hemkesh", 0):
+    print("Hemkesh has no money")         # Hemkesh has no money
+
+savings_interest = Interest(4)
+print(savings_interest(5000))             # 200
+print(callable(savings_interest))         # True
+        </script>
+        <p class="note"><b>Concept:</b> Without <code>__bool__</code>, Python uses <code>__len__</code> (length 0 is false). Without both, every object is true.</p>
+      </section>
+
+      <section class="chapter part" id="part-attributes">
+        <h2>Attribute control</h2>
+        <p class="kind">Part 3 of 6 &middot; deciding what happens when an attribute is read or set</p>
+        <p>Reading <code>acc.balance</code> or writing <code>acc.balance = 5</code> looks like plain data access. Python gives you several hooks to run code at that moment, from the simple <code>property</code> to the general descriptor.</p>
+        <ul>
+          <li><a href="#property">property</a>: a method that looks like an attribute</li>
+          <li><a href="#descriptors">Descriptors</a>: a reusable property</li>
+          <li><a href="#getattr">__getattr__ and __getattribute__</a>: catching attribute reads</li>
+          <li><a href="#slots">__slots__</a>: a fixed list of attributes</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="property">
+        <h2>property in one example</h2>
+        <p><code>@property</code> turns a method into something you read like an attribute. Add a setter and you can check every value before it is stored, without changing how the class is used.</p>
+        <script type="text/plain" data-lang="py" data-file="property.py">
+class Account:
+    def __init__(self, owner, balance):
+        self.owner = owner
+        self.balance = balance            # goes through the setter below
+
+    @property
+    def balance(self):                    # runs on: acc.balance
+        return self._balance
+
+    @balance.setter
+    def balance(self, value):             # runs on: acc.balance = value
+        if value < 0:
+            raise ValueError("balance cannot be negative")
+        self._balance = value
+
+    @property
+    def is_low(self):                     # no setter: read-only
+        return self._balance < 1000
+
+acc = Account("Malinikesh Agrawani", 9000)
+acc.balance -= 8500
+print(acc.balance, acc.is_low)            # 500 True
+
+try:
+    acc.balance = -1
+except ValueError as error:
+    print(error)                          # balance cannot be negative
+        </script>
+      </section>
+
+      <section class="chapter" id="descriptors">
+        <h2>Descriptors: a reusable property</h2>
+        <p>A property is tied to one attribute of one class. If five fields need the same check, you would write it five times. A <b>descriptor</b> is a small class with <code>__get__</code> and <code>__set__</code> methods. Put an instance of it in a class body, and Python calls those methods whenever that attribute is read or set.</p>
+        <script type="text/plain" data-lang="py" data-file="descriptor.py">
+class PositiveAmount:
+    def __set_name__(self, owner, name):      # called once per field
+        self.name = name                      # e.g. "principal"
+        self.storage = "_" + name             # where the value really lives
+
+    def __get__(self, obj, objtype=None):     # runs on: loan.principal
+        if obj is None:                       # read on the class itself
+            return self
+        return getattr(obj, self.storage)
+
+    def __set__(self, obj, value):            # runs on: loan.principal = v
+        if value <= 0:
+            raise ValueError(f"{self.name} must be positive, got {value}")
+        setattr(obj, self.storage, value)
+
+class Loan:
+    principal = PositiveAmount()              # one validator,
+    monthly_payment = PositiveAmount()        # used on two fields
+
+    def __init__(self, borrower, principal, monthly_payment):
+        self.borrower = borrower
+        self.principal = principal
+        self.monthly_payment = monthly_payment
+
+loan = Loan("Subhash Agrawani", 200000, 5000)
+print(loan.principal, loan.monthly_payment)   # 200000 5000
+
+try:
+    loan.monthly_payment = 0
+except ValueError as error:
+    print(error)                  # monthly_payment must be positive, got 0
+        </script>
+        <p><code>__set_name__</code> is called when the class is created and tells each descriptor which name it was given. That is how one <code>PositiveAmount</code> class can report "principal" for one field and "monthly_payment" for the other.</p>
+        <p class="note"><b>Concept:</b> You have used descriptors all along. <code>property</code>, methods, <code>classmethod</code> and <code>staticmethod</code> are all built on this same mechanism.</p>
+      </section>
+
+      <section class="chapter" id="getattr">
+        <h2>__getattr__ and __getattribute__</h2>
+        <p><code>__getattr__</code> is called only when the normal lookup fails, so it is a safe place for fallbacks, such as passing unknown attributes on to another object. <code>__getattribute__</code> is called for every attribute read, found or not. It is easy to break things with it and it is rarely needed.</p>
+        <script type="text/plain" data-lang="py" data-file="getattr.py">
+class Account:
+    def __init__(self, owner, balance):
+        self.owner = owner
+        self.balance = balance
+
+class Audited:
+    def __init__(self, target):
+        self.target = target
+
+    def __getattr__(self, name):          # only for names Audited lacks
+        print("  passing on:", name)
+        return getattr(self.target, name)
+
+acc = Audited(Account("Hemkesh Agrawani", 900))
+print(acc.target.owner)                   # found normally, no message
+print(acc.balance)                        # not on Audited: __getattr__ runs
+        </script>
+        <script type="text/plain" data-lang="text" data-file="Output">
+Hemkesh Agrawani
+  passing on: balance
+900
+        </script>
+        <p class="note"><b>Caution:</b> Inside <code>__getattribute__</code>, reading <code>self.anything</code> calls <code>__getattribute__</code> again, for ever. Use <code>super().__getattribute__(name)</code> there. The matching hook for writes is <code>__setattr__</code>.</p>
+      </section>
+
+      <section class="chapter" id="slots">
+        <h2>__slots__</h2>
+        <p>Every normal object carries its own dict to hold its attributes. That is flexible but costs memory. <code>__slots__</code> lists the only attribute names allowed, and Python then stores them in fixed places with no per-object dict.</p>
+        <script type="text/plain" data-lang="py" data-file="slots.py">
+class Account:
+    def __init__(self, owner, balance):
+        self.owner = owner
+        self.balance = balance
+
+class SlimAccount:
+    __slots__ = ("owner", "balance")
+
+    def __init__(self, owner, balance):
+        self.owner = owner
+        self.balance = balance
+
+normal = Account("Sandhya", 2000)
+slim = SlimAccount("Sandhya", 2000)
+
+print(hasattr(normal, "__dict__"))    # True
+print(hasattr(slim, "__dict__"))      # False
+
+normal.branch = "Raipur"              # fine: any new attribute is allowed
+try:
+    slim.branch = "Raipur"
+except AttributeError:
+    print("no slot called branch")    # no slot called branch
+        </script>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>What it saves</th><th>What it forbids</th></tr></thead>
+            <tbody>
+              <tr><td>Memory per object, which matters when you make hundreds of thousands of them</td><td>Adding attributes that are not in the list</td></tr>
+              <tr><td>A little time on attribute access</td><td>Tools that rely on <code>__dict__</code>, such as <code>vars(obj)</code></td></tr>
+              <tr><td>Typos such as <code>acc.balanse = 5</code> become errors</td><td>Easy multiple inheritance when several parents have slots</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="chapter part" id="part-classes">
+        <h2>Class machinery</h2>
+        <p class="kind">Part 4 of 6 &middot; tools that write, check and customise classes</p>
+        <p>These features work on classes themselves: generating the boring methods, fixing a set of allowed values, saying what a subclass must provide, and running code when a class is created.</p>
+        <ul>
+          <li><a href="#dataclass-fields">Dataclasses in depth</a>: <code>field</code>, <code>default_factory</code>, <code>__post_init__</code></li>
+          <li><a href="#dataclass-frozen">Frozen and ordered dataclasses</a></li>
+          <li><a href="#enum">Enum</a>: a fixed set of named values</li>
+          <li><a href="#abc">Abstract base classes</a>: methods a subclass must write</li>
+          <li><a href="#protocol">Protocol</a>: matching by shape, not by parent</li>
+          <li><a href="#init-subclass">__init_subclass__</a>: a hook for new subclasses</li>
+          <li><a href="#metaclass">Metaclasses</a>: the class of a class</li>
+          <li><a href="#class-decorators">Class decorators</a>: the lighter alternative</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="dataclass-fields">
+        <h2>Dataclasses in depth</h2>
+        <p><code>@dataclass</code> reads the annotated fields of a class and writes <code>__init__</code>, <code>__repr__</code> and <code>__eq__</code> for you. <code>field()</code> tunes one field. <code>default_factory</code> gives each object its own fresh list or dict, and <code>__post_init__</code> runs right after the generated <code>__init__</code>, which is the place for checks and computed values.</p>
+        <script type="text/plain" data-lang="py" data-file="dataclass_fields.py">
+from dataclasses import dataclass, field
+
+@dataclass
+class Account:
+    owner: str
+    balance: int = 0
+    history: list = field(default_factory=list)     # a new list per object
+    code: str = field(init=False, repr=False)       # not an __init__ argument
+
+    def __post_init__(self):
+        if self.balance < 0:
+            raise ValueError("balance cannot be negative")
+        self.code = self.owner[:3].upper()
+
+a = Account("Rishikesh Agrawani", 5000)
+b = Account("Sandhya Agrawani")
+a.history.append("opened with 5000")
+
+print(a)
+print(b.history, b.code)
+print(b == Account("Sandhya Agrawani"))
+        </script>
+        <script type="text/plain" data-lang="text" data-file="Output">
+Account(owner='Rishikesh Agrawani', balance=5000, history=['opened with 5000'])
+[] SAN
+True
+        </script>
+        <p class="note"><b>Caution:</b> Writing <code>history: list = []</code> is refused with a <code>ValueError</code>, because that one list would be shared by every account. Use <code>default_factory</code> for lists, dicts and sets.</p>
+      </section>
+
+      <section class="chapter" id="dataclass-frozen">
+        <h2>Frozen and ordered dataclasses</h2>
+        <p><code>frozen=True</code> makes objects read-only after creation, which also makes them hashable, so they can be set members and dict keys. <code>order=True</code> adds <code>&lt;</code> and friends, comparing the fields from first to last like a tuple.</p>
+        <script type="text/plain" data-lang="py" data-file="dataclass_frozen.py">
+from dataclasses import dataclass, replace, FrozenInstanceError
+
+@dataclass(frozen=True, order=True)
+class Money:
+    amount: int
+    currency: str = "INR"
+
+price = Money(500)
+try:
+    price.amount = 900
+except FrozenInstanceError:
+    print("cannot change a frozen object")
+
+bigger = replace(price, amount=900)       # a changed copy instead
+print(bigger)                             # Money(amount=900, currency='INR')
+print(Money(500) < Money(900))            # True
+print(sorted([Money(900), Money(20), Money(500)])[0])   # Money(amount=20, currency='INR')
+print(len({Money(500), Money(500)}))      # 1
+        </script>
+      </section>
+
+      <section class="chapter" id="enum">
+        <h2>Enum</h2>
+        <p>An <code>Enum</code> is a fixed set of named values. Use it instead of loose strings such as <code>"savings"</code>, so that a typo becomes an error and not a silent bug.</p>
+        <script type="text/plain" data-lang="py" data-file="enum_kinds.py">
+from enum import Enum
+
+class AccountType(Enum):
+    SAVINGS = "savings"
+    CURRENT = "current"
+    FIXED = "fixed deposit"
+
+kind = AccountType.SAVINGS
+print(kind)                               # AccountType.SAVINGS
+print(kind.name, "/", kind.value)         # SAVINGS / savings
+print(AccountType("current"))             # AccountType.CURRENT
+print(kind is AccountType.SAVINGS)        # True
+print([t.name for t in AccountType])      # ['SAVINGS', 'CURRENT', 'FIXED']
+
+try:
+    AccountType("saving")                 # a typo
+except ValueError as error:
+    print(error)                          # 'saving' is not a valid AccountType
+        </script>
+        <p class="note"><b>Tip:</b> Compare members with <code>is</code> or <code>==</code>. When the values do not matter, write <code>SAVINGS = auto()</code> (from <code>enum</code>) and Python numbers them for you.</p>
+      </section>
+
+      <section class="chapter" id="abc">
+        <h2>Abstract base classes</h2>
+        <p>An <b>abstract base class</b> (ABC) is a parent that cannot be used directly. It marks some methods with <code>@abstractmethod</code>, and Python refuses to create an object of any subclass that has not written them all.</p>
+        <script type="text/plain" data-lang="py" data-file="abc_account.py">
+from abc import ABC, abstractmethod
+
+class Account(ABC):
+    def __init__(self, owner, balance):
+        self.owner = owner
+        self.balance = balance
+
+    @abstractmethod
+    def monthly_fee(self):
+        """Every kind of account must say what it charges."""
+
+    def charge_fee(self):                 # shared code that uses it
+        self.balance -= self.monthly_fee()
+
+class Savings(Account):
+    def monthly_fee(self):
+        return 0
+
+class Current(Account):
+    def monthly_fee(self):
+        return 50
+
+acc = Current("Subhash Agrawani", 7000)
+acc.charge_fee()
+print(acc.balance)                        # 6950
+
+try:
+    Account("Nobody", 0)
+except TypeError:
+    print("Account is abstract")          # Account is abstract
+        </script>
+      </section>
+
+      <section class="chapter" id="protocol">
+        <h2>Protocol: matching by shape</h2>
+        <p>A <code>Protocol</code> describes which methods an object must have, without asking it to inherit from anything. Any class with the right methods fits. This is called <b>structural typing</b>, the checked form of duck typing ("if it has a <code>balance()</code> method, it will do").</p>
+        <script type="text/plain" data-lang="py" data-file="protocol.py">
+from typing import Protocol, runtime_checkable
+
+@runtime_checkable                        # allows isinstance() checks
+class HasBalance(Protocol):
+    def balance(self) -> int: ...
+
+class Account:                            # no parent class
+    def balance(self) -> int:
+        return 5000
+
+class Wallet:                             # unrelated to Account
+    def balance(self) -> int:
+        return 120
+
+def total(items: list[HasBalance]) -> int:
+    return sum(item.balance() for item in items)
+
+print(total([Account(), Wallet()]))       # 5120
+print(isinstance(Wallet(), HasBalance))   # True
+print(isinstance("cash", HasBalance))     # False
+        </script>
+        <div class="scroll">
+          <table>
+            <thead><tr><th></th><th>ABC</th><th>Protocol</th></tr></thead>
+            <tbody>
+              <tr><td><b>A class fits when</b></td><td>It inherits from the ABC</td><td>It has the listed methods</td></tr>
+              <tr><td><b>Checked</b></td><td>When an object is created</td><td>Mostly by a type checker, before the program runs</td></tr>
+              <tr><td><b>Can share code</b></td><td>Yes, normal methods in the parent</td><td>Not its purpose</td></tr>
+              <tr><td><b>Use it for</b></td><td>Your own family of classes</td><td>Accepting classes you do not own or cannot change</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="chapter" id="init-subclass">
+        <h2>__init_subclass__</h2>
+        <p>A parent class can define <code>__init_subclass__</code>. Python calls it every time a new subclass is defined, and passes any keyword arguments written after the parent's name. It covers the most common reason people once needed a metaclass: keeping a register of subclasses.</p>
+        <script type="text/plain" data-lang="py" data-file="init_subclass.py">
+class Account:
+    kinds = {}
+
+    def __init_subclass__(cls, code, **kwargs):
+        super().__init_subclass__(**kwargs)
+        Account.kinds[code] = cls         # runs once per subclass
+
+class Savings(Account, code="SAV"):
+    pass
+
+class Current(Account, code="CUR"):
+    pass
+
+print(list(Account.kinds))                # ['SAV', 'CUR']
+acc = Account.kinds["CUR"]()              # build an object from a code
+print(type(acc).__name__)                 # Current
+        </script>
+      </section>
+
+      <section class="chapter" id="metaclass">
+        <h2>Metaclasses</h2>
+        <p>Classes are objects too, and every object has a class. The class of a class is called its <b>metaclass</b>, and for normal classes it is <code>type</code>. A metaclass is a subclass of <code>type</code>, and it can change how classes themselves are built.</p>
+        <script type="text/plain" data-lang="py" data-file="metaclass.py">
+class Account:
+    pass
+
+print(type(Account()).__name__)           # Account
+print(type(Account).__name__)             # type
+print(type(int).__name__)                 # type
+
+class Registered(type):                   # a metaclass
+    names = []
+
+    def __new__(mcls, name, bases, namespace):
+        cls = super().__new__(mcls, name, bases, namespace)
+        if bases:                         # skip the base class itself
+            mcls.names.append(name)
+        return cls
+
+class Report(metaclass=Registered):
+    pass
+
+class Statement(Report):
+    pass
+
+class TaxReport(Report):
+    pass
+
+print(Registered.names)                   # ['Statement', 'TaxReport']
+print(type(Statement).__name__)           # Registered
+        </script>
+        <p class="note"><b>You rarely need this:</b> Metaclasses are used inside frameworks such as <code>Enum</code>, <code>ABC</code> and database model libraries. In your own code, reach for a class decorator or <code>__init_subclass__</code> first. Know what a metaclass is so that you can read such code, not so that you write one.</p>
+      </section>
+
+      <section class="chapter" id="class-decorators">
+        <h2>Class decorators</h2>
+        <p>A decorator can wrap a class just as it wraps a function: it receives the class, may change or record it, and returns it. <code>@dataclass</code> and <code>@total_ordering</code> are class decorators. The <a href="python-decorators.html">decorators page</a> explains the mechanism.</p>
+        <script type="text/plain" data-lang="py" data-file="class_decorator.py">
+reports = {}
+
+def register(cls):
+    reports[cls.__name__.lower()] = cls   # record the class
+    cls.describe = lambda self: f"{type(self).__name__} report"   # add a method
+    return cls                            # hand the same class back
+
+@register
+class Statement:
+    pass
+
+@register
+class Summary:
+    pass
+
+print(list(reports))                      # ['statement', 'summary']
+print(Summary().describe())               # Summary report
+        </script>
+      </section>
+
+      <section class="chapter part" id="part-tools">
+        <h2>Functions and data tools</h2>
+        <p class="kind">Part 5 of 6 &middot; small standard-library helpers used every day</p>
+        <p>These save a few lines each, and experienced developers reach for them without thinking.</p>
+        <ul>
+          <li><a href="#functools">functools</a>: <code>partial</code>, <code>reduce</code>, <code>singledispatch</code></li>
+          <li><a href="#collections">collections</a>: <code>Counter</code>, <code>defaultdict</code>, <code>deque</code>, <code>namedtuple</code>, <code>ChainMap</code></li>
+          <li><a href="#unpacking">Unpacking tricks</a>: stars, merging dicts and the walrus operator</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="functools">
+        <h2>functools: partial, reduce, singledispatch</h2>
+        <p><code>partial</code> makes a new function with some arguments already filled in. <code>reduce</code> folds a list into one value by applying a two-argument function again and again. <code>singledispatch</code> lets one function name have a different body for each type of its first argument.</p>
+        <script type="text/plain" data-lang="py" data-file="functools_tools.py">
+from functools import partial, reduce, singledispatch
+
+def add_interest(balance, percent):
+    return balance + balance * percent // 100
+
+savings_interest = partial(add_interest, percent=4)
+print(savings_interest(5000))                      # 5200
+
+balances = [5000, 12000, 800]
+print(reduce(lambda total, b: total + b, balances))   # 17800
+
+@singledispatch
+def describe(value):                      # the fallback
+    return f"unknown: {value}"
+
+@describe.register
+def _(value: int):
+    return f"amount of {value} rupees"
+
+@describe.register
+def _(value: list):
+    return f"{len(value)} amounts"
+
+print(describe(500))                      # amount of 500 rupees
+print(describe(balances))                 # 3 amounts
+print(describe(None))                     # unknown: None
+        </script>
+        <p class="note"><b>Tip:</b> For plain totals, <code>sum()</code>, <code>max()</code> and <code>min()</code> are clearer than <code>reduce</code>. Keep <code>reduce</code> for combining steps that have no built-in.</p>
+      </section>
+
+      <section class="chapter" id="collections">
+        <h2>collections</h2>
+        <p>The <code>collections</code> module holds special-purpose containers. <code>Counter</code> counts things, <code>defaultdict</code> creates missing values by itself, <code>deque</code> is a list that is fast at both ends, <code>namedtuple</code> is a tuple with field names, and <code>ChainMap</code> looks through several dicts in order.</p>
+        <script type="text/plain" data-lang="py" data-file="collections_tools.py">
+from collections import Counter, defaultdict, deque, namedtuple, ChainMap
+
+moves = [("Rishikesh", "deposit", 500), ("Sandhya", "deposit", 900),
+         ("Rishikesh", "withdraw", 200), ("Hemkesh", "deposit", 50)]
+
+kinds = Counter(kind for _, kind, _ in moves)
+print(kinds["deposit"], kinds.most_common(1))   # 3 [('deposit', 3)]
+
+by_owner = defaultdict(list)              # a missing key starts as []
+for owner, _, amount in moves:
+    by_owner[owner].append(amount)
+print(dict(by_owner))     # {'Rishikesh': [500, 200], 'Sandhya': [900], 'Hemkesh': [50]}
+
+recent = deque(maxlen=3)                  # keeps only the last 3
+for owner, _, _ in moves:
+    recent.append(owner)
+print(list(recent))                       # ['Sandhya', 'Rishikesh', 'Hemkesh']
+
+Account = namedtuple("Account", "owner balance")
+acc = Account("Malinikesh", 9000)
+print(acc.owner, acc[1])                  # Malinikesh 9000
+
+settings = ChainMap({"limit": 50000}, {"limit": 10000, "currency": "INR"})
+print(settings["limit"], settings["currency"])   # 50000 INR
+        </script>
+      </section>
+
+      <section class="chapter" id="unpacking">
+        <h2>Unpacking tricks</h2>
+        <p>A star collects "the rest" when unpacking, and spreads a collection out when building one or calling a function. Two stars do the same for dicts. The <b>walrus operator</b> <code>:=</code> assigns a value and uses it in the same expression.</p>
+        <script type="text/plain" data-lang="py" data-file="unpacking.py">
+family = ["Rishikesh", "Sandhya", "Subhash", "Malinikesh", "Hemkesh"]
+
+first, *middle, last = family
+print(first, len(middle), last)           # Rishikesh 3 Hemkesh
+
+parents, children = family[1:3], [family[0], *family[3:]]
+print([*parents, *children][:2])          # ['Sandhya', 'Subhash']
+
+def transfer(sender, receiver, amount):
+    return f"{sender} -> {receiver}: {amount}"
+
+print(transfer(*["Subhash", "Hemkesh"], amount=500))   # Subhash -> Hemkesh: 500
+print(transfer(**{"sender": "A", "receiver": "B", "amount": 1}))   # A -> B: 1
+
+defaults = {"currency": "INR", "limit": 10000}
+custom = {"limit": 50000}
+print({**defaults, **custom})             # {'currency': 'INR', 'limit': 50000}
+print(defaults | custom)                  # {'currency': 'INR', 'limit': 50000}
+
+if (count := len(family)) > 3:            # assign and test in one line
+    print(count, "accounts to check")     # 5 accounts to check
+        </script>
+        <p class="note"><b>Version:</b> The walrus operator needs Python 3.8 and the <code>|</code> operator for dicts needs 3.9. In both merges the right-hand dict wins when a key appears twice.</p>
+      </section>
+
+      <section class="chapter part" id="part-typing">
+        <h2>Typing and newer syntax</h2>
+        <p class="kind">Part 6 of 6 &middot; saying what types you expect, and syntax from Python 3.10</p>
+        <p><b>Type hints</b> are notes in the code that say what kind of value a variable, argument or result should be. The last chapters show two pieces of syntax that arrived after Python 3.9, then a table of everything on this page.</p>
+        <ul>
+          <li><a href="#type-hints">Type hints</a>: variables, functions, <code>Optional</code>, <code>Union</code></li>
+          <li><a href="#typing-more">TypedDict, Callable, and what hints do not do</a></li>
+          <li><a href="#match">match</a>: structural pattern matching (3.10+)</li>
+          <li><a href="#union-pipe">X | Y unions</a> (3.10+)</li>
+          <li><a href="#reference">Quick reference</a></li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="type-hints">
+        <h2>Type hints</h2>
+        <p>A hint follows a colon after a name, and <code>-&gt;</code> gives the type a function returns. Containers say what they hold: <code>list[str]</code> is a list of strings. <code>Optional[X]</code> means "an X or <code>None</code>", and <code>Union[X, Y]</code> means "an X or a Y".</p>
+        <script type="text/plain" data-lang="py" data-file="type_hints.py">
+from typing import Optional, Union
+
+owners: list[str] = ["Rishikesh", "Sandhya"]
+balances: dict[str, int] = {"Rishikesh": 5000, "Sandhya": 2000}
+
+def find_balance(owner: str) -> Optional[int]:
+    return balances.get(owner)            # an int, or None if unknown
+
+def to_rupees(amount: Union[int, str]) -> int:
+    return int(amount)
+
+def richest(accounts: dict[str, int]) -> tuple[str, int]:
+    owner = max(accounts, key=accounts.get)
+    return owner, accounts[owner]
+
+print(find_balance("Sandhya"))            # 2000
+print(find_balance("Hemkesh"))            # None
+print(to_rupees("750") + to_rupees(250))  # 1000
+print(richest(balances))                  # ('Rishikesh', 5000)
+        </script>
+        <p class="note"><b>Version:</b> <code>list[str]</code> and <code>dict[str, int]</code> work from Python 3.9. Older code imports <code>List</code> and <code>Dict</code> from <code>typing</code> for the same thing.</p>
+      </section>
+
+      <section class="chapter" id="typing-more">
+        <h2>TypedDict, Callable, and what hints do not do</h2>
+        <p><code>TypedDict</code> describes a dict with known keys and a type for each. <code>Callable[[int], int]</code> describes a function that takes one <code>int</code> and returns an <code>int</code>. Most important: Python does not check hints when the program runs. The last line below passes strings where numbers are expected and nothing stops it.</p>
+        <script type="text/plain" data-lang="py" data-file="typing_more.py">
+from typing import TypedDict, Callable
+
+class AccountRow(TypedDict):
+    owner: str
+    balance: int
+
+row: AccountRow = {"owner": "Subhash Agrawani", "balance": 7000}
+print(type(row).__name__, row["balance"])     # dict 7000
+
+def apply(balance: int, rule: Callable[[int], int]) -> int:
+    return rule(balance)
+
+print(apply(1000, lambda b: b * 2))           # 2000
+
+def deposit(balance: int, amount: int) -> int:
+    return balance + amount
+
+print(deposit("500", "100"))                  # 500100
+        </script>
+        <p class="note"><b>Concept:</b> Hints are read by people, by editors, and by separate tools called type checkers, such as <code>mypy</code> and <code>pyright</code>. A type checker reads your code without running it and would report the last call above as an error.</p>
+      </section>
+
+      <section class="chapter" id="match">
+        <h2>match: structural pattern matching</h2>
+        <p>The <code>match</code> statement compares a value against several shapes and unpacks the parts of the one that fits, in a single step. It needs Python 3.10 or newer, so this block is not run on this page.</p>
+        <script type="text/plain" data-lang="py" data-file="match_command.py" data-norun>
+def handle(command):
+    match command:
+        case ["deposit", owner, amount]:              # a list of 3 items
+            return f"add {amount} to {owner}"
+        case ["transfer", sender, receiver, amount]:  # a list of 4 items
+            return f"move {amount} from {sender} to {receiver}"
+        case {"action": "close", "owner": owner}:     # a dict with these keys
+            return f"close the account of {owner}"
+        case _:                                       # anything else
+            return "unknown command"
+
+print(handle(["deposit", "Hemkesh", 50]))       # add 50 to Hemkesh
+print(handle(["transfer", "Subhash", "Hemkesh", 500]))
+# move 500 from Subhash to Hemkesh
+print(handle({"action": "close", "owner": "Sandhya"}))
+# close the account of Sandhya
+print(handle("hello"))                          # unknown command
+        </script>
+      </section>
+
+      <section class="chapter" id="union-pipe">
+        <h2>X | Y unions</h2>
+        <p>From Python 3.10, <code>X | Y</code> in a type hint means the same as <code>Union[X, Y]</code>, and <code>X | None</code> the same as <code>Optional[X]</code>. It also works in <code>isinstance</code>. This block needs 3.10 or newer, so it is not run on this page.</p>
+        <script type="text/plain" data-lang="py" data-file="union_pipe.py" data-norun>
+balances: dict[str, int] = {"Sandhya": 2000}
+
+def find_balance(owner: str) -> int | None:       # was Optional[int]
+    return balances.get(owner)
+
+def to_rupees(amount: int | str) -> int:          # was Union[int, str]
+    return int(amount)
+
+print(find_balance("Hemkesh"))            # None
+print(to_rupees("750"))                   # 750
+print(isinstance(750, int | str))         # True
+        </script>
+      </section>
+
+      <section class="chapter" id="reference">
+        <h2>Quick reference</h2>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Feature</th><th>What it is for</th></tr></thead>
+            <tbody>
+              <tr><td><code>with</code>, <code>__enter__</code>, <code>__exit__</code></td><td>Set-up and guaranteed clean-up around a block</td></tr>
+              <tr><td><code>@contextmanager</code></td><td>A context manager written as one generator function</td></tr>
+              <tr><td><code>suppress</code>, <code>closing</code>, <code>ExitStack</code></td><td>Ignore named errors, close an object, manage many contexts</td></tr>
+              <tr><td><code>__repr__</code>, <code>__str__</code></td><td>Text for developers and text for users</td></tr>
+              <tr><td><code>__eq__</code>, <code>__hash__</code></td><td>Equality by value; use in sets and as dict keys</td></tr>
+              <tr><td><code>__lt__</code> with <code>@total_ordering</code></td><td>Comparison, <code>sorted</code>, <code>min</code>, <code>max</code></td></tr>
+              <tr><td><code>__len__</code>, <code>__contains__</code>, <code>__getitem__</code>, <code>__iter__</code></td><td><code>len(x)</code>, <code>in</code>, <code>x[key]</code>, <code>for</code></td></tr>
+              <tr><td><code>__add__</code>, <code>__radd__</code>, <code>__mul__</code></td><td>Arithmetic operators and <code>sum()</code></td></tr>
+              <tr><td><code>__bool__</code>, <code>__call__</code></td><td>Truth value; calling an object like a function</td></tr>
+              <tr><td><code>@property</code></td><td>Run code when one attribute is read or set</td></tr>
+              <tr><td>Descriptor (<code>__get__</code>, <code>__set__</code>, <code>__set_name__</code>)</td><td>The same attribute logic reused on many fields</td></tr>
+              <tr><td><code>__getattr__</code></td><td>Fallback for attributes that are not found</td></tr>
+              <tr><td><code>__slots__</code></td><td>Fixed attributes, less memory per object</td></tr>
+              <tr><td><code>@dataclass</code>, <code>field</code>, <code>__post_init__</code></td><td>Data-holding classes without hand-written methods</td></tr>
+              <tr><td><code>Enum</code></td><td>A fixed set of named values</td></tr>
+              <tr><td><code>ABC</code>, <code>@abstractmethod</code></td><td>Force subclasses to write certain methods</td></tr>
+              <tr><td><code>Protocol</code></td><td>Accept any object that has the right methods</td></tr>
+              <tr><td><code>__init_subclass__</code></td><td>Run code whenever a subclass is defined</td></tr>
+              <tr><td>Metaclass</td><td>Change how classes are built (rarely needed)</td></tr>
+              <tr><td>Class decorator</td><td>Change or record a class after it is built</td></tr>
+              <tr><td><code>partial</code>, <code>reduce</code>, <code>singledispatch</code></td><td>Pre-fill arguments, fold a list, choose a body by type</td></tr>
+              <tr><td><code>Counter</code>, <code>defaultdict</code>, <code>deque</code>, <code>namedtuple</code>, <code>ChainMap</code></td><td>Count, group, keep the last N, name tuple fields, layer dicts</td></tr>
+              <tr><td><code>*rest</code>, <code>**dict</code>, <code>:=</code></td><td>Unpack, spread and merge, assign inside an expression</td></tr>
+              <tr><td>Type hints, <code>Optional</code>, <code>Union</code>, <code>TypedDict</code>, <code>Callable</code></td><td>State expected types for readers and type checkers</td></tr>
+              <tr><td><code>match</code> (3.10+)</td><td>Branch on the shape of data and unpack it</td></tr>
+              <tr><td><code>X | Y</code> (3.10+)</td><td>Shorter way to write a union type</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>That completes the advanced path. The next path is about everything a working project needs around the language, starting with <a href="python-project-setup.html">Python Project Setup</a>.</p>
+      </section>
+
+    </div>
+  </main>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script src="../../assets/tutorial.js"></script>
+</body>
+</html>

@@ -1,0 +1,877 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Python Iterators and Generators</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@500;700&display=swap">
+<link rel="stylesheet" href="../../assets/tutorial.css">
+</head>
+<body data-track="python">
+
+<header class="topbar">
+  <div class="topbar-in">
+    <a class="brand" href="../../../index.html">Learnings</a>
+    <nav class="tracks" aria-label="Python paths">
+      <a href="../../../index.html#python-basics">Python Basics</a>
+      <a href="../../../index.html#python-advanced" aria-current="true">Python Advanced</a>
+      <a href="../../../index.html#python-practice">Python in Practice</a>
+      <a href="../../../index.html#python-design">Python Design</a>
+      <a href="../../../archive.html">Archive</a>
+    </nav>
+    <div class="tools">
+      <button class="btn" id="menu" type="button" aria-expanded="false">Chapters</button>
+      <input id="q" type="search" placeholder="Search chapters" aria-label="Search chapters">
+      <button class="btn" id="theme" type="button">Dark mode</button>
+    </div>
+  </div>
+</header>
+
+<div class="shell">
+  <aside class="side">
+    <p class="side-label">Iterators and Generators</p>
+    <nav id="toc" aria-label="Chapters"></nav>
+  </aside>
+
+  <main>
+    <div class="page-head">
+      <p class="eyebrow">Python advanced, part 2 of 5</p>
+      <h1>Python Iterators and Generators</h1>
+      <p class="lead">Every <code>for</code> loop you have written used an iterator without showing it. This page opens the loop up to see the two functions behind it, then writes iterators by hand, and then shows generators, the short way to write the same thing. The examples use a small family bank: accounts, transactions and statements.</p>
+    </div>
+
+    <div class="chapters">
+
+      <section class="chapter part" id="iterators">
+        <h2>Iterators</h2>
+        <p class="kind">Part 1 of 2 &middot; what a for loop really does</p>
+        <p>An iterator is an object that hands out items one at a time and remembers where it is. Lists, strings, dictionaries and files can all be looped over because each of them can supply an iterator when asked.</p>
+        <ul>
+          <li><a href="#for-loop-by-hand">A for loop by hand</a>: <code>iter()</code>, <code>next()</code> and <code>StopIteration</code></li>
+          <li><a href="#iterable-vs-iterator">Iterable and iterator</a>: two words, two different things</li>
+          <li><a href="#custom-iterator">Writing an iterator class</a>: a countdown</li>
+          <li><a href="#passbook">A passbook iterator</a>: walking through an account's transactions</li>
+          <li><a href="#iterable-class">Making a class iterable</a>: a fresh iterator for every loop</li>
+          <li><a href="#getitem">The __getitem__ fallback</a>: the old way still works</li>
+          <li><a href="#lazy-builtins">Lazy built-in tools</a>: <code>enumerate</code>, <code>zip</code>, <code>map</code>, <code>filter</code>, <code>reversed</code></li>
+          <li><a href="#iter-sentinel">iter with a stop value</a>: call a function until it says stop</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="for-loop-by-hand">
+        <h2>A for loop by hand</h2>
+        <p>A <code>for</code> loop does two things. First it calls <code>iter()</code> on the collection to get an iterator. Then it calls <code>next()</code> on that iterator again and again. Each call returns the next item. When nothing is left, <code>next()</code> raises the error <code>StopIteration</code>, and the loop ends quietly.</p>
+        <script type="text/plain" data-lang="py" data-file="by_hand.py">
+balances = [1000, 2500, 400]
+
+it = iter(balances)          # ask the list for an iterator
+print(next(it))              # 1000
+print(next(it))              # 2500
+print(next(it))              # 400
+try:
+    next(it)
+except StopIteration:
+    print("no more items")   # no more items
+        </script>
+        <p>So this <code>for</code> loop and this <code>while</code> loop do the same work. The first is what you write. The second is what Python does.</p>
+        <script type="text/plain" data-lang="py" data-file="for_as_while.py">
+family = ["Sandhya", "Subhash", "Rishikesh"]
+
+for name in family:
+    print(name)
+
+it = iter(family)
+while True:
+    try:
+        name = next(it)
+    except StopIteration:
+        break                # the for loop does this for you
+    print(name)
+        </script>
+        <script type="text/plain" data-lang="text" data-file="Output">
+Sandhya
+Subhash
+Rishikesh
+Sandhya
+Subhash
+Rishikesh
+        </script>
+      </section>
+
+      <section class="chapter" id="iterable-vs-iterator">
+        <h2>Iterable and iterator</h2>
+        <p>An <b>iterable</b> is anything you can loop over. It has an <code>__iter__</code> method, which <code>iter()</code> calls. An <b>iterator</b> is the object that does the stepping. It has a <code>__next__</code> method, which <code>next()</code> calls. A list is an iterable, but it is not an iterator.</p>
+        <script type="text/plain" data-lang="py" data-file="two_words.py">
+family = ["Sandhya", "Subhash"]
+
+# a list is iterable, but it is not an iterator
+print(hasattr(family, "__iter__"))     # True
+print(hasattr(family, "__next__"))     # False
+
+it = iter(family)
+print(type(it).__name__)               # list_iterator
+print(hasattr(it, "__next__"))         # True
+# asking an iterator for an iterator gives back the same object
+print(iter(it) is it)                  # True
+        </script>
+        <p>The last line matters. An iterator is also iterable, and asking it for an iterator gives back the same object. That is why you can use an iterator in a <code>for</code> loop.</p>
+        <h3>An iterator is used up once</h3>
+        <p>An iterator only moves forward. After it reaches the end it stays empty. The list is not touched, so you can always ask it for a new iterator.</p>
+        <script type="text/plain" data-lang="py" data-file="used_up.py">
+family = ["Sandhya", "Subhash", "Rishikesh"]
+
+it = iter(family)
+print(list(it))          # ['Sandhya', 'Subhash', 'Rishikesh']
+# the iterator is finished, so the second pass is empty
+print(list(it))          # []
+
+# list() asks the list itself for a new iterator each time
+print(list(family))      # ['Sandhya', 'Subhash', 'Rishikesh']
+print(list(family))      # ['Sandhya', 'Subhash', 'Rishikesh']
+
+first = iter(family)
+second = iter(family)    # two iterators, each with its own position
+next(first)
+next(first)
+print(next(first), next(second))   # Rishikesh Sandhya
+        </script>
+        <p class="note"><b>Picture:</b> the list is a passbook. An iterator is a finger moving down the page. Many fingers can point into the same passbook, and each one moves only forward.</p>
+      </section>
+
+      <section class="chapter" id="custom-iterator">
+        <h2>Writing an iterator class</h2>
+        <p>Any class with these two methods is an iterator. <code>__iter__</code> returns <code>self</code>. <code>__next__</code> returns the next item, or raises <code>StopIteration</code> when it has none.</p>
+        <script type="text/plain" data-lang="py" data-file="countdown.py">
+class Countdown:
+    def __init__(self, start):
+        self.current = start             # the position is kept on the object
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        if self.current <= 0:
+            raise StopIteration          # tell the loop to stop
+        value = self.current
+        self.current -= 1
+        return value
+
+for number in Countdown(3):
+    print(number)
+# 3
+# 2
+# 1
+
+print(list(Countdown(5)))                # [5, 4, 3, 2, 1]
+print(sum(Countdown(4)))                 # 10
+        </script>
+        <p>Nothing here stores the numbers 5, 4, 3, 2, 1. Each one is worked out at the moment it is asked for. And because the class follows the rules, <code>for</code>, <code>list()</code> and <code>sum()</code> all accept it.</p>
+        <p class="note"><b>Protocol:</b> these two methods together are called the iterator protocol. A protocol is an agreement about method names. Python does not care what the class is, only that the methods are there.</p>
+      </section>
+
+      <section class="chapter" id="passbook">
+        <h2>A passbook iterator</h2>
+        <p>The same shape with bank data. The iterator walks through a list of transactions and returns each one together with the balance after it. Its state is a position and a running balance.</p>
+        <script type="text/plain" data-lang="py" data-file="passbook.py">
+class Passbook:
+    def __init__(self, opening, transactions):
+        self.balance = opening
+        self.transactions = transactions
+        self.position = 0
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        if self.position >= len(self.transactions):
+            raise StopIteration
+        note, amount = self.transactions[self.position]
+        self.position += 1
+        self.balance += amount
+        return note, amount, self.balance
+
+transactions = [("salary", 50000), ("rent", -12000), ("groceries", -3500)]
+passbook = Passbook(1000, transactions)
+
+for line in passbook:
+    print(line)
+print("second loop:", list(passbook))
+        </script>
+        <script type="text/plain" data-lang="text" data-file="Output">
+('salary', 50000, 51000)
+('rent', -12000, 39000)
+('groceries', -3500, 35500)
+second loop: []
+        </script>
+        <p>The second loop gets nothing, because the iterator is used up. For a countdown that is fine. For an account it is a nuisance: you want to print the statement as often as you like. The next chapter fixes that.</p>
+      </section>
+
+      <section class="chapter" id="iterable-class">
+        <h2>Making a class iterable</h2>
+        <p>Split the two roles. The <code>Account</code> holds the data and is the iterable. Its <code>__iter__</code> builds and returns a <b>new</b> iterator every time. Each loop then starts from the top, just as it does with a list.</p>
+        <script type="text/plain" data-lang="py" data-file="account_iterable.py">
+class Passbook:                              # the iterator: holds a position
+    def __init__(self, opening, transactions):
+        self.balance = opening
+        self.remaining = iter(transactions)
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        note, amount = next(self.remaining)  # StopIteration passes straight through
+        self.balance += amount
+        return note, self.balance
+
+class Account:                               # the iterable: holds the data
+    def __init__(self, owner, opening):
+        self.owner = owner
+        self.opening = opening
+        self.transactions = []
+
+    def add(self, note, amount):
+        self.transactions.append((note, amount))
+
+    def __iter__(self):
+        return Passbook(self.opening, self.transactions)   # fresh every time
+
+account = Account("Rishikesh", 1000)
+account.add("salary", 50000)
+account.add("rent", -12000)
+
+print(list(account))     # [('salary', 51000), ('rent', 39000)]
+print(list(account))     # [('salary', 51000), ('rent', 39000)]
+        </script>
+        <p class="note"><b>Rule of thumb:</b> a container should be an iterable that returns a fresh iterator. Only the short-lived stepping object should return <code>self</code> from <code>__iter__</code>.</p>
+      </section>
+
+      <section class="chapter" id="getitem">
+        <h2>The __getitem__ fallback</h2>
+        <p>There is an older, second way. If a class has no <code>__iter__</code> but has <code>__getitem__</code>, Python tries index 0, 1, 2 and so on until it gets an <code>IndexError</code>.</p>
+        <script type="text/plain" data-lang="py" data-file="getitem.py">
+class Branch:
+    def __init__(self, customers):
+        self.customers = customers
+
+    def __getitem__(self, index):
+        return self.customers[index]     # raises IndexError past the end
+
+branch = Branch(["Malinikesh", "Hemkesh"])
+print(branch[0])                 # Malinikesh
+for name in branch:              # works without __iter__
+    print(name)
+# Malinikesh
+# Hemkesh
+        </script>
+        <p class="note"><b>Advice:</b> know that this exists, because you will see it in old code. In new code write <code>__iter__</code>. It says clearly that the class is meant to be looped over.</p>
+      </section>
+
+      <section class="chapter" id="lazy-builtins">
+        <h2>Lazy built-in tools</h2>
+        <p>Several built-in functions you already use return iterators, not lists. They are <b>lazy</b>: they do no work until something asks for the next item. Wrap them in <code>list()</code> to see everything at once.</p>
+        <script type="text/plain" data-lang="py" data-file="zip_lazy.py">
+names = ["Rishikesh", "Sandhya", "Subhash"]
+balances = [3500, 9000, 12000]
+
+pairs = zip(names, balances)     # nothing is paired yet
+print(type(pairs).__name__)      # zip
+print(next(pairs))               # ('Rishikesh', 3500)
+print(list(pairs))               # [('Sandhya', 9000), ('Subhash', 12000)]
+# used up, like any iterator
+print(list(pairs))               # []
+        </script>
+        <script type="text/plain" data-lang="py" data-file="lazy_tools.py">
+names = ["Rishikesh", "Sandhya", "Subhash"]
+balances = [3500, 9000, 12000]
+
+print(list(enumerate(names, start=1)))
+# [(1, 'Rishikesh'), (2, 'Sandhya'), (3, 'Subhash')]
+
+with_interest = map(lambda b: b + b * 5 // 100, balances)
+print(list(with_interest))                           # [3675, 9450, 12600]
+
+large = filter(lambda b: b >= 5000, balances)
+print(list(large))                                   # [9000, 12000]
+
+print(list(reversed(names)))                         # ['Subhash', 'Sandhya', 'Rishikesh']
+        </script>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Tool</th><th>Each <code>next()</code> gives</th></tr></thead>
+            <tbody>
+              <tr><td><code>enumerate(items)</code></td><td>a pair: a running number and the item</td></tr>
+              <tr><td><code>zip(a, b)</code></td><td>a tuple with one item from each. Stops at the shortest</td></tr>
+              <tr><td><code>map(func, items)</code></td><td><code>func(item)</code> for the next item</td></tr>
+              <tr><td><code>filter(func, items)</code></td><td>the next item for which <code>func(item)</code> is true</td></tr>
+              <tr><td><code>reversed(sequence)</code></td><td>the items from last to first, without copying the sequence</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><b>Also lazy:</b> <code>range()</code> works numbers out on demand too, though it is an iterable and not an iterator, so you can loop over the same <code>range</code> many times. A file object is an iterator over its lines.</p>
+      </section>
+
+      <section class="chapter" id="iter-sentinel">
+        <h2>iter with a stop value</h2>
+        <p><code>iter()</code> has a second form with two arguments: a function and a stop value, called a sentinel. The iterator calls the function again and again, and ends when the function returns the sentinel.</p>
+        <script type="text/plain" data-lang="py" data-file="sentinel.py">
+queue = [0, 300, 200, 500]       # pop() takes from the end; 0 marks "counter closed"
+
+for amount in iter(queue.pop, 0):
+    print("deposit", amount)
+# deposit 500
+# deposit 200
+# deposit 300
+        </script>
+        <p class="note"><b>Where it helps:</b> reading a file in fixed-size pieces until an empty piece comes back, or reading messages until a "stop" message arrives.</p>
+      </section>
+
+      <section class="chapter part" id="generators">
+        <h2>Generators</h2>
+        <p class="kind">Part 2 of 2 &middot; iterators written the short way</p>
+        <p>An iterator class needs three methods and has to keep its own position. A generator is a function that Python turns into an iterator for you. You write an ordinary loop and put <code>yield</code> where each value should come out.</p>
+        <ul>
+          <li><a href="#generator-function">Generator functions</a>: <code>yield</code> instead of a class</li>
+          <li><a href="#pause-resume">Pause and resume</a>: how the function runs in pieces</li>
+          <li><a href="#lazy-memory">Lazy means small</a>: memory used by a list and by a generator</li>
+          <li><a href="#infinite">Infinite generators</a>: endless streams and <code>islice</code></li>
+          <li><a href="#generator-expressions">Generator expressions</a>: a comprehension in round brackets</li>
+          <li><a href="#pipelines">Generator pipelines</a>: small steps joined together</li>
+          <li><a href="#yield-from">yield from</a>: hand over to another generator</li>
+          <li><a href="#send">Sending values in</a>: <code>send()</code></li>
+          <li><a href="#return-close">Return value and close</a>: how a generator ends</li>
+          <li><a href="#itertools">A tour of itertools</a>: ready-made iterator tools</li>
+          <li><a href="#mistakes">Common mistakes</a> and <a href="#which-one">which one to use</a></li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="generator-function">
+        <h2>Generator functions</h2>
+        <p>Here is <code>Countdown</code> again, first as the class from before, then as a generator function. Both give the same numbers.</p>
+        <script type="text/plain" data-lang="py" data-file="countdown_class.py">
+class Countdown:
+    def __init__(self, start):
+        self.current = start
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        if self.current <= 0:
+            raise StopIteration
+        value = self.current
+        self.current -= 1
+        return value
+
+print(list(Countdown(3)))        # [3, 2, 1]
+        </script>
+        <script type="text/plain" data-lang="py" data-file="countdown_generator.py">
+def countdown(start):
+    current = start
+    while current > 0:
+        yield current            # hand out one value, then wait here
+        current -= 1
+
+print(list(countdown(3)))        # [3, 2, 1]
+        </script>
+        <p>Any function with <code>yield</code> in its body is a generator function. Calling it does not run the body. It returns a <b>generator</b> object, which is an iterator: it has <code>__iter__</code> and <code>__next__</code>, and raises <code>StopIteration</code> when the function ends.</p>
+        <script type="text/plain" data-lang="py" data-file="generator_object.py">
+def countdown(start):
+    current = start
+    while current > 0:
+        yield current
+        current -= 1
+
+numbers = countdown(2)
+print(type(numbers).__name__)        # generator
+print(iter(numbers) is numbers)      # True   it is its own iterator
+print(next(numbers))                 # 2
+print(next(numbers))                 # 1
+try:
+    next(numbers)
+except StopIteration:
+    print("finished")                # finished
+        </script>
+        <p class="note"><b>What you saved:</b> no class, no <code>self.current</code>, no <code>raise StopIteration</code>. The position is simply the local variable <code>current</code> and the place where the function is waiting.</p>
+      </section>
+
+      <section class="chapter" id="pause-resume">
+        <h2>Pause and resume</h2>
+        <p><code>return</code> ends a function and throws its local variables away. <code>yield</code> hands out a value and <b>pauses</b> the function with everything kept. The next <code>next()</code> continues from the line after the <code>yield</code>.</p>
+        <script type="text/plain" data-lang="py" data-file="pause.py">
+def teller():
+    print("  counter opens")
+    yield "token 1"
+    print("  back after the first pause")
+    yield "token 2"
+    print("  counter closes")
+
+queue = teller()
+print("generator made, no line of it has run yet")
+print(next(queue))
+print(next(queue))
+try:
+    next(queue)
+except StopIteration:
+    print("finished")
+        </script>
+        <script type="text/plain" data-lang="text" data-file="Output">
+generator made, no line of it has run yet
+  counter opens
+token 1
+  back after the first pause
+token 2
+  counter closes
+finished
+        </script>
+        <p>Local variables survive each pause. That is how a generator keeps a running balance without any class.</p>
+        <script type="text/plain" data-lang="py" data-file="passbook_generator.py">
+def passbook(opening, transactions):
+    balance = opening                    # kept between yields
+    for note, amount in transactions:
+        balance += amount
+        yield note, amount, balance
+
+transactions = [("salary", 50000), ("rent", -12000), ("groceries", -3500)]
+for line in passbook(1000, transactions):
+    print(line)
+        </script>
+        <script type="text/plain" data-lang="text" data-file="Output">
+('salary', 50000, 51000)
+('rent', -12000, 39000)
+('groceries', -3500, 35500)
+        </script>
+        <p class="note"><b>Compare:</b> this is the whole <a href="#passbook">passbook iterator</a> from earlier, in five lines.</p>
+      </section>
+
+      <section class="chapter" id="lazy-memory">
+        <h2>Lazy means small</h2>
+        <p>A list holds all its items in memory at once. A generator holds only the code and where it has got to, and makes each item when asked. So its size does not grow with the number of items.</p>
+        <script type="text/plain" data-lang="py" data-file="memory.py">
+import sys
+
+as_list = [n * 2 for n in range(100000)]         # square brackets: a real list
+as_generator = (n * 2 for n in range(100000))    # round brackets: a generator
+
+list_size = sys.getsizeof(as_list)
+generator_size = sys.getsizeof(as_generator)
+
+print(list_size > 500000)                # True   several hundred thousand bytes
+print(generator_size < 500)              # True   a few hundred bytes at most
+print(list_size > 1000 * generator_size) # True
+print(sum(as_list) == sum(as_generator)) # True   same numbers, same total
+        </script>
+        <p>The exact sizes differ between Python versions, so the example prints comparisons. On this machine the list takes roughly 800 kilobytes and the generator about a hundred bytes. With a million items the list would be ten times larger. The generator would stay the same.</p>
+        <p class="note"><b>Trade:</b> a generator saves memory but gives up what a list can do. You cannot index it, ask its length, or go through it twice.</p>
+      </section>
+
+      <section class="chapter" id="infinite">
+        <h2>Infinite generators</h2>
+        <p>Because items are made on demand, a generator may never end. A <code>while True</code> loop with a <code>yield</code> inside is safe, as long as the caller stops asking. <code>itertools.islice</code> takes the first few items from any iterator.</p>
+        <script type="text/plain" data-lang="py" data-file="account_numbers.py">
+from itertools import islice
+
+def account_numbers(start=1001):
+    number = start
+    while True:                      # never ends by itself
+        yield f"SB{number}"
+        number += 1
+
+numbers = account_numbers()
+print(next(numbers))                 # SB1001
+print(next(numbers))                 # SB1002
+print(list(islice(numbers, 3)))      # ['SB1003', 'SB1004', 'SB1005']
+        </script>
+        <p>Monthly interest, forever. The caller decides how many months to look at.</p>
+        <script type="text/plain" data-lang="py" data-file="monthly_interest.py">
+from itertools import islice
+
+def monthly_balances(balance, rate):
+    while True:
+        balance = round(balance * (1 + rate / 100), 2)
+        yield balance
+
+for balance in islice(monthly_balances(10000, 1), 3):
+    print(balance)
+# 10100.0
+# 10201.0
+# 10303.01
+
+for month, balance in enumerate(monthly_balances(10000, 1), start=1):
+    if balance >= 10500:
+        print("passes 10500 in month", month)    # passes 10500 in month 5
+        break                                    # stop asking: the generator just waits
+        </script>
+      </section>
+
+      <section class="chapter" id="generator-expressions">
+        <h2>Generator expressions</h2>
+        <p>A list comprehension in round brackets is a generator expression. It is the shortest way to make a generator when the logic fits on one line.</p>
+        <script type="text/plain" data-lang="py" data-file="expressions.py">
+balances = {"Rishikesh": 3500, "Sandhya": 9000, "Subhash": 12000, "Hemkesh": 800}
+
+doubled = (amount * 2 for amount in balances.values())
+print(type(doubled).__name__)        # generator
+print(next(doubled))                 # 7000
+print(list(doubled))                 # [18000, 24000, 1600]   the rest
+
+# as the only argument of a function, the extra brackets can be left out
+print(sum(amount for amount in balances.values()))                   # 25300
+print(max(len(name) for name in balances))                           # 9
+print(any(amount > 10000 for amount in balances.values()))           # True
+print(", ".join(name for name, amount in balances.items() if amount < 5000))
+# Rishikesh, Hemkesh
+        </script>
+        <p class="note"><b>Choose:</b> use a generator expression when the result is consumed once, straight away, by something like <code>sum()</code>, <code>max()</code>, <code>any()</code> or <code>join()</code>. Use a list comprehension when you need to keep the items.</p>
+      </section>
+
+      <section class="chapter" id="pipelines">
+        <h2>Generator pipelines</h2>
+        <p>A generator can take another iterator as its input. Join several and you have a pipeline: each stage does one small job and passes items on, one at a time. No stage ever holds the whole file in memory.</p>
+        <script type="text/plain" data-lang="py" data-file="pipeline.py">
+with open("transactions.txt", "w") as file:
+    file.write("# owner,kind,amount\n")
+    file.write("Rishikesh,deposit,5000\n")
+    file.write("\n")
+    file.write("Sandhya,deposit,2000\n")
+    file.write("Rishikesh,withdraw,1500\n")
+    file.write("Subhash,deposit,7000\n")
+
+def read_lines(path):                    # stage 1: lines from the file
+    with open(path) as file:
+        for line in file:
+            yield line.strip()
+
+def skip_noise(lines):                   # stage 2: drop blanks and comments
+    for line in lines:
+        if line and not line.startswith("#"):
+            yield line
+
+def parse(lines):                        # stage 3: text to (owner, kind, amount)
+    for line in lines:
+        owner, kind, amount = line.split(",")
+        yield owner, kind, int(amount)
+
+def deposits_only(records):              # stage 4: keep the deposit amounts
+    for owner, kind, amount in records:
+        if kind == "deposit":
+            yield amount
+
+records = parse(skip_noise(read_lines("transactions.txt")))
+print(sum(deposits_only(records)))       # 14000
+        </script>
+        <p>Nothing is read until <code>sum()</code> asks for the first amount. That request travels back through the stages to the file, one line comes forward, and so on. The same code would work on a file with millions of lines.</p>
+        <p class="note"><b>Shape:</b> each stage is "for each item coming in, maybe yield something out". Short stages can also be written as generator expressions.</p>
+      </section>
+
+      <section class="chapter" id="yield-from">
+        <h2>yield from</h2>
+        <p><code>yield from other</code> yields every item of another iterable, one by one. It replaces the loop <code>for item in other: yield item</code>.</p>
+        <script type="text/plain" data-lang="py" data-file="yield_from.py">
+def parents():
+    yield "Sandhya"
+    yield "Subhash"
+
+def children():
+    yield "Rishikesh"
+    yield "Malinikesh"
+    yield "Hemkesh"
+
+def family():
+    yield from parents()             # hand over until parents() is finished
+    yield from children()
+    yield from ["(5 members)"]       # any iterable works
+
+print(list(family()))
+# ['Sandhya', 'Subhash', 'Rishikesh', 'Malinikesh', 'Hemkesh', '(5 members)']
+        </script>
+        <h3>Flattening nested data</h3>
+        <p>It is most useful when a generator calls itself. The family's money is spread over nested dictionaries. The generator walks down every branch and yields only the amounts.</p>
+        <script type="text/plain" data-lang="py" data-file="portfolio.py">
+portfolio = {
+    "Rishikesh": {"savings": 12000, "deposits": {"fixed": 50000, "recurring": 8000}},
+    "Sandhya": {"savings": 30000},
+    "Subhash": {"savings": 9000, "deposits": {"fixed": 75000}},
+}
+
+def amounts(node):
+    for value in node.values():
+        if isinstance(value, dict):
+            yield from amounts(value)    # go one level deeper
+        else:
+            yield value
+
+print(list(amounts(portfolio)))      # [12000, 50000, 8000, 30000, 9000, 75000]
+print(sum(amounts(portfolio)))       # 184000
+        </script>
+      </section>
+
+      <section class="chapter" id="send">
+        <h2>Sending values in</h2>
+        <p>So far values only came out. <code>yield</code> can also receive a value. Written as <code>amount = yield balance</code>, it hands out <code>balance</code>, pauses, and when the caller uses <code>send(value)</code>, that value becomes <code>amount</code>. A generator used this way is often called a coroutine.</p>
+        <script type="text/plain" data-lang="py" data-file="send.py">
+def running_balance(balance):
+    while True:
+        amount = yield balance       # give the balance out, wait for an amount
+        balance += amount
+
+account = running_balance(1000)
+# the first next() runs up to the first yield
+print(next(account))             # 1000
+print(account.send(500))         # 1500
+print(account.send(-200))        # 1300
+print(account.send(2000))        # 3300
+        </script>
+        <p>The first <code>next()</code> is required. It moves the generator to its first <code>yield</code>, where it can receive something. Sending a value before that raises <code>TypeError</code>.</p>
+        <p>A running average works the same way.</p>
+        <script type="text/plain" data-lang="py" data-file="running_average.py">
+def running_average():
+    total = 0
+    count = 0
+    average = None
+    while True:
+        amount = yield average
+        total += amount
+        count += 1
+        average = total / count
+
+average = running_average()
+next(average)                    # move to the first yield
+print(average.send(1000))        # 1000.0
+print(average.send(2000))        # 1500.0
+print(average.send(600))         # 1200.0
+        </script>
+        <p class="note"><b>How often:</b> you will rarely write <code>send()</code> yourself. It is worth knowing because <code>async</code> and <code>await</code>, covered later, grew out of this idea.</p>
+      </section>
+
+      <section class="chapter" id="return-close">
+        <h2>Return value and close</h2>
+        <p>A generator ends when its function ends. A plain <code>return</code> stops it early. A <code>return value</code> is allowed too, but a <code>for</code> loop never sees that value. It travels inside the <code>StopIteration</code> error, and <code>yield from</code> picks it up.</p>
+        <script type="text/plain" data-lang="py" data-file="return_value.py">
+def deposits():
+    yield 500
+    yield 700
+    return 1200                      # the total, as a final result
+
+gen = deposits()
+print(next(gen), next(gen))          # 500 700
+try:
+    next(gen)
+except StopIteration as stop:
+    print("returned:", stop.value)   # returned: 1200
+
+def report():
+    total = yield from deposits()    # yield from hands back the return value
+    yield f"total {total}"
+
+print(list(report()))                # [500, 700, 'total 1200']
+        </script>
+        <h3>close()</h3>
+        <p><code>close()</code> stops a paused generator for good. Python raises <code>GeneratorExit</code> at the paused <code>yield</code>, so a <code>finally</code> block or a <code>with</code> block inside the generator still cleans up.</p>
+        <script type="text/plain" data-lang="py" data-file="close.py">
+def read_ledger():
+    print("  ledger opened")
+    try:
+        yield "entry 1"
+        yield "entry 2"
+        yield "entry 3"
+    finally:
+        print("  ledger closed")     # runs even when stopped early
+
+ledger = read_ledger()
+print(next(ledger))
+ledger.close()
+print(list(ledger))
+        </script>
+        <script type="text/plain" data-lang="text" data-file="Output">
+  ledger opened
+entry 1
+  ledger closed
+[]
+        </script>
+      </section>
+
+      <section class="chapter" id="itertools">
+        <h2>A tour of itertools</h2>
+        <p>The standard module <code>itertools</code> is a box of ready-made lazy iterators. They combine well with generators and with each other.</p>
+        <h3>count, cycle, chain, islice</h3>
+        <script type="text/plain" data-lang="py" data-file="endless.py">
+from itertools import count, cycle, chain, islice
+
+print(list(islice(count(1001), 3)))          # [1001, 1002, 1003]   count never ends
+print(list(islice(count(0, 500), 4)))        # [0, 500, 1000, 1500]
+
+tellers = cycle(["Sandhya", "Subhash"])      # round and round, forever
+print([next(tellers) for _ in range(5)])
+# ['Sandhya', 'Subhash', 'Sandhya', 'Subhash', 'Sandhya']
+
+savings = [3500, 9000]
+fixed = [50000]
+print(list(chain(savings, fixed, [800])))    # [3500, 9000, 50000, 800]   one after another
+
+print(list(islice("ABCDEFG", 2, 6, 2)))      # ['C', 'E']   start, stop, step, like a slice
+        </script>
+        <h3>accumulate and groupby</h3>
+        <p><code>accumulate</code> gives running totals. <code>groupby</code> collects neighbouring items with the same key, so sort by that key first.</p>
+        <script type="text/plain" data-lang="py" data-file="totals_groups.py">
+from itertools import accumulate, groupby
+
+amounts = [1000, 500, -200, 700]
+print(list(accumulate(amounts)))             # [1000, 1500, 1300, 2000]
+
+transactions = [("Rishikesh", 500), ("Sandhya", 900), ("Rishikesh", 250),
+                ("Sandhya", 100), ("Hemkesh", 50)]
+transactions.sort(key=lambda t: t[0])        # groupby needs sorted input
+
+for owner, group in groupby(transactions, key=lambda t: t[0]):
+    print(owner, sum(amount for _, amount in group))
+# Hemkesh 50
+# Rishikesh 750
+# Sandhya 1000
+        </script>
+        <h3>product, permutations, combinations</h3>
+        <p>These make every arrangement of their input. The results grow very fast, which is exactly why they are lazy.</p>
+        <script type="text/plain" data-lang="py" data-file="arrangements.py">
+from itertools import product, permutations, combinations
+
+print(list(product(["savings", "current"], ["INR", "USD"])))
+# [('savings', 'INR'), ('savings', 'USD'), ('current', 'INR'), ('current', 'USD')]
+
+print(list(permutations("ABC", 2)))          # ordered pairs
+# [('A', 'B'), ('A', 'C'), ('B', 'A'), ('B', 'C'), ('C', 'A'), ('C', 'B')]
+
+children = ["Rishikesh", "Malinikesh", "Hemkesh"]
+print(list(combinations(children, 2)))       # pairs where order does not matter
+# [('Rishikesh', 'Malinikesh'), ('Rishikesh', 'Hemkesh'), ('Malinikesh', 'Hemkesh')]
+        </script>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Tool</th><th>Gives</th></tr></thead>
+            <tbody>
+              <tr><td><code>count(start, step)</code></td><td>numbers without end</td></tr>
+              <tr><td><code>cycle(items)</code></td><td>the items again and again, without end</td></tr>
+              <tr><td><code>chain(a, b, ...)</code></td><td>all of <code>a</code>, then all of <code>b</code>, and so on</td></tr>
+              <tr><td><code>islice(it, stop)</code> or <code>islice(it, start, stop, step)</code></td><td>a slice of any iterator</td></tr>
+              <tr><td><code>accumulate(items)</code></td><td>running totals</td></tr>
+              <tr><td><code>groupby(items, key)</code></td><td>pairs of a key and an iterator over the neighbouring items with that key</td></tr>
+              <tr><td><code>product(a, b)</code></td><td>every pairing of an item from <code>a</code> with an item from <code>b</code></td></tr>
+              <tr><td><code>permutations(items, r)</code></td><td>every ordered choice of <code>r</code> items</td></tr>
+              <tr><td><code>combinations(items, r)</code></td><td>every choice of <code>r</code> items, ignoring order</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="chapter" id="mistakes">
+        <h2>Common mistakes</h2>
+        <h3>Going through a generator twice</h3>
+        <p>A generator is an iterator, so it is used up after one pass. The second pass is empty and gives no error, which makes this easy to miss.</p>
+        <script type="text/plain" data-lang="py" data-file="twice.py">
+balances = [3500, 9000, 12000]
+
+large = (b for b in balances if b > 5000)
+print(sum(large))                # 21000
+# already used up: the second sum sees nothing
+print(sum(large))                # 0
+
+large = [b for b in balances if b > 5000]    # fix 1: keep a list
+print(sum(large), max(large))    # 21000 12000
+
+def large_balances():                        # fix 2: make a new generator each time
+    return (b for b in balances if b > 5000)
+
+print(sum(large_balances()), max(large_balances()))   # 21000 12000
+        </script>
+        <h3>Asking a generator for its length or an index</h3>
+        <p>A generator does not know how many items it will give, and it cannot jump to a position.</p>
+        <script type="text/plain" data-lang="py" data-file="no_len.py">
+names = (name.upper() for name in ["Sandhya", "Subhash"])
+
+try:
+    len(names)
+except TypeError as error:
+    print(error)                 # object of type 'generator' has no len()
+
+try:
+    names[0]
+except TypeError as error:
+    print(error)                 # 'generator' object is not subscriptable
+
+print(sum(1 for _ in names))     # 2   counting works, but it uses the generator up
+        </script>
+        <h3>Collecting an infinite generator</h3>
+        <p><code>list()</code>, <code>sum()</code> and <code>sorted()</code> keep asking until the end. An infinite generator has no end, so the program hangs and memory fills up. This block is not run by the page checker, because it would never finish.</p>
+        <script type="text/plain" data-lang="py" data-file="endless_list.py" data-norun>
+from itertools import count
+
+numbers = list(count(1001))      # never finishes: do not run this
+        </script>
+        <p>Take a limited number of items first.</p>
+        <script type="text/plain" data-lang="py" data-file="take_some.py">
+from itertools import count, islice, takewhile
+
+print(list(islice(count(1001), 3)))                      # [1001, 1002, 1003]
+print(list(takewhile(lambda n: n < 1004, count(1001))))  # [1001, 1002, 1003]
+        </script>
+        <p class="note"><b>Also watch for:</b> a function that tests an iterator, such as <code>if 9000 in generator</code>, uses up every item it had to look at.</p>
+      </section>
+
+      <section class="chapter" id="which-one">
+        <h2>Which one to use</h2>
+        <p>All three give you an iterator. Pick the smallest one that does the job.</p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th></th><th>Iterator class</th><th>Generator function</th><th>Generator expression</th></tr></thead>
+            <tbody>
+              <tr><td>How you write it</td><td>A class with <code>__iter__</code> and <code>__next__</code></td><td>A <code>def</code> with <code>yield</code></td><td><code>(x for x in items)</code></td></tr>
+              <tr><td>Where the position lives</td><td>In attributes you manage</td><td>In local variables, kept for you</td><td>Hidden</td></tr>
+              <tr><td>Amount of code</td><td>Most</td><td>Little</td><td>One line</td></tr>
+              <tr><td>Use it when</td><td>The object needs extra methods or attributes, or is a container that must give a fresh iterator each time</td><td>The logic needs several statements, a loop with state, cleanup, or never ends</td><td>A simple transform or filter that is consumed once, straight away</td></tr>
+              <tr><td>Example on this page</td><td><a href="#iterable-class">Account and Passbook</a></td><td><a href="#pause-resume">passbook</a>, <a href="#pipelines">pipeline stages</a></td><td><a href="#generator-expressions"><code>sum(amount for ...)</code></a></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>You want to</th><th>Write</th></tr></thead>
+            <tbody>
+              <tr><td>Step through something by hand</td><td><code>it = iter(items)</code>, then <code>next(it)</code></td></tr>
+              <tr><td>Get a default instead of <code>StopIteration</code></td><td><code>next(it, None)</code></td></tr>
+              <tr><td>Make your own class work in a <code>for</code> loop</td><td><code>__iter__</code> that returns a fresh iterator, or is itself a generator function</td></tr>
+              <tr><td>Take the first n items of anything</td><td><code>islice(it, n)</code></td></tr>
+              <tr><td>Join generators</td><td><code>yield from other</code> or <code>chain(a, b)</code></td></tr>
+              <tr><td>Loop more than once</td><td>Keep a list, or call the generator function again</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>The shortest iterable class of all combines both halves of this page: write <code>__iter__</code> as a generator function. Each loop calls it and gets a new generator.</p>
+        <script type="text/plain" data-lang="py" data-file="iter_as_generator.py">
+class Account:
+    def __init__(self, owner, opening):
+        self.owner = owner
+        self.opening = opening
+        self.transactions = []
+
+    def __iter__(self):                  # a generator function: fresh on every loop
+        balance = self.opening
+        for note, amount in self.transactions:
+            balance += amount
+            yield note, balance
+
+account = Account("Sandhya", 2000)
+account.transactions += [("pension", 15000), ("medicine", -1200)]
+
+print(list(account))             # [('pension', 17000), ('medicine', 15800)]
+print(list(account))             # [('pension', 17000), ('medicine', 15800)]
+print(next(iter(account), None)) # ('pension', 17000)
+        </script>
+        <p>Generators run one piece at a time. To run several jobs at the same time, continue with <a href="python-concurrency.html">Python Threads and Processes</a>.</p>
+      </section>
+
+    </div>
+  </main>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script src="../../assets/tutorial.js"></script>
+</body>
+</html>

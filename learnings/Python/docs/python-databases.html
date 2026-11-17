@@ -1,0 +1,1211 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Python Databases</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@500;700&display=swap">
+<link rel="stylesheet" href="../../assets/tutorial.css">
+</head>
+<body data-track="python">
+
+<header class="topbar">
+  <div class="topbar-in">
+    <a class="brand" href="../../../index.html">Learnings</a>
+    <nav class="tracks" aria-label="Python paths">
+      <a href="../../../index.html#python-basics">Python Basics</a>
+      <a href="../../../index.html#python-advanced">Python Advanced</a>
+      <a href="../../../index.html#python-practice" aria-current="true">Python in Practice</a>
+      <a href="../../../index.html#python-design">Python Design</a>
+      <a href="../../../archive.html">Archive</a>
+    </nav>
+    <div class="tools">
+      <button class="btn" id="menu" type="button" aria-expanded="false">Chapters</button>
+      <input id="q" type="search" placeholder="Search chapters" aria-label="Search chapters">
+      <button class="btn" id="theme" type="button">Dark mode</button>
+    </div>
+  </div>
+</header>
+
+<div class="shell">
+  <aside class="side">
+    <p class="side-label">Databases</p>
+    <nav id="toc" aria-label="Chapters"></nav>
+  </aside>
+
+  <main>
+    <div class="page-head">
+      <p class="eyebrow">Python in practice, part 8 of 9</p>
+      <h1>Python Databases</h1>
+      <p class="lead">A variable is gone when the program stops. A database keeps data safe on disk, lets you ask questions about it, and protects it when several things happen at once. This page builds a small family bank, first with plain SQL through the standard library module <code>sqlite3</code>, then with the SQLAlchemy ORM. You need to know Python, and nothing about databases.</p>
+    </div>
+
+    <div class="chapters">
+
+      <section class="chapter part" id="sql-part">
+        <h2>SQL with sqlite3</h2>
+        <p class="kind">Part 1 of 4 &middot; tables, rows and queries with the standard library</p>
+        <p>SQLite is a complete database that lives in a single file, or in memory. Python ships with the <code>sqlite3</code> module to talk to it, so everything in this part runs with <b>no installation</b>.</p>
+        <p>Every example uses the special name <code>:memory:</code>, a database that exists only while the program runs. That keeps each example complete on its own. Pass a file name such as <code>"bank.db"</code> and the same code keeps its data on disk.</p>
+        <ul>
+          <li><a href="#relational">What a database is</a>: tables, rows, columns, keys and SQL</li>
+          <li><a href="#connect">Connecting and creating a table</a></li>
+          <li><a href="#insert">Inserting rows</a></li>
+          <li><a href="#placeholders">Placeholders and SQL injection</a></li>
+          <li><a href="#select">Selecting, filtering and ordering</a></li>
+          <li><a href="#fetch">Reading the results</a></li>
+          <li><a href="#row-factory">Columns by name</a></li>
+          <li><a href="#update-delete">Updating and deleting</a></li>
+          <li><a href="#join">A second table and a JOIN</a></li>
+          <li><a href="#group-by">Totals with GROUP BY</a></li>
+          <li><a href="#indexes">Indexes</a></li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="relational">
+        <h2>What a database is</h2>
+        <p>A <b>relational database</b> stores data in <b>tables</b>. A table looks like a spreadsheet sheet: it has named <b>columns</b>, and each <b>row</b> is one record. The bank on this page starts with a table of customers.</p>
+        <script type="text/plain" data-lang="text" data-file="The customers table">
+id | name                | joined
+---+---------------------+-------
+ 1 | Rishikesh Agrawani  | 2016
+ 2 | Sandhya Agrawani    | 2009
+ 3 | Subhash Agrawani    | 2009
+ 4 | Malinikesh Agrawani | 2018
+ 5 | Hemkesh Agrawani    | 2020
+        </script>
+        <div class="scroll">
+          <table>
+            <thead>
+              <tr><th>Term</th><th>Meaning</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>Table</td><td>A named set of rows that all have the same columns, such as <code>customers</code></td></tr>
+              <tr><td>Row</td><td>One record: one customer, one account</td></tr>
+              <tr><td>Column</td><td>One named piece of every row, with a type: <code>name</code> is text, <code>joined</code> is a number</td></tr>
+              <tr><td>Primary key</td><td>A column whose value is different for every row, so one row can be picked out exactly. Here it is <code>id</code></td></tr>
+              <tr><td>Foreign key</td><td>A column that holds the primary key of a row in another table. It is how tables are linked</td></tr>
+              <tr><td>SQL</td><td>Structured Query Language, the language you use to create tables and to read and change rows</td></tr>
+              <tr><td>Query</td><td>One SQL statement sent to the database</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><b>Concept:</b> "relational" means the tables relate to each other through keys. An account row does not repeat the customer's name. It stores the customer's <code>id</code>, and the database joins the two when you ask.</p>
+      </section>
+
+      <section class="chapter" id="connect">
+        <h2>Connecting and creating a table</h2>
+        <p><code>sqlite3.connect()</code> opens a <b>connection</b>, the object every query goes through. <code>CREATE TABLE</code> names the table and lists its columns with their types.</p>
+        <script type="text/plain" data-lang="py" data-file="connect.py">
+import sqlite3
+
+conn = sqlite3.connect(":memory:")       # or "bank.db" to keep a file
+
+conn.execute("""
+    CREATE TABLE customers (
+        id     INTEGER PRIMARY KEY,
+        name   TEXT NOT NULL,
+        joined INTEGER
+    )
+""")
+
+tables = conn.execute("SELECT name FROM sqlite_master WHERE type = 'table'").fetchall()
+print(tables)         # [('customers',)]
+
+conn.close()          # always close a connection when you are done
+        </script>
+        <p><code>INTEGER PRIMARY KEY</code> makes <code>id</code> the primary key, and SQLite fills it in with 1, 2, 3 and so on. <code>NOT NULL</code> means the column may not be left empty. <code>NULL</code> is the database word for "no value", and Python shows it as <code>None</code>.</p>
+        <p class="note"><b>Style:</b> SQL keywords are written in capitals by habit, so they stand out from table and column names. The database accepts lower case as well.</p>
+      </section>
+
+      <section class="chapter" id="insert">
+        <h2>Inserting rows</h2>
+        <p><code>INSERT INTO</code> adds a row. The <code>?</code> marks are <b>placeholders</b>: the values travel separately, in a tuple, and the database puts them in. <code>executemany()</code> runs the same statement once for each tuple in a list.</p>
+        <script type="text/plain" data-lang="py" data-file="insert.py">
+import sqlite3
+
+conn = sqlite3.connect(":memory:")
+conn.execute("CREATE TABLE customers (id INTEGER PRIMARY KEY, name TEXT NOT NULL, joined INTEGER)")
+
+cur = conn.execute("INSERT INTO customers (name, joined) VALUES (?, ?)",
+                   ("Rishikesh Agrawani", 2016))
+print(cur.lastrowid)                     # 1
+# lastrowid is the id the database chose for the new row
+
+family = [
+    ("Sandhya Agrawani", 2009),
+    ("Subhash Agrawani", 2009),
+    ("Malinikesh Agrawani", 2018),
+    ("Hemkesh Agrawani", 2020),
+]
+conn.executemany("INSERT INTO customers (name, joined) VALUES (?, ?)", family)
+conn.commit()                            # save the changes
+
+print(conn.execute("SELECT COUNT(*) FROM customers").fetchone())   # (5,)
+conn.close()
+        </script>
+        <p class="note"><b>Concept:</b> <code>commit()</code> makes the changes permanent. Until you commit, they can still be undone. The <a href="#commit-rollback">transactions part</a> explains this in full.</p>
+      </section>
+
+      <section class="chapter" id="placeholders">
+        <h2>Placeholders and SQL injection</h2>
+        <p>Never build SQL by gluing text from a user into the query string. If the text contains a quote mark, it stops being a value and becomes part of the SQL. This attack is called <b>SQL injection</b>.</p>
+        <p>Below, someone types a strange "name" into a search box. The unsafe query returns every customer. The safe query, with a placeholder, treats the whole text as one name and finds nobody.</p>
+        <script type="text/plain" data-lang="py" data-file="injection.py">
+import sqlite3
+
+conn = sqlite3.connect(":memory:")
+conn.execute("CREATE TABLE customers (id INTEGER PRIMARY KEY, name TEXT NOT NULL, joined INTEGER)")
+conn.executemany("INSERT INTO customers (name, joined) VALUES (?, ?)", [
+    ("Rishikesh Agrawani", 2016), ("Sandhya Agrawani", 2009), ("Subhash Agrawani", 2009),
+    ("Malinikesh Agrawani", 2018), ("Hemkesh Agrawani", 2020),
+])
+
+typed = "nobody' OR '1'='1"              # what the attacker types
+
+unsafe = f"SELECT name FROM customers WHERE name = '{typed}'"
+print(unsafe)
+# SELECT name FROM customers WHERE name = 'nobody' OR '1'='1'
+print(len(conn.execute(unsafe).fetchall()))       # 5  (everyone: '1'='1' is always true)
+
+safe = "SELECT name FROM customers WHERE name = ?"
+print(conn.execute(safe, (typed,)).fetchall())    # []  (no customer has that name)
+conn.close()
+        </script>
+        <p>With worse input the same hole can change or delete data. The rule has no exceptions: values go in through <code>?</code> placeholders, never through f-strings, <code>+</code> or <code>.format()</code>.</p>
+        <p class="note"><b>Pitfall:</b> the second argument must be a sequence. For one value write <code>(typed,)</code> with the comma. <code>(typed)</code> is just a string, and <code>sqlite3</code> would treat each character as a separate value.</p>
+      </section>
+
+      <section class="chapter" id="select">
+        <h2>Selecting, filtering and ordering</h2>
+        <p><code>SELECT</code> reads rows. <code>WHERE</code> keeps only the rows that match, <code>ORDER BY</code> sorts them, and <code>LIMIT</code> stops after a number of rows.</p>
+        <script type="text/plain" data-lang="py" data-file="select.py">
+import sqlite3
+
+conn = sqlite3.connect(":memory:")
+conn.execute("CREATE TABLE customers (id INTEGER PRIMARY KEY, name TEXT NOT NULL, joined INTEGER)")
+conn.executemany("INSERT INTO customers (name, joined) VALUES (?, ?)", [
+    ("Rishikesh Agrawani", 2016), ("Sandhya Agrawani", 2009), ("Subhash Agrawani", 2009),
+    ("Malinikesh Agrawani", 2018), ("Hemkesh Agrawani", 2020),
+])
+
+recent = conn.execute(
+    "SELECT name, joined FROM customers WHERE joined >= ? ORDER BY joined DESC", (2016,))
+print(recent.fetchall())
+# [('Hemkesh Agrawani', 2020), ('Malinikesh Agrawani', 2018), ('Rishikesh Agrawani', 2016)]
+
+s_names = conn.execute("SELECT name FROM customers WHERE name LIKE ? ORDER BY name", ("S%",))
+print(s_names.fetchall())
+# [('Sandhya Agrawani',), ('Subhash Agrawani',)]
+
+first_two = conn.execute("SELECT id, name FROM customers ORDER BY joined, name LIMIT 2")
+print(first_two.fetchall())
+# [(2, 'Sandhya Agrawani'), (3, 'Subhash Agrawani')]
+conn.close()
+        </script>
+        <p><code>DESC</code> sorts from high to low. <code>LIKE</code> compares text with a pattern, where <code>%</code> stands for any run of characters. <code>SELECT *</code> returns every column, which is handy while exploring. In real code, name the columns you need.</p>
+        <p class="note"><b>Pitfall:</b> without <code>ORDER BY</code> the database may return rows in any order. If the order matters, ask for it.</p>
+      </section>
+
+      <section class="chapter" id="fetch">
+        <h2>Reading the results</h2>
+        <p><code>execute()</code> returns a <b>cursor</b>, an object that hands out the result rows. Each row is a tuple. There are three ways to read them.</p>
+        <script type="text/plain" data-lang="py" data-file="fetch.py">
+import sqlite3
+
+conn = sqlite3.connect(":memory:")
+conn.execute("CREATE TABLE customers (id INTEGER PRIMARY KEY, name TEXT NOT NULL, joined INTEGER)")
+conn.executemany("INSERT INTO customers (name, joined) VALUES (?, ?)", [
+    ("Rishikesh Agrawani", 2016), ("Sandhya Agrawani", 2009), ("Subhash Agrawani", 2009),
+])
+
+row = conn.execute("SELECT name, joined FROM customers WHERE id = ?", (1,)).fetchone()
+print(row)                     # ('Rishikesh Agrawani', 2016)
+
+missing = conn.execute("SELECT name FROM customers WHERE id = ?", (99,)).fetchone()
+print(missing)                 # None  (no such row)
+
+rows = conn.execute("SELECT id, name FROM customers ORDER BY id").fetchall()
+print(len(rows), rows[0])      # 3 (1, 'Rishikesh Agrawani')
+
+for name, joined in conn.execute("SELECT name, joined FROM customers ORDER BY name"):
+    print(joined, name)
+# 2016 Rishikesh Agrawani
+# 2009 Sandhya Agrawani
+# 2009 Subhash Agrawani
+conn.close()
+        </script>
+        <div class="scroll">
+          <table>
+            <thead>
+              <tr><th>Call</th><th>Gives you</th><th>Use it when</th></tr>
+            </thead>
+            <tbody>
+              <tr><td><code>fetchone()</code></td><td>The next row, or <code>None</code></td><td>You expect one row, such as a lookup by id</td></tr>
+              <tr><td><code>fetchall()</code></td><td>A list of all remaining rows</td><td>The result is small enough to hold in memory</td></tr>
+              <tr><td><code>for row in cursor</code></td><td>One row at a time</td><td>The result may be large</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="chapter" id="row-factory">
+        <h2>Columns by name</h2>
+        <p><code>row[1]</code> is hard to read and breaks when the column order changes. Set <code>conn.row_factory = sqlite3.Row</code> and every row can be read by column name as well as by position.</p>
+        <script type="text/plain" data-lang="py" data-file="row_factory.py">
+import sqlite3
+
+conn = sqlite3.connect(":memory:")
+conn.row_factory = sqlite3.Row           # set this once, right after connecting
+conn.execute("CREATE TABLE customers (id INTEGER PRIMARY KEY, name TEXT NOT NULL, joined INTEGER)")
+conn.execute("INSERT INTO customers (name, joined) VALUES (?, ?)", ("Rishikesh Agrawani", 2016))
+
+row = conn.execute("SELECT id, name, joined FROM customers WHERE id = ?", (1,)).fetchone()
+print(row["name"])       # Rishikesh Agrawani
+print(row[2])            # 2016
+# positions still work
+print(row.keys())        # ['id', 'name', 'joined']
+print(dict(row))         # {'id': 1, 'name': 'Rishikesh Agrawani', 'joined': 2016}
+conn.close()
+        </script>
+      </section>
+
+      <section class="chapter" id="update-delete">
+        <h2>Updating and deleting</h2>
+        <p><code>UPDATE</code> changes rows and <code>DELETE</code> removes them. Both act on <b>every row that matches the <code>WHERE</code></b>. The cursor's <code>rowcount</code> tells you how many rows were changed.</p>
+        <script type="text/plain" data-lang="py" data-file="update_delete.py">
+import sqlite3
+
+conn = sqlite3.connect(":memory:")
+conn.execute("CREATE TABLE customers (id INTEGER PRIMARY KEY, name TEXT NOT NULL, joined INTEGER)")
+conn.executemany("INSERT INTO customers (name, joined) VALUES (?, ?)", [
+    ("Rishikesh Agrawani", 2016), ("Sandhya Agrawani", 2009), ("Hemkesh Agrawani", 2020),
+])
+
+cur = conn.execute("UPDATE customers SET joined = ? WHERE name = ?", (2015, "Rishikesh Agrawani"))
+print(cur.rowcount)      # 1
+
+cur = conn.execute("UPDATE customers SET joined = ? WHERE id = ?", (2000, 99))
+print(cur.rowcount)      # 0  (no row has id 99, and that is not an error)
+
+cur = conn.execute("DELETE FROM customers WHERE id = ?", (3,))
+print(cur.rowcount)      # 1
+conn.commit()
+
+print(conn.execute("SELECT id, name, joined FROM customers ORDER BY id").fetchall())
+# [(1, 'Rishikesh Agrawani', 2015), (2, 'Sandhya Agrawani', 2009)]
+conn.close()
+        </script>
+        <p class="note"><b>Pitfall:</b> an <code>UPDATE</code> or <code>DELETE</code> with no <code>WHERE</code> changes the whole table. <code>DELETE FROM customers</code> removes every customer. Write the <code>WHERE</code> first.</p>
+      </section>
+
+      <section class="chapter" id="join">
+        <h2>A second table and a JOIN</h2>
+        <p>One customer can have several accounts, so accounts get their own table. Each account row holds a <code>customer_id</code>, a <b>foreign key</b> that points at the <code>id</code> of its owner. A <code>JOIN</code> puts rows from both tables side by side wherever the keys match.</p>
+        <script type="text/plain" data-lang="py" data-file="join.py">
+import sqlite3
+
+conn = sqlite3.connect(":memory:")
+conn.execute("PRAGMA foreign_keys = ON")       # SQLite checks foreign keys only when asked
+conn.execute("CREATE TABLE customers (id INTEGER PRIMARY KEY, name TEXT NOT NULL)")
+conn.execute("""
+    CREATE TABLE accounts (
+        id          INTEGER PRIMARY KEY,
+        customer_id INTEGER NOT NULL REFERENCES customers (id),
+        kind        TEXT NOT NULL,
+        balance     INTEGER NOT NULL DEFAULT 0
+    )
+""")
+conn.executemany("INSERT INTO customers (name) VALUES (?)", [
+    ("Rishikesh Agrawani",), ("Sandhya Agrawani",), ("Subhash Agrawani",),
+    ("Malinikesh Agrawani",), ("Hemkesh Agrawani",),
+])
+conn.executemany("INSERT INTO accounts (customer_id, kind, balance) VALUES (?, ?, ?)", [
+    (1, "savings", 5000), (1, "current", 2500), (2, "savings", 12000),
+    (3, "savings", 8000), (4, "savings", 3000),
+])
+
+rows = conn.execute("""
+    SELECT customers.name, accounts.kind, accounts.balance
+    FROM accounts
+    JOIN customers ON customers.id = accounts.customer_id
+    ORDER BY accounts.id
+""")
+for name, kind, balance in rows:
+    print(f"{name:20} {kind:8} {balance:6}")
+
+try:
+    conn.execute("INSERT INTO accounts (customer_id, kind) VALUES (?, ?)", (99, "savings"))
+except sqlite3.IntegrityError as error:
+    print("refused:", error)
+conn.close()
+        </script>
+        <script type="text/plain" data-lang="text" data-file="Output">
+Rishikesh Agrawani   savings    5000
+Rishikesh Agrawani   current    2500
+Sandhya Agrawani     savings   12000
+Subhash Agrawani     savings    8000
+Malinikesh Agrawani  savings    3000
+refused: FOREIGN KEY constraint failed
+        </script>
+        <p>The foreign key also protects the data: an account for customer 99 is refused, because there is no customer 99. Hemkesh has no account yet, so he does not appear. A plain <code>JOIN</code> keeps only rows that have a match on both sides.</p>
+        <p class="note"><b>Money:</b> balances on this page are whole rupees stored as integers, to keep the examples short. <a href="#habits">Good habits</a> explains why money should never be a <code>float</code>.</p>
+      </section>
+
+      <section class="chapter" id="group-by">
+        <h2>Totals with GROUP BY</h2>
+        <p>An <b>aggregate</b> function turns many rows into one value: <code>COUNT</code>, <code>SUM</code>, <code>AVG</code>, <code>MIN</code>, <code>MAX</code>. <code>GROUP BY</code> makes one group per customer and runs the aggregate inside each group.</p>
+        <script type="text/plain" data-lang="py" data-file="group_by.py">
+import sqlite3
+
+conn = sqlite3.connect(":memory:")
+conn.execute("CREATE TABLE customers (id INTEGER PRIMARY KEY, name TEXT NOT NULL)")
+conn.execute("""CREATE TABLE accounts (id INTEGER PRIMARY KEY,
+    customer_id INTEGER NOT NULL REFERENCES customers (id), balance INTEGER NOT NULL)""")
+conn.executemany("INSERT INTO customers (name) VALUES (?)", [
+    ("Rishikesh Agrawani",), ("Sandhya Agrawani",), ("Subhash Agrawani",),
+    ("Malinikesh Agrawani",), ("Hemkesh Agrawani",),
+])
+conn.executemany("INSERT INTO accounts (customer_id, balance) VALUES (?, ?)", [
+    (1, 5000), (1, 2500), (2, 12000), (3, 8000), (4, 3000),
+])
+
+print(conn.execute("SELECT COUNT(*), SUM(balance), MAX(balance) FROM accounts").fetchone())
+# (5, 30500, 12000)
+
+rows = conn.execute("""
+    SELECT customers.name, COUNT(accounts.id), COALESCE(SUM(accounts.balance), 0) AS total
+    FROM customers
+    LEFT JOIN accounts ON accounts.customer_id = customers.id
+    GROUP BY customers.id
+    ORDER BY total DESC
+""")
+for name, count, total in rows:
+    print(f"{name:20} {count} {total:6}")
+conn.close()
+        </script>
+        <script type="text/plain" data-lang="text" data-file="Output">
+Sandhya Agrawani     1  12000
+Subhash Agrawani     1   8000
+Rishikesh Agrawani   2   7500
+Malinikesh Agrawani  1   3000
+Hemkesh Agrawani     0      0
+        </script>
+        <p><code>LEFT JOIN</code> keeps every row of the left table, <code>customers</code>, even when nothing matches on the right. That is why Hemkesh appears here with zero accounts. His sum would be <code>NULL</code>, and <code>COALESCE(..., 0)</code> replaces a <code>NULL</code> with 0. <code>AS total</code> gives the column a name that <code>ORDER BY</code> can use.</p>
+        <p class="note"><b>Concept:</b> to filter groups after they are totalled, use <code>HAVING</code>, for example <code>HAVING SUM(accounts.balance) &gt; 5000</code>. <code>WHERE</code> filters rows before grouping.</p>
+      </section>
+
+      <section class="chapter" id="indexes">
+        <h2>Indexes</h2>
+        <p>Without help, the database finds matching rows by reading the whole table. An <b>index</b> is a sorted lookup structure on one or more columns, like the index at the back of a book. With it, the database jumps straight to the rows.</p>
+        <p>The bank keeps one row per deposit or withdrawal in a table named <code>ledger</code>. <code>EXPLAIN QUERY PLAN</code> asks SQLite how it would run a query.</p>
+        <script type="text/plain" data-lang="py" data-file="indexes.py">
+import sqlite3
+
+conn = sqlite3.connect(":memory:")
+conn.execute("CREATE TABLE ledger (id INTEGER PRIMARY KEY, account_id INTEGER, amount INTEGER)")
+query = "EXPLAIN QUERY PLAN SELECT amount FROM ledger WHERE account_id = ?"
+
+print(conn.execute(query, (3,)).fetchone()[-1])
+# SCAN ledger
+
+conn.execute("CREATE INDEX idx_ledger_account ON ledger (account_id)")
+
+print(conn.execute(query, (3,)).fetchone()[-1])
+# SEARCH ledger USING INDEX idx_ledger_account (account_id=?)
+conn.close()
+        </script>
+        <p><code>SCAN</code> means "read every row". <code>SEARCH ... USING INDEX</code> means "look it up". On ten rows you will not notice. On ten million you will. The exact wording of the plan differs a little between SQLite versions.</p>
+        <p class="note"><b>Trade-off:</b> an index makes reads faster and writes a little slower, because every insert must update it too. Index the columns you filter or join on often. The primary key is indexed already.</p>
+      </section>
+
+      <section class="chapter part" id="transactions-part">
+        <h2>Transactions</h2>
+        <p class="kind">Part 2 of 4 &middot; changes that happen completely or not at all</p>
+        <p>A bank transfer is two changes: take money from one account, add it to another. If the program stops between the two, money is lost. A <b>transaction</b> ties several changes together so that they all happen, or none do. This part still needs only the standard library.</p>
+        <ul>
+          <li><a href="#acid">What a transaction is</a>: the idea and ACID in plain words</li>
+          <li><a href="#commit-rollback">Commit and rollback</a></li>
+          <li><a href="#transfer-bug">A transfer that loses money</a></li>
+          <li><a href="#transfer-fix">The fix: with connection</a></li>
+          <li><a href="#constraints">Constraints</a>: a second line of defence</li>
+          <li><a href="#races">Two transfers at once</a></li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="acid">
+        <h2>What a transaction is</h2>
+        <p>A <b>transaction</b> is a group of statements that the database treats as one unit of work. You end it in one of two ways. <b>Commit</b> makes all its changes permanent. <b>Rollback</b> throws all of them away, as if nothing had happened.</p>
+        <p>Databases promise four things about transactions. The first letters spell ACID.</p>
+        <div class="scroll">
+          <table>
+            <thead>
+              <tr><th>Letter</th><th>Name</th><th>In plain words</th><th>At the bank</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>A</td><td>Atomicity</td><td>All of the changes happen, or none of them</td><td>A transfer never takes money out without putting it in</td></tr>
+              <tr><td>C</td><td>Consistency</td><td>The rules of the database hold before and after</td><td>No balance ends up below zero if a rule forbids it</td></tr>
+              <tr><td>I</td><td>Isolation</td><td>Transactions running at the same time do not see each other's half-finished work</td><td>Nobody sees the moment when the money has left one account and not reached the other</td></tr>
+              <tr><td>D</td><td>Durability</td><td>Once committed, the change survives a crash or power cut</td><td>A confirmed deposit is still there after a restart</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><b>Naming:</b> banks also call each deposit or payment a "transaction". To avoid mixing the two meanings, this page calls those rows the <code>ledger</code>, and uses "transaction" only for the database idea.</p>
+      </section>
+
+      <section class="chapter" id="commit-rollback">
+        <h2>Commit and rollback</h2>
+        <p>By default, <code>sqlite3</code> opens a transaction for you just before the first <code>INSERT</code>, <code>UPDATE</code> or <code>DELETE</code>. It stays open until you call <code>commit()</code> or <code>rollback()</code>.</p>
+        <script type="text/plain" data-lang="py" data-file="rollback.py">
+import sqlite3
+
+conn = sqlite3.connect(":memory:")
+conn.execute("CREATE TABLE accounts (id INTEGER PRIMARY KEY, owner TEXT, balance INTEGER)")
+
+def count():
+    return conn.execute("SELECT COUNT(*) FROM accounts").fetchone()[0]
+
+conn.execute("INSERT INTO accounts (owner, balance) VALUES (?, ?)", ("Rishikesh", 5000))
+print(count())           # 1
+# this connection sees its own unsaved change
+conn.rollback()          # undo everything since the last commit
+print(count())           # 0
+
+conn.execute("INSERT INTO accounts (owner, balance) VALUES (?, ?)", ("Sandhya", 12000))
+conn.commit()            # now it is permanent
+conn.rollback()          # nothing left to undo
+print(count())           # 1
+conn.close()
+        </script>
+        <p>Other connections do not see a change until it is committed. That is isolation at work. The next example uses a database file so that two connections can open the same data.</p>
+        <script type="text/plain" data-lang="py" data-file="two_connections.py">
+import sqlite3
+
+writer = sqlite3.connect("bank.db")
+reader = sqlite3.connect("bank.db")
+writer.execute("CREATE TABLE accounts (id INTEGER PRIMARY KEY, owner TEXT, balance INTEGER)")
+
+def seen_by_reader():
+    return reader.execute("SELECT COUNT(*) FROM accounts").fetchone()[0]
+
+writer.execute("INSERT INTO accounts (owner, balance) VALUES (?, ?)", ("Hemkesh", 1500))
+print(seen_by_reader())      # 0
+# the insert is not committed yet, so the reader cannot see it
+
+writer.commit()
+print(seen_by_reader())      # 1
+
+writer.close()
+reader.close()
+        </script>
+        <p class="note"><b>Pitfall:</b> if you close a connection, or the program ends, without committing, the open transaction is rolled back. A forgotten <code>commit()</code> is the usual reason for "my data did not save".</p>
+      </section>
+
+      <section class="chapter" id="transfer-bug">
+        <h2>A transfer that loses money</h2>
+        <p>To see why transactions matter, switch them off. <code>isolation_level=None</code> puts the connection in <b>autocommit</b> mode: every statement is saved the moment it runs. The transfer below sends money to an account that does not exist.</p>
+        <script type="text/plain" data-lang="py" data-file="transfer_bug.py">
+import sqlite3
+
+conn = sqlite3.connect(":memory:", isolation_level=None)    # autocommit: no transaction
+conn.execute("CREATE TABLE accounts (id INTEGER PRIMARY KEY, owner TEXT, balance INTEGER)")
+conn.executemany("INSERT INTO accounts (owner, balance) VALUES (?, ?)",
+                 [("Rishikesh", 5000), ("Sandhya", 12000)])
+
+def total():
+    return conn.execute("SELECT SUM(balance) FROM accounts").fetchone()[0]
+
+def transfer(src, dst, amount):
+    conn.execute("UPDATE accounts SET balance = balance - ? WHERE id = ?", (amount, src))
+    cur = conn.execute("UPDATE accounts SET balance = balance + ? WHERE id = ?", (amount, dst))
+    if cur.rowcount == 0:
+        raise LookupError(f"account {dst} does not exist")
+
+print(total())                   # 17000
+try:
+    transfer(1, 99, 2000)        # there is no account 99
+except LookupError as error:
+    print("failed:", error)      # failed: account 99 does not exist
+print(total())                   # 15000  (2000 rupees have vanished)
+conn.close()
+        </script>
+        <p>The first <code>UPDATE</code> was saved at once. The second one changed nothing, the function raised an error, and the caller was told the transfer failed. But Rishikesh is already 2000 rupees poorer. The same thing happens if the program crashes or the power goes between the two statements.</p>
+      </section>
+
+      <section class="chapter" id="transfer-fix">
+        <h2>The fix: with connection</h2>
+        <p>Used in a <code>with</code> statement, a <code>sqlite3</code> connection wraps the block in a transaction. If the block finishes, it commits. If the block raises an exception, it rolls back, and the exception carries on to the caller.</p>
+        <script type="text/plain" data-lang="py" data-file="transfer_fix.py">
+import sqlite3
+
+conn = sqlite3.connect(":memory:")                # default mode: transactions are on
+conn.execute("CREATE TABLE accounts (id INTEGER PRIMARY KEY, owner TEXT, balance INTEGER)")
+conn.executemany("INSERT INTO accounts (owner, balance) VALUES (?, ?)",
+                 [("Rishikesh", 5000), ("Sandhya", 12000)])
+conn.commit()
+
+def balances():
+    return conn.execute("SELECT owner, balance FROM accounts ORDER BY id").fetchall()
+
+def transfer(src, dst, amount):
+    with conn:                                    # commit on success, rollback on error
+        conn.execute("UPDATE accounts SET balance = balance - ? WHERE id = ?", (amount, src))
+        cur = conn.execute("UPDATE accounts SET balance = balance + ? WHERE id = ?", (amount, dst))
+        if cur.rowcount == 0:
+            raise LookupError(f"account {dst} does not exist")
+
+try:
+    transfer(1, 99, 2000)
+except LookupError as error:
+    print("failed:", error)      # failed: account 99 does not exist
+print(balances())                # [('Rishikesh', 5000), ('Sandhya', 12000)]
+
+transfer(1, 2, 2000)
+print(balances())                # [('Rishikesh', 3000), ('Sandhya', 14000)]
+conn.close()
+        </script>
+        <p>The failed transfer left no trace: the first <code>UPDATE</code> was rolled back together with the second. The good transfer changed both rows in one step. This is atomicity.</p>
+        <p class="note"><b>Pitfall:</b> <code>with conn:</code> ends the transaction, not the connection. You still call <code>conn.close()</code> yourself. Context managers are covered in <a href="python-errors-and-files.html">Python Errors and Files</a>.</p>
+      </section>
+
+      <section class="chapter" id="constraints">
+        <h2>Constraints</h2>
+        <p>A <b>constraint</b> is a rule written into the table. The database refuses any change that breaks it, whichever program sends the change. Python code should still check first, but a constraint catches the bug that slips past the check.</p>
+        <script type="text/plain" data-lang="py" data-file="constraints.py">
+import sqlite3
+
+conn = sqlite3.connect(":memory:")
+conn.execute("""
+    CREATE TABLE accounts (
+        id      INTEGER PRIMARY KEY,
+        number  TEXT NOT NULL UNIQUE,
+        owner   TEXT NOT NULL,
+        balance INTEGER NOT NULL DEFAULT 0 CHECK (balance >= 0)
+    )
+""")
+conn.execute("INSERT INTO accounts (number, owner, balance) VALUES ('SB-1001', 'Malinikesh', 3000)")
+conn.commit()
+
+attempts = [
+    "INSERT INTO accounts (number, owner) VALUES ('SB-1001', 'Hemkesh')",   # number already used
+    "INSERT INTO accounts (number, owner) VALUES ('SB-1002', NULL)",        # no owner
+    "UPDATE accounts SET balance = balance - 5000 WHERE number = 'SB-1001'",   # would go below zero
+]
+for sql in attempts:
+    try:
+        with conn:
+            conn.execute(sql)
+    except sqlite3.IntegrityError as error:
+        print(error)
+
+print(conn.execute("SELECT number, owner, balance FROM accounts").fetchall())
+conn.close()
+        </script>
+        <script type="text/plain" data-lang="text" data-file="Output">
+UNIQUE constraint failed: accounts.number
+NOT NULL constraint failed: accounts.owner
+CHECK constraint failed: balance >= 0
+[('SB-1001', 'Malinikesh', 3000)]
+        </script>
+        <div class="scroll">
+          <table>
+            <thead>
+              <tr><th>Constraint</th><th>Rule</th></tr>
+            </thead>
+            <tbody>
+              <tr><td><code>NOT NULL</code></td><td>The column must have a value</td></tr>
+              <tr><td><code>UNIQUE</code></td><td>No two rows may have the same value in this column</td></tr>
+              <tr><td><code>CHECK (...)</code></td><td>The condition must be true for every row</td></tr>
+              <tr><td><code>PRIMARY KEY</code></td><td>Unique, and identifies the row</td></tr>
+              <tr><td><code>REFERENCES</code> (foreign key)</td><td>The value must exist as a key in the other table</td></tr>
+              <tr><td><code>DEFAULT</code></td><td>Not a check: the value used when none is given</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><b>Concept:</b> constraints plus transactions work as a pair. If a <code>CHECK</code> fails on the second statement of a transfer, the exception triggers the rollback, and the first statement is undone as well.</p>
+      </section>
+
+      <section class="chapter" id="races">
+        <h2>Two transfers at once</h2>
+        <p>A real bank handles many requests at the same moment. Suppose an account holds 1000 rupees and two programs each try to withdraw 800. Each one reads the balance, sees 1000, decides there is enough, and writes back 200. The bank has paid out 1600 from an account that held 1000. This is a <b>race condition</b>, the same "check, then act" bug described for threads in <a href="python-concurrency.html">Python Threads and Processes</a>. Here the shared data is a row instead of a variable.</p>
+        <p>The simplest cure is to make the check and the change <b>one statement</b>. The database runs a single <code>UPDATE</code> as one indivisible step, so the balance cannot change between the test and the subtraction. <code>rowcount</code> then tells you whether it happened.</p>
+        <script type="text/plain" data-lang="py" data-file="atomic_update.py">
+import sqlite3
+
+conn = sqlite3.connect(":memory:")
+conn.execute("CREATE TABLE accounts (id INTEGER PRIMARY KEY, owner TEXT, balance INTEGER)")
+conn.execute("INSERT INTO accounts (owner, balance) VALUES (?, ?)", ("Subhash", 1000))
+conn.commit()
+
+def withdraw(account_id, amount):
+    with conn:
+        cur = conn.execute(
+            "UPDATE accounts SET balance = balance - ? WHERE id = ? AND balance >= ?",
+            (amount, account_id, amount),
+        )
+    return cur.rowcount == 1          # 1 row changed: paid. 0 rows: refused.
+
+print(withdraw(1, 800))      # True
+print(withdraw(1, 800))      # False
+# only 200 is left, so no row matched and nothing changed
+print(conn.execute("SELECT balance FROM accounts WHERE id = 1").fetchone()[0])   # 200
+conn.close()
+        </script>
+        <p>This example runs the two withdrawals one after the other, so that the output is the same every time. The point is that the pattern stays correct when they arrive together, because the database decides the order and each <code>UPDATE</code> sees the result of the one before it.</p>
+        <p>Behind this, databases use <b>locks</b>: while one transaction is changing data, others that want the same data must wait. SQLite allows one writer at a time for the whole database file. Server databases such as PostgreSQL and MySQL lock single rows, so writers to different accounts do not wait for each other. How much one transaction may see of another's unfinished or just-committed work is set by its <b>isolation level</b>.</p>
+        <p class="note"><b>Pitfall:</b> a transaction on its own does not fix "read the balance in Python, then write the new balance". On most databases two transactions can still both read 1000 at their default isolation level. Use the single <code>UPDATE ... AND balance &gt;= ?</code>, or lock the row while you read it (<code>SELECT ... FOR UPDATE</code> on PostgreSQL and MySQL), and keep a <code>CHECK (balance &gt;= 0)</code> constraint as the last guard.</p>
+      </section>
+
+      <section class="chapter part" id="orm-part">
+        <h2>SQLAlchemy ORM</h2>
+        <p class="kind">Part 3 of 4 &middot; rows as Python objects</p>
+        <p>SQLAlchemy is the most widely used database library for Python. It is <b>not</b> in the standard library, so every example in this part needs one install first. The examples use the modern "2.0 style" and were checked with SQLAlchemy 2.0 on Python 3.9.</p>
+        <script type="text/plain" data-lang="bash" data-file="Terminal">
+pip install sqlalchemy
+        </script>
+        <ul>
+          <li><a href="#orm">What an ORM is</a>, and what it costs</li>
+          <li><a href="#models">Engine and models</a></li>
+          <li><a href="#session">Sessions: adding rows</a></li>
+          <li><a href="#orm-query">Querying with select</a></li>
+          <li><a href="#orm-change">Updating and deleting objects</a></li>
+          <li><a href="#n-plus-one">Relationships and the N+1 problem</a></li>
+          <li><a href="#orm-transfer">The transfer with the ORM</a></li>
+          <li><a href="#echo">Seeing the SQL</a></li>
+          <li><a href="#raw-or-orm">Raw SQL or the ORM</a>, migrations and other databases</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="orm">
+        <h2>What an ORM is</h2>
+        <p>An <b>ORM</b>, short for object-relational mapper, connects classes to tables. You write a class for each table. Each row becomes an object, each column an attribute, and the ORM writes the SQL for you.</p>
+        <div class="scroll">
+          <table>
+            <thead>
+              <tr><th>In the database</th><th>In Python with an ORM</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>Table <code>accounts</code></td><td>Class <code>Account</code></td></tr>
+              <tr><td>Row</td><td>One <code>Account</code> object</td></tr>
+              <tr><td>Column <code>balance</code></td><td>Attribute <code>account.balance</code></td></tr>
+              <tr><td>Foreign key <code>customer_id</code></td><td><code>account.owner</code>, the <code>Customer</code> object itself</td></tr>
+              <tr><td><code>UPDATE accounts SET balance = ...</code></td><td><code>account.balance = ...</code> then commit</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>What you gain: less repeated SQL, one place that describes each table, normal Python objects to pass around, and the same code on SQLite, PostgreSQL and MySQL. What you pay: one more library to learn, a little speed, and SQL you no longer see. That last cost is real. An innocent-looking loop can run hundreds of queries, as <a href="#n-plus-one">the N+1 chapter</a> shows.</p>
+        <p class="note"><b>Advice:</b> an ORM does not replace knowing SQL. It writes SQL for you, and you need to be able to read what it wrote. That is why this page started with plain SQL.</p>
+      </section>
+
+      <section class="chapter" id="models">
+        <h2>Engine and models</h2>
+        <p>The <b>engine</b> knows how to reach the database. It is made once, from a URL. A <b>model</b> is a class that describes one table. Models inherit from a base class that you create from <code>DeclarativeBase</code>.</p>
+        <script type="text/plain" data-lang="py" data-file="models.py">
+from typing import List, Optional
+
+from sqlalchemy import ForeignKey, String, create_engine, inspect
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
+
+class Base(DeclarativeBase):
+    pass
+
+class Customer(Base):
+    __tablename__ = "customers"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(String(100))
+    joined: Mapped[Optional[int]]                   # Optional: the column may be NULL
+    accounts: Mapped[List["Account"]] = relationship(back_populates="owner")
+
+class Account(Base):
+    __tablename__ = "accounts"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    customer_id: Mapped[int] = mapped_column(ForeignKey("customers.id"))
+    kind: Mapped[str] = mapped_column(String(20), default="savings")
+    balance: Mapped[int] = mapped_column(default=0)
+    owner: Mapped["Customer"] = relationship(back_populates="accounts")
+
+engine = create_engine("sqlite:///:memory:")        # in-memory SQLite, as before
+Base.metadata.create_all(engine)                    # runs CREATE TABLE for every model
+
+print(inspect(engine).get_table_names())            # ['accounts', 'customers']
+        </script>
+        <div class="scroll">
+          <table>
+            <thead>
+              <tr><th>Piece</th><th>What it does</th></tr>
+            </thead>
+            <tbody>
+              <tr><td><code>__tablename__</code></td><td>The name of the table in the database</td></tr>
+              <tr><td><code>Mapped[int]</code></td><td>A type hint that says "this attribute is a column holding an int". A plain type means <code>NOT NULL</code></td></tr>
+              <tr><td><code>Mapped[Optional[int]]</code></td><td>The column may be <code>NULL</code>, which Python sees as <code>None</code></td></tr>
+              <tr><td><code>mapped_column(...)</code></td><td>Extra details: primary key, foreign key, length, default value</td></tr>
+              <tr><td><code>relationship(...)</code></td><td>Not a column. A Python-side link that follows the foreign key: <code>customer.accounts</code> is a list, <code>account.owner</code> is one customer</td></tr>
+              <tr><td><code>back_populates</code></td><td>Names the attribute on the other class, so both sides stay in step</td></tr>
+              <tr><td><code>create_all(engine)</code></td><td>Creates any table that does not exist yet. It never changes a table that already exists</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><b>Python 3.9:</b> SQLAlchemy reads these type hints while the program runs. Write <code>Optional[int]</code> and <code>List["Account"]</code> from <code>typing</code>. The newer spelling <code>int | None</code> works only on Python 3.10 and later.</p>
+      </section>
+
+      <section class="chapter" id="session">
+        <h2>Sessions: adding rows</h2>
+        <p>A <b>session</b> is your workspace for one piece of work. You add objects to it, it remembers what is new or changed, and <code>commit()</code> sends everything to the database in one transaction. Used with <code>with</code>, the session is closed for you at the end.</p>
+        <script type="text/plain" data-lang="py" data-file="session.py">
+from sqlalchemy import String, create_engine
+from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column
+
+class Base(DeclarativeBase):
+    pass
+
+class Account(Base):
+    __tablename__ = "accounts"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    owner: Mapped[str] = mapped_column(String(100))
+    balance: Mapped[int] = mapped_column(default=0)
+
+engine = create_engine("sqlite:///:memory:")
+Base.metadata.create_all(engine)
+
+with Session(engine) as session:
+    rishikesh = Account(owner="Rishikesh Agrawani", balance=5000)
+    print(rishikesh.id)                  # None  (not in the database yet)
+
+    session.add(rishikesh)
+    session.add_all([
+        Account(owner="Sandhya Agrawani", balance=12000),
+        Account(owner="Hemkesh Agrawani"),             # balance uses the default
+    ])
+    session.commit()                     # INSERT the three rows
+
+    print(rishikesh.id)                  # 1  (filled in by the database)
+    print(session.get(Account, 3).balance)   # 0
+        </script>
+        <p><code>session.get(Account, 3)</code> fetches one object by primary key, or returns <code>None</code> if there is no such row. To keep this and the next few examples short, they use a single <code>Account</code> model that stores the owner's name directly.</p>
+      </section>
+
+      <section class="chapter" id="orm-query">
+        <h2>Querying with select</h2>
+        <p><code>select(Account)</code> builds a query from Python expressions. <code>where()</code> filters and <code>order_by()</code> sorts. <code>session.scalars()</code> runs it and gives back <code>Account</code> objects.</p>
+        <script type="text/plain" data-lang="py" data-file="orm_query.py">
+from sqlalchemy import String, create_engine, func, select
+from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column
+
+class Base(DeclarativeBase):
+    pass
+
+class Account(Base):
+    __tablename__ = "accounts"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    owner: Mapped[str] = mapped_column(String(100))
+    balance: Mapped[int] = mapped_column(default=0)
+
+engine = create_engine("sqlite:///:memory:")
+Base.metadata.create_all(engine)
+
+with Session(engine) as session:
+    session.add_all([
+        Account(owner="Rishikesh Agrawani", balance=5000),
+        Account(owner="Sandhya Agrawani", balance=12000),
+        Account(owner="Subhash Agrawani", balance=8000),
+        Account(owner="Malinikesh Agrawani", balance=3000),
+    ])
+    session.commit()
+
+    query = select(Account).where(Account.balance >= 5000).order_by(Account.balance.desc())
+    for account in session.scalars(query):
+        print(account.owner, account.balance)
+    # Sandhya Agrawani 12000
+    # Subhash Agrawani 8000
+    # Rishikesh Agrawani 5000
+
+    one = session.scalars(select(Account).where(Account.owner.like("Malini%"))).first()
+    print(one.id, one.owner)                               # 4 Malinikesh Agrawani
+
+    names = session.scalars(select(Account.owner).order_by(Account.owner).limit(2)).all()
+    print(names)                                           # ['Malinikesh Agrawani', 'Rishikesh Agrawani']
+
+    print(session.scalar(select(func.sum(Account.balance))))   # 28000
+        </script>
+        <div class="scroll">
+          <table>
+            <thead>
+              <tr><th>Call</th><th>Returns</th></tr>
+            </thead>
+            <tbody>
+              <tr><td><code>session.scalars(query)</code></td><td>A result you can loop over, one object per row</td></tr>
+              <tr><td><code>.all()</code></td><td>A list of all of them</td></tr>
+              <tr><td><code>.first()</code></td><td>The first one, or <code>None</code></td></tr>
+              <tr><td><code>.one()</code></td><td>Exactly one, and an error if there are zero or several</td></tr>
+              <tr><td><code>session.scalar(query)</code></td><td>A single value, such as a count or a sum</td></tr>
+              <tr><td><code>session.execute(query)</code></td><td>Rows as tuples, for queries that select several columns</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><b>Safety:</b> values such as <code>5000</code> and <code>"Malini%"</code> are sent as placeholders, never pasted into the SQL. The ORM protects you from SQL injection as long as you build queries this way.</p>
+      </section>
+
+      <section class="chapter" id="orm-change">
+        <h2>Updating and deleting objects</h2>
+        <p>To update a row, change the attribute and commit. The session notices the change and writes the <code>UPDATE</code>. To delete a row, pass the object to <code>session.delete()</code>.</p>
+        <script type="text/plain" data-lang="py" data-file="orm_change.py">
+from sqlalchemy import String, create_engine, select
+from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column
+
+class Base(DeclarativeBase):
+    pass
+
+class Account(Base):
+    __tablename__ = "accounts"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    owner: Mapped[str] = mapped_column(String(100))
+    balance: Mapped[int] = mapped_column(default=0)
+
+engine = create_engine("sqlite:///:memory:")
+Base.metadata.create_all(engine)
+
+with Session(engine) as session:
+    session.add_all([Account(owner="Malinikesh Agrawani", balance=3000),
+                     Account(owner="Hemkesh Agrawani", balance=1500)])
+    session.commit()
+
+with Session(engine) as session:
+    malinikesh = session.get(Account, 1)
+    malinikesh.balance += 500            # just change the attribute
+    session.delete(session.get(Account, 2))
+    session.commit()                     # UPDATE and DELETE are sent here
+
+with Session(engine) as session:         # a fresh session reads from the database
+    for account in session.scalars(select(Account)):
+        print(account.id, account.owner, account.balance)
+    # 1 Malinikesh Agrawani 3500
+        </script>
+        <p class="note"><b>Pitfall:</b> nothing is saved until <code>commit()</code>. If the <code>with</code> block ends without a commit, the session rolls back and the changes are lost, quietly.</p>
+      </section>
+
+      <section class="chapter" id="n-plus-one">
+        <h2>Relationships and the N+1 problem</h2>
+        <p>With a relationship you move between tables by attribute: <code>customer.accounts</code> is the list of that customer's accounts. By default the ORM loads that list only when you first touch it, with one extra query. This is called <b>lazy loading</b>.</p>
+        <p>Lazy loading is fine for one customer. In a loop over N customers it means 1 query for the customers plus N queries for their accounts. That is the <b>N+1 query problem</b>. The example counts the queries that really reach the database.</p>
+        <script type="text/plain" data-lang="py" data-file="n_plus_one.py">
+from typing import List
+
+from sqlalchemy import ForeignKey, String, create_engine, event, select
+from sqlalchemy.orm import (DeclarativeBase, Mapped, Session, mapped_column,
+                            relationship, selectinload)
+
+class Base(DeclarativeBase):
+    pass
+
+class Customer(Base):
+    __tablename__ = "customers"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(String(100))
+    accounts: Mapped[List["Account"]] = relationship(back_populates="owner")
+
+class Account(Base):
+    __tablename__ = "accounts"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    customer_id: Mapped[int] = mapped_column(ForeignKey("customers.id"))
+    balance: Mapped[int] = mapped_column(default=0)
+    owner: Mapped["Customer"] = relationship(back_populates="accounts")
+
+engine = create_engine("sqlite:///:memory:")
+Base.metadata.create_all(engine)
+
+with Session(engine) as session:
+    rishikesh = Customer(name="Rishikesh Agrawani")
+    rishikesh.accounts = [Account(balance=5000), Account(balance=2500)]   # sets customer_id for us
+    session.add_all([
+        rishikesh,
+        Customer(name="Sandhya Agrawani", accounts=[Account(balance=12000)]),
+        Customer(name="Subhash Agrawani", accounts=[Account(balance=8000)]),
+        Customer(name="Malinikesh Agrawani", accounts=[Account(balance=3000)]),
+        Customer(name="Hemkesh Agrawani"),
+    ])
+    session.commit()
+    print(rishikesh.accounts[1].owner.name)         # Rishikesh Agrawani
+
+queries = []
+
+@event.listens_for(engine, "before_cursor_execute")
+def remember(conn, cursor, statement, parameters, context, executemany):
+    queries.append(statement)                       # called once for every SQL statement
+
+def totals(query):
+    queries.clear()
+    with Session(engine) as session:
+        result = {c.name.split()[0]: sum(a.balance for a in c.accounts)
+                  for c in session.scalars(query)}
+    return result, len(queries)
+
+print(totals(select(Customer)))
+# ({'Rishikesh': 7500, 'Sandhya': 12000, 'Subhash': 8000, 'Malinikesh': 3000, 'Hemkesh': 0}, 6)
+
+print(totals(select(Customer).options(selectinload(Customer.accounts))))
+# ({'Rishikesh': 7500, 'Sandhya': 12000, 'Subhash': 8000, 'Malinikesh': 3000, 'Hemkesh': 0}, 2)
+        </script>
+        <p>Same answer, 6 queries against 2. <code>selectinload(Customer.accounts)</code> tells the ORM to fetch the accounts of all the customers in one second query. With 5 customers the difference is small. With 5000 it is 5001 queries against 2.</p>
+        <p class="note"><b>Habit:</b> when a loop touches a relationship, load it up front with <code>selectinload</code>. If a page is slow, count the queries before anything else.</p>
+      </section>
+
+      <section class="chapter" id="orm-transfer">
+        <h2>The transfer with the ORM</h2>
+        <p><code>session.begin()</code> is a context manager for one transaction: commit if the block finishes, rollback if it raises. Combined with the session itself on one line, it gives the same all-or-nothing transfer as before.</p>
+        <script type="text/plain" data-lang="py" data-file="orm_transfer.py">
+from sqlalchemy import String, create_engine, select
+from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column
+
+class Base(DeclarativeBase):
+    pass
+
+class Account(Base):
+    __tablename__ = "accounts"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    owner: Mapped[str] = mapped_column(String(100))
+    balance: Mapped[int] = mapped_column(default=0)
+
+engine = create_engine("sqlite:///:memory:")
+Base.metadata.create_all(engine)
+
+with Session(engine) as session, session.begin():
+    session.add_all([Account(owner="Rishikesh", balance=5000),
+                     Account(owner="Sandhya", balance=12000)])
+
+def transfer(src_id, dst_id, amount):
+    with Session(engine) as session, session.begin():    # commit or rollback, then close
+        src = session.get(Account, src_id)
+        dst = session.get(Account, dst_id)
+        src.balance -= amount
+        if src.balance < 0:
+            raise ValueError("insufficient funds")
+        if dst is None:
+            raise LookupError(f"account {dst_id} does not exist")
+        dst.balance += amount
+
+def balances():
+    with Session(engine) as session:
+        return [(a.owner, a.balance) for a in session.scalars(select(Account).order_by(Account.id))]
+
+for args in [(1, 99, 2000), (1, 2, 9000), (1, 2, 2000)]:
+    try:
+        transfer(*args)
+        print("ok    ", balances())
+    except (LookupError, ValueError) as error:
+        print("failed", balances(), error)
+        </script>
+        <script type="text/plain" data-lang="text" data-file="Output">
+failed [('Rishikesh', 5000), ('Sandhya', 12000)] account 99 does not exist
+failed [('Rishikesh', 5000), ('Sandhya', 12000)] insufficient funds
+ok     [('Rishikesh', 3000), ('Sandhya', 14000)]
+        </script>
+        <p>In both failed transfers, <code>src.balance</code> had already been lowered in Python. The rollback threw that change away, so the database never saw it.</p>
+        <p>This version reads the balance into Python and writes it back, so it has the race described in <a href="#races">Two transfers at once</a>. The ORM can also send the single safe <code>UPDATE</code>. The <code>update()</code> function builds it, and <code>rowcount</code> works as before.</p>
+        <script type="text/plain" data-lang="py" data-file="orm_atomic.py">
+from sqlalchemy import String, create_engine, update
+from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column
+
+class Base(DeclarativeBase):
+    pass
+
+class Account(Base):
+    __tablename__ = "accounts"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    owner: Mapped[str] = mapped_column(String(100))
+    balance: Mapped[int] = mapped_column(default=0)
+
+engine = create_engine("sqlite:///:memory:")
+Base.metadata.create_all(engine)
+
+with Session(engine) as session, session.begin():
+    session.add(Account(owner="Subhash", balance=1000))
+
+def withdraw(account_id, amount):
+    statement = (
+        update(Account)
+        .where(Account.id == account_id, Account.balance >= amount)
+        .values(balance=Account.balance - amount)       # balance = balance - ?
+    )
+    with Session(engine) as session, session.begin():
+        return session.execute(statement).rowcount == 1
+
+print(withdraw(1, 800))      # True
+print(withdraw(1, 800))      # False
+        </script>
+      </section>
+
+      <section class="chapter" id="echo">
+        <h2>Seeing the SQL</h2>
+        <p>Pass <code>echo=True</code> to <code>create_engine()</code> and SQLAlchemy logs every statement it sends, with the values. It is the quickest way to learn what the ORM does, and to spot an N+1 problem.</p>
+        <p>This block is not run automatically, because each logged line starts with the current time and some lines include how long a step took, so the output differs on every run. The output below is from a real run, with the timestamps and the table-check lines trimmed.</p>
+        <script type="text/plain" data-lang="py" data-file="echo.py" data-norun>
+from sqlalchemy import String, create_engine, select
+from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column
+
+class Base(DeclarativeBase):
+    pass
+
+class Customer(Base):
+    __tablename__ = "customers"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(String(100))
+
+engine = create_engine("sqlite:///:memory:", echo=True)     # log every statement
+Base.metadata.create_all(engine)
+
+with Session(engine) as session:
+    session.add(Customer(name="Rishikesh Agrawani"))
+    session.commit()
+    found = session.scalars(select(Customer).where(Customer.name.like("Rishi%"))).all()
+        </script>
+        <script type="text/plain" data-lang="text" data-file="Output (trimmed)">
+INFO sqlalchemy.engine.Engine BEGIN (implicit)
+INFO sqlalchemy.engine.Engine
+CREATE TABLE customers (
+	id INTEGER NOT NULL,
+	name VARCHAR(100) NOT NULL,
+	PRIMARY KEY (id)
+)
+INFO sqlalchemy.engine.Engine [no key 0.00003s] ()
+INFO sqlalchemy.engine.Engine COMMIT
+INFO sqlalchemy.engine.Engine BEGIN (implicit)
+INFO sqlalchemy.engine.Engine INSERT INTO customers (name) VALUES (?)
+INFO sqlalchemy.engine.Engine [generated in 0.00006s] ('Rishikesh Agrawani',)
+INFO sqlalchemy.engine.Engine COMMIT
+INFO sqlalchemy.engine.Engine BEGIN (implicit)
+INFO sqlalchemy.engine.Engine SELECT customers.id, customers.name
+FROM customers
+WHERE customers.name LIKE ?
+INFO sqlalchemy.engine.Engine [generated in 0.00005s] ('Rishi%',)
+INFO sqlalchemy.engine.Engine ROLLBACK
+        </script>
+        <p>Everything from this page is visible: the <code>CREATE TABLE</code>, the <code>?</code> placeholders with the values sent separately, and the <code>BEGIN</code> and <code>COMMIT</code> of each transaction. The final <code>ROLLBACK</code> is harmless. The session was closed after a read, with nothing to save.</p>
+        <p class="note"><b>Pitfall:</b> switch <code>echo</code> off in production. It is slow, and it writes customer data into the logs.</p>
+      </section>
+
+      <section class="chapter" id="raw-or-orm">
+        <h2>Raw SQL or the ORM</h2>
+        <p>Both are fine, and many projects use both. SQLAlchemy can also run SQL you wrote yourself, through <code>text()</code>, with named placeholders such as <code>:minimum</code>.</p>
+        <script type="text/plain" data-lang="py" data-file="raw_sql.py">
+from sqlalchemy import create_engine, text
+
+engine = create_engine("sqlite:///:memory:")
+
+with engine.begin() as conn:             # one transaction, committed at the end
+    conn.execute(text("CREATE TABLE accounts (id INTEGER PRIMARY KEY, owner TEXT, balance INTEGER)"))
+    conn.execute(
+        text("INSERT INTO accounts (owner, balance) VALUES (:owner, :balance)"),
+        [{"owner": "Sandhya", "balance": 12000}, {"owner": "Hemkesh", "balance": 1500}],
+    )
+    rows = conn.execute(
+        text("SELECT owner, balance FROM accounts WHERE balance >= :minimum"), {"minimum": 5000})
+    print(rows.all())        # [('Sandhya', 12000)]
+        </script>
+        <div class="scroll">
+          <table>
+            <thead>
+              <tr><th>Situation</th><th>Reach for</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>A small script, one or two tables, SQLite</td><td><code>sqlite3</code> and plain SQL</td></tr>
+              <tr><td>An application with many tables: create, read, update, delete</td><td>The ORM</td></tr>
+              <tr><td>A report with several joins, groups and totals</td><td>Raw SQL, often through <code>text()</code></td></tr>
+              <tr><td>Changing thousands of rows in one go</td><td>One <code>UPDATE</code> statement, raw or with <code>update()</code>, not a loop over objects</td></tr>
+              <tr><td>You are learning how databases work</td><td>Raw SQL first</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <h3>Migrations</h3>
+        <p><code>create_all()</code> creates missing tables, but it never alters an existing one. When a live database needs a new column, you write a <b>migration</b>: a small versioned script that changes the tables step by step. The usual tool with SQLAlchemy is <b>Alembic</b>.</p>
+        <h3>Other databases</h3>
+        <p>SQLite is perfect for learning, tests and small tools. A web application with many users normally runs a database server such as PostgreSQL or MySQL. With SQLAlchemy the models and queries stay the same. You install a driver package for that database and change the URL given to <code>create_engine()</code>. These lines are not runnable here, because they need a real server.</p>
+        <script type="text/plain" data-lang="text" data-file="Database URLs">
+sqlite:///bank.db                                       a file next to the program
+sqlite:///:memory:                                      in memory
+postgresql+psycopg2://user:password@localhost/bank      needs: pip install psycopg2-binary
+mysql+pymysql://user:password@localhost/bank            needs: pip install pymysql
+        </script>
+      </section>
+
+      <section class="chapter part" id="habits-part">
+        <h2>Good habits</h2>
+        <p class="kind">Part 4 of 4 &middot; rules that prevent the common disasters</p>
+        <p>Most database trouble comes from a short list of mistakes. This part states the rules once and ends with a table of everything on the page.</p>
+        <ul>
+          <li><a href="#habits">Five habits</a>: placeholders, short connections, closed sessions, money types, secrets</li>
+          <li><a href="#reference">Quick reference</a></li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="habits">
+        <h2>Five habits</h2>
+        <h3>1. Never build SQL with string formatting</h3>
+        <p>Values go through placeholders: <code>?</code> in <code>sqlite3</code>, <code>:name</code> in <code>text()</code>, or ORM expressions. See <a href="#placeholders">Placeholders and SQL injection</a>.</p>
+        <h3>2. Keep connections and transactions short</h3>
+        <p>Open, do the work, commit, close. An open transaction can hold locks that make other users wait. Do not keep one open while you wait for a person or call another service.</p>
+        <h3>3. Close what you open</h3>
+        <p>Use <code>with Session(engine) as session:</code> so the session is always closed, even after an error. For <code>sqlite3</code>, call <code>conn.close()</code>, or wrap the connection in <code>contextlib.closing()</code>. Create the engine once for the whole program and reuse it.</p>
+        <h3>4. Store money as integers or Decimal, never float</h3>
+        <p>A <code>float</code> cannot hold most decimal fractions exactly, and the tiny errors add up. Store money as a whole number of the smallest unit, paise for rupees, or use <code>Decimal</code>.</p>
+        <script type="text/plain" data-lang="py" data-file="money.py">
+from decimal import Decimal
+
+print(0.1 + 0.2)                             # 0.30000000000000004
+print(Decimal("0.10") + Decimal("0.20"))     # 0.30
+
+deposit_paise = 1050 + 2025                  # 10.50 rupees + 20.25 rupees, held as paise
+print(deposit_paise)                         # 3075
+print(f"{deposit_paise // 100}.{deposit_paise % 100:02d}")   # 30.75
+        </script>
+        <p>In a table, use an <code>INTEGER</code> column of paise, or the <code>NUMERIC</code> / <code>DECIMAL</code> column type on PostgreSQL and MySQL. The types themselves are covered in <a href="python-data-types.html">Python Data Types</a>.</p>
+        <h3>5. Keep secrets out of the code</h3>
+        <p>A database URL usually contains a password. If it is written in a source file, it ends up in version control, where everyone with access to the code can read it for ever. Read it from an <b>environment variable</b>, a named value that the operating system hands to the program.</p>
+        <script type="text/plain" data-lang="py" data-file="settings.py">
+import os
+
+# In production the real URL is set outside the code:  export DATABASE_URL=postgresql+psycopg2://...
+database_url = os.environ.get("DATABASE_URL", "sqlite:///:memory:")
+print(database_url)          # sqlite:///:memory:
+# the variable is not set here, so the safe default is used
+        </script>
+        <p class="note"><b>Pitfall:</b> a secret that was committed once stays in the history, even after you delete the line. If that happens, change the password.</p>
+      </section>
+
+      <section class="chapter" id="reference">
+        <h2>Quick reference</h2>
+        <div class="scroll">
+          <table>
+            <thead>
+              <tr><th>Task</th><th>sqlite3 (standard library)</th><th>SQLAlchemy ORM (pip install)</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>Connect</td><td><code>conn = sqlite3.connect("bank.db")</code></td><td><code>engine = create_engine("sqlite:///bank.db")</code></td></tr>
+              <tr><td>Create tables</td><td><code>conn.execute("CREATE TABLE ...")</code></td><td><code>Base.metadata.create_all(engine)</code></td></tr>
+              <tr><td>Insert</td><td><code>conn.execute("INSERT ... VALUES (?, ?)", (a, b))</code></td><td><code>session.add(Account(...))</code></td></tr>
+              <tr><td>Read one by id</td><td><code>conn.execute("SELECT ... WHERE id = ?", (1,)).fetchone()</code></td><td><code>session.get(Account, 1)</code></td></tr>
+              <tr><td>Read many</td><td><code>conn.execute("SELECT ...").fetchall()</code></td><td><code>session.scalars(select(Account).where(...)).all()</code></td></tr>
+              <tr><td>Update</td><td><code>conn.execute("UPDATE ... SET ... WHERE id = ?", ...)</code></td><td><code>account.balance = 100</code></td></tr>
+              <tr><td>Delete</td><td><code>conn.execute("DELETE FROM ... WHERE id = ?", ...)</code></td><td><code>session.delete(account)</code></td></tr>
+              <tr><td>Save</td><td><code>conn.commit()</code></td><td><code>session.commit()</code></td></tr>
+              <tr><td>Undo</td><td><code>conn.rollback()</code></td><td><code>session.rollback()</code></td></tr>
+              <tr><td>All-or-nothing block</td><td><code>with conn:</code></td><td><code>with Session(engine) as session, session.begin():</code></td></tr>
+              <tr><td>Rows changed</td><td><code>cursor.rowcount</code></td><td><code>session.execute(update(...)).rowcount</code></td></tr>
+              <tr><td>Columns by name</td><td><code>conn.row_factory = sqlite3.Row</code></td><td>Attributes on the object</td></tr>
+              <tr><td>Related rows</td><td><code>JOIN ... ON ...</code></td><td><code>customer.accounts</code>, with <code>selectinload</code> in loops</td></tr>
+              <tr><td>See the SQL</td><td>You wrote it</td><td><code>create_engine(url, echo=True)</code></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>The bank's data is now safe on disk, but only this one program can reach it. The last page of the path puts it behind an HTTP API that any program can call: <a href="python-web-apis.html">Python Web APIs</a>.</p>
+      </section>
+
+    </div>
+  </main>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script src="../../assets/tutorial.js"></script>
+</body>
+</html>

@@ -1,0 +1,1159 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Python Data Structures and Algorithms</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@500;700&display=swap">
+<link rel="stylesheet" href="../../assets/tutorial.css">
+</head>
+<body data-track="python">
+
+<header class="topbar">
+  <div class="topbar-in">
+    <a class="brand" href="../../../index.html">Learnings</a>
+    <nav class="tracks" aria-label="Python paths">
+      <a href="../../../index.html#python-basics">Python Basics</a>
+      <a href="../../../index.html#python-advanced">Python Advanced</a>
+      <a href="../../../index.html#python-practice" aria-current="true">Python in Practice</a>
+      <a href="../../../index.html#python-design">Python Design</a>
+      <a href="../../../archive.html">Archive</a>
+    </nav>
+    <div class="tools">
+      <button class="btn" id="menu" type="button" aria-expanded="false">Chapters</button>
+      <input id="q" type="search" placeholder="Search chapters" aria-label="Search chapters">
+      <button class="btn" id="theme" type="button">Dark mode</button>
+    </div>
+  </div>
+</header>
+
+<div class="shell">
+  <aside class="side">
+    <p class="side-label">Data structures</p>
+    <nav id="toc" aria-label="Chapters"></nav>
+  </aside>
+
+  <main>
+    <div class="page-head">
+      <p class="eyebrow">Python in practice, part 6 of 9</p>
+      <h1>Python Data Structures and Algorithms</h1>
+      <p class="lead">A data structure is a way of arranging values so that some operations on them are cheap. An algorithm is a list of steps that solves a problem. This page covers the structures Python gives you, a few you can build yourself, and the algorithms that come up most often in interviews and in everyday code. The running example is a small bank. Every example runs on the standard library alone, so nothing needs <code>pip install</code>.</p>
+    </div>
+
+    <div class="chapters">
+
+      <section class="chapter part" id="part-measuring">
+        <h2>Measuring</h2>
+        <p class="kind">Part 1 of 6 &middot; how to say that code is fast or slow</p>
+        <p>Before comparing structures you need a way to compare them. Seconds are a poor measure, because they change with the machine. Programmers count <b>steps</b> and ask how the count grows when the input grows.</p>
+        <ul>
+          <li><a href="#big-o">Big-O in plain words</a>: the five growth rates worth knowing</li>
+          <li><a href="#counting-steps">Counting steps</a>: measure work without a clock</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="big-o">
+        <h2>Big-O in plain words</h2>
+        <p>Big-O notation describes how the amount of work grows as the input grows. The input size is called <code>n</code>: the number of accounts, transactions or customers. <code>O(n)</code> means "double the input and the work doubles". <code>O(1)</code> means "the work stays the same however large the input is".</p>
+        <p>Big-O drops small details. A loop that does 3 steps per item and a loop that does 5 steps per item are both <code>O(n)</code>. What matters is the shape of the growth.</p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Big-O</th><th>Name</th><th>Steps at n = 1,000</th><th>Steps at n = 1,000,000</th><th>What it feels like</th></tr></thead>
+            <tbody>
+              <tr><td><code>O(1)</code></td><td>constant</td><td>1</td><td>1</td><td>Instant at any size. Looking up a dict key.</td></tr>
+              <tr><td><code>O(log n)</code></td><td>logarithmic</td><td>about 10</td><td>about 20</td><td>Instant. Each step halves what is left. Binary search.</td></tr>
+              <tr><td><code>O(n)</code></td><td>linear</td><td>1,000</td><td>1,000,000</td><td>Fine. One pass over the data. Summing a list.</td></tr>
+              <tr><td><code>O(n log n)</code></td><td>linearithmic</td><td>about 10,000</td><td>about 20,000,000</td><td>Still fine. Sorting.</td></tr>
+              <tr><td><code>O(n<sup>2</sup>)</code></td><td>quadratic</td><td>1,000,000</td><td>1,000,000,000,000</td><td>Fine for small input, hopeless for large input. A loop inside a loop over the same data.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><b>Rule of thumb:</b> plain Python gets through very roughly ten million simple steps in a second. A million steps is not noticeable. A million million steps would take more than a day.</p>
+      </section>
+
+      <section class="chapter" id="counting-steps">
+        <h2>Counting steps</h2>
+        <p>You can see the growth rates without a clock. Each function below does a different kind of work and returns how many steps it took.</p>
+        <script type="text/plain" data-lang="py" data-file="count_steps.py">
+def halving_steps(n):          # O(log n): throw half away each time
+    steps = 0
+    while n > 1:
+        n //= 2
+        steps += 1
+    return steps
+
+def one_pass_steps(n):         # O(n): touch every item once
+    steps = 0
+    for _ in range(n):
+        steps += 1
+    return steps
+
+def every_pair_steps(n):       # O(n^2): compare every item with every item
+    steps = 0
+    for _ in range(n):
+        for _ in range(n):
+            steps += 1
+    return steps
+
+for n in (10, 100, 1000):
+    print(n, halving_steps(n), one_pass_steps(n), every_pair_steps(n))
+        </script>
+        <script type="text/plain" data-lang="text" data-file="Output">
+10 3 10 100
+100 6 100 10000
+1000 9 1000 1000000
+        </script>
+        <p>The input grew 100 times, from 10 to 1,000. The halving loop went from 3 steps to 9. The single pass grew 100 times. The loop inside a loop grew 10,000 times.</p>
+        <p class="note"><b>Habit:</b> to find the Big-O of your own code, look for loops. One loop over the data is <code>O(n)</code>. A loop inside a loop is usually <code>O(n<sup>2</sup>)</code>. A loop that halves the data is <code>O(log n)</code>. Also count hidden loops: <code>x in some_list</code>, <code>sum()</code>, <code>max()</code> and slicing all walk the list.</p>
+      </section>
+
+      <section class="chapter part" id="part-builtin">
+        <h2>Built-in structures and their costs</h2>
+        <p class="kind">Part 2 of 6 &middot; list, dict, set and tuple</p>
+        <p>Python's four built-in containers cover most needs. They look similar in code, but the same operation can cost one step on one of them and a million steps on another.</p>
+        <ul>
+          <li><a href="#lists">Lists</a>: cheap at the end, expensive at the front</li>
+          <li><a href="#dict-set">Dicts and sets</a>: finding things in one step</li>
+          <li><a href="#tuples">Tuples</a>: small fixed records</li>
+          <li><a href="#cost-table">What each operation costs</a>: the table to remember</li>
+          <li><a href="#choosing">Choosing the right one</a>: list against set, counted</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="lists">
+        <h2>Lists</h2>
+        <p>A list keeps its items side by side in one block of memory, in order. Reading <code>items[i]</code> is <code>O(1)</code> because Python can jump straight to position <code>i</code>. Adding at the end with <code>append</code> is also <code>O(1)</code>.</p>
+        <p>Adding at the front is different. <code>insert(0, x)</code> must first move every existing item one place to the right, so it is <code>O(n)</code>. Doing it <code>n</code> times is <code>O(n<sup>2</sup>)</code>.</p>
+        <script type="text/plain" data-lang="py" data-file="list_ends.py">
+import timeit
+
+def add_at_end(n):
+    items = []
+    for i in range(n):
+        items.append(i)         # O(1) each time
+
+def add_at_front(n):
+    items = []
+    for i in range(n):
+        items.insert(0, i)      # O(n) each time: everything shifts
+
+n = 20_000
+end = min(timeit.repeat(lambda: add_at_end(n), number=1, repeat=3))
+front = min(timeit.repeat(lambda: add_at_front(n), number=1, repeat=3))
+
+print(front > 5 * end)          # True
+        </script>
+        <p>The example prints a comparison and not the times themselves, because times differ on every machine and every run. The gap here is large enough that the answer is always <code>True</code>.</p>
+        <p>Searching a list with <code>in</code>, <code>index()</code> or <code>count()</code> is <code>O(n)</code>. Python has no shortcut: it compares your value with each item from the left until it finds a match or runs out.</p>
+        <script type="text/plain" data-lang="py" data-file="list_search.py">
+account_numbers = [1004, 1001, 1005, 1002, 1003]
+
+print(1002 in account_numbers)        # True   (4 comparisons)
+print(9999 in account_numbers)        # False  (5 comparisons, all of them)
+print(account_numbers.index(1005))    # 2
+        </script>
+      </section>
+
+      <section class="chapter" id="dict-set">
+        <h2>Dicts and sets</h2>
+        <p>A dict and a set find things without searching. They use <b>hashing</b>. Python runs the key through the built-in <code>hash()</code> function, which turns it into a number. That number decides which slot of an internal table the key goes into. To look the key up later, Python computes the same number and goes straight to that slot.</p>
+        <p>So lookups, inserts and deletes are <code>O(1)</code> on average, whether the dict holds five accounts or five million.</p>
+        <script type="text/plain" data-lang="py" data-file="dict_lookup.py">
+balances = {
+    "Rishikesh": 52000,
+    "Sandhya": 91000,
+    "Subhash": 78000,
+}
+
+print(balances["Sandhya"])             # 91000
+print("Hemkesh" in balances)           # False
+balances["Hemkesh"] = 7000             # insert: O(1)
+del balances["Subhash"]                # delete: O(1)
+print(list(balances))                  # ['Rishikesh', 'Sandhya', 'Hemkesh']
+
+vip = {"Sandhya", "Subhash"}           # a set: keys only, no values
+print("Sandhya" in vip)                # True
+print(hash("Sandhya") == hash("Sandhya"))   # True
+        </script>
+        <p>A dict remembers the order in which keys were inserted. A set has no order you can rely on.</p>
+        <h3>What can be a key</h3>
+        <p>A key must be <b>hashable</b>: its hash must never change while it is in the dict. Immutable values such as numbers, strings and tuples of immutable values are hashable. Lists, dicts and sets can change, so they are not.</p>
+        <script type="text/plain" data-lang="py" data-file="keys.py">
+transfers = {}
+transfers[("Rishikesh", "Sandhya")] = 5000     # a tuple is a fine key
+print(transfers)                # {('Rishikesh', 'Sandhya'): 5000}
+
+try:
+    transfers[["Rishikesh", "Sandhya"]] = 5000 # a list is not
+except TypeError as error:
+    print(error)                # unhashable type: 'list'
+
+members = frozenset(["Rishikesh", "Hemkesh"])  # an immutable set
+print({members: "joint account"}[members])     # joint account
+        </script>
+        <p class="note"><b>Detail:</b> the actual number returned by <code>hash()</code> for a string changes each time Python starts. That is deliberate, for security. Never save hash values or depend on them.</p>
+      </section>
+
+      <section class="chapter" id="tuples">
+        <h2>Tuples</h2>
+        <p>A tuple is a fixed sequence. It cannot grow, shrink or have an item replaced. Reading by position is <code>O(1)</code> and searching is <code>O(n)</code>, the same as a list.</p>
+        <p>Use a tuple for a small group of values that belong together, such as one transaction. Use a list for a collection of similar things that changes over time, such as all transactions.</p>
+        <script type="text/plain" data-lang="py" data-file="tuples.py">
+transaction = ("Rishikesh", "deposit", 5000)   # one record
+owner, kind, amount = transaction              # unpacking
+print(owner, amount)                           # Rishikesh 5000
+
+try:
+    transaction[2] = 9000
+except TypeError as error:
+    print(error)    # 'tuple' object does not support item assignment
+
+history = [transaction, ("Sandhya", "withdraw", 1200)]   # a list of tuples
+print(len(history))                            # 2
+        </script>
+      </section>
+
+      <section class="chapter" id="cost-table">
+        <h2>What each operation costs</h2>
+        <p>These are the costs for CPython, the standard Python. "Average" means the usual case. <code>n</code> is the number of items in the container.</p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Operation</th><th>list</th><th>dict</th><th>set</th><th>tuple</th></tr></thead>
+            <tbody>
+              <tr><td>Read by position, <code>x[i]</code></td><td>O(1)</td><td>not available</td><td>not available</td><td>O(1)</td></tr>
+              <tr><td>Read by key, <code>d[key]</code></td><td>not available</td><td>O(1) average</td><td>not available</td><td>not available</td></tr>
+              <tr><td>Membership, <code>x in c</code></td><td>O(n)</td><td>O(1) average</td><td>O(1) average</td><td>O(n)</td></tr>
+              <tr><td>Add at the end</td><td>O(1), <code>append</code></td><td>O(1) average, <code>d[k] = v</code></td><td>O(1) average, <code>add</code></td><td>cannot change</td></tr>
+              <tr><td>Add at the front or middle</td><td>O(n), <code>insert</code></td><td>has no positions</td><td>has no positions</td><td>cannot change</td></tr>
+              <tr><td>Remove the last item</td><td>O(1), <code>pop()</code></td><td>O(1), <code>popitem()</code></td><td>not available</td><td>cannot change</td></tr>
+              <tr><td>Remove the first item</td><td>O(n), <code>pop(0)</code></td><td>not available</td><td>not available</td><td>cannot change</td></tr>
+              <tr><td>Remove a given value or key</td><td>O(n), <code>remove(x)</code></td><td>O(1) average, <code>del d[k]</code></td><td>O(1) average, <code>discard(x)</code></td><td>cannot change</td></tr>
+              <tr><td>Length, <code>len(c)</code></td><td>O(1)</td><td>O(1)</td><td>O(1)</td><td>O(1)</td></tr>
+              <tr><td>Loop over everything</td><td>O(n)</td><td>O(n)</td><td>O(n)</td><td>O(n)</td></tr>
+              <tr><td>Copy or slice</td><td>O(size of the copy)</td><td>O(n)</td><td>O(n)</td><td>O(size of the copy)</td></tr>
+              <tr><td>Sort</td><td>O(n log n)</td><td>use <code>sorted(d)</code></td><td>use <code>sorted(s)</code></td><td>use <code>sorted(t)</code></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><b>Trade-off:</b> dicts and sets buy their speed with memory. They keep spare empty slots, so they take more room than a list holding the same items.</p>
+      </section>
+
+      <section class="chapter" id="choosing">
+        <h2>Choosing the right one</h2>
+        <p>The most common mistake is to test membership on a list inside a loop. The example counts how many comparisons Python makes when it looks for one account among 1,000, first in a list and then in a set.</p>
+        <script type="text/plain" data-lang="py" data-file="list_vs_set.py">
+class AccountNumber:
+    comparisons = 0                      # shared counter
+
+    def __init__(self, number):
+        self.number = number
+
+    def __eq__(self, other):
+        AccountNumber.comparisons += 1   # count every == Python performs
+        return self.number == other.number
+
+    def __hash__(self):
+        return hash(self.number)
+
+as_list = [AccountNumber(n) for n in range(1000)]
+as_set = set(as_list)
+wanted = AccountNumber(999)              # the last one in the list
+
+AccountNumber.comparisons = 0
+print(wanted in as_list)                 # True
+print(AccountNumber.comparisons)         # 1000
+
+AccountNumber.comparisons = 0
+print(wanted in as_set)                  # True
+print(AccountNumber.comparisons)         # 1
+        </script>
+        <p>The list needed 1,000 comparisons. The set used the hash to go to the right slot and needed one comparison to confirm the match.</p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>You need to</th><th>Reach for</th></tr></thead>
+            <tbody>
+              <tr><td>Keep items in order and read them by position</td><td>list</td></tr>
+              <tr><td>Ask "have I seen this before?" many times</td><td>set</td></tr>
+              <tr><td>Find a record by its id or name</td><td>dict</td></tr>
+              <tr><td>Remove duplicates</td><td>set, or <code>dict.fromkeys(items)</code> to keep the order</td></tr>
+              <tr><td>Hold a small fixed record, or build a dict key from several values</td><td>tuple</td></tr>
+              <tr><td>Add and remove at both ends</td><td><code>collections.deque</code>, covered next</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="chapter part" id="part-library">
+        <h2>Structures from the library</h2>
+        <p class="kind">Part 3 of 6 &middot; ready-made tools in the standard library</p>
+        <p>The standard library adds structures for jobs the four built-ins do badly. Knowing they exist saves you from writing them by hand, and in an interview it shows that you know the language.</p>
+        <ul>
+          <li><a href="#deque">A queue with deque</a>: first in, first out</li>
+          <li><a href="#stack">A stack with a list</a>: last in, first out</li>
+          <li><a href="#heapq">A priority queue with heapq</a>: the most important item first</li>
+          <li><a href="#bisect">Searching a sorted list with bisect</a>: which tier does a value fall in</li>
+          <li><a href="#counting">Grouping and counting</a>: <code>defaultdict</code> and <code>Counter</code></li>
+          <li><a href="#records">Records</a>: <code>namedtuple</code> and <code>dataclass</code></li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="deque">
+        <h2>A queue with deque</h2>
+        <p>A queue serves items in the order they arrived: first in, first out. Customers waiting at a bank counter form a queue.</p>
+        <p>A list is a poor queue. <code>list.pop(0)</code> removes the first item and then shifts every other item one place to the left, which is <code>O(n)</code>. <code>collections.deque</code> (say "deck", short for double-ended queue) adds and removes at both ends in <code>O(1)</code>.</p>
+        <script type="text/plain" data-lang="py" data-file="counter_queue.py">
+from collections import deque
+
+queue = deque()
+queue.append("Sandhya")            # customers join at the back
+queue.append("Subhash")
+queue.append("Rishikesh")
+
+print(queue.popleft())             # Sandhya    (served from the front)
+queue.append("Malinikesh")
+print(queue.popleft())             # Subhash
+print(list(queue))                 # ['Rishikesh', 'Malinikesh']
+print(len(queue))                  # 2
+
+recent = deque(maxlen=3)           # keeps only the last 3 items
+for amount in [500, 1200, 300, 4500, 250]:
+    recent.append(amount)
+print(list(recent))                # [300, 4500, 250]
+        </script>
+        <p class="note"><b>Limit:</b> a deque is fast at its two ends only. Reading or inserting in the middle is <code>O(n)</code>. If you need <code>items[i]</code> often, stay with a list.</p>
+      </section>
+
+      <section class="chapter" id="stack">
+        <h2>A stack with a list</h2>
+        <p>A stack serves the newest item first: last in, first out. Think of a pile of plates. A plain list is a good stack, because <code>append</code> and <code>pop()</code> both work at the end and are <code>O(1)</code>.</p>
+        <p>An undo history is a stack. The last change made is the first one undone.</p>
+        <script type="text/plain" data-lang="py" data-file="undo.py">
+balance = 10000
+history = []                         # the stack of earlier balances
+
+def change(amount):
+    global balance
+    history.append(balance)          # push: remember the old value
+    balance += amount
+
+def undo():
+    global balance
+    if history:                      # never pop an empty stack
+        balance = history.pop()      # pop: take the newest one back
+
+change(+5000)
+change(-2000)
+print(balance)                       # 13000
+undo()
+print(balance)                       # 15000
+undo()
+print(balance)                       # 10000
+undo()                               # nothing left to undo
+print(balance)                       # 10000
+        </script>
+      </section>
+
+      <section class="chapter" id="heapq">
+        <h2>A priority queue with heapq</h2>
+        <p>A priority queue hands out the most important item first, whatever order the items arrived in. The <code>heapq</code> module keeps a plain list arranged as a <b>heap</b>, in which the smallest item is always at position 0. Adding an item and removing the smallest are both <code>O(log n)</code>.</p>
+        <p>Here VIP customers have priority 1 and everyone else priority 2. A lower number is served first. The arrival number in the middle breaks ties, so two customers with the same priority are served in arrival order.</p>
+        <script type="text/plain" data-lang="py" data-file="vip_queue.py">
+import heapq
+
+waiting = []                                   # a plain list, used as a heap
+arrivals = [("Rishikesh", 2), ("Sandhya", 1), ("Hemkesh", 2), ("Subhash", 1)]
+
+for order, (name, priority) in enumerate(arrivals):
+    heapq.heappush(waiting, (priority, order, name))
+
+while waiting:
+    priority, order, name = heapq.heappop(waiting)
+    print(priority, name)
+        </script>
+        <script type="text/plain" data-lang="text" data-file="Output">
+1 Sandhya
+1 Subhash
+2 Rishikesh
+2 Hemkesh
+        </script>
+        <p>A heap is also the quick way to get the top few items of a large collection without sorting all of it.</p>
+        <script type="text/plain" data-lang="py" data-file="top_transactions.py">
+import heapq
+
+transactions = [
+    ("Rishikesh", 5000), ("Sandhya", 42000), ("Hemkesh", 750),
+    ("Subhash", 18000), ("Malinikesh", 2600), ("Sandhya", 9000),
+]
+
+largest = heapq.nlargest(3, transactions, key=lambda t: t[1])
+print(largest)      # [('Sandhya', 42000), ('Subhash', 18000), ('Sandhya', 9000)]
+
+smallest = heapq.nsmallest(2, transactions, key=lambda t: t[1])
+print(smallest)     # [('Hemkesh', 750), ('Malinikesh', 2600)]
+        </script>
+        <p class="note"><b>Detail:</b> <code>heapq</code> only makes a min-heap, with the smallest first. To serve the largest first, push the negative of the number, or use <code>nlargest</code>.</p>
+      </section>
+
+      <section class="chapter" id="bisect">
+        <h2>Searching a sorted list with bisect</h2>
+        <p>If a list is sorted, you can find a position in it in <code>O(log n)</code> by repeatedly halving the range. The <code>bisect</code> module does this. <code>bisect_right(limits, x)</code> returns how many limits are less than or equal to <code>x</code>, which is exactly the question "which tier is this value in?".</p>
+        <p>The bank pays a higher interest rate on larger balances.</p>
+        <script type="text/plain" data-lang="py" data-file="interest_tier.py">
+from bisect import bisect_right, insort
+
+limits = [10_000, 100_000, 1_000_000]      # must be sorted
+rates = [2.5, 3.0, 3.5, 4.0]               # one more rate than limits
+
+def interest_rate(balance):
+    return rates[bisect_right(limits, balance)]
+
+print(interest_rate(7_000))          # 2.5   below the first limit
+print(interest_rate(10_000))         # 3.0   exactly on a limit: next tier
+print(interest_rate(52_000))         # 3.0
+print(interest_rate(5_000_000))      # 4.0   above the last limit
+
+balances = [7000, 18000, 91000]
+insort(balances, 52000)              # insert and keep the list sorted
+print(balances)                      # [7000, 18000, 52000, 91000]
+        </script>
+        <p class="note"><b>Detail:</b> <code>insort</code> finds the position in <code>O(log n)</code>, but the insert itself still shifts items, so the whole call is <code>O(n)</code>.</p>
+      </section>
+
+      <section class="chapter" id="counting">
+        <h2>Grouping and counting</h2>
+        <p>Two jobs come up constantly: put items into groups, and count how often each thing appears. <code>defaultdict</code> creates a missing value for you the first time a key is used. <code>Counter</code> is a dict made for counting.</p>
+        <script type="text/plain" data-lang="py" data-file="group_count.py">
+from collections import Counter, defaultdict
+
+transactions = [
+    ("Rishikesh", "deposit", 5000), ("Sandhya", "withdraw", 1200),
+    ("Rishikesh", "withdraw", 800), ("Hemkesh", "deposit", 750),
+    ("Sandhya", "deposit", 42000), ("Rishikesh", "deposit", 300),
+]
+
+by_owner = defaultdict(list)             # a missing key starts as []
+for owner, kind, amount in transactions:
+    by_owner[owner].append(amount)
+print(dict(by_owner))
+# {'Rishikesh': [5000, 800, 300], 'Sandhya': [1200, 42000], 'Hemkesh': [750]}
+
+totals = defaultdict(int)                # a missing key starts as 0
+for owner, kind, amount in transactions:
+    totals[kind] += amount
+print(dict(totals))                      # {'deposit': 48050, 'withdraw': 2000}
+
+counts = Counter(owner for owner, kind, amount in transactions)
+print(counts["Rishikesh"])               # 3
+print(counts.most_common(2))             # [('Rishikesh', 3), ('Sandhya', 2)]
+print(counts["Subhash"])                 # 0   (no KeyError)
+        </script>
+        <p>Both do the work in one pass, so they are <code>O(n)</code>.</p>
+      </section>
+
+      <section class="chapter" id="records">
+        <h2>Records</h2>
+        <p>A record is a group of named fields, such as one account. A plain tuple works, but <code>account[2]</code> says nothing about what position 2 holds. <code>namedtuple</code> gives the positions names and stays immutable. A <code>dataclass</code> is a normal class with the boring methods written for you, and its fields can change.</p>
+        <script type="text/plain" data-lang="py" data-file="records.py">
+from collections import namedtuple
+from dataclasses import dataclass
+
+Transaction = namedtuple("Transaction", ["owner", "kind", "amount"])
+t = Transaction("Rishikesh", "deposit", 5000)
+print(t.amount, t[2])        # 5000 5000
+print(t)   # Transaction(owner='Rishikesh', kind='deposit', amount=5000)
+
+@dataclass
+class Account:
+    number: int
+    owner: str
+    balance: float = 0.0
+
+account = Account(1001, "Sandhya Agrawani", 91000)
+account.balance += 500                   # fields can change
+print(account)
+# Account(number=1001, owner='Sandhya Agrawani', balance=91500)
+print(account == Account(1001, "Sandhya Agrawani", 91500))    # True
+        </script>
+        <p class="note"><b>Choosing:</b> use a <code>namedtuple</code> for small values that never change and may be used as dict keys. Use a <code>dataclass</code> when fields change or the record needs methods. Add <code>@dataclass(frozen=True)</code> to make a dataclass immutable and hashable.</p>
+      </section>
+
+      <section class="chapter part" id="part-build">
+        <h2>Build your own</h2>
+        <p class="kind">Part 4 of 6 &middot; four classic structures written by hand</p>
+        <p>In real code you will rarely write these, because the built-ins and the library are faster and already tested. Interviewers still ask for them, and writing each one once is the best way to understand what the library does for you.</p>
+        <ul>
+          <li><a href="#linked-list">A linked list</a>: items joined by references</li>
+          <li><a href="#stack-queue-classes">Stack and queue classes</a>: a small, safe interface</li>
+          <li><a href="#bst">A binary search tree</a>: sorted data that is quick to search</li>
+          <li><a href="#graph">A graph</a>: things and the connections between them</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="linked-list">
+        <h2>A linked list</h2>
+        <p>A linked list is a chain of <b>nodes</b>. Each node holds one value and a reference to the next node. The list itself only remembers the first node, called the head.</p>
+        <p>Adding at the front is <code>O(1)</code>: make a node and point it at the old head. Nothing has to shift. The price is that there is no <code>items[i]</code>. To reach an item you must walk the chain from the head, which is <code>O(n)</code>.</p>
+        <script type="text/plain" data-lang="py" data-file="linked_list.py">
+class Node:
+    def __init__(self, value, next=None):
+        self.value = value
+        self.next = next                 # the following node, or None
+
+class LinkedList:
+    def __init__(self):
+        self.head = None
+
+    def push_front(self, value):         # O(1)
+        self.head = Node(value, self.head)
+
+    def __iter__(self):                  # walk the chain: O(n)
+        node = self.head
+        while node is not None:
+            yield node.value
+            node = node.next
+
+    def remove(self, value):             # unlink the first match: O(n)
+        previous, node = None, self.head
+        while node is not None and node.value != value:
+            previous, node = node, node.next
+        if node is None:
+            return False                 # not found
+        if previous is None:
+            self.head = node.next        # it was the head
+        else:
+            previous.next = node.next    # skip over the node
+        return True
+
+names = LinkedList()
+for name in ["Hemkesh", "Malinikesh", "Rishikesh"]:
+    names.push_front(name)
+print(list(names))             # ['Rishikesh', 'Malinikesh', 'Hemkesh']
+print(names.remove("Malinikesh"))        # True
+print(list(names))             # ['Rishikesh', 'Hemkesh']
+print("Hemkesh" in names)                # True
+        </script>
+        <p class="note"><b>Concept:</b> because the class defines <code>__iter__</code>, a <code>for</code> loop, <code>list()</code> and <code>in</code> all work on it. <code>collections.deque</code> is built on a similar idea, with links in both directions.</p>
+      </section>
+
+      <section class="chapter" id="stack-queue-classes">
+        <h2>Stack and queue classes</h2>
+        <p>Wrapping a list or a deque in a small class gives the structure a clear name and hides the operations that would break it. Nobody can insert into the middle of a <code>Stack</code> by mistake.</p>
+        <script type="text/plain" data-lang="py" data-file="stack_queue.py">
+from collections import deque
+
+class Stack:                                  # last in, first out
+    def __init__(self):
+        self._items = []
+
+    def push(self, item):
+        self._items.append(item)
+
+    def pop(self):
+        if not self._items:
+            raise IndexError("pop from an empty stack")
+        return self._items.pop()
+
+    def peek(self):                           # look without removing
+        return self._items[-1]
+
+    def __len__(self):
+        return len(self._items)
+
+class Queue:                                  # first in, first out
+    def __init__(self):
+        self._items = deque()
+
+    def enqueue(self, item):
+        self._items.append(item)
+
+    def dequeue(self):
+        if not self._items:
+            raise IndexError("dequeue from an empty queue")
+        return self._items.popleft()
+
+    def __len__(self):
+        return len(self._items)
+
+stack, queue = Stack(), Queue()
+for name in ["Sandhya", "Subhash", "Rishikesh"]:
+    stack.push(name)
+    queue.enqueue(name)
+
+print(stack.pop(), queue.dequeue())           # Rishikesh Sandhya
+print(stack.peek(), len(stack), len(queue))   # Subhash 2 2
+        </script>
+      </section>
+
+      <section class="chapter" id="bst">
+        <h2>A binary search tree</h2>
+        <p>A binary search tree (BST) keeps values sorted in a branching shape. Each node has up to two children. Everything in the left branch is smaller than the node, and everything in the right branch is larger.</p>
+        <p>To search, start at the top and go left or right at each node. Each step throws away one branch. If the tree is balanced, meaning its branches have similar depth, a search takes <code>O(log n)</code> steps.</p>
+        <script type="text/plain" data-lang="py" data-file="bst.py">
+class TreeNode:
+    def __init__(self, key):
+        self.key = key
+        self.left = None
+        self.right = None
+
+def insert(node, key):
+    if node is None:
+        return TreeNode(key)             # found the empty spot
+    if key < node.key:
+        node.left = insert(node.left, key)
+    elif key > node.key:
+        node.right = insert(node.right, key)
+    return node                          # equal keys are ignored
+
+def search(node, key):
+    steps = 0
+    while node is not None:
+        steps += 1
+        if key == node.key:
+            return True, steps
+        node = node.left if key < node.key else node.right
+    return False, steps
+
+def in_order(node):                      # left branch, node, right branch
+    if node is not None:
+        yield from in_order(node.left)
+        yield node.key
+        yield from in_order(node.right)
+
+root = None
+for account_number in [1004, 1002, 1006, 1001, 1003, 1005, 1007]:
+    root = insert(root, account_number)
+
+print(list(in_order(root)))    # [1001, 1002, 1003, 1004, 1005, 1006, 1007]
+print(search(root, 1005))      # (True, 3)
+print(search(root, 1009))      # (False, 3)
+        </script>
+        <p>The in-order traversal visits the keys in sorted order. Seven accounts were searched in three steps.</p>
+        <p class="note"><b>Weakness:</b> insert keys that are already sorted (1001, 1002, 1003, ...) and every node goes to the right. The tree becomes a linked list and searching falls to <code>O(n)</code>. Self-balancing trees fix this, but Python has none built in. For sorted data in Python, use a sorted list with <code>bisect</code>, or a dict when you only need lookups.</p>
+      </section>
+
+      <section class="chapter" id="graph">
+        <h2>A graph</h2>
+        <p>A graph is a set of things, called nodes, and the connections between them, called edges. Road maps, social networks and file dependencies are graphs.</p>
+        <p>The simplest way to store one in Python is a dict. Each key is a node and its value is the list of nodes it connects to. Here the nodes are bank branches and an edge means that money can be transferred directly between the two.</p>
+        <script type="text/plain" data-lang="py" data-file="branches.py">
+routes = {
+    "Raipur":   ["Bilaspur", "Nagpur"],
+    "Bilaspur": ["Raipur", "Bhopal"],
+    "Nagpur":   ["Raipur", "Bhopal", "Mumbai"],
+    "Bhopal":   ["Bilaspur", "Nagpur", "Indore", "Delhi"],
+    "Indore":   ["Bhopal", "Mumbai"],
+    "Mumbai":   ["Nagpur", "Indore"],
+    "Delhi":    ["Bhopal"],
+}
+
+print(routes["Nagpur"])                    # ['Raipur', 'Bhopal', 'Mumbai']
+print("Delhi" in routes["Raipur"])         # False  (no direct route)
+print(len(routes))                         # 7 branches
+
+edges = sum(len(neighbours) for neighbours in routes.values()) // 2
+print(edges)                               # 8 routes
+
+def add_route(graph, a, b):                # routes work in both directions
+    graph.setdefault(a, []).append(b)
+    graph.setdefault(b, []).append(a)
+
+add_route(routes, "Delhi", "Jaipur")
+print(routes["Delhi"], routes["Jaipur"])   # ['Bhopal', 'Jaipur'] ['Delhi']
+        </script>
+        <p>Every route is stored twice, once from each end, because transfers work in both directions. The chapter on <a href="#bfs-dfs">breadth-first and depth-first search</a> uses this graph to find a route between two branches.</p>
+      </section>
+
+      <section class="chapter part" id="part-algorithms">
+        <h2>Algorithms</h2>
+        <p class="kind">Part 5 of 6 &middot; searching, sorting and the patterns behind interview questions</p>
+        <p>A small number of ideas solve a large share of problems. Each chapter here shows one idea in its smallest form.</p>
+        <ul>
+          <li><a href="#searching">Linear and binary search</a>: finding one value</li>
+          <li><a href="#sorting">Sorting with sorted</a>: keys, several keys, reverse</li>
+          <li><a href="#merge-sort">Merge sort by hand</a>: how an <code>O(n log n)</code> sort works</li>
+          <li><a href="#recursion">Recursion and iteration</a>: a function that calls itself, and its limits</li>
+          <li><a href="#two-pointers">Two pointers</a>: walk a sorted list from both ends</li>
+          <li><a href="#sliding-window">Sliding window</a>: a moving range over a list</li>
+          <li><a href="#bfs-dfs">Breadth-first and depth-first search</a>: exploring a graph</li>
+          <li><a href="#dynamic-programming">Dynamic programming</a>: solve small problems once and reuse them</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="searching">
+        <h2>Linear and binary search</h2>
+        <p><b>Linear search</b> checks each item in turn. It works on any list and is <code>O(n)</code>. <b>Binary search</b> needs a sorted list. It looks at the middle item, then throws away the half that cannot contain the target, and repeats. It is <code>O(log n)</code>.</p>
+        <script type="text/plain" data-lang="py" data-file="search.py">
+def linear_search(items, target):
+    steps = 0
+    for index, item in enumerate(items):
+        steps += 1
+        if item == target:
+            return index, steps
+    return -1, steps
+
+def binary_search(items, target):        # items must be sorted
+    low, high = 0, len(items) - 1
+    steps = 0
+    while low <= high:
+        steps += 1
+        middle = (low + high) // 2
+        if items[middle] == target:
+            return middle, steps
+        if items[middle] < target:
+            low = middle + 1             # target is in the right half
+        else:
+            high = middle - 1            # target is in the left half
+    return -1, steps
+
+account_numbers = list(range(1000, 2000))    # 1,000 sorted numbers
+
+print(linear_search(account_numbers, 1900))  # (900, 901)
+print(binary_search(account_numbers, 1900))  # (900, 10)
+print(binary_search(account_numbers, 5000))  # (-1, 10)
+        </script>
+        <p>Both found position 900. Linear search took 901 steps and binary search took 10. In real code, do not write binary search yourself. Use <code>bisect</code>, which is tested and runs at C speed.</p>
+        <script type="text/plain" data-lang="py" data-file="search_bisect.py">
+from bisect import bisect_left
+
+def find(sorted_items, target):
+    index = bisect_left(sorted_items, target)   # first place target could go
+    if index < len(sorted_items) and sorted_items[index] == target:
+        return index
+    return -1
+
+account_numbers = list(range(1000, 2000))
+print(find(account_numbers, 1900))      # 900
+print(find(account_numbers, 5000))      # -1
+        </script>
+        <p class="note"><b>Interview tip:</b> the usual bugs in a hand-written binary search are <code>low &lt; high</code> where <code>low &lt;= high</code> is needed, and forgetting the <code>+ 1</code> or <code>- 1</code>, which makes the loop run forever. Test it with an empty list, one item, and targets at both ends.</p>
+      </section>
+
+      <section class="chapter" id="sorting">
+        <h2>Sorting with sorted</h2>
+        <p><code>sorted(items)</code> returns a new sorted list. <code>items.sort()</code> sorts a list in place and returns <code>None</code>. Both use an algorithm called Timsort. It is <code>O(n log n)</code> in the worst case and faster on data that is already partly in order, which real data often is. It is also <b>stable</b>: items that compare as equal keep the order they had before the sort.</p>
+        <p>The <code>key</code> argument is a function that is called once on each item. Python sorts by what the function returns. <code>operator.itemgetter</code> builds such a function for a position or dict key, and <code>operator.attrgetter</code> builds one for an attribute.</p>
+        <script type="text/plain" data-lang="py" data-file="sort_keys.py">
+from operator import itemgetter
+
+accounts = [
+    ("Rishikesh", "savings", 52000),
+    ("Sandhya", "current", 91000),
+    ("Subhash", "savings", 91000),
+    ("Malinikesh", "current", 18000),
+    ("Hemkesh", "savings", 7000),
+]
+
+def names(rows):
+    return [row[0] for row in rows]
+
+print(names(sorted(accounts)))                       # by name: tuples compare left to right
+# ['Hemkesh', 'Malinikesh', 'Rishikesh', 'Sandhya', 'Subhash']
+
+print(names(sorted(accounts, key=itemgetter(2))))    # by balance
+# ['Hemkesh', 'Malinikesh', 'Rishikesh', 'Sandhya', 'Subhash']
+
+print(names(sorted(accounts, key=itemgetter(2), reverse=True)))
+# ['Sandhya', 'Subhash', 'Rishikesh', 'Malinikesh', 'Hemkesh']
+
+print(names(sorted(accounts, key=itemgetter(1, 0)))) # by kind, then by name
+# ['Malinikesh', 'Sandhya', 'Hemkesh', 'Rishikesh', 'Subhash']
+
+print(names(sorted(accounts, key=lambda a: len(a[0]))))   # by length of name
+# ['Sandhya', 'Subhash', 'Hemkesh', 'Rishikesh', 'Malinikesh']
+        </script>
+        <p>Sandhya and Subhash have the same balance. In both balance sorts Sandhya stays ahead of Subhash, because she came first in the original list. That is stability, and <code>reverse=True</code> keeps it.</p>
+        <h3>Several keys in different directions</h3>
+        <p>To sort by balance from high to low and then by name from A to Z, return a tuple from the key and negate the number. When a field cannot be negated, such as a string, sort twice: first by the least important key, then by the most important. Stability keeps the first order inside each group.</p>
+        <script type="text/plain" data-lang="py" data-file="sort_multi.py">
+from dataclasses import dataclass
+from operator import attrgetter
+
+@dataclass
+class Account:
+    owner: str
+    kind: str
+    balance: int
+
+accounts = [
+    Account("Rishikesh", "savings", 52000),
+    Account("Subhash", "savings", 91000),
+    Account("Sandhya", "current", 91000),
+    Account("Hemkesh", "savings", 7000),
+]
+
+ranked = sorted(accounts, key=lambda a: (-a.balance, a.owner))
+print([a.owner for a in ranked])
+# ['Sandhya', 'Subhash', 'Rishikesh', 'Hemkesh']
+
+step1 = sorted(accounts, key=attrgetter("owner"))            # least important first
+step2 = sorted(step1, key=attrgetter("kind"), reverse=True)  # then most important
+print([(a.kind, a.owner) for a in step2])
+# [('savings', 'Hemkesh'), ('savings', 'Rishikesh'), ('savings', 'Subhash'), ('current', 'Sandhya')]
+
+print(max(accounts, key=attrgetter("balance")).owner)        # Subhash
+        </script>
+        <p class="note"><b>Detail:</b> <code>min()</code> and <code>max()</code> take a <code>key</code> too, and they are <code>O(n)</code>. Do not sort a whole list just to get its largest item.</p>
+      </section>
+
+      <section class="chapter" id="merge-sort">
+        <h2>Merge sort by hand</h2>
+        <p>You should always use <code>sorted()</code> in real code. Writing one sort yourself shows where <code>O(n log n)</code> comes from. Merge sort follows a plan called <b>divide and conquer</b>: split the list in half, sort each half, then merge the two sorted halves into one.</p>
+        <p>Merging two sorted lists is easy. Look at the front of each, take the smaller, and repeat.</p>
+        <script type="text/plain" data-lang="py" data-file="merge_sort.py">
+def merge(left, right):
+    merged = []
+    i = j = 0
+    while i < len(left) and j < len(right):
+        if left[i] <= right[j]:          # <= keeps equal items in order: stable
+            merged.append(left[i])
+            i += 1
+        else:
+            merged.append(right[j])
+            j += 1
+    merged.extend(left[i:])              # one side still has items left
+    merged.extend(right[j:])
+    return merged
+
+def merge_sort(items):
+    if len(items) <= 1:                  # 0 or 1 items are already sorted
+        return items
+    middle = len(items) // 2
+    return merge(merge_sort(items[:middle]), merge_sort(items[middle:]))
+
+print(merge([750, 5000], [1200, 2600, 9000]))   # [750, 1200, 2600, 5000, 9000]
+print(merge_sort([5000, 750, 42000, 1200, 9000, 2600]))
+# [750, 1200, 2600, 5000, 9000, 42000]
+print(merge_sort([]))                           # []
+        </script>
+        <p>A list of <code>n</code> items can be halved about <code>log n</code> times before the pieces have one item each. At every level of halving, the merges together handle all <code>n</code> items. That gives <code>n</code> times <code>log n</code>.</p>
+      </section>
+
+      <section class="chapter" id="recursion">
+        <h2>Recursion and iteration</h2>
+        <p>A recursive function calls itself on a smaller version of the problem. It needs a <b>base case</b>, an input small enough to answer directly, or it never stops. Iteration means solving the same problem with a loop.</p>
+        <script type="text/plain" data-lang="py" data-file="factorial.py">
+import sys
+
+def factorial_recursive(n):
+    if n <= 1:                    # base case
+        return 1
+    return n * factorial_recursive(n - 1)
+
+def factorial_loop(n):
+    result = 1
+    for i in range(2, n + 1):
+        result *= i
+    return result
+
+print(factorial_recursive(5), factorial_loop(5))    # 120 120
+print(sys.getrecursionlimit())                      # 1000
+
+try:
+    factorial_recursive(5000)
+except RecursionError as error:
+    print("RecursionError")                         # RecursionError
+
+print(len(str(factorial_loop(5000))))               # 16326 digits, no problem
+        </script>
+        <p>Each call that has not finished yet takes up memory. Python stops a chain of calls that grows too deep and raises <code>RecursionError</code>. The default limit is 1000. So use recursion when the depth stays small, as it does in a balanced tree or in merge sort, and use a loop when the depth grows with the size of the input.</p>
+        <h3>Memoisation</h3>
+        <p>Fibonacci numbers show a second problem. Each number is the sum of the two before it, so the obvious recursive function calls itself twice, and those calls repeat the same work again and again. <b>Memoisation</b> means remembering the answer for each input the first time it is computed. <code>functools.lru_cache</code> adds that to any function.</p>
+        <script type="text/plain" data-lang="py" data-file="fibonacci.py">
+from functools import lru_cache
+
+calls = 0
+
+def fib_slow(n):
+    global calls
+    calls += 1
+    if n < 2:
+        return n
+    return fib_slow(n - 1) + fib_slow(n - 2)
+
+@lru_cache(maxsize=None)          # remember every answer
+def fib_fast(n):
+    if n < 2:
+        return n
+    return fib_fast(n - 1) + fib_fast(n - 2)
+
+print(fib_slow(20), calls)        # 6765 21891
+print(fib_fast(20))               # 6765
+print(fib_fast.cache_info().misses)   # 21   (the body ran 21 times)
+print(fib_fast(300))
+# 222232244629420445529739893461909967206666939096499764990979600
+
+def fib_loop(n):                  # iteration: no recursion limit, no cache
+    a, b = 0, 1
+    for _ in range(n):
+        a, b = b, a + b
+    return a
+
+print(fib_loop(20))               # 6765
+        </script>
+        <p>The slow version made 21,891 calls to find the 20th number. With the cache the function body ran 21 times, once for each value from 0 to 20.</p>
+        <p class="note"><b>Detail:</b> <code>lru_cache</code> only works when the arguments are hashable, because it stores them as dict keys. Python 3.9 and later also offer <code>functools.cache</code>, which is the same as <code>lru_cache(maxsize=None)</code>.</p>
+      </section>
+
+      <section class="chapter" id="two-pointers">
+        <h2>Two pointers</h2>
+        <p>A "pointer" here is just an index into a list. The two-pointer pattern keeps two of them and moves them towards each other. On a sorted list it replaces a loop inside a loop, turning <code>O(n<sup>2</sup>)</code> into <code>O(n)</code>.</p>
+        <p>The problem: find two transactions that add up to exactly 10,000. Start with one pointer at the smallest amount and one at the largest. If the sum is too small, move the left pointer up. If it is too large, move the right pointer down.</p>
+        <script type="text/plain" data-lang="py" data-file="two_pointers.py">
+def pair_with_sum(sorted_amounts, target):
+    left, right = 0, len(sorted_amounts) - 1
+    while left < right:
+        total = sorted_amounts[left] + sorted_amounts[right]
+        if total == target:
+            return sorted_amounts[left], sorted_amounts[right]
+        if total < target:
+            left += 1                 # need a bigger sum
+        else:
+            right -= 1                # need a smaller sum
+    return None
+
+amounts = sorted([5000, 750, 9000, 1200, 2600, 7400, 300])
+print(amounts)                        # [300, 750, 1200, 2600, 5000, 7400, 9000]
+print(pair_with_sum(amounts, 10000))  # (2600, 7400)
+print(pair_with_sum(amounts, 123))    # None
+        </script>
+        <p class="note"><b>Alternative:</b> if the list is not sorted and you may not sort it, walk it once and keep the amounts seen so far in a set. For each amount, check whether <code>target - amount</code> is in the set. That is also <code>O(n)</code>.</p>
+      </section>
+
+      <section class="chapter" id="sliding-window">
+        <h2>Sliding window</h2>
+        <p>A window is a run of neighbouring items. Many problems ask for the best window: the largest total over any 3 days, the longest run without a repeat. The slow way adds up every window from scratch. The sliding-window pattern moves the window one step at a time and only adjusts for the item that entered and the item that left.</p>
+        <script type="text/plain" data-lang="py" data-file="sliding_window.py">
+def best_window(values, size):
+    total = sum(values[:size])                 # the first window
+    best, best_start = total, 0
+    for end in range(size, len(values)):
+        total += values[end]                   # one item enters
+        total -= values[end - size]            # one item leaves
+        if total > best:
+            best, best_start = total, end - size + 1
+    return best, best_start
+
+daily_deposits = [1200, 300, 4500, 250, 5000, 4100, 800]
+print(best_window(daily_deposits, 3))          # (9900, 4)
+print(daily_deposits[4:7])                     # [5000, 4100, 800]
+        </script>
+        <p>The best three days in a row start at position 4 and total 9,900. The loop does two small steps per day whatever the window size, so it is <code>O(n)</code>.</p>
+      </section>
+
+      <section class="chapter" id="bfs-dfs">
+        <h2>Breadth-first and depth-first search</h2>
+        <p>There are two standard ways to explore a graph. <b>Breadth-first search</b> (BFS) visits everything one step away, then everything two steps away, and so on. It uses a queue. <b>Depth-first search</b> (DFS) follows one path as far as it goes, then backs up and tries the next. It uses a stack, or recursion.</p>
+        <p>Both keep a set of nodes already seen, so they never visit a node twice or go round in circles.</p>
+        <script type="text/plain" data-lang="py" data-file="traversal.py">
+from collections import deque
+
+routes = {
+    "Raipur":   ["Bilaspur", "Nagpur"],
+    "Bilaspur": ["Raipur", "Bhopal"],
+    "Nagpur":   ["Raipur", "Bhopal", "Mumbai"],
+    "Bhopal":   ["Bilaspur", "Nagpur", "Indore", "Delhi"],
+    "Indore":   ["Bhopal", "Mumbai"],
+    "Mumbai":   ["Nagpur", "Indore"],
+    "Delhi":    ["Bhopal"],
+}
+
+def bfs_order(graph, start):
+    seen, order = {start}, []
+    queue = deque([start])
+    while queue:
+        branch = queue.popleft()             # oldest first
+        order.append(branch)
+        for neighbour in graph[branch]:
+            if neighbour not in seen:
+                seen.add(neighbour)
+                queue.append(neighbour)
+    return order
+
+def dfs_order(graph, branch, seen=None):
+    seen = seen if seen is not None else set()
+    seen.add(branch)
+    order = [branch]
+    for neighbour in graph[branch]:
+        if neighbour not in seen:
+            order += dfs_order(graph, neighbour, seen)   # go deeper first
+    return order
+
+print(bfs_order(routes, "Raipur"))
+print(dfs_order(routes, "Raipur"))
+        </script>
+        <script type="text/plain" data-lang="text" data-file="Output">
+['Raipur', 'Bilaspur', 'Nagpur', 'Bhopal', 'Mumbai', 'Indore', 'Delhi']
+['Raipur', 'Bilaspur', 'Bhopal', 'Nagpur', 'Mumbai', 'Indore', 'Delhi']
+        </script>
+        <h3>The shortest route between two branches</h3>
+        <p>Because BFS reaches nodes in order of distance, the first time it reaches the goal it has found a route with the fewest hops. Remember which branch each branch was reached from, then walk those links backwards from the goal.</p>
+        <script type="text/plain" data-lang="py" data-file="shortest_route.py">
+from collections import deque
+
+routes = {
+    "Raipur":   ["Bilaspur", "Nagpur"],
+    "Bilaspur": ["Raipur", "Bhopal"],
+    "Nagpur":   ["Raipur", "Bhopal", "Mumbai"],
+    "Bhopal":   ["Bilaspur", "Nagpur", "Indore", "Delhi"],
+    "Indore":   ["Bhopal", "Mumbai"],
+    "Mumbai":   ["Nagpur", "Indore"],
+    "Delhi":    ["Bhopal"],
+}
+
+def shortest_route(graph, start, goal):
+    came_from = {start: None}                # doubles as the "seen" set
+    queue = deque([start])
+    while queue:
+        branch = queue.popleft()
+        if branch == goal:
+            path = []
+            while branch is not None:        # walk back to the start
+                path.append(branch)
+                branch = came_from[branch]
+            return path[::-1]
+        for neighbour in graph[branch]:
+            if neighbour not in came_from:
+                came_from[neighbour] = branch
+                queue.append(neighbour)
+    return None                              # no route at all
+
+print(shortest_route(routes, "Raipur", "Delhi"))
+# ['Raipur', 'Bilaspur', 'Bhopal', 'Delhi']
+print(shortest_route(routes, "Raipur", "Mumbai"))
+# ['Raipur', 'Nagpur', 'Mumbai']
+print(shortest_route(routes, "Delhi", "Delhi"))     # ['Delhi']
+        </script>
+        <p class="note"><b>Cost:</b> BFS and DFS both visit each node once and look at each edge a fixed number of times, so they are <code>O(nodes + edges)</code>. BFS finds the fewest hops only when every edge counts the same. If routes had different fees, you would need Dijkstra's algorithm, which is BFS with a <code>heapq</code> priority queue in place of the deque.</p>
+      </section>
+
+      <section class="chapter" id="dynamic-programming">
+        <h2>Dynamic programming</h2>
+        <p>Dynamic programming (DP) is for problems whose answer is built from answers to smaller versions of the same problem, where those smaller versions repeat. You solve each small problem once and store the result. Memoised Fibonacci was already an example.</p>
+        <p>The problem: an ATM must pay out an amount using the fewest notes. The obvious plan is greedy: always take the largest note that fits. With real note values that works. Imagine a machine loaded with notes of 100, 300 and 400, and it fails.</p>
+        <script type="text/plain" data-lang="py" data-file="fewest_notes.py">
+from functools import lru_cache
+
+NOTES = (100, 300, 400)
+
+def greedy(amount):                    # largest note first
+    count = 0
+    for note in sorted(NOTES, reverse=True):
+        count += amount // note
+        amount %= note
+    return count
+
+@lru_cache(maxsize=None)
+def fewest(amount):
+    if amount == 0:
+        return 0                       # base case: nothing left to pay
+    best = None                        # None means "cannot be paid"
+    for note in NOTES:
+        if note <= amount:
+            rest = fewest(amount - note)       # a smaller problem
+            if rest is not None and (best is None or rest + 1 < best):
+                best = rest + 1
+    return best
+
+print(greedy(600), fewest(600))        # 3 2    (400+100+100 against 300+300)
+print(fewest(1100))                    # 3      (400+400+300)
+print(fewest(250))                     # None   (cannot be paid exactly)
+print(fewest.cache_info().misses)      # 15     (small problems actually solved)
+        </script>
+        <p>The idea in one line: the fewest notes for an amount is one note plus the fewest notes for what remains, trying each note and keeping the best. Without the cache the same remaining amounts would be solved again and again.</p>
+        <h3>Counting the ways</h3>
+        <p>The same idea can be written as a loop that fills a table from the smallest problem upwards. This version counts in how many different ways an amount can be paid with 100, 200 and 500 notes. <code>ways[a]</code> holds the number of ways to pay <code>a</code>.</p>
+        <script type="text/plain" data-lang="py" data-file="count_ways.py">
+def count_ways(amount, notes):
+    step = 100                                   # work in units of 100
+    ways = [0] * (amount // step + 1)
+    ways[0] = 1                                  # one way to pay nothing
+    for note in notes:
+        unit = note // step
+        for a in range(unit, len(ways)):
+            ways[a] += ways[a - unit]            # reuse a smaller answer
+    return ways[-1]
+
+print(count_ways(500, [100, 200, 500]))          # 4
+print(count_ways(1000, [100, 200, 500]))         # 10
+print(count_ways(10000, [100, 200, 500]))        # 541
+        </script>
+        <p>The four ways to pay 500 are one 500 note, 200+200+100, 200+100+100+100 and five 100 notes. The table makes the work <code>O(amount &times; number of notes)</code>, where trying every combination would grow far faster.</p>
+        <p class="note"><b>How to spot DP:</b> the question asks for the fewest, the most, or the number of ways, and a choice made now changes what is left to solve. Write the plain recursive version first, then add <code>lru_cache</code>.</p>
+      </section>
+
+      <section class="chapter part" id="part-interview">
+        <h2>Interview habits</h2>
+        <p class="kind">Part 6 of 6 &middot; how to work through a problem out loud</p>
+        <p>Knowing the structures is half of an interview. The other half is showing how you think. These two chapters are short on purpose.</p>
+        <ul>
+          <li><a href="#checklist">A checklist for any problem</a>: four steps, in order</li>
+          <li><a href="#patterns">Which structure to reach for</a>: problem pattern to tool</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="checklist">
+        <h2>A checklist for any problem</h2>
+        <ol>
+          <li><b>Clarify.</b> Repeat the problem in your own words. Ask how large the input can be, whether it is sorted, whether it can be empty, and whether values can repeat or be negative. Work one small example by hand.</li>
+          <li><b>Brute force first.</b> Say the simplest correct solution out loud, even if it is slow. A working <code>O(n<sup>2</sup>)</code> answer is worth more than a clever answer you cannot finish.</li>
+          <li><b>State the complexity.</b> Give the Big-O for time and for extra memory. Then ask what is repeated or wasted. That is usually where a dict, a set, sorting or a second pointer removes a loop.</li>
+          <li><b>Test edge cases.</b> Walk through your code with an empty input, one item, all items equal, and the largest and smallest values. Fix what breaks before you say you are done.</li>
+        </ol>
+        <p>The example follows the steps for one question: "does this list of transaction ids contain a duplicate?"</p>
+        <script type="text/plain" data-lang="py" data-file="duplicates.py">
+def has_duplicate_slow(ids):          # brute force: every pair, O(n^2)
+    for i in range(len(ids)):
+        for j in range(i + 1, len(ids)):
+            if ids[i] == ids[j]:
+                return True
+    return False
+
+def has_duplicate(ids):               # one pass with a set: O(n) time, O(n) memory
+    seen = set()
+    for transaction_id in ids:
+        if transaction_id in seen:
+            return True
+        seen.add(transaction_id)
+    return False
+
+cases = [[], [7], [7, 7], [1, 2, 3, 4], [1, 2, 3, 1]]     # edge cases first
+for ids in cases:
+    assert has_duplicate(ids) == has_duplicate_slow(ids)   # both must agree
+print([has_duplicate(ids) for ids in cases])
+# [False, False, True, False, True]
+        </script>
+        <p class="note"><b>Habit:</b> keep the brute-force version. Comparing it with the fast version on small inputs, as the <code>assert</code> does here, is the cheapest test you can write.</p>
+      </section>
+
+      <section class="chapter" id="patterns">
+        <h2>Which structure to reach for</h2>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>The problem says</th><th>Reach for</th><th>Typical cost</th></tr></thead>
+            <tbody>
+              <tr><td>"Have I seen this before?", duplicates, membership</td><td><code>set</code></td><td>O(1) per check</td></tr>
+              <tr><td>Look up by id or name, count or group things</td><td><code>dict</code>, <code>Counter</code>, <code>defaultdict</code></td><td>O(1) per lookup</td></tr>
+              <tr><td>Process in arrival order, level by level</td><td><code>collections.deque</code> as a queue</td><td>O(1) per add or remove</td></tr>
+              <tr><td>Undo, matching brackets, "most recent first"</td><td>list as a stack</td><td>O(1) per push or pop</td></tr>
+              <tr><td>Top k, smallest or largest so far, next most urgent</td><td><code>heapq</code></td><td>O(log n) per push or pop</td></tr>
+              <tr><td>Find a value or a range in sorted data</td><td>binary search with <code>bisect</code></td><td>O(log n)</td></tr>
+              <tr><td>A pair or triple with a given sum in sorted data</td><td>two pointers</td><td>O(n)</td></tr>
+              <tr><td>Best run of neighbouring items</td><td>sliding window</td><td>O(n)</td></tr>
+              <tr><td>Fewest steps, shortest route with equal steps</td><td>breadth-first search</td><td>O(nodes + edges)</td></tr>
+              <tr><td>Explore everything, find any path, detect a cycle</td><td>depth-first search</td><td>O(nodes + edges)</td></tr>
+              <tr><td>Fewest, most or number of ways, with repeating sub-problems</td><td>dynamic programming, <code>lru_cache</code></td><td>number of distinct sub-problems &times; work for each</td></tr>
+              <tr><td>The order of the items does not matter to the answer</td><td>sort first, then one pass</td><td>O(n log n)</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>Big-O tells you how code grows, not how long it takes on your machine today. Measuring that, and understanding where time and memory go, is the subject of the next page: <a href="python-performance.html">Python Performance and Memory</a>.</p>
+      </section>
+
+    </div>
+  </main>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script src="../../assets/tutorial.js"></script>
+</body>
+</html>

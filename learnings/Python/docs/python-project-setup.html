@@ -1,0 +1,903 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Python Project Setup</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@500;700&display=swap">
+<link rel="stylesheet" href="../../assets/tutorial.css">
+</head>
+<body data-track="python">
+
+<header class="topbar">
+  <div class="topbar-in">
+    <a class="brand" href="../../../index.html">Learnings</a>
+    <nav class="tracks" aria-label="Python paths">
+      <a href="../../../index.html#python-basics">Python Basics</a>
+      <a href="../../../index.html#python-advanced">Python Advanced</a>
+      <a href="../../../index.html#python-practice" aria-current="true">Python in Practice</a>
+      <a href="../../../index.html#python-design">Python Design</a>
+      <a href="../../../archive.html">Archive</a>
+    </nav>
+    <div class="tools">
+      <button class="btn" id="menu" type="button" aria-expanded="false">Chapters</button>
+      <input id="q" type="search" placeholder="Search chapters" aria-label="Search chapters">
+      <button class="btn" id="theme" type="button">Dark mode</button>
+    </div>
+  </div>
+</header>
+
+<div class="shell">
+  <aside class="side">
+    <p class="side-label">Project Setup</p>
+    <nav id="toc" aria-label="Chapters"></nav>
+  </aside>
+
+  <main>
+    <div class="page-head">
+      <p class="eyebrow">Python in practice, part 1 of 9</p>
+      <h1>Python Project Setup</h1>
+      <p class="lead">So far every program has been one file that you run with <code>python3 file.py</code>. Real work is a folder of files, some packages written by other people, and a way to run it all on another machine. This page grows one small project, a package called <code>bank</code>, from a single file into a project you can install and run as a command. The terminal output shown was captured from real runs with Python 3.9 on macOS. Long folder paths are shortened to <code>...</code>.</p>
+    </div>
+
+    <div class="chapters">
+
+      <section class="chapter part" id="part-environments">
+        <h2>Environments and pip</h2>
+        <p class="kind">Group 1 of 4 &middot; a private Python for each project</p>
+        <p>Before writing any code, give the project its own place to install packages. Everything in this group is typed in a terminal.</p>
+        <ul>
+          <li><a href="#global-problem">The problem with one Python</a>: why sharing one install goes wrong</li>
+          <li><a href="#venv">Creating a virtual environment</a>: <code>python3 -m venv .venv</code></li>
+          <li><a href="#activate">Activating and leaving it</a>: macOS, Linux and Windows</li>
+          <li><a href="#pip">Installing packages with pip</a>: install, pin, list, remove</li>
+          <li><a href="#requirements">requirements.txt</a>: write down what you installed</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="global-problem">
+        <h2>The problem with one Python</h2>
+        <p>Your machine has one main Python install. If every project installs its packages there, they all share one set. A <b>package</b> here means code written by someone else that you download, such as <code>requests</code> or <code>tabulate</code>.</p>
+        <p>Sharing breaks in three ways:</p>
+        <ul>
+          <li><b>Version clashes.</b> Project A needs version 1 of a package and project B needs version 2. Only one version can be installed at a time.</li>
+          <li><b>No record.</b> After a year nobody knows which of the 80 installed packages this project really needs, so nobody else can run it.</li>
+          <li><b>Risk to the system.</b> On macOS and Linux the system Python is used by the operating system itself. Changing its packages can break other tools.</li>
+        </ul>
+        <p>The fix is a <b>virtual environment</b>: a private folder of packages that belongs to one project.</p>
+      </section>
+
+      <section class="chapter" id="venv">
+        <h2>Creating a virtual environment</h2>
+        <p>The <code>venv</code> module comes with Python. It creates a folder that holds a link to the Python interpreter and an empty place for packages. The usual name for that folder is <code>.venv</code>.</p>
+        <script type="text/plain" data-lang="bash">
+mkdir bank-project
+cd bank-project
+python3 -m venv .venv        # on Windows: py -m venv .venv
+ls .venv
+        </script>
+        <script type="text/plain" data-lang="text" data-file="Output">
+bin
+include
+lib
+pyvenv.cfg
+        </script>
+        <p><code>bin</code> holds <code>python</code>, <code>pip</code> and the activate scripts. <code>lib</code> is where installed packages will go. On Windows the folder is called <code>Scripts</code> instead of <code>bin</code>.</p>
+        <p class="note"><b>Rule:</b> never commit <code>.venv</code> to git. It is large, it only works on the machine that made it, and it can be rebuilt in a minute from a list of package names. Add <code>.venv/</code> to <code>.gitignore</code>.</p>
+      </section>
+
+      <section class="chapter" id="activate">
+        <h2>Activating and leaving it</h2>
+        <p><b>Activating</b> an environment changes your current terminal so that <code>python</code> and <code>pip</code> mean the ones inside <code>.venv</code>. It lasts until you close that terminal or type <code>deactivate</code>.</p>
+        <div class="scroll">
+          <table>
+            <thead>
+              <tr><th>System</th><th>Activate</th><th>Check which Python runs</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>macOS, Linux</td><td><code>source .venv/bin/activate</code></td><td><code>which python</code></td></tr>
+              <tr><td>Windows, Command Prompt</td><td><code>.venv\Scripts\activate</code></td><td><code>where python</code></td></tr>
+              <tr><td>Windows, PowerShell</td><td><code>.venv\Scripts\Activate.ps1</code></td><td><code>Get-Command python</code></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <script type="text/plain" data-lang="bash">
+source .venv/bin/activate
+which python
+deactivate
+which python3
+        </script>
+        <script type="text/plain" data-lang="text" data-file="Output">
+.../bank-project/.venv/bin/python
+/usr/bin/python3
+        </script>
+        <p>There are three ways to tell that an environment is active. The prompt starts with <code>(.venv)</code>. <code>which python</code> prints a path inside <code>.venv</code>. And Python itself can tell you:</p>
+        <script type="text/plain" data-lang="py" data-file="am_i_in_a_venv.py">
+import sys
+
+in_venv = sys.prefix != sys.base_prefix
+print("inside a virtual environment:", in_venv)
+# True when run with a venv's python, False with the system python
+        </script>
+        <p class="note"><b>Concept:</b> <code>sys.prefix</code> is the folder of the Python that is running. <code>sys.base_prefix</code> is the folder of the real install it was made from. They differ only inside a virtual environment.</p>
+        <p>You do not have to activate at all. Calling <code>.venv/bin/python</code> directly uses the environment too. Activation is only a shortcut.</p>
+      </section>
+
+      <section class="chapter" id="pip">
+        <h2>Installing packages with pip</h2>
+        <p><code>pip</code> downloads packages from the Python Package Index (PyPI) and puts them into the active environment. The bank will print tables, so install <code>tabulate</code>, a small package that formats rows as a text table.</p>
+        <script type="text/plain" data-lang="bash">
+pip install tabulate==0.9.0
+pip list
+        </script>
+        <script type="text/plain" data-lang="text" data-file="Output">
+Collecting tabulate==0.9.0
+  Downloading tabulate-0.9.0-py3-none-any.whl (35 kB)
+Installing collected packages: tabulate
+Successfully installed tabulate-0.9.0
+
+Package    Version
+---------- -------
+pip        21.2.4
+setuptools 58.0.4
+tabulate   0.9.0
+        </script>
+        <p><code>==0.9.0</code> <b>pins</b> the version: you get exactly that one. Without it pip installs the newest release, which can differ from one month to the next.</p>
+        <div class="scroll">
+          <table>
+            <thead>
+              <tr><th>Command</th><th>What it does</th></tr>
+            </thead>
+            <tbody>
+              <tr><td><code>pip install tabulate</code></td><td>Install the newest version</td></tr>
+              <tr><td><code>pip install tabulate==0.9.0</code></td><td>Install exactly 0.9.0</td></tr>
+              <tr><td><code>pip install "tabulate&gt;=0.9"</code></td><td>Install 0.9 or newer. The quotes stop the shell from reading <code>&gt;</code> as a redirect</td></tr>
+              <tr><td><code>pip install --upgrade tabulate</code></td><td>Move to the newest version</td></tr>
+              <tr><td><code>pip uninstall tabulate</code></td><td>Remove it</td></tr>
+              <tr><td><code>pip show tabulate</code></td><td>Version, summary and install location of one package</td></tr>
+              <tr><td><code>pip list</code></td><td>Everything installed in this environment</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>This is the one Python block on this page that needs <code>pip install</code> first. All the others use the standard library only.</p>
+        <script type="text/plain" data-lang="py" data-file="table.py">
+from tabulate import tabulate      # needs: pip install tabulate
+
+rows = [("Sandhya Agrawani", 12000), ("Hemkesh Agrawani", 1500)]
+print(tabulate(rows, headers=["Owner", "Balance"]))
+        </script>
+        <script type="text/plain" data-lang="text" data-file="Output">
+Owner               Balance
+----------------  ---------
+Sandhya Agrawani      12000
+Hemkesh Agrawani       1500
+        </script>
+        <p class="note"><b>Tip:</b> <code>python -m pip install ...</code> does the same as <code>pip install ...</code>, but it is certain to install into the Python you just named. Use it whenever you are not sure which <code>pip</code> your terminal picked.</p>
+      </section>
+
+      <section class="chapter" id="requirements">
+        <h2>requirements.txt</h2>
+        <p>Since <code>.venv</code> is not committed, the project needs a text file that lists its packages. <code>pip freeze</code> prints every installed package with its exact version, in the format pip can read back.</p>
+        <script type="text/plain" data-lang="bash">
+pip freeze
+pip freeze > requirements.txt
+        </script>
+        <script type="text/plain" data-lang="text" data-file="requirements.txt">
+tabulate==0.9.0
+        </script>
+        <p>Anyone who clones the project then rebuilds the same environment with three commands:</p>
+        <script type="text/plain" data-lang="bash">
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+        </script>
+        <script type="text/plain" data-lang="text" data-file="Output">
+Collecting tabulate==0.9.0
+  Using cached tabulate-0.9.0-py3-none-any.whl (35 kB)
+Installing collected packages: tabulate
+Successfully installed tabulate-0.9.0
+        </script>
+        <p class="note"><b>Note:</b> <code>pip freeze</code> also lists the packages your packages depend on. Installing <code>requests</code>, for example, adds four more lines. That is useful, because it pins everything, but it hides which packages you chose yourself. The <a href="#pyproject">pyproject.toml chapter</a> shows where to record only your own choices.</p>
+      </section>
+
+      <section class="chapter part" id="part-modules">
+        <h2>Modules and packages</h2>
+        <p class="kind">Group 2 of 4 &middot; splitting code into files and folders</p>
+        <p>This group is about <code>import</code>: what it loads, where Python looks, and why the same file behaves differently when it is run and when it is imported.</p>
+        <ul>
+          <li><a href="#modules">A module is one file</a>: <code>bank.py</code> and a script that uses it</li>
+          <li><a href="#import-forms">Ways to import</a>: <code>import x</code>, <code>from x import y</code>, <code>as</code>, and why not <code>*</code></li>
+          <li><a href="#dunder-name">The __name__ check</a>: <code>if __name__ == "__main__":</code></li>
+          <li><a href="#packages">A package is a folder</a>: <code>__init__.py</code></li>
+          <li><a href="#absolute-relative">Absolute and relative imports</a></li>
+          <li><a href="#sys-path">How Python finds modules</a>: <code>sys.path</code> and <code>ModuleNotFoundError</code></li>
+          <li><a href="#python-m">Running with python -m</a></li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="modules">
+        <h2>A module is one file</h2>
+        <p>A <b>module</b> is a <code>.py</code> file. Its name is the file name without <code>.py</code>. Here is the whole bank as one module.</p>
+        <script type="text/plain" data-lang="py" data-file="bank.py">
+"""A tiny bank: accounts, deposits and transfers."""
+
+
+class Account:
+    def __init__(self, owner, balance=0):
+        self.owner = owner
+        self.balance = balance
+
+    def deposit(self, amount):
+        if amount <= 0:
+            raise ValueError("deposit must be positive")
+        self.balance += amount
+
+    def withdraw(self, amount):
+        if amount > self.balance:
+            raise ValueError("insufficient funds")
+        self.balance -= amount
+
+
+def transfer(source, target, amount):
+    source.withdraw(amount)
+    target.deposit(amount)
+        </script>
+        <p>A second file in the same folder can use it. <code>import bank</code> runs <code>bank.py</code> once from top to bottom and gives you a module object called <code>bank</code>. Everything defined in the file is reached with a dot.</p>
+        <script type="text/plain" data-lang="py" data-file="main.py">
+import bank
+
+sandhya = bank.Account("Sandhya Agrawani", 12000)
+rishikesh = bank.Account("Rishikesh Agrawani", 5000)
+bank.transfer(sandhya, rishikesh, 2000)
+
+print(sandhya.balance)        # 10000
+print(rishikesh.balance)      # 7000
+print(bank.__doc__)           # A tiny bank: accounts, deposits and transfers.
+        </script>
+        <p class="note"><b>Concept:</b> a module is imported only once per program. A second <code>import bank</code> anywhere else reuses the object that already exists, so the file does not run again.</p>
+      </section>
+
+      <section class="chapter" id="import-forms">
+        <h2>Ways to import</h2>
+        <p>There are four forms. They all load the same module. They differ only in which names appear in your file. These examples need <code>bank.py</code> from the previous chapter in the same folder.</p>
+        <script type="text/plain" data-lang="py" data-file="import_forms.py">
+import bank                              # 1. the module; use bank.Account
+from bank import Account, transfer       # 2. chosen names; use Account directly
+import bank as b                         # 3. the module under a shorter name
+from bank import transfer as move        # 4. one name under another name
+
+hemkesh = Account("Hemkesh Agrawani", 1500)
+malinikesh = b.Account("Malinikesh Agrawani", 3000)
+move(malinikesh, hemkesh, 500)
+
+print(hemkesh.balance)                   # 2000
+print(bank.Account is Account)           # True
+print(move is transfer)                  # True
+        </script>
+        <div class="scroll">
+          <table>
+            <thead>
+              <tr><th>Form</th><th>Use it when</th></tr>
+            </thead>
+            <tbody>
+              <tr><td><code>import bank</code></td><td>The default. Every use says where the name comes from</td></tr>
+              <tr><td><code>from bank import Account</code></td><td>You use a few names many times</td></tr>
+              <tr><td><code>import bank as b</code></td><td>The name is long, or there is a well known short form such as <code>import numpy as np</code></td></tr>
+              <tr><td><code>from bank import *</code></td><td>Avoid in files. See below</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <h3>Why not from x import *</h3>
+        <p>The star copies every public name of the module into your file. You cannot see which names arrived, and they silently replace names you already had. The <code>os</code> module has its own function called <code>open</code>:</p>
+        <script type="text/plain" data-lang="py" data-file="star_import.py">
+import builtins
+
+print(open is builtins.open)     # True
+
+from os import *
+
+print(open is builtins.open)     # False
+        </script>
+        <p>After the star import, <code>open("notes.txt")</code> calls <code>os.open</code>, which takes different arguments and returns a number instead of a file object. Nothing on the import line warned you.</p>
+      </section>
+
+      <section class="chapter" id="dunder-name">
+        <h2>The __name__ check</h2>
+        <p>Every module has a variable called <code>__name__</code>, set by Python before the file runs. Its value depends on how the file was started:</p>
+        <ul>
+          <li>The file you <b>run</b> gets <code>__name__ == "__main__"</code>.</li>
+          <li>A file that is <b>imported</b> gets its module name, for example <code>"bank"</code>.</li>
+        </ul>
+        <script type="text/plain" data-lang="py" data-file="show_name.py">
+import json
+
+print(__name__)          # __main__
+print(json.__name__)     # json
+        </script>
+        <p>That lets one file do two jobs: be imported for its functions, and do something useful when run directly. Add a <code>demo</code> function and four lines to the bottom of <code>bank.py</code>. The first <code>print</code> is only there so you can watch the value.</p>
+        <script type="text/plain" data-lang="py" data-file="bank.py">
+"""A tiny bank: accounts, deposits and transfers."""
+
+
+class Account:
+    def __init__(self, owner, balance=0):
+        self.owner = owner
+        self.balance = balance
+
+    def deposit(self, amount):
+        if amount <= 0:
+            raise ValueError("deposit must be positive")
+        self.balance += amount
+
+    def withdraw(self, amount):
+        if amount > self.balance:
+            raise ValueError("insufficient funds")
+        self.balance -= amount
+
+
+def transfer(source, target, amount):
+    source.withdraw(amount)
+    target.deposit(amount)
+
+
+def demo():
+    sandhya = Account("Sandhya Agrawani", 12000)
+    rishikesh = Account("Rishikesh Agrawani", 5000)
+    transfer(sandhya, rishikesh, 2000)
+    print("demo:", sandhya.balance, rishikesh.balance)
+
+
+print("bank.py: __name__ is", __name__)
+
+if __name__ == "__main__":
+    demo()
+        </script>
+        <p>Run it directly and the condition is true, so the demo runs:</p>
+        <script type="text/plain" data-lang="bash">
+python3 bank.py
+        </script>
+        <script type="text/plain" data-lang="text" data-file="Output">
+bank.py: __name__ is __main__
+demo: 10000 7000
+        </script>
+        <p>Import it from another file and the condition is false, so the demo is skipped:</p>
+        <script type="text/plain" data-lang="py" data-file="main.py">
+import bank
+
+print("main.py: __name__ is", __name__)
+hemkesh = bank.Account("Hemkesh Agrawani", 1500)
+hemkesh.deposit(500)
+print(hemkesh.balance)
+        </script>
+        <script type="text/plain" data-lang="text" data-file="Output">
+bank.py: __name__ is bank
+main.py: __name__ is __main__
+2000
+        </script>
+        <p class="note"><b>Why it matters:</b> without the <code>if</code>, the demo would run every time anyone imported <code>bank</code>, including your tests. Keep the top level of a module to definitions, and put anything that acts (printing, reading input, starting a server) under the check.</p>
+      </section>
+
+      <section class="chapter" id="packages">
+        <h2>A package is a folder</h2>
+        <p>When one file grows too long, turn it into a <b>package</b>: a folder of modules. The folder name becomes the import name. A file called <code>__init__.py</code> inside it marks the folder as a package and runs when the package is first imported.</p>
+        <script type="text/plain" data-lang="text" data-file="Files">
+bank/
+    __init__.py       runs on "import bank"
+    accounts.py       the Account class
+    transfers.py      the transfer function
+        </script>
+        <p><code>accounts.py</code> is the <code>Account</code> class from before. It runs on its own, although it prints nothing.</p>
+        <script type="text/plain" data-lang="py" data-file="bank/accounts.py">
+"""Accounts and the money in them."""
+
+
+class Account:
+    def __init__(self, owner, balance=0):
+        self.owner = owner
+        self.balance = balance
+
+    def deposit(self, amount):
+        if amount <= 0:
+            raise ValueError("deposit must be positive")
+        self.balance += amount
+
+    def withdraw(self, amount):
+        if amount > self.balance:
+            raise ValueError("insufficient funds")
+        self.balance -= amount
+        </script>
+        <p>The next two files import from other files of the package, so they cannot be run alone. They are marked as not runnable here. Both were tested as part of the finished project.</p>
+        <script type="text/plain" data-lang="py" data-file="bank/transfers.py" data-norun>
+"""Moving money between two accounts."""
+
+from .accounts import Account
+
+
+def transfer(source: Account, target: Account, amount: int) -> None:
+    source.withdraw(amount)
+    target.deposit(amount)
+        </script>
+        <script type="text/plain" data-lang="py" data-file="bank/__init__.py" data-norun>
+"""A tiny bank: accounts, deposits and transfers."""
+
+from bank.accounts import Account
+from bank.transfers import transfer
+
+__all__ = ["Account", "transfer"]
+__version__ = "0.1.0"
+        </script>
+        <p>The two imports in <code>__init__.py</code> lift the main names to the top of the package. Users can write <code>from bank import Account</code> and do not need to know which file holds the class. <code>__all__</code> is the list of names the package offers to the outside.</p>
+        <p class="note"><b>Note:</b> <code>__init__.py</code> may be completely empty. Python 3 can even import a folder without one, as a "namespace package", but that is a special tool for splitting one package across several folders. For a normal package always add the file.</p>
+      </section>
+
+      <section class="chapter" id="absolute-relative">
+        <h2>Absolute and relative imports</h2>
+        <p>Inside a package there are two ways to import a neighbour.</p>
+        <div class="scroll">
+          <table>
+            <thead>
+              <tr><th>Kind</th><th>Written as</th><th>Meaning</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>Absolute</td><td><code>from bank.accounts import Account</code></td><td>Start from the top package name</td></tr>
+              <tr><td>Relative</td><td><code>from .accounts import Account</code></td><td>One dot: start from the folder this file is in</td></tr>
+              <tr><td>Relative</td><td><code>from ..utils import helper</code></td><td>Two dots: start from the folder above</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>Both work. Absolute imports are easier to read and to search for, and they are what PEP 8, the Python style guide, recommends. Relative imports are shorter and keep working if the package is renamed. Pick one style for a project. The rest of this page uses absolute imports.</p>
+        <p>Relative imports have one trap. They only work when the file is loaded <i>as part of its package</i>. Run the file directly and Python does not know which package the dot refers to:</p>
+        <script type="text/plain" data-lang="bash">
+python3 bank/transfers.py
+        </script>
+        <script type="text/plain" data-lang="text" data-file="Output">
+Traceback (most recent call last):
+  File ".../bank/transfers.py", line 3, in <module>
+    from .accounts import Account
+ImportError: attempted relative import with no known parent package
+        </script>
+        <p class="note"><b>Rule:</b> do not run files that live inside a package by their path. Import them, or start the package with <code>python -m</code>, which a <a href="#python-m">later chapter</a> covers.</p>
+      </section>
+
+      <section class="chapter" id="sys-path">
+        <h2>How Python finds modules</h2>
+        <p>For <code>import bank</code>, Python walks through a list of folders called <code>sys.path</code> and takes the first <code>bank.py</code> file or <code>bank</code> folder it finds. The list is built when Python starts, in this order:</p>
+        <div class="scroll">
+          <table>
+            <thead>
+              <tr><th>Order</th><th>Folder</th><th>Holds</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>1</td><td>The folder of the script you ran. With <code>python -m</code> or <code>python -c</code>, the current folder instead</td><td>Your own files</td></tr>
+              <tr><td>2</td><td>Folders listed in the <code>PYTHONPATH</code> environment variable, if it is set</td><td>Extra folders you asked for</td></tr>
+              <tr><td>3</td><td>The standard library folders</td><td><code>json</code>, <code>os</code>, <code>random</code> and the rest</td></tr>
+              <tr><td>4</td><td><code>site-packages</code> of the active environment</td><td>Everything installed with pip</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <script type="text/plain" data-lang="py" data-file="where.py">
+import json
+import os
+import sys
+
+here = os.path.dirname(os.path.abspath(__file__))
+print(type(sys.path).__name__)                      # list
+print(os.path.samefile(sys.path[0], here))          # True
+print(os.path.basename(json.__file__))              # __init__.py
+print("site-packages" in json.__file__)             # False
+        </script>
+        <p>Every module has a <code>__file__</code> attribute. When an import gives you something unexpected, print it to see which file Python really loaded.</p>
+        <h3>ModuleNotFoundError</h3>
+        <p>If no folder in the list has the module, you get the error most people meet in their first week:</p>
+        <script type="text/plain" data-lang="py" data-file="not_found.py">
+try:
+    import bnak                         # a typo for "bank"
+except ModuleNotFoundError as error:
+    print(error)                        # No module named 'bnak'
+    print(error.name)                   # bnak
+        </script>
+        <p>Python is not saying the module does not exist on your disk. It is saying the module is not in any folder on <code>sys.path</code> <i>for the Python that is running</i>. There are three usual causes:</p>
+        <ul>
+          <li><b>Not installed here.</b> You ran <code>pip install</code> with one Python and the script with another, or you forgot to activate the environment.</li>
+          <li><b>Wrong starting folder.</b> Rule 1 uses the folder of the script, not the folder you are standing in.</li>
+          <li><b>A typo</b>, or an install name that differs from the import name. For example you <code>pip install pyyaml</code> but <code>import yaml</code>.</li>
+        </ul>
+        <p>The second cause is the confusing one. Take a project with the <code>bank</code> package and a script in a sub-folder:</p>
+        <script type="text/plain" data-lang="text" data-file="Files">
+project/
+    bank/
+        __init__.py
+        accounts.py
+    scripts/
+        report.py         first line: from bank import Account
+        </script>
+        <script type="text/plain" data-lang="bash">
+cd project
+python3 scripts/report.py
+        </script>
+        <script type="text/plain" data-lang="text" data-file="Output">
+Traceback (most recent call last):
+  File ".../scripts/report.py", line 1, in <module>
+    from bank import Account
+ModuleNotFoundError: No module named 'bank'
+        </script>
+        <p>You are standing in <code>project</code>, and <code>bank</code> is right there. But the first entry of <code>sys.path</code> is <code>project/scripts</code>, and there is no <code>bank</code> in that folder.</p>
+        <p class="note"><b>Fix:</b> do not edit <code>sys.path</code> in your code. Either run the script as a module from the project folder with <code>python3 -m scripts.report</code>, or install your project into the environment so that <code>bank</code> can be imported from anywhere. The <a href="#editable">editable install chapter</a> shows how.</p>
+      </section>
+
+      <section class="chapter" id="python-m">
+        <h2>Running with python -m</h2>
+        <p><code>python -m name</code> means: find the module called <code>name</code> through <code>sys.path</code>, the same way <code>import</code> would, and run it as the main program. You have used it already: <code>python3 -m venv</code> and <code>python -m pip</code> run modules named <code>venv</code> and <code>pip</code>.</p>
+        <div class="scroll">
+          <table>
+            <thead>
+              <tr><th></th><th><code>python scripts/report.py</code></th><th><code>python -m scripts.report</code></th></tr>
+            </thead>
+            <tbody>
+              <tr><td>You give</td><td>A file path, with slashes and <code>.py</code></td><td>A module name, with dots and no <code>.py</code></td></tr>
+              <tr><td>First entry of <code>sys.path</code></td><td>The folder of the file</td><td>The current folder</td></tr>
+              <tr><td>Relative imports</td><td>Fail</td><td>Work</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>From the <code>project</code> folder of the last chapter, this form finds <code>bank</code>, because the current folder is on the path:</p>
+        <script type="text/plain" data-lang="bash">
+python3 -m scripts.report
+        </script>
+        <script type="text/plain" data-lang="text" data-file="Output">
+9000
+        </script>
+        <h3>Making a package runnable</h3>
+        <p><code>python -m bank</code> with a <i>package</i> name runs the file <code>__main__.py</code> inside that package. Without that file you get this:</p>
+        <script type="text/plain" data-lang="text" data-file="Output">
+.../.venv/bin/python: No module named bank.__main__; 'bank' is a package and cannot be directly executed
+        </script>
+        <p>The file is usually three lines that hand over to a <code>main</code> function. The <a href="#cli">command-line chapter</a> writes that function. This block is not runnable alone, because it needs the package.</p>
+        <script type="text/plain" data-lang="py" data-file="bank/__main__.py" data-norun>
+import sys
+
+from bank.cli import main
+
+sys.exit(main())
+        </script>
+        <p class="note"><b>Concept:</b> <code>sys.exit(number)</code> ends the program and reports the number to the terminal. 0 means success. Anything else means failure. Other programs and scripts read that number to decide what to do next.</p>
+      </section>
+
+      <section class="chapter part" id="part-project">
+        <h2>A real project</h2>
+        <p class="kind">Group 3 of 4 &middot; a layout others can install and run</p>
+        <p>Now put the pieces together: where the files go, one configuration file that describes the project, and a command you can type in the terminal.</p>
+        <ul>
+          <li><a href="#layout">Project layout</a>: the file tree and <code>.gitignore</code></li>
+          <li><a href="#pyproject">pyproject.toml</a>: name, version, dependencies</li>
+          <li><a href="#editable">Editable install</a>: <code>pip install -e .</code></li>
+          <li><a href="#cli">A command-line entry point</a>: typing <code>bank</code> in the terminal</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="layout">
+        <h2>Project layout</h2>
+        <p>This is the layout used for the rest of the page. It is called the <b>src layout</b>, because the package sits inside a folder named <code>src</code>.</p>
+        <script type="text/plain" data-lang="text" data-file="Files">
+bank-project/
+    pyproject.toml        describes the project: name, version, dependencies
+    README.md             what it is and how to run it
+    .gitignore            files git must not track
+    .venv/                the virtual environment (not committed)
+    src/
+        bank/
+            __init__.py
+            __main__.py   lets "python -m bank" work
+            accounts.py
+            transfers.py
+            cli.py        the command line
+    tests/
+        test_accounts.py
+        </script>
+        <p>The other common choice is the <b>flat layout</b>: the <code>bank</code> folder sits directly in <code>bank-project</code>, with no <code>src</code>.</p>
+        <div class="scroll">
+          <table>
+            <thead>
+              <tr><th></th><th>src layout</th><th>Flat layout</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>Import without installing</td><td>Fails from the project folder. You must install the project first</td><td>Works from the project folder, by accident of rule 1</td></tr>
+              <tr><td>Tests run against</td><td>The installed package, as your users will get it</td><td>Whatever folder happens to be on the path</td></tr>
+              <tr><td>Good for</td><td>Anything you will share or deploy</td><td>Small scripts and quick experiments</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>Tests live in their own <code>tests</code> folder, outside the package, so they are not shipped to users. <a href="python-testing.html">Python Testing</a> fills that folder.</p>
+        <script type="text/plain" data-lang="text" data-file=".gitignore">
+.venv/
+__pycache__/
+*.pyc
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+        </script>
+        <p class="note"><b>Concept:</b> <code>__pycache__</code> folders hold compiled copies of your modules that Python makes to start faster. They are rebuilt automatically and should never be committed.</p>
+      </section>
+
+      <section class="chapter" id="pyproject">
+        <h2>pyproject.toml</h2>
+        <p><code>pyproject.toml</code> is the standard file that describes a Python project. It is written in TOML, a simple format of <code>[sections]</code> and <code>key = value</code> lines. pip reads it, and so do most Python tools.</p>
+        <script type="text/plain" data-lang="text" data-file="pyproject.toml">
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "bank"
+version = "0.1.0"
+description = "A tiny bank: accounts, deposits and transfers"
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = [
+    "tabulate>=0.9",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8",
+    "ruff",
+    "mypy",
+]
+
+[project.scripts]
+bank = "bank.cli:main"
+        </script>
+        <div class="scroll">
+          <table>
+            <thead>
+              <tr><th>Part</th><th>Meaning</th></tr>
+            </thead>
+            <tbody>
+              <tr><td><code>[build-system]</code></td><td>Which tool turns this folder into an installable package. <code>setuptools</code> is the long-standing default. pip downloads it by itself when needed</td></tr>
+              <tr><td><code>name</code>, <code>version</code></td><td>What pip calls the project and which release this is</td></tr>
+              <tr><td><code>requires-python</code></td><td>pip refuses to install on an older Python</td></tr>
+              <tr><td><code>dependencies</code></td><td>Packages the code needs to run. pip installs them together with your project</td></tr>
+              <tr><td><code>[project.optional-dependencies]</code></td><td>Named extra groups. <code>dev</code> holds tools only developers need, such as the test runner</td></tr>
+              <tr><td><code>[project.scripts]</code></td><td>Terminal commands to create. Explained in the <a href="#cli">command-line chapter</a></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>With the src layout, setuptools finds the <code>bank</code> package inside <code>src</code> without being told.</p>
+        <p class="note"><b>Ranges or pins:</b> in <code>pyproject.toml</code> write the loosest range that works, such as <code>tabulate&gt;=0.9</code>. That says what the code needs. Exact pins of every package belong in <code>requirements.txt</code> or a lock file, which says what was installed on one tested setup. Many projects keep both.</p>
+      </section>
+
+      <section class="chapter" id="editable">
+        <h2>Editable install</h2>
+        <p><code>pip install .</code> installs the project in the current folder like any other package, by copying it into <code>site-packages</code>. While you are developing that is annoying, because every edit would need a new install. An <b>editable install</b>, <code>pip install -e .</code>, does not copy. It records the location of your <code>src</code> folder, so the environment always sees your latest code.</p>
+        <p>Before it is installed, the package cannot be found from the project folder. This is the src layout doing its job:</p>
+        <script type="text/plain" data-lang="bash">
+python -m bank balances
+        </script>
+        <script type="text/plain" data-lang="text" data-file="Output">
+.../.venv/bin/python: No module named bank
+        </script>
+        <p>Installing from <code>pyproject.toml</code> in editable mode needs a reasonably new pip. The pip that Python 3.9 puts into a fresh environment is too old, and says so:</p>
+        <script type="text/plain" data-lang="bash">
+pip install -e .
+        </script>
+        <script type="text/plain" data-lang="text" data-file="Output with pip 21.2.4">
+ERROR: File "setup.py" or "setup.cfg" not found. Directory cannot be installed in editable mode: .../bank-project
+(A "pyproject.toml" file was found, but editable mode currently requires a setuptools-based build.)
+        </script>
+        <p>Upgrade pip inside the environment, then install. The output is shortened to its first and last lines.</p>
+        <script type="text/plain" data-lang="bash">
+python -m pip install --upgrade pip
+pip install -e .
+pip list
+        </script>
+        <script type="text/plain" data-lang="text" data-file="Output">
+Successfully installed pip-26.0.1
+
+Obtaining file://.../bank-project
+  ...
+Successfully built bank
+Installing collected packages: tabulate, bank
+Successfully installed bank-0.1.0 tabulate-0.9.0
+
+Package    Version Editable project location
+---------- ------- -------------------------
+bank       0.1.0   .../bank-project
+pip        26.0.1
+setuptools 58.0.4
+tabulate   0.9.0
+        </script>
+        <p>pip installed <code>tabulate</code> as well, because it is listed under <code>dependencies</code>. Now <code>bank</code> can be imported from any folder while this environment is active, and it points at your source files:</p>
+        <script type="text/plain" data-lang="bash">
+python -c "import bank; print(bank.__file__)"
+        </script>
+        <script type="text/plain" data-lang="text" data-file="Output">
+.../bank-project/src/bank/__init__.py
+        </script>
+        <p>To install the developer tools too, name the extra group in square brackets. The quotes are needed in some shells.</p>
+        <script type="text/plain" data-lang="bash">
+pip install -e ".[dev]"
+        </script>
+        <p class="note"><b>Note:</b> you install in editable mode once. Edits to <code>.py</code> files take effect on the next run. Run the install again only after changing <code>pyproject.toml</code>, for example after adding a dependency or a command.</p>
+      </section>
+
+      <section class="chapter" id="cli">
+        <h2>A command-line entry point</h2>
+        <p>The last piece is a command. <code>cli.py</code> reads the words typed after <code>bank</code> with <code>argparse</code> from the standard library and prints a table. The balances are sample data built in memory on every run, so a transfer is not remembered by the next command. Saving data comes in <a href="python-databases.html">Python Databases</a>.</p>
+        <p>This file imports <code>tabulate</code> and the package itself, so it is marked as not runnable alone. It was run inside the finished project to produce the output below.</p>
+        <script type="text/plain" data-lang="py" data-file="src/bank/cli.py" data-norun>
+"""The command line: bank balances, bank transfer ..."""
+
+import argparse
+
+from tabulate import tabulate
+
+from bank.accounts import Account
+from bank.transfers import transfer
+
+
+def sample_accounts():
+    return {
+        "Rishikesh": Account("Rishikesh Agrawani", 5000),
+        "Sandhya": Account("Sandhya Agrawani", 12000),
+        "Subhash": Account("Subhash Agrawani", 9000),
+        "Malinikesh": Account("Malinikesh Agrawani", 3000),
+        "Hemkesh": Account("Hemkesh Agrawani", 1500),
+    }
+
+
+def main(argv=None):
+    parser = argparse.ArgumentParser(prog="bank", description="A tiny bank.")
+    commands = parser.add_subparsers(dest="command", required=True)
+    commands.add_parser("balances", help="show every balance")
+    move = commands.add_parser("transfer", help="move money between two people")
+    move.add_argument("source")
+    move.add_argument("target")
+    move.add_argument("amount", type=int)
+    args = parser.parse_args(argv)
+
+    accounts = sample_accounts()
+    if args.command == "transfer":
+        transfer(accounts[args.source], accounts[args.target], args.amount)
+    rows = [(a.owner, a.balance) for a in accounts.values()]
+    print(tabulate(rows, headers=["Owner", "Balance"]))
+    return 0
+        </script>
+        <p>With <code>__main__.py</code> from the <a href="#python-m">python -m chapter</a> in place, the package runs as a module:</p>
+        <script type="text/plain" data-lang="bash">
+python -m bank balances
+        </script>
+        <script type="text/plain" data-lang="text" data-file="Output">
+Owner                  Balance
+-------------------  ---------
+Rishikesh Agrawani        5000
+Sandhya Agrawani         12000
+Subhash Agrawani          9000
+Malinikesh Agrawani       3000
+Hemkesh Agrawani          1500
+        </script>
+        <p>The line <code>bank = "bank.cli:main"</code> under <code>[project.scripts]</code> goes one step further. It reads as: create a command named <code>bank</code> that imports <code>bank.cli</code> and calls <code>main</code>. During install, pip writes a small launcher file into <code>.venv/bin</code>, so the command exists whenever the environment is active.</p>
+        <script type="text/plain" data-lang="bash">
+which bank
+bank transfer Sandhya Rishikesh 2000
+        </script>
+        <script type="text/plain" data-lang="text" data-file="Output">
+.../bank-project/.venv/bin/bank
+
+Owner                  Balance
+-------------------  ---------
+Rishikesh Agrawani        7000
+Sandhya Agrawani         10000
+Subhash Agrawani          9000
+Malinikesh Agrawani       3000
+Hemkesh Agrawani          1500
+        </script>
+        <p>Leave out the command word and <code>argparse</code> prints a usage line and exits with code 2:</p>
+        <script type="text/plain" data-lang="text" data-file="Output of: bank">
+usage: bank [-h] {balances,transfer} ...
+bank: error: the following arguments are required: command
+        </script>
+        <p class="note"><b>Design:</b> <code>main(argv=None)</code> takes the arguments as a parameter and returns the exit code instead of calling <code>sys.exit</code> itself. A test can then call <code>main(["balances"])</code> directly, without starting a new process.</p>
+      </section>
+
+      <section class="chapter part" id="part-wrap-up">
+        <h2>Tools, mistakes and reference</h2>
+        <p class="kind">Group 4 of 4 &middot; what else exists and what goes wrong</p>
+        <ul>
+          <li><a href="#newer-tools">Newer tools</a>: uv, Poetry and pipx in one line each</li>
+          <li><a href="#mistakes">Common mistakes</a>: three errors and how to recognise them</li>
+          <li><a href="#quick-reference">Quick reference</a>: every command on this page</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="newer-tools">
+        <h2>Newer tools</h2>
+        <p><code>venv</code> and <code>pip</code> come with Python and work everywhere, which is why this page uses them. You will meet other tools in real projects. They were not run for this page, so here they are by name only.</p>
+        <div class="scroll">
+          <table>
+            <thead>
+              <tr><th>Tool</th><th>In one line</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>uv</td><td>A very fast replacement for pip and venv that can also install Python versions and keep a lock file</td></tr>
+              <tr><td>Poetry</td><td>Manages dependencies, a lock file, the environment and publishing through its own commands, configured in <code>pyproject.toml</code></td></tr>
+              <tr><td>pipx</td><td>Installs command-line programs written in Python, each in its own hidden environment, so they are available everywhere</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><b>Concept:</b> a <b>lock file</b> records the exact version of every package that was installed, including the packages your packages depend on. It does the job of a frozen <code>requirements.txt</code>, written and updated by the tool.</p>
+        <p>All of them build on the ideas above: an isolated environment per project, and dependencies written in a file. Learn those with <code>venv</code> and <code>pip</code> first and the other tools will make sense.</p>
+      </section>
+
+      <section class="chapter" id="mistakes">
+        <h2>Common mistakes</h2>
+        <h3>Naming your file like a standard library module</h3>
+        <p>The folder of your script comes first on <code>sys.path</code>. If you save a file as <code>random.py</code>, then <code>import random</code> finds <i>your</i> file, not the standard one. Here the file even imports itself:</p>
+        <script type="text/plain" data-lang="py" data-file="random.py" data-norun>
+import random
+
+print(random.randint(1, 6))
+        </script>
+        <script type="text/plain" data-lang="text" data-file="Output">
+Traceback (most recent call last):
+  File ".../random.py", line 1, in <module>
+    import random
+  File ".../random.py", line 3, in <module>
+    print(random.randint(1, 6))
+AttributeError: partially initialized module 'random' has no attribute 'randint' (most likely due to a circular import)
+        </script>
+        <p>The block is marked as not runnable because it only fails when the file is really named <code>random.py</code>. The same happens with <code>json.py</code>, <code>email.py</code>, <code>test.py</code>, <code>calendar.py</code> and any other standard name. The cure is to rename your file and delete the <code>__pycache__</code> folder next to it.</p>
+
+        <h3>Installing into the wrong Python</h3>
+        <p>pip says "Successfully installed", and the script still fails with <code>ModuleNotFoundError</code>. Usually <code>pip</code> and <code>python</code> belong to two different installs. Ask both where they live:</p>
+        <script type="text/plain" data-lang="bash">
+which python          # Windows: where python
+python -m pip --version
+        </script>
+        <script type="text/plain" data-lang="text" data-file="Output">
+.../bank-project/.venv/bin/python
+pip 21.2.4 from .../bank-project/.venv/lib/python3.9/site-packages/pip (python 3.9)
+        </script>
+        <p>Both paths should point into the same <code>.venv</code>. Installing with <code>python -m pip install ...</code> makes a mismatch impossible, because pip then runs under the Python you named.</p>
+
+        <h3>Forgetting to activate</h3>
+        <p>A new terminal window starts without any environment. If you install a package there, it goes into the global Python, which is the problem this page began with. Check for <code>(.venv)</code> at the start of the prompt before you type <code>pip install</code>. Editors such as VS Code and PyCharm have their own interpreter setting, and it must point at <code>.venv</code> as well.</p>
+      </section>
+
+      <section class="chapter" id="quick-reference">
+        <h2>Quick reference</h2>
+        <div class="scroll">
+          <table>
+            <thead>
+              <tr><th>Goal</th><th>Command or file</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>Create an environment</td><td><code>python3 -m venv .venv</code></td></tr>
+              <tr><td>Activate it</td><td><code>source .venv/bin/activate</code>, on Windows <code>.venv\Scripts\activate</code></td></tr>
+              <tr><td>Leave it</td><td><code>deactivate</code></td></tr>
+              <tr><td>Install a package, pinned</td><td><code>pip install tabulate==0.9.0</code></td></tr>
+              <tr><td>Record what is installed</td><td><code>pip freeze &gt; requirements.txt</code></td></tr>
+              <tr><td>Install from the record</td><td><code>pip install -r requirements.txt</code></td></tr>
+              <tr><td>Describe the project</td><td><code>pyproject.toml</code></td></tr>
+              <tr><td>Install your own project for development</td><td><code>pip install -e .</code> or <code>pip install -e ".[dev]"</code></td></tr>
+              <tr><td>Run a module or package</td><td><code>python -m bank</code>, which needs <code>__main__.py</code> in the package</td></tr>
+              <tr><td>Create a terminal command</td><td><code>[project.scripts]</code> in <code>pyproject.toml</code></td></tr>
+              <tr><td>Code that runs only when the file is run directly</td><td><code>if __name__ == "__main__":</code></td></tr>
+              <tr><td>See where Python looks for modules</td><td><code>python -c "import sys; print(sys.path)"</code></td></tr>
+              <tr><td>See which file an import loaded</td><td><code>print(module.__file__)</code></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>The project now has a <code>tests</code> folder with nothing explained yet. Next in the practice path: <a href="python-testing.html">Python Testing</a>.</p>
+      </section>
+
+    </div>
+  </main>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script src="../../assets/tutorial.js"></script>
+</body>
+</html>

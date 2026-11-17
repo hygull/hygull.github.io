@@ -1,0 +1,887 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Python Data Types</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@500;700&display=swap">
+<link rel="stylesheet" href="../../assets/tutorial.css">
+</head>
+<body data-track="python">
+
+<header class="topbar">
+  <div class="topbar-in">
+    <a class="brand" href="../../../index.html">Learnings</a>
+    <nav class="tracks" aria-label="Python paths">
+      <a href="../../../index.html#python-basics" aria-current="true">Python Basics</a>
+      <a href="../../../index.html#python-advanced">Python Advanced</a>
+      <a href="../../../index.html#python-practice">Python in Practice</a>
+      <a href="../../../index.html#python-design">Python Design</a>
+      <a href="../../../archive.html">Archive</a>
+    </nav>
+    <div class="tools">
+      <button class="btn" id="menu" type="button" aria-expanded="false">Chapters</button>
+      <input id="q" type="search" placeholder="Search chapters" aria-label="Search chapters">
+      <button class="btn" id="theme" type="button">Dark mode</button>
+    </div>
+  </div>
+</header>
+
+<div class="shell">
+  <aside class="side">
+    <p class="side-label">Data Types</p>
+    <nav id="toc" aria-label="Chapters"></nav>
+  </aside>
+
+  <main>
+    <div class="page-head">
+      <p class="eyebrow">Python basics, part 2 of 6</p>
+      <h1>Python Data Types</h1>
+      <p class="lead">Almost every Python program is built from five types: strings, lists, tuples, dictionaries and sets. This page shows how to create each one, how to read and change it, and when to pick it. It is a rewrite of five Pythofrank lessons from February 2017. The original examples are kept where they still fit, updated from Python 2.7 to Python 3, and the gaps are filled with examples from a small family bank.</p>
+    </div>
+
+    <div class="chapters">
+
+      <section class="chapter" id="overview">
+        <h2>The five types at a glance</h2>
+        <p>A string holds text. The other four are <b>collections</b>: they hold several values in one variable. They differ in three ways: whether the items keep their order, whether the value can be changed after it is made (<b>mutable</b>) or not (<b>immutable</b>), and whether the same item may appear twice.</p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Type</th><th>Holds</th><th>Ordered?</th><th>Mutable?</th><th>Duplicates?</th><th>Written as</th></tr></thead>
+            <tbody>
+              <tr><td><a href="#strings">String</a> <code>str</code></td><td>Characters</td><td>Yes</td><td>No</td><td>Yes</td><td><code>"savings"</code></td></tr>
+              <tr><td><a href="#lists">List</a> <code>list</code></td><td>Any values</td><td>Yes</td><td>Yes</td><td>Yes</td><td><code>[5000, 800, 800]</code></td></tr>
+              <tr><td><a href="#tuples">Tuple</a> <code>tuple</code></td><td>Any values</td><td>Yes</td><td>No</td><td>Yes</td><td><code>("Rishikesh", 5000)</code></td></tr>
+              <tr><td><a href="#dictionaries">Dictionary</a> <code>dict</code></td><td>Key and value pairs</td><td>Yes, in the order added</td><td>Yes</td><td>Keys no, values yes</td><td><code>{"balance": 5000}</code></td></tr>
+              <tr><td><a href="#sets">Set</a> <code>set</code></td><td>Unique values</td><td>No</td><td>Yes</td><td>No</td><td><code>{"savings", "current"}</code></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <script type="text/plain" data-lang="py" data-file="five_types.py">
+owner = "Rishikesh Agrawani"                 # string
+deposits = [5000, 800, 800]                  # list
+account = ("Rishikesh", "savings")           # tuple
+balances = {"Rishikesh": 6600}               # dictionary
+kinds = {"savings", "current"}               # set
+
+for value in (owner, deposits, account, balances, kinds):
+    print(type(value).__name__, len(value))
+# str 18
+# list 3
+# tuple 2
+# dict 1
+# set 2
+        </script>
+        <p class="note"><b>Concept:</b> <code>len()</code> works on all five. It counts characters in a string, items in a list, tuple or set, and keys in a dictionary.</p>
+      </section>
+
+      <section class="chapter part" id="strings">
+        <h2>Strings</h2>
+        <p class="kind">Type 1 of 5 &middot; text</p>
+        <p>A string is a sequence of characters: letters, digits, spaces, symbols. Names, account numbers, messages and file contents are all strings. A string keeps its characters in order and can never be changed once made.</p>
+        <ul>
+          <li><a href="#str-create">Creating strings</a>: quotes, joining, escape characters</li>
+          <li><a href="#str-slice">Indexing and slicing</a>: one character or a piece</li>
+          <li><a href="#str-methods">Common string methods</a>: clean, split, search, replace</li>
+          <li><a href="#str-format">f-strings and formatting</a>: put values into text</li>
+          <li><a href="#str-immutable">Strings cannot be changed</a>: every method returns a new string</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="str-create">
+        <h2>Creating strings</h2>
+        <p class="kind"><a href="#strings">Strings</a></p>
+        <p>Put the text in single or double quotes. Both make the same type. <code>+</code> joins two strings and <code>*</code> repeats one.</p>
+        <script type="text/plain" data-lang="py" data-file="create_string.py">
+name = "Rishikesh Agrawani"       # with double quotes
+city = 'Bangalore'                # with single quotes
+
+print(type(name))                 # <class 'str'>
+print(name, city)                 # Rishikesh Agrawani Bangalore
+print(len(name))                  # 18
+
+firstname = "Sandhya"
+lastname = "Agrawani"
+print(firstname + lastname)       # SandhyaAgrawani
+print(firstname + " " + lastname) # Sandhya Agrawani
+print("-" * 16)                   # ----------------
+        </script>
+        <p>A backslash starts an <b>escape character</b>, a code for something you cannot type directly. <code>\n</code> is a new line and <code>\t</code> is a tab. Three quotes let a string run over several lines.</p>
+        <script type="text/plain" data-lang="py" data-file="escapes.py">
+print("Hello\nWorld")             # \n starts a new line
+print("Owner:\tSubhash")          # \t jumps to the next tab stop
+print('It\'s a savings account')  # \' is a quote inside single quotes
+
+address = """Agrawani Bank
+MG Road
+Bangalore"""
+print(address)
+        </script>
+        <script type="text/plain" data-lang="text" data-file="Output">
+Hello
+World
+Owner:	Subhash
+It's a savings account
+Agrawani Bank
+MG Road
+Bangalore
+        </script>
+      </section>
+
+      <section class="chapter" id="str-slice">
+        <h2>Indexing and slicing</h2>
+        <p class="kind"><a href="#strings">Strings</a></p>
+        <p>Each character has a position called its <b>index</b>, starting at 0. Negative indexes count from the end. A <b>slice</b> <code>s[start:stop]</code> takes the characters from <code>start</code> up to, but not including, <code>stop</code>.</p>
+        <script type="text/plain" data-lang="py" data-file="slicing.py">
+s = "ABCDEFGHIJ"
+
+print(s[0])               # A           first character
+print(s[len(s) - 1])      # J           last character, the long way
+print(s[-1])              # J           last character, the short way
+print(s[:3])              # ABC         from the start to index 2
+print(s[3:])              # DEFGHIJ     from index 3 to the end
+print(s[2:5])             # CDE         indexes 2, 3 and 4
+print(s[::2])             # ACEGI       every second character
+print(s[::-1])            # JIHGFEDCBA  a step of -1 reverses the string
+
+account_number = "SB-2017-000123"
+print(account_number[:2])                 # SB
+print("*" * 10 + account_number[-4:])     # **********0123
+        </script>
+        <p class="note"><b>Concept:</b> an index that does not exist, such as <code>s[10]</code> here, raises an <code>IndexError</code>. A slice never does. <code>s[5:100]</code> simply gives what is there: <code>FGHIJ</code>.</p>
+      </section>
+
+      <section class="chapter" id="str-methods">
+        <h2>Common string methods</h2>
+        <p class="kind"><a href="#strings">Strings</a></p>
+        <p>A <b>method</b> is a function that belongs to a value and is called with a dot. These clean up text and change its case.</p>
+        <script type="text/plain" data-lang="py" data-file="clean.py">
+raw = "  rishikesh AGRAWANI  "
+
+clean = raw.strip()               # remove spaces from both ends
+print(clean)                      # rishikesh AGRAWANI
+print(clean.upper())              # RISHIKESH AGRAWANI
+print(clean.lower())              # rishikesh agrawani
+print(clean.title())              # Rishikesh Agrawani
+print(clean.capitalize())         # Rishikesh agrawani
+
+s2 = "ABxyABpqABmnAB"
+print(s2.replace("AB", "##"))     # ##xy##pq##mn##
+print(s2.replace("AB", "##", 2))  # ##xy##pqABmnAB   at most 2 replacements
+        </script>
+        <p><code>split()</code> cuts a string into a list of pieces and <code>join()</code> glues a list back into one string. The rest of these search inside the text.</p>
+        <script type="text/plain" data-lang="py" data-file="split_search.py">
+line = "Hemkesh Agrawani,savings,3000"
+
+parts = line.split(",")
+print(parts)                      # ['Hemkesh Agrawani', 'savings', '3000']
+print(" | ".join(parts))          # Hemkesh Agrawani | savings | 3000
+print("1 2 3".split())            # ['1', '2', '3']   no argument: split on spaces
+
+print(line.find("savings"))       # 17   index where it starts
+print(line.find("loan"))          # -1   not found
+print("savings" in line)          # True
+print(line.startswith("Hemkesh")) # True
+print(line.endswith("000"))       # True
+print(line.count("a"))            # 3
+
+print("3000".isdigit())           # True   only digits
+print("3000.50".isdigit())        # False  the dot is not a digit
+print("Hemkesh".isalpha())        # True   only letters
+        </script>
+      </section>
+
+      <section class="chapter" id="str-format">
+        <h2>f-strings and formatting</h2>
+        <p class="kind"><a href="#strings">Strings</a></p>
+        <p>Put <code>f</code> before the opening quote and write any value or expression inside <code>{}</code>. After a colon you can say how to show it: <code>.2f</code> means 2 digits after the decimal point, and <code>,</code> adds thousands separators.</p>
+        <script type="text/plain" data-lang="py" data-file="fstrings.py">
+name = "Malinikesh Agrawani"
+deposits = 3
+balance = 80000.567
+
+print(f"{name} made {deposits} deposits.")   # Malinikesh Agrawani made 3 deposits.
+print(f"Balance: {balance:.2f}")             # Balance: 80000.57
+print(f"Balance: {balance:,.2f}")            # Balance: 80,000.57
+print(f"Next year: {balance * 1.04:.0f}")    # Next year: 83201
+print(f"{name.upper()!r}")                   # 'MALINIKESH AGRAWANI'
+
+print(f"|{'Owner':<12}|{'Balance':>10}|")    # |Owner       |   Balance|
+print(f"|{'Hemkesh':<12}|{3000:>10}|")       # |Hemkesh     |      3000|
+        </script>
+        <p>Two older styles do the same job. You will meet them in existing code, and the 2017 lesson used both.</p>
+        <script type="text/plain" data-lang="py" data-file="old_formatting.py">
+name = "Malinikesh Agrawani"
+balance = 80000.567
+
+print("{} has {:.2f}".format(name, balance))   # Malinikesh Agrawani has 80000.57
+print("%s has %.2f" % (name, balance))         # Malinikesh Agrawani has 80000.57
+        </script>
+        <p class="note"><b>Concept:</b> <code>&lt;</code> pads on the right so the text sits on the left, and <code>&gt;</code> pads on the left. The number after it is the total width.</p>
+      </section>
+
+      <section class="chapter" id="str-immutable">
+        <h2>Strings cannot be changed</h2>
+        <p class="kind"><a href="#strings">Strings</a></p>
+        <p>A string is immutable. You cannot replace one character in place, and no method changes the original. Every method returns a <b>new</b> string, so keep the result in a variable.</p>
+        <script type="text/plain" data-lang="py" data-file="immutable_string.py">
+s = "ABCDEFGHIJ"
+
+try:
+    s[0] = "a"
+except TypeError as error:
+    print(error)          # 'str' object does not support item assignment
+
+s.replace("AB", "ab")     # the result is thrown away
+print(s)                  # ABCDEFGHIJ   unchanged
+
+s = s.replace("AB", "ab") # point the name s at the new string
+print(s)                  # abCDEFGHIJ
+
+s = "a" + s[1:] + "!"     # build a new string from pieces
+print(s)                  # abCDEFGHIJ!
+        </script>
+      </section>
+
+      <section class="chapter part" id="lists">
+        <h2>Lists</h2>
+        <p class="kind">Type 2 of 5 &middot; an ordered collection you can change</p>
+        <p>A list holds any number of values in order. You can add items, remove them, replace them and sort them. It is the collection you will use most.</p>
+        <ul>
+          <li><a href="#list-create">Creating and reading lists</a>: brackets, indexes, slices</li>
+          <li><a href="#list-change">Adding and removing items</a>: append, insert, extend, remove, pop, del</li>
+          <li><a href="#list-sort">Sorting, searching and counting</a>: sort, sorted, reverse, in, len</li>
+          <li><a href="#list-copy">Copying a list</a>: two names for one list, and how to avoid it</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="list-create">
+        <h2>Creating and reading lists</h2>
+        <p class="kind"><a href="#lists">Lists</a></p>
+        <p>Write the items between square brackets, separated by commas. Indexing and slicing work exactly as they do for strings. Unlike a string, a list lets you assign to an index.</p>
+        <script type="text/plain" data-lang="py" data-file="create_list.py">
+l = [1, 2, 3, 4, 5]
+print(type(l))            # <class 'list'>
+print(l[0], l[4])         # 1 5
+print(l[-1])              # 5
+print(l[1:4])             # [2, 3, 4]
+
+l[4] = 67                 # replace the item at index 4
+print(l)                  # [1, 2, 3, 4, 67]
+
+empty = []
+mixed = ["Rishikesh", 5000, True, 4.5]       # items can be of any type
+numbers = list(range(5, 11))                 # from a range
+letters = list("bank")                       # from a string
+doubled = [item * 2 for item in numbers]     # from a comprehension
+
+print(numbers)            # [5, 6, 7, 8, 9, 10]
+print(letters)            # ['b', 'a', 'n', 'k']
+print(doubled)            # [10, 12, 14, 16, 18, 20]
+print([0] * 3 + [1, 2])   # [0, 0, 0, 1, 2]
+        </script>
+      </section>
+
+      <section class="chapter" id="list-change">
+        <h2>Adding and removing items</h2>
+        <p class="kind"><a href="#lists">Lists</a></p>
+        <p><code>append()</code> adds one item at the end, <code>insert()</code> adds one at a given index, and <code>extend()</code> adds every item of another list.</p>
+        <script type="text/plain" data-lang="py" data-file="adding.py">
+customers = ["Rishikesh", "Sandhya"]
+
+customers.append("Subhash")               # at the end
+print(customers)          # ['Rishikesh', 'Sandhya', 'Subhash']
+
+customers.insert(0, "Hemkesh")            # at index 0, the rest move right
+print(customers)          # ['Hemkesh', 'Rishikesh', 'Sandhya', 'Subhash']
+
+customers.extend(["Malinikesh", "Sandhya"])
+print(customers)
+# ['Hemkesh', 'Rishikesh', 'Sandhya', 'Subhash', 'Malinikesh', 'Sandhya']
+        </script>
+        <p><code>remove()</code> deletes by value, <code>pop()</code> deletes by index and hands the item back, and <code>del</code> deletes by index or slice without returning anything.</p>
+        <script type="text/plain" data-lang="py" data-file="removing.py">
+l = [1, 2, 3, 4, 67, 69, 4]
+
+l.remove(4)               # removes the first 4 only
+print(l)                  # [1, 2, 3, 67, 69, 4]
+
+print(l.pop())            # 4    pop() removes and returns the last item
+print(l.pop(0))           # 1    pop(0) removes and returns the first item
+print(l)                  # [2, 3, 67, 69]
+
+del l[1]                  # delete index 1
+print(l)                  # [2, 67, 69]
+del l[:2]                 # delete a slice
+print(l)                  # [69]
+
+l.clear()                 # remove everything
+print(l)                  # []
+
+try:
+    l.pop()
+except IndexError as error:
+    print(error)          # pop from empty list
+        </script>
+        <p class="note"><b>Watch out:</b> <code>append()</code>, <code>remove()</code> and the other methods that change a list return <code>None</code>. Writing <code>l = l.append(5)</code> loses the list.</p>
+      </section>
+
+      <section class="chapter" id="list-sort">
+        <h2>Sorting, searching and counting</h2>
+        <p class="kind"><a href="#lists">Lists</a></p>
+        <p><code>sort()</code> reorders the list itself. <code>sorted()</code> leaves the list alone and returns a new sorted one. Both accept <code>reverse=True</code> and a <code>key</code>, a function that says what to sort by.</p>
+        <script type="text/plain" data-lang="py" data-file="sorting.py">
+balances = [5000, 800, 12000, 3000]
+
+print(sorted(balances))           # [800, 3000, 5000, 12000]   a new list
+print(balances)                   # [5000, 800, 12000, 3000]   unchanged
+
+balances.sort()                   # sorts in place
+print(balances)                   # [800, 3000, 5000, 12000]
+balances.sort(reverse=True)       # largest first
+print(balances)                   # [12000, 5000, 3000, 800]
+balances.reverse()                # flips the current order
+print(balances)                   # [800, 3000, 5000, 12000]
+
+names = ["Subhash", "Malinikesh", "Hemkesh", "Rishikesh"]
+print(sorted(names))              # ['Hemkesh', 'Malinikesh', 'Rishikesh', 'Subhash']
+print(sorted(names, key=len))     # ['Subhash', 'Hemkesh', 'Rishikesh', 'Malinikesh']
+        </script>
+        <p><code>in</code> tests whether an item is present. This is called a <b>membership</b> test. A handful of built-in functions answer the other common questions.</p>
+        <script type="text/plain" data-lang="py" data-file="searching.py">
+balances = [5000, 800, 12000, 3000, 800]
+
+print(len(balances))              # 5
+print(800 in balances)            # True
+print(999 not in balances)        # True
+print(balances.index(12000))      # 2     index of the first match
+print(balances.count(800))        # 2     how many times it appears
+print(min(balances), max(balances), sum(balances))   # 800 12000 21600
+        </script>
+      </section>
+
+      <section class="chapter" id="list-copy">
+        <h2>Copying a list</h2>
+        <p class="kind"><a href="#lists">Lists</a></p>
+        <p><code>b = a</code> does not copy a list. It gives the same list a second name, so a change through one name shows up through the other. This is called <b>aliasing</b>. Use <code>copy()</code> or a full slice <code>[:]</code> to get a separate list.</p>
+        <script type="text/plain" data-lang="py" data-file="aliasing.py">
+balances = [5000, 800, 12000]
+
+alias = balances                  # same list, second name
+alias.append(3000)
+print(balances)                   # [5000, 800, 12000, 3000]   changed too
+print(alias is balances)          # True
+
+backup = balances.copy()          # a new list with the same items
+backup2 = balances[:]             # the same thing with a slice
+backup.append(1)
+print(balances)                   # [5000, 800, 12000, 3000]   not affected
+print(backup is balances)         # False
+print(backup2 == balances)        # True   equal items, different lists
+        </script>
+        <p><code>copy()</code> is a <b>shallow</b> copy: it copies the outer list only. If the items are lists themselves, both copies still share them. <code>copy.deepcopy()</code> copies every level.</p>
+        <script type="text/plain" data-lang="py" data-file="deepcopy.py">
+import copy
+
+branches = [["Rishikesh", "Sandhya"], ["Subhash"]]   # a list of lists
+
+shallow = branches.copy()
+deep = copy.deepcopy(branches)
+
+branches[0].append("Hemkesh")     # change an inner list
+
+print(shallow[0])                 # ['Rishikesh', 'Sandhya', 'Hemkesh']   shared
+print(deep[0])                    # ['Rishikesh', 'Sandhya']              separate
+        </script>
+        <p class="note"><b>Concept:</b> <code>==</code> asks whether two values are equal. <code>is</code> asks whether two names point at the very same object.</p>
+      </section>
+
+      <section class="chapter part" id="tuples">
+        <h2>Tuples</h2>
+        <p class="kind">Type 3 of 5 &middot; an ordered collection that stays fixed</p>
+        <p>A tuple is like a list that cannot be changed after it is made. Use it for a small group of values that belong together, such as an owner with an account type and a balance.</p>
+        <ul>
+          <li><a href="#tuple-create">Creating tuples</a>: parentheses, commas and the one-item tuple</li>
+          <li><a href="#tuple-unpack">Unpacking and swapping</a>: one name for each item</li>
+          <li><a href="#tuple-immutable">Why tuples are immutable</a>: safe to share, usable as keys</li>
+          <li><a href="#tuple-named">Named tuples</a>: read the items by name</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="tuple-create">
+        <h2>Creating tuples</h2>
+        <p class="kind"><a href="#tuples">Tuples</a></p>
+        <p>It is the commas that make a tuple. The parentheses are optional but make it easier to see. Reading works as it does for a list.</p>
+        <script type="text/plain" data-lang="py" data-file="create_tuple.py">
+t = (1, 2, 3, 4, 5)               # 1st way: parentheses
+t2 = 7, 5, 3, 2, 1                # 2nd way: commas only
+t3 = tuple([3, 2, 1, 7, 9])       # 3rd way: from a list
+t4 = tuple(range(1, 6))           # 4th way: from a range
+
+print(type(t))                    # <class 'tuple'>
+print(t2)                         # (7, 5, 3, 2, 1)
+print(t[0], t[3], t[-1])          # 1 4 5
+print(t[1:3])                     # (2, 3)
+print(t + t3)                     # (1, 2, 3, 4, 5, 3, 2, 1, 7, 9)
+print(len(t), 4 in t, t4 == t)    # 5 True True
+        </script>
+        <p>A tuple with one item needs a trailing comma. Without it, the parentheses are just ordinary brackets around a value.</p>
+        <script type="text/plain" data-lang="py" data-file="one_item.py">
+not_a_tuple = (5000)
+one_item = (5000,)
+empty = ()
+
+print(type(not_a_tuple))          # <class 'int'>
+print(type(one_item))             # <class 'tuple'>
+print(one_item, len(one_item))    # (5000,) 1
+print(empty, len(empty))          # () 0
+        </script>
+      </section>
+
+      <section class="chapter" id="tuple-unpack">
+        <h2>Unpacking and swapping</h2>
+        <p class="kind"><a href="#tuples">Tuples</a></p>
+        <p><b>Unpacking</b> assigns each item of a tuple to its own name in one statement. The number of names must match the number of items. A name with a <code>*</code> collects whatever is left over into a list.</p>
+        <script type="text/plain" data-lang="py" data-file="unpacking.py">
+account = ("Sandhya Agrawani", "savings", 12000)
+
+owner, kind, balance = account
+print(owner)                      # Sandhya Agrawani
+print(kind, balance)              # savings 12000
+
+first, *others = (5000, 800, 12000, 3000)
+print(first, others)              # 5000 [800, 12000, 3000]
+
+a, b = 5000, 800
+a, b = b, a                       # swap two values without a third variable
+print(a, b)                       # 800 5000
+
+rupees, paise = divmod(12345, 100)    # a function can return a tuple
+print(rupees, paise)              # 123 45
+
+accounts = [("Rishikesh", 5000), ("Hemkesh", 3000)]
+for name, amount in accounts:     # unpacking in a loop
+    print(name, amount)
+# Rishikesh 5000
+# Hemkesh 3000
+        </script>
+      </section>
+
+      <section class="chapter" id="tuple-immutable">
+        <h2>Why tuples are immutable</h2>
+        <p class="kind"><a href="#tuples">Tuples</a></p>
+        <p>A tuple has no <code>append</code>, no <code>remove</code> and no item assignment. That is the point. A value that cannot change is safe to pass around, and it can be used as a dictionary key or stored in a set, which a list cannot.</p>
+        <script type="text/plain" data-lang="py" data-file="immutable_tuple.py">
+t = (1, 2, 3, 4, 5)
+
+try:
+    t[3] = 5
+except TypeError as error:
+    print(error)          # 'tuple' object does not support item assignment
+
+rates = {
+    ("savings", "regular"): 0.04,         # tuples as dictionary keys
+    ("savings", "senior"): 0.05,
+}
+print(rates[("savings", "senior")])       # 0.05
+
+try:
+    rates[["current", "regular"]] = 0.0   # a list as a key
+except TypeError as error:
+    print(error)          # unhashable type: 'list'
+        </script>
+        <p class="note"><b>Watch out:</b> a tuple fixes which items it holds, not what is inside them. In <code>t = ([1, 2], 3)</code> the list <code>t[0]</code> can still grow with <code>t[0].append(9)</code>.</p>
+      </section>
+
+      <section class="chapter" id="tuple-named">
+        <h2>Named tuples</h2>
+        <p class="kind"><a href="#tuples">Tuples</a></p>
+        <p><code>account[2]</code> does not say what the third item means. A <b>named tuple</b> is a tuple whose items also have names, so you can write <code>account.balance</code>. It is still immutable and still unpacks.</p>
+        <script type="text/plain" data-lang="py" data-file="named_tuple.py">
+from collections import namedtuple
+
+Account = namedtuple("Account", ["owner", "kind", "balance"])
+
+account = Account("Subhash Agrawani", "current", 25000)
+print(account.owner)              # Subhash Agrawani
+print(account.balance)            # 25000
+print(account[2])                 # 25000   indexes still work
+print(account)
+# Account(owner='Subhash Agrawani', kind='current', balance=25000)
+
+owner, kind, balance = account    # unpacking still works
+
+richer = account._replace(balance=30000)   # a new tuple with one field changed
+print(richer.balance, account.balance)     # 30000 25000
+        </script>
+      </section>
+
+      <section class="chapter part" id="dictionaries">
+        <h2>Dictionaries</h2>
+        <p class="kind">Type 4 of 5 &middot; values looked up by key</p>
+        <p>A dictionary stores pairs. Each pair has a <b>key</b>, which you look things up by, and a <b>value</b>, which is what you get back. A list answers "what is at position 2?". A dictionary answers "what is Rishikesh's balance?".</p>
+        <ul>
+          <li><a href="#dict-create">Creating and reading dictionaries</a>: braces, <code>[]</code> and <code>get</code></li>
+          <li><a href="#dict-change">Adding, updating and deleting</a>: assignment, update, setdefault, pop, del</li>
+          <li><a href="#dict-loop">Looping over a dictionary</a>: keys, values and items</li>
+          <li><a href="#dict-comprehension">Dictionary comprehension</a>: build a dictionary in one line</li>
+          <li><a href="#dict-nested">Nested dictionaries</a>: dictionaries inside dictionaries, and pretty printing</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="dict-create">
+        <h2>Creating and reading dictionaries</h2>
+        <p class="kind"><a href="#dictionaries">Dictionaries</a></p>
+        <p>Write <code>key: value</code> pairs between braces. Square brackets read a value by its key and raise a <code>KeyError</code> if the key is missing. <code>get()</code> returns <code>None</code>, or a default you choose, instead.</p>
+        <script type="text/plain" data-lang="py" data-file="create_dict.py">
+d = {"city": "Bangalore", "state": "Karnataka", "country": "India"}
+
+print(d["city"])                  # Bangalore
+print(d["country"])               # India
+print(d)          # {'city': 'Bangalore', 'state': 'Karnataka', 'country': 'India'}
+print(len(d))                     # 3
+print("state" in d)               # True    in checks the keys
+print("Bangalore" in d)           # False   not the values
+
+print(d.get("pincode"))           # None
+print(d.get("pincode", "unknown"))    # unknown
+
+try:
+    d["pincode"]
+except KeyError as error:
+    print("No such key:", error)  # No such key: 'pincode'
+        </script>
+        <p>There are other ways to build one. All three below give the same dictionary.</p>
+        <script type="text/plain" data-lang="py" data-file="other_ways.py">
+a = {"owner": "Rishikesh", "balance": 5000}
+b = dict(owner="Rishikesh", balance=5000)                 # keyword arguments
+c = dict(zip(["owner", "balance"], ["Rishikesh", 5000]))  # a list of keys, a list of values
+
+print(a == b == c)                # True
+print({})                         # {}   an empty dictionary
+        </script>
+        <p class="note"><b>Concept:</b> a key must be an immutable value such as a string, a number or a tuple. A value can be anything. Each key appears once: assigning to a key that exists replaces its value.</p>
+      </section>
+
+      <section class="chapter" id="dict-change">
+        <h2>Adding, updating and deleting</h2>
+        <p class="kind"><a href="#dictionaries">Dictionaries</a></p>
+        <p>Assigning to a key adds it if it is new and replaces the value if it exists. <code>update()</code> does the same for many keys at once.</p>
+        <script type="text/plain" data-lang="py" data-file="change_dict.py">
+account = {"owner": "Rishikesh Agrawani", "balance": 5000}
+
+account["kind"] = "savings"       # new key: added
+account["balance"] = 6500         # existing key: replaced
+account["balance"] += 500         # read, add, store back
+print(account)
+# {'owner': 'Rishikesh Agrawani', 'balance': 7000, 'kind': 'savings'}
+
+account.update({"balance": 7200, "branch": "Bangalore"})
+print(account["balance"], account["branch"])     # 7200 Bangalore
+
+account.setdefault("nominee", "Sandhya Agrawani")    # set only if missing
+account.setdefault("branch", "Raipur")               # already there: no change
+print(account["nominee"], account["branch"])     # Sandhya Agrawani Bangalore
+        </script>
+        <p><code>pop()</code> removes a key and returns its value. <code>del</code> removes a key and returns nothing.</p>
+        <script type="text/plain" data-lang="py" data-file="delete_dict.py">
+account = {"owner": "Rishikesh Agrawani", "balance": 7200,
+           "kind": "savings", "branch": "Bangalore"}
+
+branch = account.pop("branch")
+print(branch)                         # Bangalore
+print(account.pop("pincode", None))   # None   a default avoids the KeyError
+
+del account["kind"]
+print(account)            # {'owner': 'Rishikesh Agrawani', 'balance': 7200}
+
+account.clear()
+print(account)            # {}
+        </script>
+      </section>
+
+      <section class="chapter" id="dict-loop">
+        <h2>Looping over a dictionary</h2>
+        <p class="kind"><a href="#dictionaries">Dictionaries</a></p>
+        <p>Looping over a dictionary gives its keys. <code>values()</code> gives the values and <code>items()</code> gives each key together with its value. A dictionary remembers the order in which keys were added.</p>
+        <script type="text/plain" data-lang="py" data-file="loop_dict.py">
+balances = {"Rishikesh": 7200, "Sandhya": 12000, "Subhash": 25000, "Hemkesh": 3000}
+
+for name in balances:
+    print(name, end=" ")
+print()                           # Rishikesh Sandhya Subhash Hemkesh
+
+for name, balance in balances.items():
+    print(f"{name:<10} {balance:>6}")
+# Rishikesh    7200
+# Sandhya     12000
+# Subhash     25000
+# Hemkesh      3000
+
+print(list(balances.keys()))      # ['Rishikesh', 'Sandhya', 'Subhash', 'Hemkesh']
+print(list(balances.values()))    # [7200, 12000, 25000, 3000]
+print(sum(balances.values()))     # 47200
+print(max(balances, key=balances.get))    # Subhash   the key with the largest value
+
+for name in sorted(balances):     # keys in alphabetical order
+    print(name, end=" ")
+print()                           # Hemkesh Rishikesh Sandhya Subhash
+        </script>
+        <p class="note"><b>Concept:</b> <code>keys()</code>, <code>values()</code> and <code>items()</code> return <b>views</b>, live windows onto the dictionary, not lists. Wrap one in <code>list()</code> when you need a real list.</p>
+      </section>
+
+      <section class="chapter" id="dict-comprehension">
+        <h2>Dictionary comprehension</h2>
+        <p class="kind"><a href="#dictionaries">Dictionaries</a></p>
+        <p>A dictionary comprehension builds a dictionary from a loop in one line. It has the shape <code>{key: value for item in collection}</code>, with an optional <code>if</code> at the end.</p>
+        <script type="text/plain" data-lang="py" data-file="dict_comprehension.py">
+balances = {"Rishikesh": 7200, "Sandhya": 12000, "Hemkesh": 3000}
+
+with_interest = {name: round(amount * 1.04) for name, amount in balances.items()}
+print(with_interest)      # {'Rishikesh': 7488, 'Sandhya': 12480, 'Hemkesh': 3120}
+
+large = {name: amount for name, amount in balances.items() if amount >= 5000}
+print(large)              # {'Rishikesh': 7200, 'Sandhya': 12000}
+
+lengths = {name: len(name) for name in balances}
+print(lengths)            # {'Rishikesh': 9, 'Sandhya': 7, 'Hemkesh': 7}
+
+squares = {n: n * n for n in range(1, 5)}
+print(squares)            # {1: 1, 2: 4, 3: 9, 4: 16}
+        </script>
+      </section>
+
+      <section class="chapter" id="dict-nested">
+        <h2>Nested dictionaries</h2>
+        <p class="kind"><a href="#dictionaries">Dictionaries</a></p>
+        <p>A value can itself be a list or another dictionary. Read a nested value by chaining the brackets, one level at a time.</p>
+        <script type="text/plain" data-lang="py" data-file="nested.py">
+bank = {
+    "Rishikesh": {"kind": "savings", "balance": 7200, "nominees": ["Sandhya", "Subhash"]},
+    "Malinikesh": {"kind": "current", "balance": 9000, "nominees": ["Hemkesh"]},
+}
+
+print(bank["Rishikesh"]["balance"])           # 7200
+print(bank["Rishikesh"]["nominees"][0])       # Sandhya
+
+bank["Malinikesh"]["balance"] += 1000
+bank["Malinikesh"]["nominees"].append("Rishikesh")
+print(bank["Malinikesh"])
+# {'kind': 'current', 'balance': 10000, 'nominees': ['Hemkesh', 'Rishikesh']}
+
+for owner, details in bank.items():
+    print(owner, details["kind"], len(details["nominees"]))
+# Rishikesh savings 2
+# Malinikesh current 2
+        </script>
+        <p>A large nested dictionary is hard to read on one line. <code>json.dumps()</code> from the standard library turns it into indented text. <code>sort_keys=True</code> prints the keys in alphabetical order.</p>
+        <script type="text/plain" data-lang="py" data-file="pretty.py">
+import json
+
+details = {
+    "name": "Rishikesh Agrawani",
+    "city": "Bangalore",
+    "siblings": [{"name": "Malinikesh"}, {"name": "Hemkesh"}],
+    "is_active": True,
+}
+
+print(json.dumps(details, indent=4, sort_keys=True))
+        </script>
+        <script type="text/plain" data-lang="text" data-file="Output">
+{
+    "city": "Bangalore",
+    "is_active": true,
+    "name": "Rishikesh Agrawani",
+    "siblings": [
+        {
+            "name": "Malinikesh"
+        },
+        {
+            "name": "Hemkesh"
+        }
+    ]
+}
+        </script>
+        <p class="note"><b>Concept:</b> the output is JSON, a text format that many languages share. That is why Python's <code>True</code> is printed as <code>true</code> and every string gets double quotes.</p>
+      </section>
+
+      <section class="chapter part" id="sets">
+        <h2>Sets</h2>
+        <p class="kind">Type 5 of 5 &middot; unique values with no order</p>
+        <p>A set holds each value at most once and keeps no order. It is the right tool for removing duplicates, for asking "is this value in here?" and for comparing two groups.</p>
+        <ul>
+          <li><a href="#set-create">Creating sets</a>: braces, <code>set()</code> and uniqueness</li>
+          <li><a href="#set-operations">Union, intersection and difference</a>: combine and compare two sets</li>
+          <li><a href="#set-membership">Fast membership tests</a>: why <code>in</code> is quick on a set</li>
+          <li><a href="#frozenset">frozenset</a>: a set that cannot change</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="set-create">
+        <h2>Creating sets</h2>
+        <p class="kind"><a href="#sets">Sets</a></p>
+        <p>Write the items between braces, or pass any collection to <code>set()</code>. Duplicates are dropped. An empty set must be written <code>set()</code>, because <code>{}</code> is an empty dictionary.</p>
+        <script type="text/plain" data-lang="py" data-file="create_set.py">
+s1 = set()                        # an empty set
+print(s1, len(s1))                # set() 0
+print(type({}))                   # <class 'dict'>   {} is not a set
+
+evens = set([0, 2, 4, 6, 8, 10])  # from a list
+print(sorted(evens))              # [0, 2, 4, 6, 8, 10]
+
+cities = ["Bangalore", "Raipur", "Bangalore", "Dhamtari", "Raipur"]
+unique = set(cities)              # duplicates disappear
+print(len(cities), len(unique))   # 5 3
+print(sorted(unique))             # ['Bangalore', 'Dhamtari', 'Raipur']
+
+unique.add("London")              # add one item
+unique.add("Raipur")              # already there: nothing happens
+unique.discard("Dhamtari")        # remove if present
+unique.discard("Paris")           # not present: no error
+print(sorted(unique))             # ['Bangalore', 'London', 'Raipur']
+
+odds = {1: "one", 3: "three", 5: "five"}
+print(sorted(set(odds)))          # [1, 3, 5]   a set from a dictionary takes its keys
+        </script>
+        <p class="note"><b>Watch out:</b> a set has no order, so there is no <code>unique[0]</code>, and printing a set of strings can show a different order each time the program runs. The examples here print <code>sorted(...)</code>, which returns a list in a fixed order.</p>
+      </section>
+
+      <section class="chapter" id="set-operations">
+        <h2>Union, intersection and difference</h2>
+        <p class="kind"><a href="#sets">Sets</a></p>
+        <p>These are the operations from school maths. Each has an operator and a method that do the same thing. All of them return a new set.</p>
+        <script type="text/plain" data-lang="py" data-file="set_operations.py">
+A = set([1, 2, 3, 4, 5])
+B = set((4, 5, 6, 7, 8))
+
+print(sorted(A | B))              # [1, 2, 3, 4, 5, 6, 7, 8]   union: in A or in B
+print(sorted(A & B))              # [4, 5]                     intersection: in both
+print(sorted(A - B))              # [1, 2, 3]                  difference: in A, not in B
+print(sorted(B - A))              # [6, 7, 8]
+print(sorted(A ^ B))              # [1, 2, 3, 6, 7, 8]         symmetric difference: in one only
+
+print(A.union(B) == A | B)                    # True
+print(A.intersection(B) == A & B)             # True
+print(A.difference(B) == A - B)               # True
+print(A.symmetric_difference(B) == A ^ B)     # True
+
+print({4, 5} <= A)                # True    {4, 5} is a subset of A
+print(A.isdisjoint({9, 10}))      # True    nothing in common
+        </script>
+        <p>The same operations answer real questions about two groups of customers.</p>
+        <script type="text/plain" data-lang="py" data-file="customers.py">
+savings = {"Rishikesh", "Sandhya", "Subhash", "Hemkesh"}
+loans = {"Subhash", "Malinikesh", "Rishikesh"}
+
+print(sorted(savings | loans))    # every customer
+# ['Hemkesh', 'Malinikesh', 'Rishikesh', 'Sandhya', 'Subhash']
+print(sorted(savings & loans))    # has both
+# ['Rishikesh', 'Subhash']
+print(sorted(savings - loans))    # savings but no loan
+# ['Hemkesh', 'Sandhya']
+print(sorted(savings ^ loans))    # exactly one of the two
+# ['Hemkesh', 'Malinikesh', 'Sandhya']
+        </script>
+      </section>
+
+      <section class="chapter" id="set-membership">
+        <h2>Fast membership tests</h2>
+        <p class="kind"><a href="#sets">Sets</a></p>
+        <p>To answer <code>x in some_list</code>, Python checks the items one by one, so a longer list takes longer. A set stores its items by their <b>hash</b>, a number worked out from the value, and can jump almost straight to the right place. The time barely grows with the size of the set.</p>
+        <script type="text/plain" data-lang="py" data-file="membership.py">
+import timeit
+
+account_ids = list(range(100000))         # 100,000 account numbers
+id_set = set(account_ids)
+
+print(99999 in account_ids)               # True
+print(99999 in id_set)                    # True
+
+list_time = timeit.timeit(lambda: 99999 in account_ids, number=200)
+set_time = timeit.timeit(lambda: 99999 in id_set, number=200)
+
+print(set_time < list_time)               # True
+print(list_time / set_time > 100)         # True   the set is over 100 times faster here
+        </script>
+        <p class="note"><b>Concept:</b> the exact times change from run to run and from machine to machine, so the example prints only the comparison. Dictionary keys are found the same way, which is why <code>key in some_dict</code> is fast too.</p>
+      </section>
+
+      <section class="chapter" id="frozenset">
+        <h2>frozenset</h2>
+        <p class="kind"><a href="#sets">Sets</a></p>
+        <p>A <code>frozenset</code> is an immutable set. It supports every operation that reads, but has no <code>add</code> or <code>discard</code>. Because it cannot change, it can be a dictionary key or an item of another set, which an ordinary set cannot.</p>
+        <script type="text/plain" data-lang="py" data-file="frozen.py">
+joint = frozenset(["Sandhya", "Subhash"])
+
+print("Sandhya" in joint)                 # True
+print(sorted(joint | {"Rishikesh"}))      # ['Rishikesh', 'Sandhya', 'Subhash']
+
+try:
+    joint.add("Hemkesh")
+except AttributeError as error:
+    print(error)          # 'frozenset' object has no attribute 'add'
+
+joint_balances = {joint: 40000}           # a frozenset as a dictionary key
+print(joint_balances[frozenset(["Subhash", "Sandhya"])])     # 40000
+
+try:
+    {{"Sandhya", "Subhash"}: 40000}       # an ordinary set as a key
+except TypeError as error:
+    print(error)          # unhashable type: 'set'
+        </script>
+        <p class="note"><b>Concept:</b> the order you write the items in does not matter. Two sets are equal when they hold the same items, so the lookup with the names swapped finds the same key.</p>
+      </section>
+
+      <section class="chapter" id="python2">
+        <h2>What changed since Python 2</h2>
+        <p>The original lessons were written for Python 2.7, which reached its end of life in 2020. If you read them, these are the differences that matter for the five types.</p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Python 2.7 (2017 lessons)</th><th>Python 3 (this page)</th></tr></thead>
+            <tbody>
+              <tr><td><code>print name, city</code></td><td><code>print(name, city)</code></td></tr>
+              <tr><td><code>type("a")</code> shows <code>&lt;type 'str'&gt;</code></td><td><code>&lt;class 'str'&gt;</code></td></tr>
+              <tr><td><code>u"abcd"</code> for Unicode text</td><td>Every string is Unicode, no <code>u</code> needed</td></tr>
+              <tr><td><code>"%s has %.2f" % (name, balance)</code></td><td><code>f"{name} has {balance:.2f}"</code></td></tr>
+              <tr><td><code>range(7, 16)</code> returns a list, <code>xrange</code> is the lazy form</td><td><code>range</code> is lazy, wrap it in <code>list()</code>; <code>xrange</code> is gone</td></tr>
+              <tr><td><code>d.keys()</code> and <code>d.values()</code> return lists</td><td>They return views; use <code>list(d.keys())</code> for a list</td></tr>
+              <tr><td>Dictionaries print in no fixed order</td><td>Dictionaries keep the order in which keys were added</td></tr>
+              <tr><td>A set prints as <code>set([1, 2, 3])</code></td><td><code>{1, 2, 3}</code></td></tr>
+              <tr><td><code>raw_input()</code></td><td><code>input()</code></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>The 2017 pages are still online as they were written: <a href="../../../pages/string.html">Strings</a>, <a href="../../../pages/list.html">Lists</a>, <a href="../../../pages/tuple.html">Tuples</a>, <a href="../../../pages/dictionary.html">Dictionaries</a> and <a href="../../../pages/sets.html">Sets</a>.</p>
+      </section>
+
+      <section class="chapter" id="which-type">
+        <h2>Which type to use</h2>
+        <p>Start from what you need to do with the data, not from the type.</p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>You need to</th><th>Use</th><th>Example</th></tr></thead>
+            <tbody>
+              <tr><td>Hold text</td><td><a href="#strings">String</a></td><td><code>"SB-2017-000123"</code></td></tr>
+              <tr><td>Keep items in order and add, remove or sort them</td><td><a href="#lists">List</a></td><td>The deposits made today</td></tr>
+              <tr><td>Group a few fixed values that belong together</td><td><a href="#tuples">Tuple</a></td><td><code>("Sandhya", "savings", 12000)</code></td></tr>
+              <tr><td>Do the same, but read the values by name</td><td><a href="#tuple-named">Named tuple</a></td><td><code>account.balance</code></td></tr>
+              <tr><td>Look a value up by a name or an id</td><td><a href="#dictionaries">Dictionary</a></td><td>Balance for each owner</td></tr>
+              <tr><td>Describe one thing with several named fields</td><td><a href="#dictionaries">Dictionary</a></td><td><code>{"owner": ..., "balance": ...}</code></td></tr>
+              <tr><td>Remove duplicates</td><td><a href="#sets">Set</a></td><td>The cities our customers live in</td></tr>
+              <tr><td>Test many times whether a value is present</td><td><a href="#sets">Set</a></td><td>Is this account id blocked?</td></tr>
+              <tr><td>Compare two groups</td><td><a href="#sets">Set</a></td><td>Customers with savings but no loan</td></tr>
+              <tr><td>Use a group of values as a dictionary key</td><td><a href="#tuples">Tuple</a> or <a href="#frozenset">frozenset</a></td><td><code>("savings", "senior")</code></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>Next, learn how to walk through all of these one item at a time in <a href="python-loops.html">Python Loops</a>.</p>
+      </section>
+
+    </div>
+  </main>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script src="../../assets/tutorial.js"></script>
+</body>
+</html>

@@ -1,0 +1,1612 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Python Testing</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@500;700&display=swap">
+<link rel="stylesheet" href="../../assets/tutorial.css">
+</head>
+<body data-track="python">
+
+<header class="topbar">
+  <div class="topbar-in">
+    <a class="brand" href="../../../index.html">Learnings</a>
+    <nav class="tracks" aria-label="Python paths">
+      <a href="../../../index.html#python-basics">Python Basics</a>
+      <a href="../../../index.html#python-advanced">Python Advanced</a>
+      <a href="../../../index.html#python-practice" aria-current="true">Python in Practice</a>
+      <a href="../../../index.html#python-design">Python Design</a>
+      <a href="../../../archive.html">Archive</a>
+    </nav>
+    <div class="tools">
+      <button class="btn" id="menu" type="button" aria-expanded="false">Chapters</button>
+      <input id="q" type="search" placeholder="Search chapters" aria-label="Search chapters">
+      <button class="btn" id="theme" type="button">Dark mode</button>
+    </div>
+  </div>
+</header>
+
+<div class="shell">
+  <aside class="side">
+    <p class="side-label">Testing</p>
+    <nav id="toc" aria-label="Chapters"></nav>
+  </aside>
+
+  <main>
+    <div class="page-head">
+      <p class="eyebrow">Python in practice, part 2 of 9</p>
+      <h1>Python Testing</h1>
+      <p class="lead">A test is a small piece of code that runs your real code and checks the result. This page starts from a plain <code>assert</code> and builds up to pytest, fixtures, parametrised tests, fakes and mocks, coverage and test-driven development. Every example tests the same small bank module, and every pytest output shown here was copied from a real run.</p>
+    </div>
+
+    <div class="chapters">
+
+      <section class="chapter part" id="first-tests">
+        <h2>First tests</h2>
+        <p class="kind">Part 1 of 4 &middot; from a plain assert to pytest</p>
+        <p>You know Python but have never written a test. This part shows what a test is, how pytest finds and runs tests, and how to read what it prints when a test passes and when it fails.</p>
+        <ul>
+          <li><a href="#why">Why test</a>: what you get for the effort</li>
+          <li><a href="#bank">The bank under test</a>: the module every example checks</li>
+          <li><a href="#assert">Arrange, act, assert</a>: the shape of every test</li>
+          <li><a href="#pytest">A first pytest run</a>: install, naming rules, a passing run</li>
+          <li><a href="#failure">Reading a failure</a>: what pytest tells you and where</li>
+          <li><a href="#flags">Useful flags</a>: choose which tests run and how much is printed</li>
+          <li><a href="#raises">Testing errors</a>: <code>pytest.raises</code></li>
+          <li><a href="#approx">Comparing floats</a>: <code>pytest.approx</code></li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="why">
+        <h2>Why test</h2>
+        <p>Without tests you check code by running it and looking. That works once. It does not work the tenth time you change the code, because nobody re-checks everything by hand.</p>
+        <ul>
+          <li><b>Tests catch mistakes early.</b> A wrong balance is found on your machine, not in a customer's account.</li>
+          <li><b>Tests make change safe.</b> Rewrite a function, run the tests, and you know in a second whether the old behaviour still holds.</li>
+          <li><b>Tests show how code is meant to be used.</b> A test is a small working example that cannot go out of date without failing.</li>
+        </ul>
+        <p>Most of this page uses <b>pytest</b>, the test tool nearly every Python project uses. It is a third-party package, so it needs <code>pip install pytest</code>. The coverage chapter needs <code>pip install pytest-cov</code>. Everything else here, including <code>unittest</code>, <code>unittest.mock</code> and <code>doctest</code>, is part of the standard library.</p>
+        <p class="note"><b>Setup:</b> install packages into a virtual environment, not into the system Python. <a href="python-project-setup.html">Python Project Setup</a> shows how.</p>
+      </section>
+
+      <section class="chapter" id="bank">
+        <h2>The bank under test</h2>
+        <p>Save this as <code>bank.py</code>. It has a <code>Person</code>, an <code>Account</code> that refuses bad deposits and withdrawals by raising <code>ValueError</code>, a <code>transfer</code> function, and a <code>TransferService</code> that also sends a message through a notifier object it is given. The rest of the page tests this one file.</p>
+        <script type="text/plain" data-lang="py" data-file="bank.py">
+from dataclasses import dataclass
+
+
+@dataclass
+class Person:
+    name: str
+
+    @property
+    def first_name(self):
+        return self.name.split()[0]
+
+
+@dataclass
+class Account:
+    owner: Person
+    balance: float = 0
+
+    def deposit(self, amount):
+        if amount <= 0:
+            raise ValueError("Amount must be positive")
+        self.balance += amount
+
+    def withdraw(self, amount):
+        if amount <= 0:
+            raise ValueError("Amount must be positive")
+        if amount > self.balance:
+            raise ValueError("Insufficient funds")
+        self.balance -= amount
+
+
+def transfer(source, target, amount):
+    source.withdraw(amount)
+    target.deposit(amount)
+
+
+class TransferService:
+    def __init__(self, notifier):
+        self.notifier = notifier        # anything with a send(to, text) method
+
+    def transfer(self, source, target, amount):
+        transfer(source, target, amount)
+        self.notifier.send(target.owner.first_name,
+                           f"Rs {amount} received from {source.owner.first_name}")
+
+
+rishikesh = Person("Rishikesh Agrawani")
+sandhya = Person("Sandhya Agrawani")        # mother
+subhash = Person("Subhash Agrawani")        # father
+malinikesh = Person("Malinikesh Agrawani")  # sister
+hemkesh = Person("Hemkesh Agrawani")        # brother
+        </script>
+        <p>Used by hand, it looks like this.</p>
+        <script type="text/plain" data-lang="py" data-file="main.py">
+from bank import Account, transfer, rishikesh, sandhya
+
+mine = Account(rishikesh, 9000)
+mothers = Account(sandhya, 1000)
+transfer(mine, mothers, 2500)
+print(mine.balance, mothers.balance)    # 6500 3500
+        </script>
+        <p class="note"><b>Layout:</b> keep <code>bank.py</code> and all the test files from this page in one folder and run every command from that folder.</p>
+      </section>
+
+      <section class="chapter" id="assert">
+        <h2>Arrange, act, assert</h2>
+        <p>Every test has the same three steps. <b>Arrange</b>: build the objects you need. <b>Act</b>: do the one thing you are testing. <b>Assert</b>: check that the result is what you expected.</p>
+        <p>Python's <code>assert</code> statement is enough to write one. <code>assert x</code> does nothing when <code>x</code> is true and raises <code>AssertionError</code> when it is false.</p>
+        <script type="text/plain" data-lang="py" data-file="check_bank.py">
+from bank import Account, rishikesh
+
+account = Account(rishikesh, 1000)      # arrange
+
+account.deposit(500)                    # act
+
+assert account.balance == 1500          # assert
+
+print("all checks passed")              # all checks passed
+        </script>
+        <p>This already is a test. It has two weak points. The script stops at the first failed <code>assert</code>, so later checks never run. And a failed <code>assert</code> says very little.</p>
+        <script type="text/plain" data-lang="py" data-file="plain_assert.py">
+from bank import Account, rishikesh
+
+account = Account(rishikesh, 1000)
+account.deposit(500)
+
+try:
+    assert account.balance == 1600      # a wrong expectation
+except AssertionError as error:
+    print("AssertionError:", repr(str(error)))   # AssertionError: ''
+        </script>
+        <p>The error carries no message: it does not say that the balance was 1500. A test runner fixes both problems. It runs every test even when some fail, and it reports exactly what was compared.</p>
+      </section>
+
+      <section class="chapter" id="pytest">
+        <h2>A first pytest run</h2>
+        <p>Install pytest into your virtual environment.</p>
+        <script type="text/plain" data-lang="bash" data-file="Terminal">
+pip install pytest
+        </script>
+        <p>pytest finds tests by name, so the names matter:</p>
+        <ul>
+          <li>test files are named <code>test_*.py</code> (or <code>*_test.py</code>);</li>
+          <li>inside them, test functions are named <code>test_*</code>;</li>
+          <li>a test passes if it finishes without raising, and fails if an <code>assert</code> is false or any other error escapes.</li>
+        </ul>
+        <p>Save this next to <code>bank.py</code>. There is nothing to import from pytest: a test is an ordinary function with an ordinary <code>assert</code>.</p>
+        <script type="text/plain" data-lang="py" data-file="test_bank.py">
+from bank import Account, transfer, rishikesh, sandhya
+
+
+def test_deposit_adds_to_balance():
+    account = Account(rishikesh, 1000)      # arrange
+    account.deposit(500)                    # act
+    assert account.balance == 1500          # assert
+
+
+def test_withdraw_takes_from_balance():
+    account = Account(rishikesh, 1000)
+    account.withdraw(300)
+    assert account.balance == 700
+
+
+def test_transfer_moves_money():
+    mine = Account(rishikesh, 9000)
+    mothers = Account(sandhya, 1000)
+    transfer(mine, mothers, 2500)
+    assert mine.balance == 6500
+    assert mothers.balance == 3500
+        </script>
+        <p>Run <code>pytest</code> with no arguments in that folder. It searches the folder, collects every test and runs them all.</p>
+        <script type="text/plain" data-lang="bash" data-file="Terminal">
+pytest
+        </script>
+        <script type="text/plain" data-lang="text" data-file="Output">
+============================= test session starts ==============================
+platform darwin -- Python 3.9.6, pytest-8.4.2, pluggy-1.6.0
+rootdir: /Users/rishikesh/bank
+collected 3 items
+
+test_bank.py ...                                                         [100%]
+
+============================== 3 passed in 0.01s ===============================
+        </script>
+        <p>Read it from the top: pytest found 3 tests ("collected 3 items"). Each dot after the file name is one passing test. The last line is the result. Your first lines will show your own system, Python version and folder.</p>
+        <p class="note"><b>Tip:</b> if the <code>pytest</code> command is not found, run <code>python -m pytest</code>. It does the same thing with the Python you name.</p>
+      </section>
+
+      <section class="chapter" id="failure">
+        <h2>Reading a failure</h2>
+        <p>A failing test is the useful case, so learn to read one. These two tests are wrong on purpose.</p>
+        <script type="text/plain" data-lang="py" data-file="test_broken.py">
+from bank import Account, rishikesh, sandhya, hemkesh
+
+
+def test_deposit_wrong_sum():
+    account = Account(rishikesh, 1000)
+    account.deposit(500)
+    assert account.balance == 1600      # wrong on purpose: the answer is 1500
+
+
+def test_owner_names():
+    accounts = [Account(rishikesh), Account(sandhya), Account(hemkesh)]
+    names = [account.owner.first_name for account in accounts]
+    assert names == ["Rishikesh", "Sandhya", "Subhash"]     # wrong on purpose
+        </script>
+        <script type="text/plain" data-lang="bash" data-file="Terminal">
+pytest test_broken.py
+        </script>
+        <script type="text/plain" data-lang="text" data-file="Output">
+============================= test session starts ==============================
+platform darwin -- Python 3.9.6, pytest-8.4.2, pluggy-1.6.0
+rootdir: /Users/rishikesh/bank
+collected 2 items
+
+test_broken.py FF                                                        [100%]
+
+=================================== FAILURES ===================================
+____________________________ test_deposit_wrong_sum ____________________________
+
+    def test_deposit_wrong_sum():
+        account = Account(rishikesh, 1000)
+        account.deposit(500)
+>       assert account.balance == 1600      # wrong on purpose: the answer is 1500
+E       AssertionError: assert 1500 == 1600
+E        +  where 1500 = Account(owner=Person(name='Rishikesh Agrawani'), balance=1500).balance
+
+test_broken.py:7: AssertionError
+_______________________________ test_owner_names _______________________________
+
+    def test_owner_names():
+        accounts = [Account(rishikesh), Account(sandhya), Account(hemkesh)]
+        names = [account.owner.first_name for account in accounts]
+>       assert names == ["Rishikesh", "Sandhya", "Subhash"]     # wrong on purpose
+E       AssertionError: assert ['Rishikesh',...a', 'Hemkesh'] == ['Rishikesh',...a', 'Subhash']
+E
+E         At index 2 diff: 'Hemkesh' != 'Subhash'
+E         Use -v to get more diff
+
+test_broken.py:13: AssertionError
+=========================== short test summary info ============================
+FAILED test_broken.py::test_deposit_wrong_sum - AssertionError: assert 1500 =...
+FAILED test_broken.py::test_owner_names - AssertionError: assert ['Rishikesh'...
+============================== 2 failed in 0.02s ===============================
+        </script>
+        <p>How to read it:</p>
+        <ul>
+          <li><code>FF</code> on the progress line: two tests failed. A dot is a pass, <code>F</code> is a failure.</li>
+          <li>Under <code>FAILURES</code> each failed test gets its own block with the test's source code. The line starting with <code>&gt;</code> is the line that failed.</li>
+          <li>Lines starting with <code>E</code> explain the failure. <code>assert 1500 == 1600</code> shows the real values, and <code>where 1500 = Account(...).balance</code> shows where the 1500 came from. For the lists, pytest points at the first item that differs.</li>
+          <li><code>test_broken.py:7</code> is the file and line number.</li>
+          <li>The short summary at the bottom lists every failed test on one line.</li>
+        </ul>
+        <p class="note"><b>Concept:</b> showing the values inside a failed <code>assert</code> is called assertion introspection. pytest rewrites the <code>assert</code> statements in test files to make it possible, which is why a plain <code>assert</code> is all you need.</p>
+      </section>
+
+      <section class="chapter" id="flags">
+        <h2>Useful flags</h2>
+        <p>A flag is an option you add after <code>pytest</code>. These are the ones you will use every day.</p>
+        <div class="scroll">
+          <table>
+            <thead>
+              <tr><th>Command</th><th>What it does</th></tr>
+            </thead>
+            <tbody>
+              <tr><td><code>pytest test_bank.py</code></td><td>Run one file</td></tr>
+              <tr><td><code>pytest test_bank.py::test_transfer_moves_money</code></td><td>Run one test</td></tr>
+              <tr><td><code>pytest -v</code></td><td>Verbose: one line per test with its name</td></tr>
+              <tr><td><code>pytest -q</code></td><td>Quiet: no header, just dots and the result</td></tr>
+              <tr><td><code>pytest -k deposit</code></td><td>Run only tests whose name contains "deposit"</td></tr>
+              <tr><td><code>pytest -x</code></td><td>Stop at the first failure</td></tr>
+              <tr><td><code>pytest --lf</code></td><td>Last failed: run only the tests that failed last time</td></tr>
+              <tr><td><code>pytest -s</code></td><td>Show what the tests <code>print</code> (pytest hides it by default)</td></tr>
+              <tr><td><code>pytest --tb=short</code></td><td>Shorter tracebacks for failures</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p><code>-v</code> on the first test file:</p>
+        <script type="text/plain" data-lang="bash" data-file="Terminal">
+pytest -v test_bank.py
+        </script>
+        <script type="text/plain" data-lang="text" data-file="Output">
+============================= test session starts ==============================
+platform darwin -- Python 3.9.6, pytest-8.4.2, pluggy-1.6.0 -- /Users/rishikesh/bank/.venv/bin/python3
+cachedir: .pytest_cache
+rootdir: /Users/rishikesh/bank
+collecting ... collected 3 items
+
+test_bank.py::test_deposit_adds_to_balance PASSED                        [ 33%]
+test_bank.py::test_withdraw_takes_from_balance PASSED                    [ 66%]
+test_bank.py::test_transfer_moves_money PASSED                           [100%]
+
+============================== 3 passed in 0.01s ===============================
+        </script>
+        <p><code>-q</code> and <code>-k</code> together. Two tests are "deselected" because their names do not contain "deposit".</p>
+        <script type="text/plain" data-lang="bash" data-file="Terminal">
+pytest -q -k deposit test_bank.py
+        </script>
+        <script type="text/plain" data-lang="text" data-file="Output">
+.                                                                        [100%]
+1 passed, 2 deselected in 0.00s
+        </script>
+        <p><code>-x</code> on the broken file stops after the first failure, so the second test never runs.</p>
+        <script type="text/plain" data-lang="bash" data-file="Terminal">
+pytest -x -q --tb=line test_broken.py
+        </script>
+        <script type="text/plain" data-lang="text" data-file="Output">
+F
+=================================== FAILURES ===================================
+/Users/rishikesh/bank/test_broken.py:7: AssertionError: assert 1500 == 1600
+=========================== short test summary info ============================
+FAILED test_broken.py::test_deposit_wrong_sum - AssertionError: assert 1500 =...
+!!!!!!!!!!!!!!!!!!!!!!!!!! stopping after 1 failures !!!!!!!!!!!!!!!!!!!!!!!!!!!
+1 failed in 0.02s
+        </script>
+        <p class="note"><b>Tip:</b> <code>-k</code> accepts small expressions too: <code>pytest -k "deposit or transfer"</code>, <code>pytest -k "not withdraw"</code>.</p>
+      </section>
+
+      <section class="chapter" id="raises">
+        <h2>Testing errors</h2>
+        <p>Refusing a bad withdrawal is behaviour too, and it needs a test. <code>pytest.raises</code> is a context manager: the test passes only if the code inside the <code>with</code> block raises the named exception.</p>
+        <script type="text/plain" data-lang="py" data-file="test_errors.py">
+import pytest
+from bank import Account, rishikesh
+
+
+def test_withdraw_more_than_balance_is_refused():
+    account = Account(rishikesh, 1000)
+    with pytest.raises(ValueError):
+        account.withdraw(5000)
+    assert account.balance == 1000          # nothing was taken
+
+
+def test_deposit_of_zero_is_refused():
+    account = Account(rishikesh, 1000)
+    with pytest.raises(ValueError, match="must be positive"):
+        account.deposit(0)
+
+
+def test_error_message():
+    account = Account(rishikesh, 1000)
+    with pytest.raises(ValueError) as excinfo:
+        account.withdraw(5000)
+    assert str(excinfo.value) == "Insufficient funds"
+        </script>
+        <ul>
+          <li><code>match=</code> also checks the error message. It is a regular expression searched for in the message, so part of the text is enough.</li>
+          <li><code>as excinfo</code> gives you the caught exception as <code>excinfo.value</code> for any further checks.</li>
+        </ul>
+        <p>If the code does <b>not</b> raise, the test fails. This test wrongly expects a small withdrawal to be refused, and these are the two key lines of the failure report pytest prints for it:</p>
+        <script type="text/plain" data-lang="py" data-file="test_no_raise.py">
+import pytest
+from bank import Account, rishikesh
+
+
+def test_small_withdrawal_is_refused():
+    account = Account(rishikesh, 1000)
+    with pytest.raises(ValueError):
+        account.withdraw(10)            # wrong on purpose: this is allowed
+        </script>
+        <script type="text/plain" data-lang="text" data-file="Output">
+>           account.withdraw(10)            # wrong on purpose: this is allowed
+E           Failed: DID NOT RAISE <class 'ValueError'>
+        </script>
+        <p class="note"><b>Habit:</b> keep only the one call that should raise inside the <code>with</code> block. If the setup lines are inside too, an error in the setup can make the test pass for the wrong reason.</p>
+      </section>
+
+      <section class="chapter" id="approx">
+        <h2>Comparing floats</h2>
+        <p>Floats are stored in binary, so some sums are off by a tiny amount. Comparing them with <code>==</code> gives surprising failures.</p>
+        <script type="text/plain" data-lang="py" data-file="floats.py">
+print(0.1 + 0.1 + 0.1)              # 0.30000000000000004
+print(0.1 + 0.1 + 0.1 == 0.3)       # False
+        </script>
+        <p><code>pytest.approx(value)</code> compares with a small tolerance, by default one part in a million. Pass <code>abs=</code> to set the allowed difference yourself.</p>
+        <script type="text/plain" data-lang="py" data-file="test_floats.py">
+import pytest
+from bank import Account, hemkesh
+
+
+def test_three_small_deposits():
+    account = Account(hemkesh)
+    for _ in range(3):
+        account.deposit(0.1)
+    assert account.balance == pytest.approx(0.3)
+
+
+def test_roughly_a_third():
+    share = 1000 / 3
+    assert share == pytest.approx(333.33, abs=0.01)     # within 1 paisa
+        </script>
+        <p class="note"><b>Real money:</b> a real bank would store paise as whole numbers or use <code>decimal.Decimal</code>, where sums are exact. <code>approx</code> is for values that are floats by nature, such as rates and averages.</p>
+      </section>
+
+      <section class="chapter part" id="fixtures-params">
+        <h2>Fixtures and parameters</h2>
+        <p class="kind">Part 2 of 4 &middot; less repeated code in tests</p>
+        <p>The tests so far each build their own accounts. With thirty tests that is thirty copies of the same lines. This part covers the two pytest features that remove the repetition: fixtures for shared setup, and parameters for running one test with many inputs.</p>
+        <ul>
+          <li><a href="#fixtures">Fixtures</a>: setup written once and handed to tests</li>
+          <li><a href="#fixture-chain">Fixtures using fixtures</a>: build bigger setups from small ones</li>
+          <li><a href="#yield-fixtures">Cleaning up with yield</a>: code that runs after the test</li>
+          <li><a href="#scope">Fixture scope</a>: how often a fixture is rebuilt</li>
+          <li><a href="#conftest">Sharing with conftest.py</a>: fixtures for every test file</li>
+          <li><a href="#built-in">Built-in fixtures</a>: <code>tmp_path</code>, <code>capsys</code>, <code>monkeypatch</code></li>
+          <li><a href="#parametrize">Parametrised tests</a>: a table of inputs and expected results</li>
+          <li><a href="#marks">Skip and xfail</a>: tests that should not run or are expected to fail</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="fixtures">
+        <h2>Fixtures</h2>
+        <p>A <b>fixture</b> is a function that prepares something a test needs. Mark it with <code>@pytest.fixture</code>. A test asks for it by having a parameter with the same name, and pytest calls the fixture and passes in what it returns.</p>
+        <script type="text/plain" data-lang="py" data-file="test_fixtures.py">
+import pytest
+from bank import Account, transfer, rishikesh, sandhya
+
+
+@pytest.fixture
+def mine():
+    return Account(rishikesh, 9000)
+
+
+@pytest.fixture
+def mothers():
+    return Account(sandhya, 1000)
+
+
+def test_deposit(mine):
+    mine.deposit(1000)
+    assert mine.balance == 10000
+
+
+def test_withdraw(mine):
+    mine.withdraw(4000)
+    assert mine.balance == 5000         # starts from 9000 again, not 10000
+
+
+def test_transfer(mine, mothers):
+    transfer(mine, mothers, 2500)
+    assert mine.balance == 6500
+    assert mothers.balance == 3500
+        </script>
+        <p>The fixture runs again for every test that asks for it. <code>test_withdraw</code> gets a brand new account with 9000 in it, whatever <code>test_deposit</code> did to its own. That keeps tests independent of each other.</p>
+        <p class="note"><b>Concept:</b> you never call a fixture yourself. Naming it as a parameter is the request. This is a small form of dependency injection: the test says what it needs and something else supplies it.</p>
+      </section>
+
+      <section class="chapter" id="fixture-chain">
+        <h2>Fixtures using fixtures</h2>
+        <p>A fixture can ask for other fixtures in the same way a test does. Small fixtures then combine into bigger starting points.</p>
+        <script type="text/plain" data-lang="py" data-file="test_fixture_chain.py">
+import pytest
+from bank import Account, transfer, rishikesh, sandhya
+
+
+@pytest.fixture
+def mine():
+    return Account(rishikesh, 9000)
+
+
+@pytest.fixture
+def mothers():
+    return Account(sandhya, 1000)
+
+
+@pytest.fixture
+def after_transfer(mine, mothers):      # a fixture that asks for two others
+    transfer(mine, mothers, 2500)
+    return mine, mothers
+
+
+def test_sender_has_less(after_transfer):
+    mine, mothers = after_transfer
+    assert mine.balance == 6500
+
+
+def test_money_is_not_lost(after_transfer):
+    mine, mothers = after_transfer
+    assert mine.balance + mothers.balance == 10000
+        </script>
+      </section>
+
+      <section class="chapter" id="yield-fixtures">
+        <h2>Cleaning up with yield</h2>
+        <p>Some setup has to be undone: a file closed, a temporary record deleted. Write <code>yield</code> where you would write <code>return</code>. The code before <code>yield</code> runs before the test, and the code after it runs when the test is over, whether it passed or failed.</p>
+        <script type="text/plain" data-lang="py" data-file="test_yield.py">
+import pytest
+from bank import Account, malinikesh
+
+
+@pytest.fixture
+def account():
+    print("\nsetup: open the account")
+    account = Account(malinikesh, 500)
+    yield account                       # the test runs here
+    print("\ncleanup: close the account")
+    account.balance = 0
+
+
+def test_deposit(account):
+    print("test: deposit 100")
+    account.deposit(100)
+    assert account.balance == 600
+        </script>
+        <p>Run it with <code>-s</code> so the prints are visible, and the order shows.</p>
+        <script type="text/plain" data-lang="bash" data-file="Terminal">
+pytest -q -s test_yield.py
+        </script>
+        <script type="text/plain" data-lang="text" data-file="Output">
+
+setup: open the account
+test: deposit 100
+.
+cleanup: close the account
+
+1 passed in 0.00s
+        </script>
+      </section>
+
+      <section class="chapter" id="scope">
+        <h2>Fixture scope</h2>
+        <p>By default a fixture is rebuilt for every test. <code>scope=</code> changes how long one result is kept and shared.</p>
+        <div class="scroll">
+          <table>
+            <thead>
+              <tr><th>Scope</th><th>Built once per</th></tr>
+            </thead>
+            <tbody>
+              <tr><td><code>"function"</code> (default)</td><td>test function</td></tr>
+              <tr><td><code>"class"</code></td><td>test class</td></tr>
+              <tr><td><code>"module"</code></td><td>test file</td></tr>
+              <tr><td><code>"session"</code></td><td>whole pytest run</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <script type="text/plain" data-lang="py" data-file="test_scope.py">
+import pytest
+from bank import Account, subhash
+
+created = []
+
+
+@pytest.fixture(scope="module")
+def shared_account():
+    created.append("account")
+    return Account(subhash, 100)
+
+
+def test_first(shared_account):
+    shared_account.deposit(50)
+    assert shared_account.balance == 150
+
+
+def test_second(shared_account):
+    assert shared_account.balance == 150    # same object: the 50 is still there
+    assert created == ["account"]           # the fixture ran only once
+        </script>
+        <p>Both tests pass, and the second one shows the cost: it sees the deposit made by the first. A shared object carries changes from one test to the next.</p>
+        <p class="note"><b>Rule of thumb:</b> keep the default scope. Use a wider scope only for something slow to build that tests read and do not change, such as a large data file loaded once.</p>
+      </section>
+
+      <section class="chapter" id="conftest">
+        <h2>Sharing with conftest.py</h2>
+        <p>Fixtures defined in a test file are visible only in that file. Put them in a file named <code>conftest.py</code> and every test file in the same folder, and in folders below it, can use them. There is nothing to import: pytest loads <code>conftest.py</code> by itself.</p>
+        <script type="text/plain" data-lang="py" data-file="conftest.py">
+import pytest
+from bank import Account, rishikesh, sandhya
+
+
+@pytest.fixture
+def mine():
+    return Account(rishikesh, 9000)
+
+
+@pytest.fixture
+def mothers():
+    return Account(sandhya, 1000)
+        </script>
+        <p>This test file defines no fixtures and does not import any. It is not run by this site's example checker, because it only works under pytest with <code>conftest.py</code> beside it. It was run with pytest: 2 passed.</p>
+        <script type="text/plain" data-lang="py" data-file="test_transfer.py" data-norun>
+import pytest
+from bank import transfer
+
+
+def test_transfer_moves_money(mine, mothers):
+    transfer(mine, mothers, 2500)
+    assert (mine.balance, mothers.balance) == (6500, 3500)
+
+
+def test_transfer_too_large_changes_nothing(mine, mothers):
+    with pytest.raises(ValueError):
+        transfer(mine, mothers, 99999)
+    assert (mine.balance, mothers.balance) == (9000, 1000)
+        </script>
+        <p class="note"><b>Tip:</b> if a test file defines a fixture with the same name as one in <code>conftest.py</code>, the one in the test file wins for that file.</p>
+      </section>
+
+      <section class="chapter" id="built-in">
+        <h2>Built-in fixtures</h2>
+        <p>pytest ships with fixtures you can ask for by name. Three are worth knowing from the start.</p>
+        <div class="scroll">
+          <table>
+            <thead>
+              <tr><th>Fixture</th><th>What the test gets</th></tr>
+            </thead>
+            <tbody>
+              <tr><td><code>tmp_path</code></td><td>A new empty folder, as a <code>pathlib.Path</code>, different for every test</td></tr>
+              <tr><td><code>capsys</code></td><td>Everything the code printed, as text you can check</td></tr>
+              <tr><td><code>monkeypatch</code></td><td>A tool to replace attributes, dictionary items and environment variables for one test, and put them back afterwards</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <script type="text/plain" data-lang="py" data-file="test_builtin.py">
+import os
+from bank import Account, rishikesh
+
+
+def print_balance(account):
+    print(f"{account.owner.first_name}: Rs {account.balance}")
+
+
+def test_tmp_path(tmp_path):
+    file = tmp_path / "balance.txt"         # tmp_path is a pathlib.Path
+    file.write_text("1500")
+    assert file.read_text() == "1500"
+
+
+def test_capsys(capsys):
+    print_balance(Account(rishikesh, 1500))
+    captured = capsys.readouterr()
+    assert captured.out == "Rishikesh: Rs 1500\n"
+
+
+def test_monkeypatch(monkeypatch):
+    monkeypatch.setenv("BANK_BRANCH", "Main Road")
+    assert os.environ["BANK_BRANCH"] == "Main Road"
+        </script>
+        <p>An environment variable is a named setting that the operating system passes to a program. After <code>test_monkeypatch</code> ends, <code>BANK_BRANCH</code> is removed again. <code>tmp_path</code> and <code>monkeypatch</code> come back in the chapters on files, the clock and mocking.</p>
+      </section>
+
+      <section class="chapter" id="parametrize">
+        <h2>Parametrised tests</h2>
+        <p>Often you want the same check for many inputs. Copying the test five times is noise. <code>@pytest.mark.parametrize</code> takes the parameter names and a table of rows, and runs the test once per row.</p>
+        <script type="text/plain" data-lang="py" data-file="test_params.py">
+import pytest
+from bank import Account, rishikesh
+
+
+@pytest.mark.parametrize("start, amount, expected", [
+    (1000, 500, 1500),
+    (0, 1, 1),
+    (250.5, 0.5, 251),
+])
+def test_deposit(start, amount, expected):
+    account = Account(rishikesh, start)
+    account.deposit(amount)
+    assert account.balance == expected
+
+
+@pytest.mark.parametrize("amount", [0, -1, -500],
+                         ids=["zero", "minus-one", "minus-500"])
+def test_deposit_refuses(amount):
+    account = Account(rishikesh, 1000)
+    with pytest.raises(ValueError):
+        account.deposit(amount)
+
+
+@pytest.mark.parametrize("amount, message", [
+    pytest.param(0, "Amount must be positive", id="zero"),
+    pytest.param(-50, "Amount must be positive", id="negative"),
+    pytest.param(5000, "Insufficient funds", id="too-much"),
+])
+def test_withdraw_refuses(amount, message):
+    account = Account(rishikesh, 1000)
+    with pytest.raises(ValueError, match=message):
+        account.withdraw(amount)
+        </script>
+        <p>Three functions become nine tests. Each row passes or fails by itself and gets its own name in square brackets. Without <code>ids</code> the name is built from the values. With <code>ids=</code>, or <code>pytest.param(..., id=...)</code> on a row, you choose it.</p>
+        <script type="text/plain" data-lang="bash" data-file="Terminal">
+pytest -v test_params.py
+        </script>
+        <script type="text/plain" data-lang="text" data-file="Output">
+test_params.py::test_deposit[1000-500-1500] PASSED                       [ 11%]
+test_params.py::test_deposit[0-1-1] PASSED                               [ 22%]
+test_params.py::test_deposit[250.5-0.5-251] PASSED                       [ 33%]
+test_params.py::test_deposit_refuses[zero] PASSED                        [ 44%]
+test_params.py::test_deposit_refuses[minus-one] PASSED                   [ 55%]
+test_params.py::test_deposit_refuses[minus-500] PASSED                   [ 66%]
+test_params.py::test_withdraw_refuses[zero] PASSED                       [ 77%]
+test_params.py::test_withdraw_refuses[negative] PASSED                   [ 88%]
+test_params.py::test_withdraw_refuses[too-much] PASSED                   [100%]
+
+============================== 9 passed in 0.02s ===============================
+        </script>
+        <p class="note"><b>Spelling:</b> the decorator is spelled <code>parametrize</code>, with a z and no second e. Any other spelling is an error.</p>
+      </section>
+
+      <section class="chapter" id="marks">
+        <h2>Skip and xfail</h2>
+        <p>A <b>mark</b> is a label on a test, written as a decorator. <code>parametrize</code> is one. Three more control whether a test runs.</p>
+        <ul>
+          <li><code>skip</code>: do not run this test.</li>
+          <li><code>skipif</code>: do not run it when a condition is true, such as an old Python version.</li>
+          <li><code>xfail</code>: "expected to fail". Run it, but a failure is reported as <code>xfailed</code> and does not make the run fail. Use it for a known bug you have not fixed yet.</li>
+        </ul>
+        <script type="text/plain" data-lang="py" data-file="test_marks.py">
+import sys
+import pytest
+from bank import Account, rishikesh
+
+
+@pytest.mark.skip(reason="statement export is not written yet")
+def test_export_statement():
+    assert False
+
+
+@pytest.mark.skipif(sys.version_info < (3, 10), reason="needs Python 3.10")
+def test_new_python_only():
+    assert True
+
+
+@pytest.mark.xfail(reason="known bug: balances are floats")
+def test_balance_is_exact():
+    account = Account(rishikesh)
+    account.deposit(0.1)
+    account.deposit(0.2)
+    assert account.balance == 0.3
+
+
+def test_deposit():
+    account = Account(rishikesh, 1000)
+    account.deposit(500)
+    assert account.balance == 1500
+        </script>
+        <p><code>-rsx</code> adds the reasons for skipped (<code>s</code>) and xfailed (<code>x</code>) tests to the summary.</p>
+        <script type="text/plain" data-lang="bash" data-file="Terminal">
+pytest -q -rsx test_marks.py
+        </script>
+        <script type="text/plain" data-lang="text" data-file="Output">
+ssx.                                                                     [100%]
+=========================== short test summary info ============================
+SKIPPED [1] test_marks.py:6: statement export is not written yet
+SKIPPED [1] test_marks.py:11: needs Python 3.10
+XFAIL test_marks.py::test_balance_is_exact - known bug: balances are floats
+1 passed, 2 skipped, 1 xfailed in 0.02s
+        </script>
+        <p>This output is from Python 3.9, so the <code>skipif</code> test was skipped. On Python 3.10 or newer it runs and you get 2 passed, 1 skipped, 1 xfailed.</p>
+        <p class="note"><b>Habit:</b> always give a <code>reason</code>. A skipped test with no reason stays skipped for years because nobody remembers why.</p>
+      </section>
+
+      <section class="chapter part" id="fakes-mocks">
+        <h2>Fakes and mocks</h2>
+        <p class="kind">Part 3 of 4 &middot; testing code that talks to the outside world</p>
+        <p>Some code sends messages, calls another server, reads the clock or writes files. A test must not send a real SMS, and it must give the same result every run. The answer is to replace the outside part with a stand-in during the test.</p>
+        <ul>
+          <li><a href="#doubles">Test doubles</a>: fake, stub, spy and mock in plain words</li>
+          <li><a href="#fake-notifier">A hand-written fake</a>: test <code>TransferService</code> without sending anything</li>
+          <li><a href="#mock">Mock objects</a>: <code>unittest.mock.Mock</code> builds the stand-in for you</li>
+          <li><a href="#patch">Patching</a>: swap a name inside a module for one test</li>
+          <li><a href="#patch-where">Patch where it is used</a>: the rule that trips everyone once</li>
+          <li><a href="#monkeypatch">monkeypatch</a>: the pytest way to do the same</li>
+          <li><a href="#time-random-env">Time, random and the environment</a>: make them predictable</li>
+          <li><a href="#files">Code that writes files</a>: <code>tmp_path</code></li>
+          <li><a href="#clock">Code that reads the clock</a>: pass the clock in, or patch it</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="doubles">
+        <h2>Test doubles</h2>
+        <p>A <b>test double</b> is any object that stands in for a real one during a test, like a stunt double in a film. There are four common kinds. People often call all of them "mocks", but the differences are worth knowing.</p>
+        <div class="scroll">
+          <table>
+            <thead>
+              <tr><th>Name</th><th>What it does</th><th>Bank example</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>Stub</td><td>Returns fixed answers and nothing more</td><td>A rate service that always says 4%</td></tr>
+              <tr><td>Fake</td><td>A simple working version of the real thing</td><td>A notifier that keeps messages in a list instead of sending them</td></tr>
+              <tr><td>Spy</td><td>Records how it was called so the test can check afterwards</td><td>"Was <code>send</code> called once, with this text?"</td></tr>
+              <tr><td>Mock</td><td>An object made by a mocking library that can be a stub and a spy at once</td><td><code>unittest.mock.Mock()</code></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>Use a double for things that are slow, cost money, need a network, or give a different answer every time. Do not use one for your own plain code: test a real <code>Account</code>, not a stand-in for it.</p>
+      </section>
+
+      <section class="chapter" id="fake-notifier">
+        <h2>A hand-written fake</h2>
+        <p><code>TransferService</code> does not create its notifier. It receives one. The <a href="design-principles.html#dip">dependency inversion chapter of Design Principles</a> promised that this pays off in tests: "pass a fake notifier that stores messages in a list". Here is that fake. It needs no library at all.</p>
+        <script type="text/plain" data-lang="py" data-file="test_notifier.py">
+import pytest
+from bank import Account, TransferService, rishikesh, sandhya
+
+
+class FakeNotifier:
+    def __init__(self):
+        self.messages = []
+
+    def send(self, to, text):
+        self.messages.append((to, text))    # remember it, send nothing
+
+
+def test_transfer_tells_the_receiver():
+    notifier = FakeNotifier()
+    service = TransferService(notifier)
+    mine, mothers = Account(rishikesh, 9000), Account(sandhya, 1000)
+
+    service.transfer(mine, mothers, 2500)
+
+    assert mothers.balance == 3500
+    assert notifier.messages == [("Sandhya", "Rs 2500 received from Rishikesh")]
+
+
+def test_failed_transfer_sends_nothing():
+    notifier = FakeNotifier()
+    service = TransferService(notifier)
+    mine, mothers = Account(rishikesh, 9000), Account(sandhya, 1000)
+
+    with pytest.raises(ValueError):
+        service.transfer(mine, mothers, 99999)
+
+    assert notifier.messages == []
+        </script>
+        <p>No SMS, no email, no network, and the whole transfer rule is tested, including the exact message text. Because the fake records what it was given, it also works as a spy.</p>
+        <p class="note"><b>Design:</b> this was only possible because the notifier is passed in. If <code>TransferService</code> created an <code>SmsSender</code> inside <code>__init__</code>, the test would have nowhere to put the fake. Code that receives its helpers is easy to test.</p>
+      </section>
+
+      <section class="chapter" id="mock">
+        <h2>Mock objects</h2>
+        <p>Writing a small class for every stand-in gets tiring. <code>unittest.mock</code>, in the standard library, makes them for you. A <code>Mock</code> accepts any method call, returns another <code>Mock</code>, and remembers every call.</p>
+        <script type="text/plain" data-lang="py" data-file="mock_basics.py">
+from unittest.mock import Mock
+
+notifier = Mock()
+notifier.send("Sandhya", "Rs 2500 received")    # any method you call exists
+
+print(notifier.send.called)             # True
+print(notifier.send.call_count)         # 1
+print(notifier.send.call_args)          # call('Sandhya', 'Rs 2500 received')
+print(notifier.send.call_args.args)     # ('Sandhya', 'Rs 2500 received')
+
+notifier.send.assert_called_once_with("Sandhya", "Rs 2500 received")   # passes
+
+try:
+    notifier.send.assert_called_once_with("Subhash", "Rs 2500 received")
+except AssertionError as error:
+    print(error)
+# expected call not found.
+# Expected: send('Subhash', 'Rs 2500 received')
+# Actual: send('Sandhya', 'Rs 2500 received')
+        </script>
+        <p><code>assert_called_once_with</code> is the spy part: it raises <code>AssertionError</code> unless there was exactly one call with exactly those arguments. <code>call_args</code> holds the arguments of the most recent call if you want to inspect them yourself.</p>
+        <h3>Choosing what a mock returns</h3>
+        <p><code>return_value</code> sets a fixed answer. That is the stub part. <code>side_effect</code> does more: give it a list to return a different value on each call, or an exception to make the call raise.</p>
+        <script type="text/plain" data-lang="py" data-file="mock_returns.py">
+from unittest.mock import Mock
+
+rates = Mock()
+rates.today.return_value = 0.04
+print(rates.today(), rates.today())     # 0.04 0.04
+
+rates.today.side_effect = [0.04, 0.05]  # a list: one answer per call
+print(rates.today(), rates.today())     # 0.04 0.05
+
+rates.today.side_effect = ConnectionError("head office is down")
+try:
+    rates.today()
+except ConnectionError as error:
+    print("raised:", error)             # raised: head office is down
+        </script>
+        <h3>Mocks in a test</h3>
+        <p>The two notifier tests again, with a <code>Mock</code> in place of the hand-written class. The second test uses <code>side_effect</code> to see what happens when sending fails, a case that is very hard to produce with a real SMS service.</p>
+        <script type="text/plain" data-lang="py" data-file="test_mock_notifier.py">
+from unittest.mock import Mock
+
+import pytest
+from bank import Account, TransferService, rishikesh, sandhya
+
+
+def test_transfer_tells_the_receiver():
+    notifier = Mock()
+    service = TransferService(notifier)
+    mine, mothers = Account(rishikesh, 9000), Account(sandhya, 1000)
+
+    service.transfer(mine, mothers, 2500)
+
+    notifier.send.assert_called_once_with(
+        "Sandhya", "Rs 2500 received from Rishikesh")
+
+
+def test_money_has_moved_when_the_message_fails():
+    notifier = Mock()
+    notifier.send.side_effect = ConnectionError("SMS gateway is down")
+    service = TransferService(notifier)
+    mine, mothers = Account(rishikesh, 9000), Account(sandhya, 1000)
+
+    with pytest.raises(ConnectionError):
+        service.transfer(mine, mothers, 2500)
+
+    assert (mine.balance, mothers.balance) == (6500, 3500)
+        </script>
+        <h3>MagicMock and spec</h3>
+        <p><code>MagicMock</code> is a <code>Mock</code> that also supports Python's special methods, so it works with <code>len()</code>, <code>with</code>, loops and indexing. A plain <code>Mock</code> does not.</p>
+        <script type="text/plain" data-lang="py" data-file="magic_mock.py">
+from unittest.mock import MagicMock, Mock
+
+plain = Mock()
+try:
+    len(plain)
+except TypeError as error:
+    print(error)                        # object of type 'Mock' has no len()
+
+ledger = MagicMock()
+ledger.__len__.return_value = 3
+print(len(ledger))                      # 3
+
+with ledger:                            # also works as a context manager
+    pass
+print(ledger.__enter__.called)          # True
+        </script>
+        <p>A mock that accepts anything also accepts mistakes. A misspelled method name is just another call. Pass <code>spec=</code> with the real class and the mock allows only the names that class has.</p>
+        <script type="text/plain" data-lang="py" data-file="mock_spec.py">
+from unittest.mock import Mock
+
+
+class EmailNotifier:
+    def send(self, to, text):
+        print(f"Email to {to}: {text}")
+
+
+loose = Mock()
+loose.sned("Sandhya", "hello")          # a typo, and nothing complains
+print(loose.send.called)                # False
+
+strict = Mock(spec=EmailNotifier)
+strict.send("Sandhya", "hello")         # fine: EmailNotifier has send
+try:
+    strict.sned("Sandhya", "hello")
+except AttributeError as error:
+    print(error)                        # Mock object has no attribute 'sned'
+        </script>
+      </section>
+
+      <section class="chapter" id="patch">
+        <h2>Patching</h2>
+        <p>The notifier was easy because it is passed in. Often the thing you want to replace is a function that the code imports and calls directly. Two small modules show the case. <code>rates.py</code> stands for a slow call to another server; here it simply fails, as it would on a machine with no network.</p>
+        <script type="text/plain" data-lang="py" data-file="rates.py">
+def fetch_rate():
+    """Ask head office for today's interest rate. Slow, and needs the network."""
+    raise ConnectionError("cannot reach head office")
+        </script>
+        <p><code>savings.py</code> uses it. This block and the test files that import <code>savings</code> are marked as not run by this site's example checker, because they need these helper files next to them. They were all run with pytest instead.</p>
+        <script type="text/plain" data-lang="py" data-file="savings.py" data-norun>
+from rates import fetch_rate
+
+
+def add_interest(account):
+    interest = round(account.balance * fetch_rate(), 2)
+    account.deposit(interest)
+    return interest
+        </script>
+        <p><code>patch("module.name")</code> replaces that name with a <code>MagicMock</code> for a while and then puts the original back. It can be used in two ways. As a <b>decorator</b> the patch lasts for the whole test, and the mock is passed in as an argument. As a <b>context manager</b> it lasts for the <code>with</code> block.</p>
+        <script type="text/plain" data-lang="py" data-file="test_savings.py" data-norun>
+from unittest.mock import patch
+
+from bank import Account, subhash
+from savings import add_interest
+
+
+@patch("savings.fetch_rate", return_value=0.04)
+def test_add_interest_with_decorator(fake_rate):
+    account = Account(subhash, 10000)
+    assert add_interest(account) == 400
+    assert account.balance == 10400
+    fake_rate.assert_called_once_with()
+
+
+def test_add_interest_with_context_manager():
+    account = Account(subhash, 10000)
+    with patch("savings.fetch_rate", return_value=0.05):
+        add_interest(account)           # patched only inside the with block
+    assert account.balance == 10500
+        </script>
+        <script type="text/plain" data-lang="bash" data-file="Terminal">
+pytest -q test_savings.py
+        </script>
+        <script type="text/plain" data-lang="text" data-file="Output">
+..                                                                       [100%]
+2 passed in 0.01s
+        </script>
+        <p>Both tests pass without any network, and the real <code>fetch_rate</code> is never called.</p>
+      </section>
+
+      <section class="chapter" id="patch-where">
+        <h2>Patch where it is used</h2>
+        <p>Look again at the target string: <code>"savings.fetch_rate"</code>, not <code>"rates.fetch_rate"</code>. The function is defined in <code>rates</code>, so patching it there looks natural. It does not work.</p>
+        <script type="text/plain" data-lang="py" data-file="test_wrong_patch.py" data-norun>
+from unittest.mock import patch
+
+from bank import Account, subhash
+from savings import add_interest
+
+
+@patch("rates.fetch_rate", return_value=0.04)      # wrong place
+def test_add_interest(fake_rate):
+    account = Account(subhash, 10000)
+    assert add_interest(account) == 400
+        </script>
+        <script type="text/plain" data-lang="bash" data-file="Terminal">
+pytest -q --tb=short test_wrong_patch.py
+        </script>
+        <script type="text/plain" data-lang="text" data-file="Output">
+F                                                                        [100%]
+=================================== FAILURES ===================================
+______________________________ test_add_interest _______________________________
+test_wrong_patch.py:10: in test_add_interest
+    assert add_interest(account) == 400
+savings.py:5: in add_interest
+    interest = round(account.balance * fetch_rate(), 2)
+rates.py:3: in fetch_rate
+    raise ConnectionError("cannot reach head office")
+E   ConnectionError: cannot reach head office
+=========================== short test summary info ============================
+FAILED test_wrong_patch.py::test_add_interest - ConnectionError: cannot reach...
+1 failed in 0.02s
+        </script>
+        <p>The real function ran. The reason is how <code>import</code> works. <code>from rates import fetch_rate</code> creates a second name, <code>savings.fetch_rate</code>, that points at the same function. <code>add_interest</code> looks the function up through that name. Patching <code>rates.fetch_rate</code> changes the name inside <code>rates</code> only, and <code>savings</code> still holds the original.</p>
+        <p class="note"><b>Rule:</b> patch the name in the module that <b>uses</b> it, not in the module that defines it. For <code>from rates import fetch_rate</code> inside <code>savings.py</code>, the target is <code>"savings.fetch_rate"</code>. Had <code>savings.py</code> written <code>import rates</code> and called <code>rates.fetch_rate()</code>, the lookup would go through <code>rates</code>, and <code>"rates.fetch_rate"</code> would be the right target.</p>
+      </section>
+
+      <section class="chapter" id="monkeypatch">
+        <h2>monkeypatch</h2>
+        <p>pytest's <code>monkeypatch</code> fixture does the same job without <code>unittest.mock</code>. You give it the object, the attribute name and the replacement. Everything is put back when the test ends.</p>
+        <script type="text/plain" data-lang="py" data-file="test_savings_monkeypatch.py" data-norun>
+import savings
+from bank import Account, subhash
+
+
+def test_add_interest(monkeypatch):
+    monkeypatch.setattr(savings, "fetch_rate", lambda: 0.04)
+    account = Account(subhash, 10000)
+    assert savings.add_interest(account) == 400
+    assert account.balance == 10400
+        </script>
+        <p>The same rule applies: the attribute is replaced on <code>savings</code>, where it is used. This file needs <code>savings.py</code> and <code>rates.py</code>, so it was verified with pytest (1 passed) and is not run by the example checker.</p>
+        <div class="scroll">
+          <table>
+            <thead>
+              <tr><th>Need</th><th>Reach for</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>Swap in a simple replacement value or function</td><td><code>monkeypatch.setattr</code></td></tr>
+              <tr><td>Set or remove an environment variable</td><td><code>monkeypatch.setenv</code>, <code>monkeypatch.delenv</code></td></tr>
+              <tr><td>Check afterwards how the replacement was called</td><td><code>patch</code>, which gives you a mock</td></tr>
+              <tr><td>Tests written with <code>unittest</code>, without pytest</td><td><code>patch</code></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="chapter" id="time-random-env">
+        <h2>Time, random and the environment</h2>
+        <p>Three things make a function give a different answer on every run: the current time, random numbers, and settings read from the environment. A test cannot assert on a value that keeps changing, so pin each one down.</p>
+        <script type="text/plain" data-lang="py" data-file="branch.py">
+import os
+import random
+import time
+
+
+def daily_limit():
+    return int(os.environ.get("BANK_DAILY_LIMIT", "50000"))
+
+
+def new_reference():
+    return f"TXN-{int(time.time())}-{random.randint(1000, 9999)}"
+        </script>
+        <p>Each test below fixes the changing part to a known value, in both styles. <code>patch.dict</code> changes a dictionary for the length of a <code>with</code> block; <code>os.environ</code> behaves like a dictionary. This file imports <code>branch</code>, so it was verified with pytest (5 passed) and is not run by the example checker.</p>
+        <script type="text/plain" data-lang="py" data-file="test_branch.py" data-norun>
+from unittest.mock import patch
+
+import branch
+
+
+def test_reference_with_monkeypatch(monkeypatch):
+    monkeypatch.setattr(branch.time, "time", lambda: 1700000000)
+    monkeypatch.setattr(branch.random, "randint", lambda low, high: 4321)
+    assert branch.new_reference() == "TXN-1700000000-4321"
+
+
+def test_reference_with_patch():
+    with patch("branch.time.time", return_value=1700000000), \
+         patch("branch.random.randint", return_value=4321) as fake_randint:
+        assert branch.new_reference() == "TXN-1700000000-4321"
+    fake_randint.assert_called_once_with(1000, 9999)
+
+
+def test_limit_default(monkeypatch):
+    monkeypatch.delenv("BANK_DAILY_LIMIT", raising=False)
+    assert branch.daily_limit() == 50000
+
+
+def test_limit_from_environment(monkeypatch):
+    monkeypatch.setenv("BANK_DAILY_LIMIT", "20000")
+    assert branch.daily_limit() == 20000
+
+
+def test_limit_with_patch_dict():
+    with patch.dict("os.environ", {"BANK_DAILY_LIMIT": "750"}):
+        assert branch.daily_limit() == 750
+        </script>
+        <p class="note"><b>Why delenv:</b> <code>test_limit_default</code> removes the variable first. Without that line the test would fail on any machine where <code>BANK_DAILY_LIMIT</code> happens to be set. A test should not depend on the machine it runs on.</p>
+      </section>
+
+      <section class="chapter" id="files">
+        <h2>Code that writes files</h2>
+        <p>Code that reads and writes files is tested with real files, in a folder that belongs to the test. <code>tmp_path</code> gives each test its own new folder, so tests never see each other's files and nothing is left in your project.</p>
+        <script type="text/plain" data-lang="py" data-file="statement.py">
+def save_statement(account, path):
+    with open(path, "w") as file:
+        file.write(f"{account.owner.name}\n{account.balance}\n")
+
+
+def load_balance(path):
+    with open(path) as file:
+        lines = file.read().splitlines()
+    return float(lines[1])
+        </script>
+        <p>Three useful checks: what exactly lands in the file, a full round trip of saving and loading, and the error case. This file imports <code>statement</code>, so it was verified with pytest (3 passed) and is not run by the example checker.</p>
+        <script type="text/plain" data-lang="py" data-file="test_statement.py" data-norun>
+import pytest
+from bank import Account, malinikesh
+from statement import load_balance, save_statement
+
+
+def test_statement_file_contents(tmp_path):
+    path = tmp_path / "malinikesh.txt"
+    save_statement(Account(malinikesh, 4200), path)
+    assert path.read_text() == "Malinikesh Agrawani\n4200\n"
+
+
+def test_save_then_load(tmp_path):
+    path = tmp_path / "malinikesh.txt"
+    save_statement(Account(malinikesh, 4200), path)
+    assert load_balance(path) == 4200
+
+
+def test_missing_file(tmp_path):
+    with pytest.raises(FileNotFoundError):
+        load_balance(tmp_path / "nobody.txt")
+        </script>
+        <p class="note"><b>Design:</b> the functions take the path as an argument. If <code>save_statement</code> had a fixed file name written inside it, the test could not send it to a temporary folder. It is the same idea as passing in the notifier.</p>
+      </section>
+
+      <section class="chapter" id="clock">
+        <h2>Code that reads the clock</h2>
+        <p>A function that calls <code>datetime.now()</code> returns something different every minute. There are two ways to test it. The cleaner one is to <b>inject the clock</b>: let the function accept the "what time is it" function as a parameter, with the real clock as the default.</p>
+        <script type="text/plain" data-lang="py" data-file="receipt.py">
+from datetime import datetime
+
+
+def receipt(account, amount, now=datetime.now):
+    return f"{now():%d %b %Y %H:%M} | {account.owner.first_name} | Rs {amount}"
+
+
+def is_weekend():
+    return datetime.now().weekday() >= 5       # 5 is Saturday, 6 is Sunday
+        </script>
+        <p>The first test passes its own clock to <code>receipt</code>, with no patching at all. <code>is_weekend</code> reads the clock directly, so the other two tests patch the name <code>datetime</code> inside the <code>receipt</code> module and tell the mock what <code>now()</code> returns. This file imports <code>receipt</code>, so it was verified with pytest (3 passed) and is not run by the example checker.</p>
+        <script type="text/plain" data-lang="py" data-file="test_receipt.py" data-norun>
+from datetime import datetime
+from unittest.mock import patch
+
+from bank import Account, rishikesh
+from receipt import is_weekend, receipt
+
+
+def test_receipt_with_injected_clock():
+    def fixed_clock():
+        return datetime(2026, 1, 15, 9, 30)
+
+    text = receipt(Account(rishikesh, 1000), 500, now=fixed_clock)
+    assert text == "15 Jan 2026 09:30 | Rishikesh | Rs 500"
+
+
+@patch("receipt.datetime")
+def test_saturday_is_weekend(fake_datetime):
+    fake_datetime.now.return_value = datetime(2026, 1, 17)     # a Saturday
+    assert is_weekend() is True
+
+
+@patch("receipt.datetime")
+def test_monday_is_not_weekend(fake_datetime):
+    fake_datetime.now.return_value = datetime(2026, 1, 19)     # a Monday
+    assert is_weekend() is False
+        </script>
+        <p class="note"><b>Gotcha:</b> <code>patch("receipt.datetime.now")</code> does not work. It fails with <code>TypeError: can't set attributes of built-in/extension type 'datetime.datetime'</code>, because <code>datetime</code> is written in C and its methods cannot be replaced. Patch the whole name <code>receipt.datetime</code> as above, or inject the clock and avoid the problem.</p>
+      </section>
+
+      <section class="chapter part" id="good-habits">
+        <h2>Good habits</h2>
+        <p class="kind">Part 4 of 4 &middot; tests that stay useful</p>
+        <p>Knowing the tools is half of it. The other half is writing tests that people trust and keep. This part covers what a good test looks like, writing the test first, measuring what the tests reach, and the two other test styles you will meet in Python code.</p>
+        <ul>
+          <li><a href="#good-tests">What makes a good test</a>: five properties</li>
+          <li><a href="#pyramid">The testing pyramid</a>: how many tests of each size</li>
+          <li><a href="#tdd">Test-driven development</a>: red, green, refactor</li>
+          <li><a href="#coverage">Coverage</a>: which lines the tests ran</li>
+          <li><a href="#unittest">The unittest style</a>: the standard library's test classes</li>
+          <li><a href="#doctest">doctest</a>: examples in docstrings that are checked</li>
+          <li><a href="#reference">Quick reference</a></li>
+          <li><a href="#mistakes">Common mistakes</a></li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="good-tests">
+        <h2>What makes a good test</h2>
+        <ul>
+          <li><b>One behaviour per test.</b> When it fails, the name alone tells you what broke. Several <code>assert</code> lines are fine if they all check the same behaviour, like both balances after one transfer.</li>
+          <li><b>A clear name.</b> <code>test_withdraw_more_than_balance_is_refused</code> reads as a sentence about the code. <code>test_withdraw_2</code> says nothing.</li>
+          <li><b>Independent.</b> Each test builds what it needs and passes when run alone. Fixtures give every test a new start.</li>
+          <li><b>Fast.</b> Tests that take milliseconds get run after every change. Tests that take minutes get run once a day, if at all.</li>
+          <li><b>No hidden order.</b> A test must not rely on another test having run first. pytest runs a file's tests from top to bottom, but <code>-k</code>, <code>--lf</code> and running a single test all change which tests come before it.</li>
+        </ul>
+        <p>A good test also checks <b>what</b> the code does, not <b>how</b>. "After the transfer my mother has 3500" stays true when you rewrite <code>transfer</code>. "<code>transfer</code> calls <code>withdraw</code> and then <code>deposit</code>" breaks on every rewrite, even a correct one.</p>
+      </section>
+
+      <section class="chapter" id="pyramid">
+        <h2>The testing pyramid</h2>
+        <p>Tests come in sizes. A <b>unit test</b> checks one small piece by itself, like <code>Account.withdraw</code>. An <b>integration test</b> checks that several pieces work together, such as saving a statement to a real file and loading it back, or code talking to a real database. An <b>end-to-end test</b> drives the whole program the way a user would. The testing pyramid is advice about how many of each to have: many unit tests at the bottom because they are fast and point straight at the fault, fewer integration tests in the middle, and only a handful of end-to-end tests at the top because they are slow and break for many reasons. Almost every test on this page is a unit test.</p>
+      </section>
+
+      <section class="chapter" id="tdd">
+        <h2>Test-driven development</h2>
+        <p>Test-driven development, or TDD, means writing the test before the code. It is a loop of three steps:</p>
+        <ul>
+          <li><b>Red:</b> write a test for behaviour that does not exist yet, run it, and watch it fail.</li>
+          <li><b>Green:</b> write the least code that makes it pass.</li>
+          <li><b>Refactor:</b> tidy the code while the tests keep passing.</li>
+        </ul>
+        <p>A worked example: the bank wants an <b>overdraft limit</b>, an amount by which an account may go below zero. Start with the tests. They describe the feature before any of it exists.</p>
+        <script type="text/plain" data-lang="py" data-file="test_overdraft.py">
+import pytest
+from bank import Account, rishikesh
+
+
+def test_can_go_below_zero_inside_the_limit():
+    account = Account(rishikesh, 1000, overdraft_limit=500)
+    account.withdraw(1200)
+    assert account.balance == -200
+
+
+def test_cannot_go_past_the_limit():
+    account = Account(rishikesh, 1000, overdraft_limit=500)
+    with pytest.raises(ValueError, match="Insufficient funds"):
+        account.withdraw(1501)
+    assert account.balance == 1000
+
+
+def test_no_overdraft_unless_asked():
+    account = Account(rishikesh, 1000)
+    with pytest.raises(ValueError):
+        account.withdraw(1001)
+        </script>
+        <h3>Red</h3>
+        <script type="text/plain" data-lang="bash" data-file="Terminal">
+pytest -q --tb=line test_overdraft.py
+        </script>
+        <script type="text/plain" data-lang="text" data-file="Output">
+FF.                                                                      [100%]
+=================================== FAILURES ===================================
+/Users/rishikesh/bank/test_overdraft.py:6: TypeError: __init__() got an unexpected keyword argument 'overdraft_limit'
+/Users/rishikesh/bank/test_overdraft.py:12: TypeError: __init__() got an unexpected keyword argument 'overdraft_limit'
+=========================== short test summary info ============================
+FAILED test_overdraft.py::test_can_go_below_zero_inside_the_limit - TypeError...
+FAILED test_overdraft.py::test_cannot_go_past_the_limit - TypeError: __init__...
+2 failed, 1 passed in 0.01s
+        </script>
+        <p>Two tests fail, and for the expected reason: <code>Account</code> has no <code>overdraft_limit</code> yet. Seeing the failure first matters. It proves the tests can fail, so a later pass means something. The third test passes already because it describes behaviour the bank has today, and it will guard that behaviour during the change.</p>
+        <h3>Green</h3>
+        <p>Two changed lines in <code>bank.py</code> are enough: a new field with a default of 0, and one changed condition in <code>withdraw</code>. This is a fragment of the <code>Account</code> class, not a whole file, so it is not run by the example checker.</p>
+        <script type="text/plain" data-lang="py" data-file="bank.py (Account, green)" data-norun>
+@dataclass
+class Account:
+    owner: Person
+    balance: float = 0
+    overdraft_limit: float = 0                              # new
+
+    def withdraw(self, amount):
+        if amount <= 0:
+            raise ValueError("Amount must be positive")
+        if amount > self.balance + self.overdraft_limit:    # changed
+            raise ValueError("Insufficient funds")
+        self.balance -= amount
+        </script>
+        <script type="text/plain" data-lang="text" data-file="Output">
+...                                                                      [100%]
+3 passed in 0.01s
+        </script>
+        <h3>Refactor</h3>
+        <p>The sum "balance plus overdraft limit" is a real idea in a bank: the amount available. Give it a name. The behaviour does not change, so the tests must stay green.</p>
+        <script type="text/plain" data-lang="py" data-file="bank.py (Account, refactored)" data-norun>
+@dataclass
+class Account:
+    owner: Person
+    balance: float = 0
+    overdraft_limit: float = 0
+
+    @property
+    def available(self):
+        return self.balance + self.overdraft_limit
+
+    def withdraw(self, amount):
+        if amount <= 0:
+            raise ValueError("Amount must be positive")
+        if amount > self.available:
+            raise ValueError("Insufficient funds")
+        self.balance -= amount
+        </script>
+        <p>Run the new tests together with the older ones, to be sure nothing else broke.</p>
+        <script type="text/plain" data-lang="bash" data-file="Terminal">
+pytest -q test_overdraft.py test_bank.py test_errors.py
+        </script>
+        <script type="text/plain" data-lang="text" data-file="Output">
+.........                                                                [100%]
+9 passed in 0.01s
+        </script>
+        <p class="note"><b>Note:</b> the rest of this page still describes the original <code>bank.py</code> from the top. The overdraft change is compatible with it: every passing test on this page also passes against the changed file.</p>
+      </section>
+
+      <section class="chapter" id="coverage">
+        <h2>Coverage</h2>
+        <p><b>Coverage</b> measures which lines of your code ran while the tests ran. The tool is <code>coverage.py</code>, and <code>pytest-cov</code> connects it to pytest. Both are third-party.</p>
+        <script type="text/plain" data-lang="bash" data-file="Terminal">
+pip install pytest-cov
+pytest --cov=bank --cov-report=term-missing test_bank.py
+        </script>
+        <p><code>--cov=bank</code> says which module to measure. <code>--cov-report=term-missing</code> adds the line numbers that never ran. With only the three tests from the first test file:</p>
+        <script type="text/plain" data-lang="text" data-file="Output">
+============================= test session starts ==============================
+platform darwin -- Python 3.9.6, pytest-8.4.2, pluggy-1.6.0
+rootdir: /Users/rishikesh/bank
+collected 3 items
+
+test_bank.py ...                                                         [100%]
+
+================================ tests coverage ================================
+_______________ coverage: platform darwin, python 3.9.6-final-0 ________________
+
+Name      Stmts   Miss  Cover   Missing
+---------------------------------------
+bank.py      35      7    80%   10, 20, 25, 27, 38, 41-42
+---------------------------------------
+TOTAL        35      7    80%
+============================== 3 passed in 0.02s ===============================
+        </script>
+        <p>The missing lines tell you what is untested. Lines 20, 25 and 27 are the three <code>raise</code> statements: these three tests never try a bad amount. Line 10 is <code>first_name</code>, and lines 38 and 41 to 42 are <code>TransferService</code>. The later test files on this page cover all of them.</p>
+        <h3>Why 100% is not the goal</h3>
+        <p>Coverage shows that a line <b>ran</b>. It does not show that anything <b>checked</b> the result. A test that calls <code>deposit</code> and asserts nothing still counts as covering it. So a low number is a useful warning, but a high number is not proof of good tests. Chasing 100% also leads to tests written to touch lines, not to check behaviour. Use the report to find code you forgot to test, then decide whether that code matters.</p>
+      </section>
+
+      <section class="chapter" id="unittest">
+        <h2>The unittest style</h2>
+        <p>The standard library has its own test framework, <code>unittest</code>. It is older than pytest and you will meet it in many projects, so learn to recognise it. Tests are methods on a class that inherits from <code>unittest.TestCase</code>, checks are methods like <code>assertEqual</code>, and <code>setUp</code> runs before every test.</p>
+        <script type="text/plain" data-lang="py" data-file="test_bank_unittest.py">
+import unittest
+
+from bank import Account, rishikesh
+
+
+class TestAccount(unittest.TestCase):
+    def setUp(self):                    # runs before every test method
+        self.account = Account(rishikesh, 1000)
+
+    def test_deposit(self):
+        self.account.deposit(500)
+        self.assertEqual(self.account.balance, 1500)
+
+    def test_withdraw_too_much(self):
+        with self.assertRaises(ValueError):
+            self.account.withdraw(5000)
+        self.assertEqual(self.account.balance, 1000)
+
+
+if __name__ == "__main__":
+    unittest.main()
+        </script>
+        <script type="text/plain" data-lang="bash" data-file="Terminal">
+python -m unittest -v test_bank_unittest.py
+        </script>
+        <script type="text/plain" data-lang="text" data-file="Output">
+test_deposit (test_bank_unittest.TestAccount) ... ok
+test_withdraw_too_much (test_bank_unittest.TestAccount) ... ok
+
+----------------------------------------------------------------------
+Ran 2 tests in 0.000s
+
+OK
+        </script>
+        <p>pytest runs <code>unittest</code> tests too. <code>pytest test_bank_unittest.py</code> reports 2 passed, so a project can move from one style to the other a file at a time.</p>
+        <div class="scroll">
+          <table>
+            <thead>
+              <tr><th>Task</th><th>unittest</th><th>pytest</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>Install</td><td>Nothing, it is in the standard library</td><td><code>pip install pytest</code></td></tr>
+              <tr><td>A test is</td><td>A <code>test_</code> method on a <code>TestCase</code> subclass</td><td>A plain <code>test_</code> function</td></tr>
+              <tr><td>Check equality</td><td><code>self.assertEqual(a, b)</code></td><td><code>assert a == b</code></td></tr>
+              <tr><td>Check truth</td><td><code>self.assertTrue(x)</code></td><td><code>assert x</code></td></tr>
+              <tr><td>Check membership</td><td><code>self.assertIn(x, items)</code></td><td><code>assert x in items</code></td></tr>
+              <tr><td>Expect an error</td><td><code>with self.assertRaises(ValueError):</code></td><td><code>with pytest.raises(ValueError):</code></td></tr>
+              <tr><td>Setup and cleanup</td><td><code>setUp</code> and <code>tearDown</code> methods</td><td>Fixtures</td></tr>
+              <tr><td>Many inputs</td><td>A loop with <code>self.subTest(...)</code></td><td><code>@pytest.mark.parametrize</code></td></tr>
+              <tr><td>Run</td><td><code>python -m unittest</code></td><td><code>pytest</code></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="chapter" id="doctest">
+        <h2>doctest</h2>
+        <p>A <b>doctest</b> is an example inside a docstring, written as it would look in the Python prompt: a line starting with <code>&gt;&gt;&gt;</code>, then the expected output. The standard library's <code>doctest</code> module runs the examples and compares what really comes out.</p>
+        <script type="text/plain" data-lang="py" data-file="interest.py">
+def simple_interest(principal, rate, years):
+    """Return the interest earned at a yearly rate given in percent.
+
+    >>> simple_interest(10000, 4, 2)
+    800.0
+    >>> simple_interest(5000, 0, 3)
+    0.0
+    >>> simple_interest(-1, 4, 2)
+    Traceback (most recent call last):
+        ...
+    ValueError: principal cannot be negative
+    """
+    if principal < 0:
+        raise ValueError("principal cannot be negative")
+    return principal * rate * years / 100
+
+
+if __name__ == "__main__":
+    import doctest
+    print(doctest.testmod())    # TestResults(failed=0, attempted=3)
+        </script>
+        <p>There are three ways to run them: run the file as above, run <code>python -m doctest -v interest.py</code>, or let pytest collect them with <code>pytest --doctest-modules</code>.</p>
+        <script type="text/plain" data-lang="bash" data-file="Terminal">
+pytest -q --doctest-modules interest.py
+        </script>
+        <script type="text/plain" data-lang="text" data-file="Output">
+.                                                                        [100%]
+1 passed in 0.01s
+        </script>
+        <p>pytest counts all the examples in one docstring as one test. Doctests are good for keeping the examples in your documentation honest. They are a poor fit for anything that needs setup, so use them next to ordinary tests, not in place of them.</p>
+      </section>
+
+      <section class="chapter" id="reference">
+        <h2>Quick reference</h2>
+        <div class="scroll">
+          <table>
+            <thead>
+              <tr><th>To do this</th><th>Write this</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>Check a value</td><td><code>assert account.balance == 1500</code></td></tr>
+              <tr><td>Expect an exception</td><td><code>with pytest.raises(ValueError, match="funds"):</code></td></tr>
+              <tr><td>Compare floats</td><td><code>assert total == pytest.approx(0.3)</code></td></tr>
+              <tr><td>Share setup</td><td><code>@pytest.fixture</code>, then name it as a test parameter</td></tr>
+              <tr><td>Clean up after a test</td><td><code>yield</code> in the fixture, cleanup code after it</td></tr>
+              <tr><td>Share fixtures between files</td><td>Put them in <code>conftest.py</code></td></tr>
+              <tr><td>Run one test with many inputs</td><td><code>@pytest.mark.parametrize("a, b", [(1, 2), (3, 4)])</code></td></tr>
+              <tr><td>Skip a test</td><td><code>@pytest.mark.skip(reason="...")</code> or <code>skipif(condition, reason="...")</code></td></tr>
+              <tr><td>Mark a known bug</td><td><code>@pytest.mark.xfail(reason="...")</code></td></tr>
+              <tr><td>Get a temporary folder</td><td>The <code>tmp_path</code> fixture</td></tr>
+              <tr><td>Check printed output</td><td><code>capsys.readouterr().out</code></td></tr>
+              <tr><td>Set an environment variable</td><td><code>monkeypatch.setenv("NAME", "value")</code></td></tr>
+              <tr><td>Replace a function for one test</td><td><code>monkeypatch.setattr(module, "name", replacement)</code></td></tr>
+              <tr><td>Make a stand-in object</td><td><code>Mock()</code>, or <code>Mock(spec=RealClass)</code></td></tr>
+              <tr><td>Set what a mock returns</td><td><code>mock.method.return_value = 0.04</code></td></tr>
+              <tr><td>Make a mock raise</td><td><code>mock.method.side_effect = ConnectionError("down")</code></td></tr>
+              <tr><td>Check how a mock was called</td><td><code>mock.method.assert_called_once_with(...)</code></td></tr>
+              <tr><td>Replace a name in a module</td><td><code>@patch("module_that_uses_it.name")</code></td></tr>
+              <tr><td>Run one test</td><td><code>pytest test_bank.py::test_transfer_moves_money</code></td></tr>
+              <tr><td>Run tests by name</td><td><code>pytest -k deposit</code></td></tr>
+              <tr><td>Stop at the first failure</td><td><code>pytest -x</code></td></tr>
+              <tr><td>Re-run only the failures</td><td><code>pytest --lf</code></td></tr>
+              <tr><td>Measure coverage</td><td><code>pytest --cov=bank --cov-report=term-missing</code></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="chapter" id="mistakes">
+        <h2>Common mistakes</h2>
+        <h3>Tests that depend on each other, and tests that assert nothing</h3>
+        <p>This file has both problems. All three tests share one account created at the top of the file.</p>
+        <script type="text/plain" data-lang="py" data-file="test_mistakes.py">
+from bank import Account, rishikesh
+
+account = Account(rishikesh, 1000)      # shared by every test in the file
+
+
+def test_deposit():
+    account.deposit(500)
+    assert account.balance == 1500
+
+
+def test_withdraw():
+    account.withdraw(300)
+    assert account.balance == 1200      # only true if test_deposit ran first
+
+
+def test_asserts_nothing():
+    account.deposit(100)                # no assert: this can never fail
+        </script>
+        <p>Run the whole file and pytest reports 3 passed. Run <code>test_withdraw</code> alone and it fails, because the deposit it silently relied on never happened.</p>
+        <script type="text/plain" data-lang="bash" data-file="Terminal">
+pytest -q test_mistakes.py -k withdraw
+        </script>
+        <script type="text/plain" data-lang="text" data-file="Output">
+F                                                                        [100%]
+=================================== FAILURES ===================================
+________________________________ test_withdraw _________________________________
+
+    def test_withdraw():
+        account.withdraw(300)
+>       assert account.balance == 1200      # only true if test_deposit ran first
+E       AssertionError: assert 700 == 1200
+E        +  where 700 = Account(owner=Person(name='Rishikesh Agrawani'), balance=700).balance
+
+test_mistakes.py:13: AssertionError
+=========================== short test summary info ============================
+FAILED test_mistakes.py::test_withdraw - AssertionError: assert 700 == 1200
+1 failed, 2 deselected in 0.02s
+        </script>
+        <p>The fix for the first problem is a fixture, so that each test gets its own account. The fix for the second is to end every test with a check. <code>test_asserts_nothing</code> only proves that <code>deposit</code> did not crash.</p>
+        <h3>Over-mocking, and testing how instead of what</h3>
+        <p>This test replaces both accounts with mocks and then checks which methods were called.</p>
+        <script type="text/plain" data-lang="py" data-file="test_overmocked.py">
+from unittest.mock import Mock
+
+from bank import transfer
+
+
+def test_transfer():
+    source, target = Mock(), Mock()
+    transfer(source, target, 2500)
+    source.withdraw.assert_called_once_with(2500)
+    target.deposit.assert_called_once_with(2500)
+        </script>
+        <p>It passes, and it proves very little. No real <code>Account</code> is involved, so it would still pass if <code>withdraw</code> added money instead of taking it. It also repeats the body of <code>transfer</code> line by line, so any rewrite of <code>transfer</code> breaks it, even a correct one. Compare it with <code>test_transfer_moves_money</code> near the top of this page, which uses real accounts and checks the balances.</p>
+        <div class="scroll">
+          <table>
+            <thead>
+              <tr><th>Mistake</th><th>What goes wrong</th><th>Do this</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>Tests share state</td><td>They pass together and fail alone, or the other way round</td><td>Build a new object per test with a fixture</td></tr>
+              <tr><td>No <code>assert</code></td><td>The test cannot fail, so it tells you nothing</td><td>End with a check on the result</td></tr>
+              <tr><td>Mocking your own simple code</td><td>The test checks the mock, not the code</td><td>Use real objects; mock only the outside world</td></tr>
+              <tr><td>Testing implementation</td><td>Every refactor breaks tests although behaviour is unchanged</td><td>Assert on results: return values, balances, messages sent</td></tr>
+              <tr><td>Patching where the function is defined</td><td>The real function still runs</td><td>Patch the name in the module that uses it</td></tr>
+              <tr><td>Files not named <code>test_*.py</code></td><td>pytest does not collect them, so their tests never run</td><td>Follow the naming rules</td></tr>
+              <tr><td><code>==</code> on floats</td><td>Fails on tiny rounding differences</td><td><code>pytest.approx</code></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>When a test does fail and the message is not enough to see why, the next step is to look inside the running program: continue with <a href="python-debugging-logging.html">Python Debugging and Logging</a>.</p>
+      </section>
+
+    </div>
+  </main>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script src="../../assets/tutorial.js"></script>
+</body>
+</html>

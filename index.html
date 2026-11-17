@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Rishikesh Agrawani | Learnings</title>
-<meta name="description" content="Short tutorials with runnable code: React, Next.js, design to code, Python loops, design principles and patterns, and Bash.">
+<meta name="description" content="Short tutorials with runnable code: React, Next.js, design to code, Python from first steps to concurrency, testing, databases and design patterns, and Bash.">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@500;700&display=swap">
 <link rel="stylesheet" href="learnings/assets/tutorial.css">
 </head>
@@ -18,6 +18,11 @@
       <a href="archive.html">Archive</a>
     </nav>
     <div class="tools">
+      <div class="view-switch" role="group" aria-label="Layout">
+        <button class="btn" type="button" data-set-view="list" aria-pressed="true">List</button>
+        <button class="btn" type="button" data-set-view="grid" aria-pressed="false">Grid</button>
+        <button class="btn" type="button" data-set-view="card" aria-pressed="false">Cards</button>
+      </div>
       <button class="btn" id="theme" type="button">Dark mode</button>
     </div>
   </div>
@@ -29,7 +34,10 @@
   <p class="lead">Notes written while learning, kept short on purpose. Each tutorial explains a concept in a few lines, shows the code, and tells you how to run it. Pick a path and read it in order.</p>
   <ul class="chips jump">
     <li><a href="#frontend">Frontend: React to Next</a></li>
-    <li><a href="#python">Python: loops, design principles and patterns</a></li>
+    <li><a href="#python-basics">Python Basics</a></li>
+    <li><a href="#python-advanced">Python Advanced</a></li>
+    <li><a href="#python-practice">Python in Practice</a></li>
+    <li><a href="#python-design">Python Design</a></li>
     <li><a href="#bash">Command line: Bash</a></li>
   </ul>
 
@@ -126,33 +134,410 @@
     </div>
   </section>
 
-  <section class="group" id="python">
+  <section class="group" id="python-basics">
     <p class="eyebrow">Python learning path</p>
-    <h2>Python</h2>
-    <p>Start with loops, then move on to design. The two design tutorials are built on one small bank and reuse the same <code>Person</code> and <code>Account</code> classes. Every example is a few lines long and runs with only the standard library.</p>
+    <h2>Python Basics</h2>
+    <p>Six tutorials that start from the first <code>print()</code>. They are Python 3 rewrites of the 2017 Pythofrank lessons, with the original examples kept where they still make sense.</p>
 
     <div class="track-list">
 
       <div class="track python">
         <div>
-          <p class="step">Basics</p>
+          <p class="step">Step 1</p>
+          <h3><a href="learnings/Python/docs/python-basics.html">First Steps</a></h3>
+          <p class="path">learnings/Python/docs/python-basics.html</p>
+        </div>
+        <div>
+          <p>What Python is, running it, variables, indentation, numbers, and decisions with <code>if</code>, <code>elif</code> and <code>else</code>.</p>
+          <ul class="chips">
+            <li><a href="learnings/Python/docs/python-basics.html#getting-started">Getting started</a></li>
+            <li><a href="learnings/Python/docs/python-basics.html#building-blocks">Building blocks</a></li>
+            <li><a href="learnings/Python/docs/python-basics.html#numbers">Numbers</a></li>
+            <li><a href="learnings/Python/docs/python-basics.html#decisions">Decisions</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="track python">
+        <div>
+          <p class="step">Step 2</p>
+          <h3><a href="learnings/Python/docs/python-data-types.html">Data Types</a></h3>
+          <p class="path">learnings/Python/docs/python-data-types.html</p>
+        </div>
+        <div>
+          <p>Strings, lists, tuples, dictionaries and sets: how to create, read and change each one, and which to pick.</p>
+          <ul class="chips">
+            <li><a href="learnings/Python/docs/python-data-types.html#strings">Strings</a></li>
+            <li><a href="learnings/Python/docs/python-data-types.html#lists">Lists</a></li>
+            <li><a href="learnings/Python/docs/python-data-types.html#tuples">Tuples</a></li>
+            <li><a href="learnings/Python/docs/python-data-types.html#dictionaries">Dictionaries</a></li>
+            <li><a href="learnings/Python/docs/python-data-types.html#sets">Sets</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="track python">
+        <div>
+          <p class="step">Step 3</p>
           <h3><a href="learnings/Python/docs/python-loops.html">Loops</a></h3>
           <p class="path">learnings/Python/docs/python-loops.html</p>
         </div>
         <div>
-          <p>The first Pythofrank lesson from 2017, rewritten for Python 3: <code>for</code> and <code>while</code> loops over numbers, strings, lists and dictionaries.</p>
+          <p><code>for</code> and <code>while</code> loops over numbers, strings, lists and dictionaries, with <code>range</code>, <code>enumerate</code>, <code>zip</code> and comprehensions.</p>
           <ul class="chips">
-            <li><a href="learnings/Python/docs/python-loops.html#range">range</a></li>
-            <li><a href="learnings/Python/docs/python-loops.html#nested">Nested loops</a></li>
-            <li><a href="learnings/Python/docs/python-loops.html#dictionary">Dictionaries</a></li>
-            <li><a href="learnings/Python/docs/python-loops.html#zip">zip</a></li>
-            <li><a href="learnings/Python/docs/python-loops.html#while">while</a></li>
-            <li><a href="learnings/Python/docs/python-loops.html#break-continue">break and continue</a></li>
-            <li><a href="learnings/Python/docs/python-loops.html#comprehension">Comprehensions</a></li>
-            <li><a href="learnings/Python/docs/python-loops.html#python2">Python 2 to 3</a></li>
+            <li><a href="learnings/Python/docs/python-loops.html#range">Counting with range</a></li>
+            <li><a href="learnings/Python/docs/python-loops.html#nested">A loop inside a loop</a></li>
+            <li><a href="learnings/Python/docs/python-loops.html#string">Looping over a string</a></li>
+            <li><a href="learnings/Python/docs/python-loops.html#list">Looping over a list</a></li>
+            <li><a href="learnings/Python/docs/python-loops.html#enumerate">Position and item with enumerate</a></li>
+            <li><a href="learnings/Python/docs/python-loops.html#dictionary">Looping over a dictionary</a></li>
+            <li><a href="learnings/Python/docs/python-loops.html#zip">Two lists at once with zip</a></li>
+            <li><a href="learnings/Python/docs/python-loops.html#while">while: loop until a condition changes</a></li>
           </ul>
         </div>
       </div>
+
+      <div class="track python">
+        <div>
+          <p class="step">Step 4</p>
+          <h3><a href="learnings/Python/docs/python-functions.html">Functions</a></h3>
+          <p class="path">learnings/Python/docs/python-functions.html</p>
+        </div>
+        <div>
+          <p>Defining functions, arguments and defaults, <code>*args</code> and <code>**kwargs</code>, scope, lambda, <code>map</code> and <code>filter</code>, recursion.</p>
+          <ul class="chips">
+            <li><a href="learnings/Python/docs/python-functions.html#define-call">Defining and calling</a></li>
+            <li><a href="learnings/Python/docs/python-functions.html#return">Return values</a></li>
+            <li><a href="learnings/Python/docs/python-functions.html#arguments">Positional and keyword arguments</a></li>
+            <li><a href="learnings/Python/docs/python-functions.html#defaults">Default values</a></li>
+            <li><a href="learnings/Python/docs/python-functions.html#mutable-default">The mutable default trap</a></li>
+            <li><a href="learnings/Python/docs/python-functions.html#args-kwargs">*args and **kwargs</a></li>
+            <li><a href="learnings/Python/docs/python-functions.html#keyword-only">Keyword-only arguments</a></li>
+            <li><a href="learnings/Python/docs/python-functions.html#docstrings">Docstrings</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="track python">
+        <div>
+          <p class="step">Step 5</p>
+          <h3><a href="learnings/Python/docs/python-classes.html">Classes</a></h3>
+          <p class="path">learnings/Python/docs/python-classes.html</p>
+        </div>
+        <div>
+          <p>Classes and objects, inheritance, class and static methods, properties, and dataclasses, built on a small bank.</p>
+          <ul class="chips">
+            <li><a href="learnings/Python/docs/python-classes.html#class-and-object">A class and an object</a></li>
+            <li><a href="learnings/Python/docs/python-classes.html#init-and-self">__init__ and self</a></li>
+            <li><a href="learnings/Python/docs/python-classes.html#instance-attributes">Each object has its own data</a></li>
+            <li><a href="learnings/Python/docs/python-classes.html#class-attributes">Class attributes are shared</a></li>
+            <li><a href="learnings/Python/docs/python-classes.html#shared-list-trap">The shared list trap</a></li>
+            <li><a href="learnings/Python/docs/python-classes.html#methods">Methods</a></li>
+            <li><a href="learnings/Python/docs/python-classes.html#str-and-repr">__str__ and __repr__</a></li>
+            <li><a href="learnings/Python/docs/python-classes.html#inheritance">Inheritance</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="track python">
+        <div>
+          <p class="step">Step 6</p>
+          <h3><a href="learnings/Python/docs/python-errors-and-files.html">Errors and Files</a></h3>
+          <p class="path">learnings/Python/docs/python-errors-and-files.html</p>
+        </div>
+        <div>
+          <p>Handling exceptions, reading and writing text, CSV and JSON files, and working with dates and times.</p>
+          <ul class="chips">
+            <li><a href="learnings/Python/docs/python-errors-and-files.html#errors">Errors</a></li>
+            <li><a href="learnings/Python/docs/python-errors-and-files.html#files">Files</a></li>
+            <li><a href="learnings/Python/docs/python-errors-and-files.html#dates">Dates and times</a></li>
+          </ul>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <section class="group" id="python-advanced">
+    <p class="eyebrow">Python learning path</p>
+    <h2>Python Advanced</h2>
+    <p>Five tutorials on the parts of Python that take longest to click. Each idea is built up one small step at a time, and every example was run before it was published.</p>
+
+    <div class="track-list">
+
+      <div class="track python">
+        <div>
+          <p class="step">Step 1</p>
+          <h3><a href="learnings/Python/docs/python-decorators.html">Decorators</a></h3>
+          <p class="path">learnings/Python/docs/python-decorators.html</p>
+        </div>
+        <div>
+          <p>Closures, plain and parameterised decorators, <code>functools.wraps</code>, class-based decorators, and real uses: logging, retry, caching, permission checks.</p>
+          <ul class="chips">
+            <li><a href="learnings/Python/docs/python-decorators.html#foundations">Foundations</a></li>
+            <li><a href="learnings/Python/docs/python-decorators.html#writing">Writing decorators</a></li>
+            <li><a href="learnings/Python/docs/python-decorators.html#with-parameters">Decorators with parameters</a></li>
+            <li><a href="learnings/Python/docs/python-decorators.html#use-cases">Use cases</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="track python">
+        <div>
+          <p class="step">Step 2</p>
+          <h3><a href="learnings/Python/docs/python-iterators-generators.html">Iterators and Generators</a></h3>
+          <p class="path">learnings/Python/docs/python-iterators-generators.html</p>
+        </div>
+        <div>
+          <p>What a <code>for</code> loop really does, writing your own iterator, generators with <code>yield</code>, pipelines, <code>yield from</code> and <code>itertools</code>.</p>
+          <ul class="chips">
+            <li><a href="learnings/Python/docs/python-iterators-generators.html#for-loop-by-hand">A for loop by hand</a></li>
+            <li><a href="learnings/Python/docs/python-iterators-generators.html#iterable-vs-iterator">Iterable and iterator</a></li>
+            <li><a href="learnings/Python/docs/python-iterators-generators.html#custom-iterator">Writing an iterator class</a></li>
+            <li><a href="learnings/Python/docs/python-iterators-generators.html#passbook">A passbook iterator</a></li>
+            <li><a href="learnings/Python/docs/python-iterators-generators.html#iterable-class">Making a class iterable</a></li>
+            <li><a href="learnings/Python/docs/python-iterators-generators.html#getitem">The __getitem__ fallback</a></li>
+            <li><a href="learnings/Python/docs/python-iterators-generators.html#lazy-builtins">Lazy built-in tools</a></li>
+            <li><a href="learnings/Python/docs/python-iterators-generators.html#iter-sentinel">iter with a stop value</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="track python">
+        <div>
+          <p class="step">Step 3</p>
+          <h3><a href="learnings/Python/docs/python-concurrency.html">Threads and Processes</a></h3>
+          <p class="path">learnings/Python/docs/python-concurrency.html</p>
+        </div>
+        <div>
+          <p>Concurrency versus parallelism, the GIL, threads, race conditions, locks and deadlock, queues, and multiprocessing.</p>
+          <ul class="chips">
+            <li><a href="learnings/Python/docs/python-concurrency.html#ideas">The ideas</a></li>
+            <li><a href="learnings/Python/docs/python-concurrency.html#threads">Threads</a></li>
+            <li><a href="learnings/Python/docs/python-concurrency.html#races">Race conditions and locks</a></li>
+            <li><a href="learnings/Python/docs/python-concurrency.html#processes">Processes</a></li>
+            <li><a href="learnings/Python/docs/python-concurrency.html#choosing">Choosing</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="track python">
+        <div>
+          <p class="step">Step 4</p>
+          <h3><a href="learnings/Python/docs/python-asyncio.html">Async IO</a></h3>
+          <p class="path">learnings/Python/docs/python-asyncio.html</p>
+        </div>
+        <div>
+          <p>The event loop, <code>async</code> and <code>await</code>, running tasks together, timeouts, semaphores and locks, and how not to block the loop.</p>
+          <ul class="chips">
+            <li><a href="learnings/Python/docs/python-asyncio.html#part-idea">The idea</a></li>
+            <li><a href="learnings/Python/docs/python-asyncio.html#part-together">Running things together</a></li>
+            <li><a href="learnings/Python/docs/python-asyncio.html#part-coordination">Coordination</a></li>
+            <li><a href="learnings/Python/docs/python-asyncio.html#part-pitfalls">Pitfalls and choosing</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="track python">
+        <div>
+          <p class="step">Step 5</p>
+          <h3><a href="learnings/Python/docs/python-power-features.html">Power Features</a></h3>
+          <p class="path">learnings/Python/docs/python-power-features.html</p>
+        </div>
+        <div>
+          <p>Context managers, special methods, descriptors, <code>__slots__</code>, dataclasses in depth, Enum, Protocol, metaclasses and type hints.</p>
+          <ul class="chips">
+            <li><a href="learnings/Python/docs/python-power-features.html#part-context">Context managers</a></li>
+            <li><a href="learnings/Python/docs/python-power-features.html#part-dunder">Special methods</a></li>
+            <li><a href="learnings/Python/docs/python-power-features.html#part-attributes">Attribute control</a></li>
+            <li><a href="learnings/Python/docs/python-power-features.html#part-classes">Class machinery</a></li>
+            <li><a href="learnings/Python/docs/python-power-features.html#part-tools">Functions and data tools</a></li>
+            <li><a href="learnings/Python/docs/python-power-features.html#part-typing">Typing and newer syntax</a></li>
+          </ul>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <section class="group" id="python-practice">
+    <p class="eyebrow">Python learning path</p>
+    <h2>Python in Practice</h2>
+    <p>Nine tutorials on everything around the language that a working project needs: setting up, testing, debugging, tooling, data and the web.</p>
+
+    <div class="track-list">
+
+      <div class="track python">
+        <div>
+          <p class="step">Step 1</p>
+          <h3><a href="learnings/Python/docs/python-project-setup.html">Project Setup</a></h3>
+          <p class="path">learnings/Python/docs/python-project-setup.html</p>
+        </div>
+        <div>
+          <p>Virtual environments, <code>pip</code>, modules and packages, imports, <code>if __name__ == "__main__"</code>, project layout and <code>pyproject.toml</code>.</p>
+          <ul class="chips">
+            <li><a href="learnings/Python/docs/python-project-setup.html#part-environments">Environments and pip</a></li>
+            <li><a href="learnings/Python/docs/python-project-setup.html#part-modules">Modules and packages</a></li>
+            <li><a href="learnings/Python/docs/python-project-setup.html#part-project">A real project</a></li>
+            <li><a href="learnings/Python/docs/python-project-setup.html#part-wrap-up">Tools, mistakes and reference</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="track python">
+        <div>
+          <p class="step">Step 2</p>
+          <h3><a href="learnings/Python/docs/python-testing.html">Testing</a></h3>
+          <p class="path">learnings/Python/docs/python-testing.html</p>
+        </div>
+        <div>
+          <p>Writing tests with pytest: fixtures, parametrised tests, fakes and mocks, test-driven development and coverage.</p>
+          <ul class="chips">
+            <li><a href="learnings/Python/docs/python-testing.html#first-tests">First tests</a></li>
+            <li><a href="learnings/Python/docs/python-testing.html#fixtures-params">Fixtures and parameters</a></li>
+            <li><a href="learnings/Python/docs/python-testing.html#fakes-mocks">Fakes and mocks</a></li>
+            <li><a href="learnings/Python/docs/python-testing.html#good-habits">Good habits</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="track python">
+        <div>
+          <p class="step">Step 3</p>
+          <h3><a href="learnings/Python/docs/python-debugging-logging.html">Debugging and Logging</a></h3>
+          <p class="path">learnings/Python/docs/python-debugging-logging.html</p>
+        </div>
+        <div>
+          <p>Reading tracebacks, the <code>pdb</code> debugger, a method for finding bugs, and the <code>logging</code> module in place of <code>print</code>.</p>
+          <ul class="chips">
+            <li><a href="learnings/Python/docs/python-debugging-logging.html#traceback">Reading a traceback</a></li>
+            <li><a href="learnings/Python/docs/python-debugging-logging.html#chained">Chained exceptions</a></li>
+            <li><a href="learnings/Python/docs/python-debugging-logging.html#common-exceptions">Common exceptions</a></li>
+            <li><a href="learnings/Python/docs/python-debugging-logging.html#print-debugging">Print debugging</a></li>
+            <li><a href="learnings/Python/docs/python-debugging-logging.html#assert">assert as a sanity check</a></li>
+            <li><a href="learnings/Python/docs/python-debugging-logging.html#breakpoint">breakpoint() and pdb</a></li>
+            <li><a href="learnings/Python/docs/python-debugging-logging.html#pdb-session">A pdb session</a></li>
+            <li><a href="learnings/Python/docs/python-debugging-logging.html#post-mortem">Post-mortem debugging</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="track python">
+        <div>
+          <p class="step">Step 4</p>
+          <h3><a href="learnings/Python/docs/python-code-quality.html">Code Quality</a></h3>
+          <p class="path">learnings/Python/docs/python-code-quality.html</p>
+        </div>
+        <div>
+          <p>PEP 8, formatting with black, linting with ruff, type checking with mypy, and pre-commit hooks.</p>
+          <ul class="chips">
+            <li><a href="learnings/Python/docs/python-code-quality.html#part-style">Style</a></li>
+            <li><a href="learnings/Python/docs/python-code-quality.html#part-tools">Tools</a></li>
+            <li><a href="learnings/Python/docs/python-code-quality.html#part-habits">Habits and automation</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="track python">
+        <div>
+          <p class="step">Step 5</p>
+          <h3><a href="learnings/Python/docs/python-standard-library.html">Standard Library Tour</a></h3>
+          <p class="path">learnings/Python/docs/python-standard-library.html</p>
+        </div>
+        <div>
+          <p>A tour of the modules worth knowing: <code>re</code>, <code>pathlib</code>, <code>argparse</code>, <code>subprocess</code>, <code>json</code>, <code>decimal</code>, <code>hashlib</code> and more.</p>
+          <ul class="chips">
+            <li><a href="learnings/Python/docs/python-standard-library.html#text">Text</a></li>
+            <li><a href="learnings/Python/docs/python-standard-library.html#files-system">Files and system</a></li>
+            <li><a href="learnings/Python/docs/python-standard-library.html#command-line">Command-line programs</a></li>
+            <li><a href="learnings/Python/docs/python-standard-library.html#other-programs">Running other programs</a></li>
+            <li><a href="learnings/Python/docs/python-standard-library.html#data-formats">Data formats</a></li>
+            <li><a href="learnings/Python/docs/python-standard-library.html#time">Time</a></li>
+            <li><a href="learnings/Python/docs/python-standard-library.html#helpers">Handy helpers</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="track python">
+        <div>
+          <p class="step">Step 6</p>
+          <h3><a href="learnings/Python/docs/python-data-structures.html">Data Structures and Algorithms</a></h3>
+          <p class="path">learnings/Python/docs/python-data-structures.html</p>
+        </div>
+        <div>
+          <p>Big-O in plain words, the cost of list, dict and set operations, deque, heapq and bisect, searching, sorting, recursion and graph search.</p>
+          <ul class="chips">
+            <li><a href="learnings/Python/docs/python-data-structures.html#part-measuring">Measuring</a></li>
+            <li><a href="learnings/Python/docs/python-data-structures.html#part-builtin">Built-in structures and their costs</a></li>
+            <li><a href="learnings/Python/docs/python-data-structures.html#part-library">Structures from the library</a></li>
+            <li><a href="learnings/Python/docs/python-data-structures.html#part-build">Build your own</a></li>
+            <li><a href="learnings/Python/docs/python-data-structures.html#part-algorithms">Algorithms</a></li>
+            <li><a href="learnings/Python/docs/python-data-structures.html#part-interview">Interview habits</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="track python">
+        <div>
+          <p class="step">Step 7</p>
+          <h3><a href="learnings/Python/docs/python-performance.html">Performance and Memory</a></h3>
+          <p class="path">learnings/Python/docs/python-performance.html</p>
+        </div>
+        <div>
+          <p>Measuring with <code>timeit</code> and <code>cProfile</code>, writing faster Python, and how references, reference counting and garbage collection work.</p>
+          <ul class="chips">
+            <li><a href="learnings/Python/docs/python-performance.html#part-measure">Measure first</a></li>
+            <li><a href="learnings/Python/docs/python-performance.html#part-faster">Faster Python</a></li>
+            <li><a href="learnings/Python/docs/python-performance.html#part-memory">How memory works</a></li>
+            <li><a href="learnings/Python/docs/python-performance.html#part-interpreter">The interpreter</a></li>
+            <li><a href="learnings/Python/docs/python-performance.html#part-reference">Checklist and reference</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="track python">
+        <div>
+          <p class="step">Step 8</p>
+          <h3><a href="learnings/Python/docs/python-databases.html">Databases</a></h3>
+          <p class="path">learnings/Python/docs/python-databases.html</p>
+        </div>
+        <div>
+          <p>SQL with <code>sqlite3</code>, safe queries, transactions that keep a transfer all-or-nothing, and the SQLAlchemy ORM.</p>
+          <ul class="chips">
+            <li><a href="learnings/Python/docs/python-databases.html#sql-part">SQL with sqlite3</a></li>
+            <li><a href="learnings/Python/docs/python-databases.html#transactions-part">Transactions</a></li>
+            <li><a href="learnings/Python/docs/python-databases.html#orm-part">SQLAlchemy ORM</a></li>
+            <li><a href="learnings/Python/docs/python-databases.html#habits-part">Good habits</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="track python">
+        <div>
+          <p class="step">Step 9</p>
+          <h3><a href="learnings/Python/docs/python-web-apis.html">Web APIs</a></h3>
+          <p class="path">learnings/Python/docs/python-web-apis.html</p>
+        </div>
+        <div>
+          <p>How HTTP works, calling an API, and building and testing a small bank API with FastAPI.</p>
+          <ul class="chips">
+            <li><a href="learnings/Python/docs/python-web-apis.html#http-part">How the web talks</a></li>
+            <li><a href="learnings/Python/docs/python-web-apis.html#client-part">Calling an API</a></li>
+            <li><a href="learnings/Python/docs/python-web-apis.html#fastapi-part">Building an API with FastAPI</a></li>
+            <li><a href="learnings/Python/docs/python-web-apis.html#beyond-part">Beyond the basics</a></li>
+          </ul>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <section class="group" id="python-design">
+    <p class="eyebrow">Python learning path</p>
+    <h2>Python Design</h2>
+    <p>Two tutorials built on one small bank. Every example is a few lines long, runs with only the standard library, and reuses the same <code>Person</code> and <code>Account</code> classes.</p>
+
+    <div class="track-list">
 
       <div class="track python">
         <div>
@@ -163,15 +548,14 @@
         <div>
           <p>The five SOLID principles, then six general ones: DRY, KISS, YAGNI, composition over inheritance, tell don't ask and encapsulation. Each one shown as the code that breaks it, then the fix.</p>
           <ul class="chips">
-            <li><a href="learnings/Python/docs/design-principles.html#solid">SOLID</a></li>
+            <li><a href="learnings/Python/docs/design-principles.html#bank">The bank we will use</a></li>
             <li><a href="learnings/Python/docs/design-principles.html#srp">Single responsibility</a></li>
             <li><a href="learnings/Python/docs/design-principles.html#ocp">Open/closed</a></li>
-            <li><a href="learnings/Python/docs/design-principles.html#lsp">Liskov</a></li>
+            <li><a href="learnings/Python/docs/design-principles.html#lsp">Liskov substitution</a></li>
             <li><a href="learnings/Python/docs/design-principles.html#isp">Interface segregation</a></li>
             <li><a href="learnings/Python/docs/design-principles.html#dip">Dependency inversion</a></li>
-            <li><a href="learnings/Python/docs/design-principles.html#dry">DRY</a></li>
-            <li><a href="learnings/Python/docs/design-principles.html#composition">Composition</a></li>
-            <li><a href="learnings/Python/docs/design-principles.html#summary">Quick reference</a></li>
+            <li><a href="learnings/Python/docs/design-principles.html#dry">DRY: don't repeat yourself</a></li>
+            <li><a href="learnings/Python/docs/design-principles.html#kiss">KISS: keep it simple</a></li>
           </ul>
         </div>
       </div>
@@ -185,11 +569,9 @@
         <div>
           <p>All 23 classic patterns, grouped into creational, structural and behavioural, with what each family means. Every pattern has the problem it solves, a small example and the shortcut Python gives you.</p>
           <ul class="chips">
-            <li><a href="learnings/Python/docs/design-patterns.html#families">The three families</a></li>
-            <li><a href="learnings/Python/docs/design-patterns.html#creational">Creational (5)</a></li>
-            <li><a href="learnings/Python/docs/design-patterns.html#structural">Structural (7)</a></li>
-            <li><a href="learnings/Python/docs/design-patterns.html#behavioural">Behavioural (11)</a></li>
-            <li><a href="learnings/Python/docs/design-patterns.html#choose">Which to pick</a></li>
+            <li><a href="learnings/Python/docs/design-patterns.html#creational">Creational patterns</a></li>
+            <li><a href="learnings/Python/docs/design-patterns.html#structural">Structural patterns</a></li>
+            <li><a href="learnings/Python/docs/design-patterns.html#behavioural">Behavioural patterns</a></li>
           </ul>
         </div>
       </div>

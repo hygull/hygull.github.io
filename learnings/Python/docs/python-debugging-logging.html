@@ -1,0 +1,1376 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Python Debugging and Logging</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@500;700&display=swap">
+<link rel="stylesheet" href="../../assets/tutorial.css">
+</head>
+<body data-track="python">
+
+<header class="topbar">
+  <div class="topbar-in">
+    <a class="brand" href="../../../index.html">Learnings</a>
+    <nav class="tracks" aria-label="Python paths">
+      <a href="../../../index.html#python-basics">Python Basics</a>
+      <a href="../../../index.html#python-advanced">Python Advanced</a>
+      <a href="../../../index.html#python-practice" aria-current="true">Python in Practice</a>
+      <a href="../../../index.html#python-design">Python Design</a>
+      <a href="../../../archive.html">Archive</a>
+    </nav>
+    <div class="tools">
+      <button class="btn" id="menu" type="button" aria-expanded="false">Chapters</button>
+      <input id="q" type="search" placeholder="Search chapters" aria-label="Search chapters">
+      <button class="btn" id="theme" type="button">Dark mode</button>
+    </div>
+  </div>
+</header>
+
+<div class="shell">
+  <aside class="side">
+    <p class="side-label">Debugging and Logging</p>
+    <nav id="toc" aria-label="Chapters"></nav>
+  </aside>
+
+  <main>
+    <div class="page-head">
+      <p class="eyebrow">Python in practice, part 3 of 9</p>
+      <h1>Python Debugging and Logging</h1>
+      <p class="lead">Debugging is finding out why a program does something you did not expect. Logging is making the program write down what it is doing, so that you can find out later without being there. This page covers both, using a small bank as the example. Everything here is in the standard library, so nothing needs <code>pip install</code>.</p>
+    </div>
+
+    <div class="chapters">
+
+      <section class="chapter part" id="debugging">
+        <h2>Debugging</h2>
+        <p class="kind">Part 1 of 2 &middot; finding out what went wrong</p>
+        <p>A bug is a difference between what you think the code does and what it really does. Debugging closes that gap. You read what Python tells you, look at the real values, and test one idea at a time.</p>
+        <p>The tools go from simple to powerful. Most bugs are solved with the first two.</p>
+        <ul>
+          <li><a href="#traceback">Reading a traceback</a>: the error report, read from the bottom up</li>
+          <li><a href="#chained">Chained exceptions</a>: when one error happens while handling another</li>
+          <li><a href="#common-exceptions">Common exceptions</a>: what each one usually means</li>
+          <li><a href="#print-debugging">Print debugging</a>: looking at values the quick way</li>
+          <li><a href="#assert">assert</a>: checks that state what must be true</li>
+          <li><a href="#breakpoint">breakpoint() and pdb</a>: stop the program and look around</li>
+          <li><a href="#pdb-session">A pdb session</a>: the commands in use</li>
+          <li><a href="#post-mortem">Post-mortem debugging</a>: start the debugger after a crash</li>
+          <li><a href="#conditional-breakpoints">Conditional breakpoints</a>: stop only when something is odd</li>
+          <li><a href="#breakpoint-off">Switching breakpoints off, and IDE debuggers</a></li>
+          <li><a href="#method">A method for finding bugs</a>: five steps that work</li>
+          <li><a href="#warnings">Warnings</a>: problems that are not errors yet</li>
+          <li><a href="#traceback-module">The traceback module</a>: a traceback as text</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="traceback">
+        <h2>Reading a traceback</h2>
+        <p>When an exception is not caught, Python stops and prints a <b>traceback</b>: the list of function calls that were in progress when the error happened. Here is a small script with a bug. It is marked as not runnable on purpose, because it crashes.</p>
+        <script type="text/plain" data-lang="py" data-file="transfer.py" data-norun>
+accounts = {"Rishikesh": 5000, "Sandhya": 12000}
+
+
+def get_balance(name):
+    return accounts[name]
+
+
+def transfer(sender, receiver, amount):
+    accounts[sender] = get_balance(sender) - amount
+    accounts[receiver] = get_balance(receiver) + amount
+
+
+def main():
+    transfer("Rishikesh", "Hemkesh", 500)
+    print("Transfer done")
+
+
+main()
+        </script>
+        <p>Running it with <code>python3 transfer.py</code> prints this. Only the folder name has been shortened.</p>
+        <script type="text/plain" data-lang="text" data-file="Output">
+Traceback (most recent call last):
+  File "/home/rishikesh/bank/transfer.py", line 18, in <module>
+    main()
+  File "/home/rishikesh/bank/transfer.py", line 14, in main
+    transfer("Rishikesh", "Hemkesh", 500)
+  File "/home/rishikesh/bank/transfer.py", line 10, in transfer
+    accounts[receiver] = get_balance(receiver) + amount
+  File "/home/rishikesh/bank/transfer.py", line 5, in get_balance
+    return accounts[name]
+KeyError: 'Hemkesh'
+        </script>
+        <p>Read it <b>from the bottom up</b>.</p>
+        <ul>
+          <li><b>The last line</b> is the error itself: the exception type (<code>KeyError</code>) and its message (<code>'Hemkesh'</code>). A dictionary was asked for a key it does not have.</li>
+          <li><b>The pair of lines just above it</b> is where the error happened: file, line number, function name, then the line of code. Here it is line 5, inside <code>get_balance</code>.</li>
+          <li><b>Each pair above that</b> is the caller of the one below. <code>get_balance</code> was called by <code>transfer</code> on line 10, which was called by <code>main</code> on line 14, which was called from the top of the file (<code>&lt;module&gt;</code>) on line 18.</li>
+          <li><b>The first line</b> says "most recent call last". That is why the place of the crash is at the bottom and the start of the program is at the top.</li>
+        </ul>
+        <p>Each pair is called a <b>frame</b>: one function call that has started and not finished yet. The bug is often not in the bottom frame. Line 5 is fine. The real question is one frame up: why did <code>transfer</code> ask for an account that does not exist?</p>
+        <p class="note"><b>Tip:</b> In a long traceback, look for the lowest frame that is in <b>your own</b> file. Frames inside library code usually only show how your bad value travelled. Python 3.11 and later also draw <code>^^^^</code> marks under the exact part of the line that failed.</p>
+      </section>
+
+      <section class="chapter" id="chained">
+        <h2>Chained exceptions</h2>
+        <p>Sometimes a traceback has two parts joined by a sentence. There are two such sentences, and they mean different things.</p>
+        <h3>During handling of the above exception</h3>
+        <p>A second error happened <b>by accident</b> inside an <code>except</code> block. This block is not runnable because it crashes: the name <code>nme</code> is a typing mistake.</p>
+        <script type="text/plain" data-lang="py" data-file="chain_accident.py" data-norun>
+accounts = {"Rishikesh": 5000}
+
+
+def get_balance(name):
+    try:
+        return accounts[name]
+    except KeyError:
+        print("No account for " + nme)
+
+
+get_balance("Hemkesh")
+        </script>
+        <script type="text/plain" data-lang="text" data-file="Output">
+Traceback (most recent call last):
+  File "/home/rishikesh/bank/chain_accident.py", line 6, in get_balance
+    return accounts[name]
+KeyError: 'Hemkesh'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/rishikesh/bank/chain_accident.py", line 11, in <module>
+    get_balance("Hemkesh")
+  File "/home/rishikesh/bank/chain_accident.py", line 8, in get_balance
+    print("No account for " + nme)
+NameError: name 'nme' is not defined
+        </script>
+        <p>The program died of the <b>last</b> error, the <code>NameError</code>. The first part shows what the code was busy handling at the time. Fix the bottom one first.</p>
+        <h3>The above exception was the direct cause</h3>
+        <p>Here the second error was raised <b>on purpose</b> with <code>raise ... from ...</code>. The code turns a low-level error into one that makes sense for a bank, and keeps the original attached. Also not runnable, because it ends in an uncaught exception.</p>
+        <script type="text/plain" data-lang="py" data-file="chain_cause.py" data-norun>
+accounts = {"Rishikesh": 5000}
+
+
+class AccountNotFound(Exception):
+    pass
+
+
+def get_balance(name):
+    try:
+        return accounts[name]
+    except KeyError as error:
+        raise AccountNotFound(f"no account for {name}") from error
+
+
+get_balance("Hemkesh")
+        </script>
+        <script type="text/plain" data-lang="text" data-file="Output">
+Traceback (most recent call last):
+  File "/home/rishikesh/bank/chain_cause.py", line 10, in get_balance
+    return accounts[name]
+KeyError: 'Hemkesh'
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/rishikesh/bank/chain_cause.py", line 15, in <module>
+    get_balance("Hemkesh")
+  File "/home/rishikesh/bank/chain_cause.py", line 12, in get_balance
+    raise AccountNotFound(f"no account for {name}") from error
+__main__.AccountNotFound: no account for Hemkesh
+        </script>
+        <p>The original error is stored on the new one as <code>__cause__</code>, so code can look at it too.</p>
+        <script type="text/plain" data-lang="py" data-file="cause.py">
+accounts = {"Rishikesh": 5000}
+
+
+class AccountNotFound(Exception):
+    pass
+
+
+try:
+    try:
+        accounts["Hemkesh"]
+    except KeyError as error:
+        raise AccountNotFound("no account for Hemkesh") from error
+except AccountNotFound as error:
+    print(repr(error))             # AccountNotFound('no account for Hemkesh')
+    print(repr(error.__cause__))   # KeyError('Hemkesh')
+        </script>
+        <p class="note"><b>Tip:</b> Write <code>raise NewError(...) from None</code> when the original error would only confuse the reader. The first part of the traceback is then left out.</p>
+      </section>
+
+      <section class="chapter" id="common-exceptions">
+        <h2>Common exceptions</h2>
+        <p>A handful of exception types cover most crashes. Knowing what each usually means saves a lot of reading.</p>
+        <div class="scroll">
+          <table>
+            <thead>
+              <tr><th>Exception</th><th>What it usually means</th><th>First thing to check</th></tr>
+            </thead>
+            <tbody>
+              <tr><td><code>SyntaxError</code></td><td>Python could not even read the file</td><td>A missing bracket, quote or colon, often on the line <b>before</b> the one reported</td></tr>
+              <tr><td><code>IndentationError</code></td><td>The spaces at the start of a line do not line up</td><td>Mixed tabs and spaces, or a block that was not indented</td></tr>
+              <tr><td><code>NameError</code></td><td>A name is used that does not exist</td><td>A spelling mistake, or a variable used before it is assigned</td></tr>
+              <tr><td><code>UnboundLocalError</code></td><td>A function reads a local variable before giving it a value</td><td>A variable assigned only inside an <code>if</code>, or a global assigned inside the function</td></tr>
+              <tr><td><code>TypeError</code></td><td>The value has the wrong type for the operation</td><td>A string where a number was expected, or the wrong number of arguments</td></tr>
+              <tr><td><code>ValueError</code></td><td>The type is right but the value is not acceptable</td><td><code>int("12,000")</code>, or unpacking the wrong number of items</td></tr>
+              <tr><td><code>KeyError</code></td><td>A dictionary does not have that key</td><td>Print the keys. Is it a spelling, case or type difference (<code>"7"</code> and <code>7</code>)?</td></tr>
+              <tr><td><code>IndexError</code></td><td>A list position is past the end</td><td>An empty list, or counting from 1 instead of 0</td></tr>
+              <tr><td><code>AttributeError</code></td><td>The object has no attribute of that name</td><td>If the message says <code>'NoneType' object</code>, a function returned <code>None</code> and you did not expect it</td></tr>
+              <tr><td><code>ZeroDivisionError</code></td><td>Division by zero</td><td>An empty list when working out an average</td></tr>
+              <tr><td><code>FileNotFoundError</code></td><td>No file at that path</td><td>The folder the program was started from, shown by <code>os.getcwd()</code></td></tr>
+              <tr><td><code>ModuleNotFoundError</code></td><td>The module in an <code>import</code> cannot be found</td><td>The package is not installed in this environment, or the wrong Python is running</td></tr>
+              <tr><td><code>RecursionError</code></td><td>A function called itself too many times</td><td>A missing or unreachable stopping condition</td></tr>
+              <tr><td><code>AssertionError</code></td><td>An <code>assert</code> statement was false</td><td>The condition on the reported line</td></tr>
+              <tr><td><code>KeyboardInterrupt</code></td><td>Someone pressed Ctrl+C</td><td>Not a bug. The traceback shows where the program was when it was stopped, which helps find an endless loop</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>Two of them, caught and printed so that the block runs to the end:</p>
+        <script type="text/plain" data-lang="py" data-file="two_errors.py">
+accounts = {"Rishikesh": 5000}
+
+try:
+    balance = accounts.get("Hemkesh")      # .get() returns None for a missing key
+    print(balance.bit_length())
+except AttributeError as error:
+    print("AttributeError:", error)
+# AttributeError: 'NoneType' object has no attribute 'bit_length'
+
+try:
+    amount = int("12,000")
+except ValueError as error:
+    print("ValueError:", error)
+# ValueError: invalid literal for int() with base 10: '12,000'
+        </script>
+        <p>Catching and handling exceptions is covered in <a href="python-errors-and-files.html">Python Errors and Files</a>.</p>
+      </section>
+
+      <section class="chapter" id="print-debugging">
+        <h2>Print debugging</h2>
+        <p>The quickest way to look at a value is to print it. Done well, it is a real tool. The <code>=</code> inside an f-string prints the expression and its value together, so you never wonder which number is which.</p>
+        <script type="text/plain" data-lang="py" data-file="print_debug.py">
+name = "Sandhya "
+balance = "12000"
+rate = 4
+
+print(f"{name=} {balance=} {rate=}")
+# name='Sandhya ' balance='12000' rate=4
+
+print(f"{balance * 2=}")           # balance * 2='1200012000'
+print(f"{type(balance)=}")         # type(balance)=<class 'str'>
+        </script>
+        <p>The output shows two bugs at once. The name has a space at the end, and the balance is text, not a number. That is why doubling it gave <code>'1200012000'</code>.</p>
+        <p>Plain <code>print(x)</code> hides exactly these things. <code>repr(x)</code> shows the value the way you would type it in code, with quotes and invisible characters made visible.</p>
+        <script type="text/plain" data-lang="py" data-file="repr_debug.py">
+name = "Sandhya "
+line = "5000\n"
+
+print(name)
+# Sandhya
+# (the space at the end cannot be seen)
+print(repr(name))             # 'Sandhya '
+print(repr(line))             # '5000\n'
+print(repr("12000"), repr(12000))   # '12000' 12000
+print(type(12000).__name__, type("12000").__name__)   # int str
+        </script>
+        <p>Three habits make print debugging work:</p>
+        <ul>
+          <li>Print a <b>label</b> with every value. <code>f"{value=}"</code> does it for you.</li>
+          <li>Print the <b>type</b> when a value looks right but behaves wrongly.</li>
+          <li>Print <b>before and after</b> the line you suspect, so you see what changed.</li>
+        </ul>
+        <p class="note"><b>Watch out:</b> Remove debug prints before you share the code. If a message is worth keeping, turn it into a <code>logger.debug()</code> call, as shown in the <a href="#logging">second part</a> of this page.</p>
+      </section>
+
+      <section class="chapter" id="assert">
+        <h2>assert as a sanity check</h2>
+        <p><code>assert condition, message</code> does nothing when the condition is true and raises <code>AssertionError</code> when it is false. Use it to state something that <b>must</b> be true if your own code is correct. When it fails, you have found a bug close to where it started.</p>
+        <script type="text/plain" data-lang="py" data-file="assert_check.py">
+def add_interest(balance, rate):
+    new_balance = balance + balance * rate / 100
+    assert new_balance >= balance, f"interest lowered the balance to {new_balance}"
+    return new_balance
+
+
+print(add_interest(5000, 4))       # 5200.0
+
+try:
+    add_interest(5000, -150)
+except AssertionError as error:
+    print("AssertionError:", error)
+# AssertionError: interest lowered the balance to -2500.0
+        </script>
+        <p>Do <b>not</b> use <code>assert</code> to check input from users, files or the network. Python has a switch, <code>-O</code> (optimise), that removes every <code>assert</code> from the program. The block below runs the same two lines twice, once normally and once with <code>-O</code>.</p>
+        <script type="text/plain" data-lang="py" data-file="assert_removed.py">
+import subprocess
+import sys
+
+code = "assert 1 > 2, 'never true'\nprint('still running')"
+
+normal = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True)
+optimised = subprocess.run([sys.executable, "-O", "-c", code], capture_output=True, text=True)
+
+print(normal.stderr.strip().splitlines()[-1])    # AssertionError: never true
+print(optimised.stdout.strip())                  # still running
+        </script>
+        <p>With <code>-O</code> the check is simply gone. For input, raise a real exception instead, because it can never be switched off:</p>
+        <script type="text/plain" data-lang="py" data-file="validate.py">
+def withdraw(balance, amount):
+    if amount <= 0:
+        raise ValueError("amount must be positive")
+    if amount > balance:
+        raise ValueError("not enough money")
+    return balance - amount
+
+
+try:
+    withdraw(5000, -100)
+except ValueError as error:
+    print("Refused:", error)       # Refused: amount must be positive
+        </script>
+        <p class="note"><b>Rule:</b> <code>assert</code> is for mistakes made by the programmer. <code>raise</code> is for bad data from outside.</p>
+      </section>
+
+      <section class="chapter" id="breakpoint">
+        <h2>breakpoint() and pdb</h2>
+        <p>A <b>debugger</b> stops a running program so that you can look at every variable and run the code one line at a time. Python comes with one called <code>pdb</code>. Put <code>breakpoint()</code> on any line, and the program pauses there and gives you a <code>(Pdb)</code> prompt.</p>
+        <p>This script has a bug: one balance was typed as text. It is not runnable here because <code>breakpoint()</code> waits for you to type commands.</p>
+        <script type="text/plain" data-lang="py" data-file="interest.py" data-norun>
+def yearly_interest(balance, rate):
+    interest = balance * rate / 100
+    return interest
+
+
+def report(accounts):
+    total = 0
+    for name, balance in accounts.items():
+        total += yearly_interest(balance, 4)
+    return total
+
+
+accounts = {"Rishikesh": 5000, "Sandhya": "12000"}
+breakpoint()
+print(report(accounts))
+        </script>
+        <p>At the prompt you type short commands. These are the ones that matter.</p>
+        <div class="scroll">
+          <table>
+            <thead>
+              <tr><th>Command</th><th>Long form</th><th>What it does</th></tr>
+            </thead>
+            <tbody>
+              <tr><td><code>l</code></td><td><code>list</code></td><td>Show the code around the current line. <code>ll</code> shows the whole function</td></tr>
+              <tr><td><code>n</code></td><td><code>next</code></td><td>Run the current line and stop at the next one. A function call is run in one go</td></tr>
+              <tr><td><code>s</code></td><td><code>step</code></td><td>Like <code>n</code>, but if the line calls a function, go inside it</td></tr>
+              <tr><td><code>c</code></td><td><code>continue</code></td><td>Run until the next breakpoint or the end of the program</td></tr>
+              <tr><td><code>p expr</code></td><td><code>print</code></td><td>Print the value of any expression, such as <code>p balance</code> or <code>p len(accounts)</code></td></tr>
+              <tr><td><code>pp expr</code></td><td></td><td>Pretty-print: the same, but long lists and dictionaries are laid out over several lines</td></tr>
+              <tr><td><code>w</code></td><td><code>where</code></td><td>Show the stack: the chain of calls that led here, like a traceback</td></tr>
+              <tr><td><code>u</code></td><td><code>up</code></td><td>Move to the caller's frame, to see <b>its</b> variables</td></tr>
+              <tr><td><code>d</code></td><td><code>down</code></td><td>Move back down one frame</td></tr>
+              <tr><td><code>b 9</code></td><td><code>break</code></td><td>Set a breakpoint on line 9. <code>b</code> alone lists the breakpoints. <code>b yearly_interest</code> stops when that function is called</td></tr>
+              <tr><td><code>r</code></td><td><code>return</code></td><td>Run until the current function returns</td></tr>
+              <tr><td><code>q</code></td><td><code>quit</code></td><td>Leave the debugger and stop the program</td></tr>
+              <tr><td><code>!statement</code></td><td></td><td>Run a Python statement, for example <code>!balance = 0</code>. The <code>!</code> stops pdb from reading it as one of its own commands</td></tr>
+              <tr><td><code>h</code></td><td><code>help</code></td><td>List all commands. <code>h b</code> explains one of them</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><b>Tip:</b> Pressing Enter on an empty line repeats the last command. That makes it easy to walk through code with <code>n</code>, Enter, Enter, Enter.</p>
+      </section>
+
+      <section class="chapter" id="pdb-session">
+        <h2>A pdb session</h2>
+        <p>This is a real session with <code>interest.py</code> from the previous chapter, started with <code>python3 interest.py</code>. The lines after <code>(Pdb)</code> are what was typed. A line starting with <code>&gt;</code> shows the file, line number and function where the program is paused, and the <code>-&gt;</code> line below it is the line that will run <b>next</b>.</p>
+        <script type="text/plain" data-lang="text" data-file="Output">
+> /home/rishikesh/bank/interest.py(15)<module>()
+-> print(report(accounts))
+(Pdb) pp accounts
+{'Rishikesh': 5000, 'Sandhya': '12000'}
+(Pdb) s
+--Call--
+> /home/rishikesh/bank/interest.py(6)report()
+-> def report(accounts):
+(Pdb) n
+> /home/rishikesh/bank/interest.py(7)report()
+-> total = 0
+(Pdb) n
+> /home/rishikesh/bank/interest.py(8)report()
+-> for name, balance in accounts.items():
+(Pdb) n
+> /home/rishikesh/bank/interest.py(9)report()
+-> total += yearly_interest(balance, 4)
+(Pdb) p name, balance
+('Rishikesh', 5000)
+(Pdb) s
+--Call--
+> /home/rishikesh/bank/interest.py(1)yearly_interest()
+-> def yearly_interest(balance, rate):
+(Pdb) n
+> /home/rishikesh/bank/interest.py(2)yearly_interest()
+-> interest = balance * rate / 100
+(Pdb) n
+> /home/rishikesh/bank/interest.py(3)yearly_interest()
+-> return interest
+(Pdb) p interest
+200.0
+(Pdb) w
+  /home/rishikesh/bank/interest.py(15)<module>()
+-> print(report(accounts))
+  /home/rishikesh/bank/interest.py(9)report()
+-> total += yearly_interest(balance, 4)
+> /home/rishikesh/bank/interest.py(3)yearly_interest()
+-> return interest
+(Pdb) u
+> /home/rishikesh/bank/interest.py(9)report()
+-> total += yearly_interest(balance, 4)
+(Pdb) p total
+0
+(Pdb) l
+  4
+  5
+  6     def report(accounts):
+  7         total = 0
+  8         for name, balance in accounts.items():
+  9  ->         total += yearly_interest(balance, 4)
+ 10         return total
+ 11
+ 12
+ 13     accounts = {"Rishikesh": 5000, "Sandhya": "12000"}
+ 14     breakpoint()
+(Pdb) b 9
+Breakpoint 1 at /home/rishikesh/bank/interest.py:9
+(Pdb) c
+> /home/rishikesh/bank/interest.py(9)report()
+-> total += yearly_interest(balance, 4)
+(Pdb) p name, balance
+('Sandhya', '12000')
+(Pdb) p type(balance)
+<class 'str'>
+(Pdb) !balance = int(balance)
+(Pdb) c
+680.0
+        </script>
+        <p>What happened, step by step:</p>
+        <ul>
+          <li><code>pp accounts</code> showed the data before anything ran.</li>
+          <li><code>s</code> stepped <b>into</b> <code>report</code>. Three <code>n</code> commands walked to line 9, and <code>p name, balance</code> showed the first account.</li>
+          <li><code>s</code> stepped into <code>yearly_interest</code>. After two more lines, <code>p interest</code> showed <code>200.0</code>, which is correct.</li>
+          <li><code>w</code> printed the stack. The <code>&gt;</code> marks the current frame. <code>u</code> moved up to <code>report</code>, where <code>total</code> is still <code>0</code> because line 9 has not finished.</li>
+          <li><code>b 9</code> set a breakpoint and <code>c</code> ran to it. Now it is Sandhya's turn, and her balance is the text <code>'12000'</code>. That is the bug.</li>
+          <li><code>!balance = int(balance)</code> repaired the value in the running program, and <code>c</code> let it finish with the right total, <code>680.0</code>.</li>
+        </ul>
+        <p class="note"><b>Remember:</b> Changing a value inside pdb only proves your idea about the bug. The real fix still has to go into the file: store <code>12000</code> as a number.</p>
+      </section>
+
+      <section class="chapter" id="post-mortem">
+        <h2>Post-mortem debugging</h2>
+        <p>Post-mortem means "after death". You do not add <code>breakpoint()</code> anywhere. You let the program crash, and the debugger opens at the exact line that failed, with all the variables still there.</p>
+        <script type="text/plain" data-lang="py" data-file="crash.py" data-norun>
+def yearly_interest(balance, rate):
+    return balance * rate / 100
+
+
+accounts = {"Rishikesh": 5000, "Sandhya": "12000"}
+for name, balance in accounts.items():
+    print(name, yearly_interest(balance, 4))
+        </script>
+        <p>The script is not runnable here because it crashes. Start it under pdb with <code>python3 -m pdb crash.py</code>. pdb pauses on the first line, so type <code>c</code> to let it run.</p>
+        <script type="text/plain" data-lang="text" data-file="Output">
+> /home/rishikesh/bank/crash.py(1)<module>()
+-> def yearly_interest(balance, rate):
+(Pdb) c
+Rishikesh 200.0
+Uncaught exception. Entering post mortem debugging
+Running 'cont' or 'step' will restart the program
+> /home/rishikesh/bank/crash.py(2)yearly_interest()
+-> return balance * rate / 100
+(Pdb) p balance
+'12000'
+(Pdb) p type(balance)
+<class 'str'>
+(Pdb) p rate
+4
+(Pdb) q
+        </script>
+        <p>Two other ways to get the same thing:</p>
+        <ul>
+          <li>Run <code>python3 -i crash.py</code>. The <code>-i</code> switch leaves you at the <code>&gt;&gt;&gt;</code> prompt after the crash. Then type <code>import pdb</code> and <code>pdb.pm()</code>. <code>pm</code> stands for post-mortem, and it opens the debugger on the last traceback.</li>
+          <li>Inside an <code>except</code> block, call <code>pdb.post_mortem()</code> to open the debugger on the exception being handled.</li>
+        </ul>
+        <script type="text/plain" data-lang="text" data-file="Output">
+$ python3 -i crash.py
+Rishikesh 200.0
+Traceback (most recent call last):
+  File "/home/rishikesh/bank/crash.py", line 7, in <module>
+    print(name, yearly_interest(balance, 4))
+  File "/home/rishikesh/bank/crash.py", line 2, in yearly_interest
+    return balance * rate / 100
+TypeError: unsupported operand type(s) for /: 'str' and 'int'
+>>> import pdb
+>>> pdb.pm()
+> /home/rishikesh/bank/crash.py(2)yearly_interest()
+-> return balance * rate / 100
+(Pdb)
+        </script>
+        <p class="note"><b>When to use it:</b> Post-mortem is the fastest route when the program crashes with an exception. Use <code>breakpoint()</code> when nothing crashes but the answer is wrong.</p>
+      </section>
+
+      <section class="chapter" id="conditional-breakpoints">
+        <h2>Conditional breakpoints</h2>
+        <p>A loop may run a thousand times and go wrong only once. Stopping on every pass is no use. A <b>conditional breakpoint</b> stops only when a condition is true.</p>
+        <p>The simplest form is an ordinary <code>if</code> in the code. Not runnable here, because it would wait for commands.</p>
+        <script type="text/plain" data-lang="py" data-file="conditional.py" data-norun>
+def yearly_interest(balance, rate):
+    if not isinstance(balance, (int, float)):
+        breakpoint()               # stops only for a balance that is not a number
+    return balance * rate / 100
+
+
+accounts = {"Rishikesh": 5000, "Sandhya": "12000"}
+for name, balance in accounts.items():
+    print(name, yearly_interest(balance, 4))
+        </script>
+        <p>The other form needs no change to the file. In pdb, write the condition after the line number, separated by a comma. This is <code>crash.py</code> from the previous chapter, started with <code>python3 -m pdb crash.py</code>:</p>
+        <script type="text/plain" data-lang="text" data-file="Output">
+> /home/rishikesh/bank/crash.py(1)<module>()
+-> def yearly_interest(balance, rate):
+(Pdb) b 2, isinstance(balance, str)
+Breakpoint 1 at /home/rishikesh/bank/crash.py:2
+(Pdb) c
+Rishikesh 200.0
+> /home/rishikesh/bank/crash.py(2)yearly_interest()
+-> return balance * rate / 100
+(Pdb) p balance
+'12000'
+(Pdb) q
+        </script>
+        <p>The first account passed line 2 without stopping. The debugger stopped only for the one whose balance is a string, <b>before</b> the line crashed.</p>
+      </section>
+
+      <section class="chapter" id="breakpoint-off">
+        <h2>Switching breakpoints off, and IDE debuggers</h2>
+        <p><code>breakpoint()</code> reads an environment variable called <code>PYTHONBREAKPOINT</code>. An environment variable is a named setting that the shell passes to a program. Set it to <code>0</code> and every <code>breakpoint()</code> call does nothing, without editing the code.</p>
+        <script type="text/plain" data-lang="bash" data-file="Terminal">
+PYTHONBREAKPOINT=0 python3 interest.py      # runs straight through, no (Pdb) prompt
+        </script>
+        <p>The block below proves it. It writes a two-line script that contains <code>breakpoint()</code>, then runs it with the variable set, so nothing waits for the keyboard.</p>
+        <script type="text/plain" data-lang="py" data-file="breakpoint_off.py">
+import os
+import subprocess
+import sys
+
+code = "breakpoint()\nprint('finished without stopping')"
+env = dict(os.environ, PYTHONBREAKPOINT="0")
+
+result = subprocess.run([sys.executable, "-c", code], env=env,
+                        capture_output=True, text=True)
+print(result.stdout.strip())       # finished without stopping
+        </script>
+        <p class="note"><b>Watch out:</b> A <code>breakpoint()</code> left in code that runs on a server will make it hang, waiting for a keyboard that is not there. Search for <code>breakpoint(</code> before every commit.</p>
+        <h3>IDE debuggers</h3>
+        <p>An IDE (integrated development environment) is an editor with tools built in. VS Code and PyCharm both have a graphical debugger that does the same job as pdb. You click next to a line number to set a breakpoint, press the debug button, and the editor shows all variables in a side panel and the call stack as a list. Buttons called Step Over, Step Into and Continue are <code>n</code>, <code>s</code> and <code>c</code>. Right-clicking a breakpoint lets you add a condition. The ideas are exactly the ones in this page, so learning pdb first means you can debug anywhere, including on a server that has no editor.</p>
+      </section>
+
+      <section class="chapter" id="method">
+        <h2>A method for finding bugs</h2>
+        <p>Tools help, but a steady method helps more. Changing lines at random until the error goes away is slow and leaves bugs behind.</p>
+        <ol>
+          <li><b>Reproduce it.</b> Find the exact steps or input that make the bug happen every time. A bug you cannot repeat is a bug you cannot prove fixed.</li>
+          <li><b>Reduce it.</b> Remove everything that is not needed to show the bug: fewer accounts, fewer steps, a smaller file. Often the cause shows itself during this step.</li>
+          <li><b>Read the error.</b> The whole message, slowly, from the bottom up. It usually says what is wrong and on which line.</li>
+          <li><b>Form one hypothesis.</b> A hypothesis is a guess you can test: "the balance is a string". Check it with a print or the debugger <b>before</b> changing anything.</li>
+          <li><b>Change one thing.</b> Make one change, run again, and look. If it did not help, undo it. Two changes at once tell you nothing about which one mattered.</li>
+        </ol>
+        <p>Apply it to <code>transfer.py</code> from the first chapter. The error says <code>KeyError: 'Hemkesh'</code> on the receiver's line. Hypothesis: the money had already left the sender when the crash came. One print proves it.</p>
+        <script type="text/plain" data-lang="py" data-file="reduce.py">
+accounts = {"Rishikesh": 5000}
+
+
+def transfer(sender, receiver, amount):
+    accounts[sender] = accounts[sender] - amount
+    accounts[receiver] = accounts[receiver] + amount
+
+
+try:
+    transfer("Rishikesh", "Hemkesh", 500)
+except KeyError as error:
+    print(f"KeyError: {error}")    # KeyError: 'Hemkesh'
+
+print(f"{accounts=}")              # accounts={'Rishikesh': 4500}
+        </script>
+        <p>So there are two bugs. The crash is the small one. The serious one is that 500 rupees vanished. The fix is to check everything first and change the balances only after that.</p>
+        <script type="text/plain" data-lang="py" data-file="fixed.py">
+accounts = {"Rishikesh": 5000}
+
+
+def transfer(sender, receiver, amount):
+    for name in (sender, receiver):
+        if name not in accounts:
+            raise LookupError(f"no account for {name}")
+    accounts[sender] -= amount
+    accounts[receiver] += amount
+
+
+try:
+    transfer("Rishikesh", "Hemkesh", 500)
+except LookupError as error:
+    print("Refused:", error)       # Refused: no account for Hemkesh
+
+print(f"{accounts=}")              # accounts={'Rishikesh': 5000}
+        </script>
+        <p class="note"><b>Tip:</b> Once a bug is fixed, write a test that fails with the old code and passes with the new. Then it cannot come back unnoticed. See <a href="python-testing.html">Python Testing</a>.</p>
+      </section>
+
+      <section class="chapter" id="warnings">
+        <h2>Warnings</h2>
+        <p>A <b>warning</b> is a message that something is likely to become a problem, while the program carries on. The most common kind is <code>DeprecationWarning</code>: a function still works but will be removed one day. The <code>warnings</code> module issues and controls them.</p>
+        <script type="text/plain" data-lang="py" data-file="deprecated.py">
+import warnings
+
+
+def send_money(sender, receiver, amount):
+    warnings.warn("send_money() is deprecated, use transfer()",
+                  DeprecationWarning, stacklevel=2)
+    return amount
+
+
+with warnings.catch_warnings(record=True) as caught:
+    warnings.simplefilter("always")
+    send_money("Rishikesh", "Sandhya", 500)        # still works
+
+print(caught[0].category.__name__)     # DeprecationWarning
+print(caught[0].message)               # send_money() is deprecated, use transfer()
+        </script>
+        <p>Normally a warning is printed once to the error stream with the file and line that caused it. <code>stacklevel=2</code> makes that line the <b>caller's</b> line, which is the one that has to change. The <code>catch_warnings</code> block is used here only to collect the warning so it can be printed in a fixed form.</p>
+        <p>While hunting a bug, it helps to turn warnings into exceptions. Then you get a full traceback showing who made the call.</p>
+        <script type="text/plain" data-lang="py" data-file="warnings_as_errors.py">
+import warnings
+
+
+def send_money(sender, receiver, amount):
+    warnings.warn("send_money() is deprecated, use transfer()", DeprecationWarning)
+    return amount
+
+
+warnings.simplefilter("error")         # every warning now raises
+
+try:
+    send_money("Rishikesh", "Sandhya", 500)
+except DeprecationWarning as error:
+    print("Stopped:", error)
+# Stopped: send_money() is deprecated, use transfer()
+        </script>
+        <p class="note"><b>From the terminal:</b> <code>python3 -W error script.py</code> does the same for a whole run without touching the code, and <code>python3 -W default script.py</code> shows warnings that are hidden by default.</p>
+      </section>
+
+      <section class="chapter" id="traceback-module">
+        <h2>The traceback module</h2>
+        <p>Sometimes a program must survive an error and still keep the full report, for example a bank job that processes many accounts overnight. The <code>traceback</code> module gives you the traceback as text, so you can save it and carry on.</p>
+        <script type="text/plain" data-lang="py" data-file="keep_going.py">
+import traceback
+
+accounts = {"Rishikesh": 5000, "Sandhya": "12000", "Subhash": 30000}
+problems = []
+
+for name, balance in accounts.items():
+    try:
+        print(name, balance * 4 / 100)
+    except Exception:
+        problems.append(traceback.format_exc())    # the whole traceback as one string
+
+print(len(problems), "problem(s)")
+print(problems[0].splitlines()[-1])
+        </script>
+        <script type="text/plain" data-lang="text" data-file="Output">
+Rishikesh 200.0
+Subhash 1200.0
+1 problem(s)
+TypeError: unsupported operand type(s) for /: 'str' and 'int'
+        </script>
+        <p>The loop finished all three accounts, and the string in <code>problems</code> holds the same text Python would have printed, with file and line number.</p>
+        <div class="scroll">
+          <table>
+            <thead>
+              <tr><th>Function</th><th>What it gives</th></tr>
+            </thead>
+            <tbody>
+              <tr><td><code>traceback.format_exc()</code></td><td>The traceback of the exception being handled, as a string</td></tr>
+              <tr><td><code>traceback.print_exc()</code></td><td>The same, printed straight to the error stream</td></tr>
+              <tr><td><code>traceback.print_stack()</code></td><td>The current call stack, with no exception needed. Good for "who called this function?"</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>In real programs you rarely call these yourself. <code>logger.exception()</code>, shown in <a href="#logger-exception">a later chapter</a>, does the same and writes the result to the log.</p>
+      </section>
+
+      <section class="chapter part" id="logging">
+        <h2>Logging</h2>
+        <p class="kind">Part 2 of 2 &middot; a record of what the program did</p>
+        <p>A log is a list of messages a program writes while it runs: what it did, when, and what went wrong. When something fails at night on a server, the log is the only witness. Python's <code>logging</code> module is the standard way to write one.</p>
+        <ul>
+          <li><a href="#why-logging">Why not print</a>: what logging adds</li>
+          <li><a href="#levels">The five levels</a>: how important is this message?</li>
+          <li><a href="#basic-config">basicConfig</a>: set up logging in one line</li>
+          <li><a href="#module-logger">A logger for each module</a>: <code>getLogger(__name__)</code></li>
+          <li><a href="#logger-exception">Logging an exception</a>: keep the traceback</li>
+          <li><a href="#lazy-formatting">Lazy formatting</a>: <code>%s</code> arguments instead of f-strings</li>
+          <li><a href="#handlers">Handlers and formatters</a>: file and console at once</li>
+          <li><a href="#rotating">Rotating log files</a>: stop the file growing for ever</li>
+          <li><a href="#hierarchy">The logger hierarchy</a>: parents, children and propagation</li>
+          <li><a href="#dict-config">Configure once, at the start</a>: <code>dictConfig</code></li>
+          <li><a href="#json-logging">Structured logging</a>: one JSON object per line</li>
+          <li><a href="#sensitive-data">What never to log</a>: passwords, cards, account numbers</li>
+          <li><a href="#logging-mistakes">Common mistakes</a></li>
+          <li><a href="#quick-reference">Quick reference</a></li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="why-logging">
+        <h2>Why not print</h2>
+        <p><code>print()</code> is fine while you sit in front of the program. It is a poor record once the program runs on its own. Logging gives four things that print does not.</p>
+        <div class="scroll">
+          <table>
+            <thead>
+              <tr><th>Need</th><th>print</th><th>logging</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>Levels</td><td>Every message looks equally important</td><td>Each message has a level, from DEBUG to CRITICAL</td></tr>
+              <tr><td>Destinations</td><td>The screen only</td><td>Screen, file, several files, or all at once</td></tr>
+              <tr><td>Context</td><td>Only what you typed</td><td>Time, level, module name and line number added for you</td></tr>
+              <tr><td>Turning it off</td><td>Delete or comment out every call</td><td>Change one setting. The calls stay in the code</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <script type="text/plain" data-lang="py" data-file="print_vs_log.py">
+import logging
+import sys
+
+logging.basicConfig(level=logging.INFO, stream=sys.stdout,
+                    format="%(levelname)s:%(name)s:%(message)s")
+
+print("Deposited 500 for Rishikesh")                 # just text
+logging.info("Deposited 500 for Rishikesh")          # text with a level and a source
+logging.debug("Balance before the deposit was 5000") # hidden: DEBUG is below INFO
+        </script>
+        <script type="text/plain" data-lang="text" data-file="Output">
+Deposited 500 for Rishikesh
+INFO:root:Deposited 500 for Rishikesh
+        </script>
+        <p class="note"><b>About the examples:</b> Logging writes to the error stream (<code>stderr</code>) by default and normally includes the time. The runnable blocks on this page send it to <code>sys.stdout</code> and leave the time out, so the output is the same on every run.</p>
+      </section>
+
+      <section class="chapter" id="levels">
+        <h2>The five levels</h2>
+        <p>Every log message has a <b>level</b> that says how serious it is. A logger also has a level, and it drops every message below it. So one setting decides how much detail you get.</p>
+        <div class="scroll">
+          <table>
+            <thead>
+              <tr><th>Level</th><th>Number</th><th>Use it for</th><th>Bank example</th></tr>
+            </thead>
+            <tbody>
+              <tr><td><code>DEBUG</code></td><td>10</td><td>Detail that only helps while finding a bug</td><td>"Balance before the deposit was 5000"</td></tr>
+              <tr><td><code>INFO</code></td><td>20</td><td>Normal events worth recording</td><td>"Deposited 500 for Rishikesh"</td></tr>
+              <tr><td><code>WARNING</code></td><td>30</td><td>Something odd happened, but the work was done</td><td>"Balance for Hemkesh is below the minimum"</td></tr>
+              <tr><td><code>ERROR</code></td><td>40</td><td>One piece of work failed</td><td>"Transfer to Malinikesh failed"</td></tr>
+              <tr><td><code>CRITICAL</code></td><td>50</td><td>The whole program cannot continue</td><td>"Cannot reach the accounts database"</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <script type="text/plain" data-lang="py" data-file="levels.py">
+import logging
+import sys
+
+logging.basicConfig(level=logging.WARNING, stream=sys.stdout,
+                    format="%(levelname)-8s %(message)s")
+
+logging.debug("Balance before the deposit was 5000")
+logging.info("Deposited 500 for Rishikesh")
+logging.warning("Balance for Hemkesh is below the minimum")
+logging.error("Transfer to Malinikesh failed")
+logging.critical("Cannot reach the accounts database")
+
+print(logging.INFO, logging.getLevelName(30))        # 20 WARNING
+        </script>
+        <script type="text/plain" data-lang="text" data-file="Output">
+WARNING  Balance for Hemkesh is below the minimum
+ERROR    Transfer to Malinikesh failed
+CRITICAL Cannot reach the accounts database
+20 WARNING
+        </script>
+        <p>The level was set to <code>WARNING</code>, so the DEBUG and INFO messages were dropped. <code>WARNING</code> is also the default when you set nothing.</p>
+        <p class="note"><b>Rule of thumb:</b> Use DEBUG while developing and INFO or WARNING in production. If an ERROR appears in the log, a person should look at it.</p>
+      </section>
+
+      <section class="chapter" id="basic-config">
+        <h2>basicConfig</h2>
+        <p><code>logging.basicConfig()</code> sets up logging in one call: the lowest level to show, where to write, and what each line looks like. The <code>format</code> string is built from named fields.</p>
+        <script type="text/plain" data-lang="py" data-file="basic_config.py">
+import logging
+import sys
+
+logging.basicConfig(
+    level=logging.DEBUG,
+    stream=sys.stdout,
+    format="%(levelname)-7s | %(name)s | line %(lineno)d | %(message)s",
+)
+
+logging.debug("Opening the bank")
+logging.info("Deposited %d for %s", 500, "Rishikesh")
+logging.warning("Balance for %s is low", "Hemkesh")
+        </script>
+        <script type="text/plain" data-lang="text" data-file="Output">
+DEBUG   | root | line 10 | Opening the bank
+INFO    | root | line 11 | Deposited 500 for Rishikesh
+WARNING | root | line 12 | Balance for Hemkesh is low
+        </script>
+        <div class="scroll">
+          <table>
+            <thead>
+              <tr><th>Field</th><th>Meaning</th></tr>
+            </thead>
+            <tbody>
+              <tr><td><code>%(asctime)s</code></td><td>Date and time, such as <code>2026-11-17 10:15:02,123</code></td></tr>
+              <tr><td><code>%(levelname)s</code></td><td>DEBUG, INFO, WARNING, ERROR or CRITICAL</td></tr>
+              <tr><td><code>%(name)s</code></td><td>Name of the logger. <code>root</code> when you call <code>logging.info()</code> directly</td></tr>
+              <tr><td><code>%(message)s</code></td><td>The message itself</td></tr>
+              <tr><td><code>%(module)s</code>, <code>%(funcName)s</code>, <code>%(lineno)d</code></td><td>The file (without <code>.py</code>), function and line number that made the call</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>A usual format for real work is <code>"%(asctime)s %(levelname)s %(name)s: %(message)s"</code>. To write to a file, pass <code>filename="bank.log"</code> instead of <code>stream</code>.</p>
+        <p class="note"><b>Watch out:</b> <code>basicConfig()</code> works only the first time. If logging is already set up, later calls do nothing. Pass <code>force=True</code> (Python 3.8 and later) to replace the old setup.</p>
+      </section>
+
+      <section class="chapter" id="module-logger">
+        <h2>A logger for each module</h2>
+        <p>Calling <code>logging.info()</code> uses one shared logger called the <b>root</b> logger. In a real program, each file should have its own logger, created once at the top with <code>logging.getLogger(__name__)</code>.</p>
+        <p><code>__name__</code> is the module's name. Inside <code>bank/transfers.py</code> it is <code>"bank.transfers"</code>. In the file you run directly it is <code>"__main__"</code>.</p>
+        <script type="text/plain" data-lang="py" data-file="module_logger.py">
+import logging
+import sys
+
+logger = logging.getLogger(__name__)          # one per file, at the top
+
+
+def deposit(balance, amount):
+    logger.info("Depositing %s", amount)
+    return balance + amount
+
+
+logging.basicConfig(level=logging.INFO, stream=sys.stdout,
+                    format="%(levelname)s %(name)s: %(message)s")
+print(deposit(5000, 500))
+print(logger.name)
+        </script>
+        <script type="text/plain" data-lang="text" data-file="Output">
+INFO __main__: Depositing 500
+5500
+__main__
+        </script>
+        <p>Why bother:</p>
+        <ul>
+          <li>Every line in the log says which module wrote it.</li>
+          <li>You can make one noisy module quieter, or one suspect module more detailed, without touching the others.</li>
+          <li><code>getLogger("bank.transfers")</code> always returns the <b>same</b> object for the same name, so nothing has to be passed around.</li>
+        </ul>
+        <script type="text/plain" data-lang="py" data-file="same_logger.py">
+import logging
+
+first = logging.getLogger("bank.transfers")
+second = logging.getLogger("bank.transfers")
+print(first is second)             # True
+        </script>
+      </section>
+
+      <section class="chapter" id="logger-exception">
+        <h2>Logging an exception</h2>
+        <p>Inside an <code>except</code> block, <code>logger.exception("message")</code> writes the message at ERROR level and adds the full traceback below it. You get the whole story, and the program can carry on.</p>
+        <script type="text/plain" data-lang="py" data-file="log_exception.py">
+import logging
+import sys
+
+logging.basicConfig(level=logging.INFO, stream=sys.stdout,
+                    format="%(levelname)s %(name)s: %(message)s")
+logger = logging.getLogger("bank.interest")
+
+accounts = {"Rishikesh": 5000, "Sandhya": "12000"}
+
+for name, balance in accounts.items():
+    try:
+        logger.info("%s earns %s", name, balance * 4 / 100)
+    except TypeError:
+        logger.exception("Could not work out interest for %s", name)
+
+logger.info("Finished")
+        </script>
+        <p>The output, with the folder name shortened:</p>
+        <script type="text/plain" data-lang="text" data-file="Output">
+INFO bank.interest: Rishikesh earns 200.0
+ERROR bank.interest: Could not work out interest for Sandhya
+Traceback (most recent call last):
+  File "/home/rishikesh/bank/log_exception.py", line 12, in <module>
+    logger.info("%s earns %s", name, balance * 4 / 100)
+TypeError: unsupported operand type(s) for /: 'str' and 'int'
+INFO bank.interest: Finished
+        </script>
+        <p><code>logger.error("...")</code> alone would log only the message. <code>logger.exception("...")</code> is the same as <code>logger.error("...", exc_info=True)</code>. Use <code>exc_info=True</code> with another level, such as <code>logger.warning</code>, when a failure is expected and not serious.</p>
+        <p class="note"><b>Watch out:</b> Call <code>logger.exception()</code> only inside an <code>except</code> block. Outside one there is no exception to report.</p>
+      </section>
+
+      <section class="chapter" id="lazy-formatting">
+        <h2>Lazy formatting</h2>
+        <p>Log calls take a message with <code>%s</code> placeholders and the values as separate arguments. The logger joins them <b>only if the message will really be written</b>. An f-string builds the text first, even when the level is switched off and the text is thrown away.</p>
+        <script type="text/plain" data-lang="py" data-file="lazy.py">
+import logging
+import sys
+
+logging.basicConfig(level=logging.INFO, stream=sys.stdout, format="%(message)s")
+logger = logging.getLogger("bank")
+
+
+class Statement:
+    def __str__(self):
+        print("  (building a long statement)")
+        return "statement with 500 lines"
+
+
+statement = Statement()
+
+print("with %s arguments:")
+logger.debug("Statement: %s", statement)      # DEBUG is off: nothing is built
+
+print("with an f-string:")
+logger.debug(f"Statement: {statement}")       # built first, then dropped
+        </script>
+        <script type="text/plain" data-lang="text" data-file="Output">
+with %s arguments:
+with an f-string:
+  (building a long statement)
+        </script>
+        <p>Neither call logged anything, but the f-string still did the work. There is a second reason to prefer <code>%s</code> arguments: the message text stays the same for every call, so tools that group log lines can see that they are the same event.</p>
+        <script type="text/plain" data-lang="py" data-file="lazy_style.py">
+import logging
+import sys
+
+logging.basicConfig(level=logging.INFO, stream=sys.stdout, format="%(message)s")
+logger = logging.getLogger("bank")
+
+name, amount = "Rishikesh", 500.5
+logger.info("Deposited %.2f for %s", amount, name)     # Deposited 500.50 for Rishikesh
+logger.info("Account: %r", name)                       # Account: 'Rishikesh'
+        </script>
+        <p class="note"><b>Fair point:</b> For cheap values the speed difference is tiny, and many teams allow f-strings in log calls. The habit matters most for DEBUG messages inside loops.</p>
+      </section>
+
+      <section class="chapter" id="handlers">
+        <h2>Handlers and formatters</h2>
+        <p>Three kinds of object work together:</p>
+        <ul>
+          <li>A <b>logger</b> is what your code calls. It decides whether a message is important enough.</li>
+          <li>A <b>handler</b> sends the message somewhere: <code>StreamHandler</code> to the screen, <code>FileHandler</code> to a file.</li>
+          <li>A <b>formatter</b> turns the message into a line of text. Each handler has its own.</li>
+        </ul>
+        <p>One logger can have several handlers, each with its own level and format. A common setup: short warnings on the screen, everything in a file.</p>
+        <script type="text/plain" data-lang="py" data-file="two_handlers.py">
+import logging
+import sys
+
+logger = logging.getLogger("bank")
+logger.setLevel(logging.DEBUG)                 # the logger lets everything through
+
+console = logging.StreamHandler(sys.stdout)
+console.setLevel(logging.WARNING)              # the screen shows problems only
+console.setFormatter(logging.Formatter("%(levelname)s: %(message)s"))
+
+to_file = logging.FileHandler("bank.log", encoding="utf-8")
+to_file.setLevel(logging.DEBUG)                # the file keeps everything
+to_file.setFormatter(logging.Formatter("%(levelname)-7s %(name)s %(funcName)s: %(message)s"))
+
+logger.addHandler(console)
+logger.addHandler(to_file)
+
+
+def withdraw(name, amount):
+    logger.debug("Checking the balance of %s", name)
+    logger.info("Withdrew %s for %s", amount, name)
+    logger.warning("Balance of %s is below 1000", name)
+
+
+withdraw("Hemkesh", 4500)
+to_file.close()
+
+print("--- bank.log ---")
+print(open("bank.log", encoding="utf-8").read(), end="")
+        </script>
+        <script type="text/plain" data-lang="text" data-file="Output">
+WARNING: Balance of Hemkesh is below 1000
+--- bank.log ---
+DEBUG   bank withdraw: Checking the balance of Hemkesh
+INFO    bank withdraw: Withdrew 4500 for Hemkesh
+WARNING bank withdraw: Balance of Hemkesh is below 1000
+        </script>
+        <p>A message has to pass two gates: the logger's level, then each handler's level. In a real file format you would start with <code>%(asctime)s</code>, which gives lines such as <code>2026-11-17 10:15:02,123 INFO    bank withdraw: Withdrew 4500 for Hemkesh</code>. A second argument to <code>Formatter</code> changes the time layout, for example <code>datefmt="%Y-%m-%d %H:%M:%S"</code>.</p>
+      </section>
+
+      <section class="chapter" id="rotating">
+        <h2>Rotating log files</h2>
+        <p>A log file that only grows will fill the disk one day. <code>RotatingFileHandler</code> starts a new file when the current one reaches a size limit and keeps only a fixed number of old ones. The newest lines are always in <code>bank.log</code>. Older ones move to <code>bank.log.1</code>, then <code>bank.log.2</code>, and the oldest file is deleted.</p>
+        <script type="text/plain" data-lang="py" data-file="rotating.py">
+import logging
+import os
+from logging.handlers import RotatingFileHandler
+
+logger = logging.getLogger("bank")
+logger.setLevel(logging.INFO)
+
+handler = RotatingFileHandler("bank.log", maxBytes=200, backupCount=2, encoding="utf-8")
+handler.setFormatter(logging.Formatter("%(levelname)s %(message)s"))
+logger.addHandler(handler)
+
+for number in range(1, 31):
+    logger.info("Transaction %02d for Rishikesh", number)
+handler.close()
+
+for filename in sorted(os.listdir(".")):
+    if filename.startswith("bank.log"):
+        print(filename, os.path.getsize(filename), "bytes")
+
+print(open("bank.log").read().splitlines()[-1])
+        </script>
+        <script type="text/plain" data-lang="text" data-file="Output">
+bank.log 170 bytes
+bank.log.1 170 bytes
+bank.log.2 170 bytes
+INFO Transaction 30 for Rishikesh
+        </script>
+        <p>Thirty lines were written, but only the last fifteen are kept, five in each of three small files. The limit here is tiny so the effect is visible. A real setting looks like <code>maxBytes=5_000_000, backupCount=5</code>: five megabytes per file, five old files.</p>
+        <p class="note"><b>Also useful:</b> <code>TimedRotatingFileHandler("bank.log", when="midnight", backupCount=14)</code> starts a new file every day and keeps two weeks.</p>
+      </section>
+
+      <section class="chapter" id="hierarchy">
+        <h2>The logger hierarchy</h2>
+        <p>Logger names with dots form a family tree. <code>bank.transfers</code> is a child of <code>bank</code>, and <code>bank</code> is a child of the root logger. A message logged on a child is also passed up to the handlers of its parents. This is called <b>propagation</b>.</p>
+        <p>So you attach a handler once, high up, and every module below it is covered.</p>
+        <script type="text/plain" data-lang="py" data-file="hierarchy.py">
+import logging
+import sys
+
+bank = logging.getLogger("bank")
+bank.setLevel(logging.INFO)
+handler = logging.StreamHandler(sys.stdout)
+handler.setFormatter(logging.Formatter("%(name)-15s %(levelname)-7s %(message)s"))
+bank.addHandler(handler)                       # the only handler
+
+accounts_log = logging.getLogger("bank.accounts")
+transfers_log = logging.getLogger("bank.transfers")
+
+accounts_log.info("Opened an account for Malinikesh")
+transfers_log.info("Sent 500 from Subhash to Malinikesh")
+
+transfers_log.setLevel(logging.WARNING)        # make one module quieter
+transfers_log.info("Sent 200 from Sandhya to Hemkesh")
+transfers_log.warning("Transfer limit nearly reached for Sandhya")
+
+print(transfers_log.parent.name, "/", accounts_log.getEffectiveLevel())
+        </script>
+        <script type="text/plain" data-lang="text" data-file="Output">
+bank.accounts   INFO    Opened an account for Malinikesh
+bank.transfers  INFO    Sent 500 from Subhash to Malinikesh
+bank.transfers  WARNING Transfer limit nearly reached for Sandhya
+bank / 20
+        </script>
+        <p>Two rules explain the output:</p>
+        <ul>
+          <li><b>Level:</b> a logger with no level of its own uses its nearest parent's. <code>bank.accounts</code> has none, so it uses INFO (20) from <code>bank</code>.</li>
+          <li><b>Handlers:</b> the child loggers have no handlers. Their messages travel up to <code>bank</code>, which prints them.</li>
+        </ul>
+        <p>If a message appears <b>twice</b> in your log, a handler is attached at two levels of the tree. Remove one, or set <code>propagate = False</code> on the child to stop messages travelling up.</p>
+        <script type="text/plain" data-lang="py" data-file="propagate.py">
+import logging
+import sys
+
+logging.basicConfig(level=logging.INFO, stream=sys.stdout, format="root handler: %(message)s")
+
+audit = logging.getLogger("bank.audit")
+own = logging.StreamHandler(sys.stdout)
+own.setFormatter(logging.Formatter("audit handler: %(message)s"))
+audit.addHandler(own)
+
+audit.info("first message")        # printed by both handlers
+audit.propagate = False
+audit.info("second message")       # printed by the audit handler only
+        </script>
+        <script type="text/plain" data-lang="text" data-file="Output">
+audit handler: first message
+root handler: first message
+audit handler: second message
+        </script>
+      </section>
+
+      <section class="chapter" id="dict-config">
+        <h2>Configure once, at the start</h2>
+        <p>Logging should be set up in <b>one place</b>, at the very start of the program, usually in <code>main()</code>. Every other file only creates its logger and uses it. For anything beyond <code>basicConfig</code>, describe the whole setup as a dictionary and pass it to <code>logging.config.dictConfig()</code>.</p>
+        <script type="text/plain" data-lang="py" data-file="dict_config.py">
+import logging
+import logging.config
+
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "short": {"format": "%(levelname)-7s %(name)s: %(message)s"},
+    },
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+            "stream": "ext://sys.stdout",
+            "formatter": "short",
+            "level": "INFO",
+        },
+    },
+    "loggers": {
+        "bank.transfers": {"level": "WARNING"},
+    },
+    "root": {"level": "INFO", "handlers": ["console"]},
+}
+
+
+def main():
+    logging.config.dictConfig(LOGGING)         # once, before anything else
+    logging.getLogger("bank.accounts").info("Opened an account for Malinikesh")
+    logging.getLogger("bank.transfers").info("Sent 500 to Malinikesh")
+    logging.getLogger("bank.transfers").warning("Transfer limit nearly reached")
+
+
+main()
+        </script>
+        <script type="text/plain" data-lang="text" data-file="Output">
+INFO    bank.accounts: Opened an account for Malinikesh
+WARNING bank.transfers: Transfer limit nearly reached
+        </script>
+        <p>The dictionary has the same three parts as before: formatters, handlers that use a formatter, and loggers that use handlers. <code>"version": 1</code> is required. <code>"disable_existing_loggers": False</code> keeps loggers that were created before this call working, which is nearly always what you want.</p>
+        <p class="note"><b>Tip:</b> Because it is plain data, the dictionary can be loaded from a JSON file, so the logging setup can change without editing code.</p>
+      </section>
+
+      <section class="chapter" id="json-logging">
+        <h2>Structured logging</h2>
+        <p>A line such as "Deposited 500 for Rishikesh" is easy for a person to read and hard for a program to search. <b>Structured logging</b> writes each event as data, usually one JSON object per line, so a log tool can filter by field: every event for one account, or every amount over 10,000.</p>
+        <p>A formatter is just a class with a <code>format(record)</code> method, so a tiny one of your own is enough. Extra fields are passed with the <code>extra</code> argument and become attributes of the record.</p>
+        <script type="text/plain" data-lang="py" data-file="json_log.py">
+import json
+import logging
+import sys
+
+
+class JsonFormatter(logging.Formatter):
+    def format(self, record):
+        data = {
+            "level": record.levelname,
+            "logger": record.name,
+            "message": record.getMessage(),
+        }
+        for field in ("account", "amount"):
+            if hasattr(record, field):
+                data[field] = getattr(record, field)
+        return json.dumps(data)
+
+
+handler = logging.StreamHandler(sys.stdout)
+handler.setFormatter(JsonFormatter())
+logger = logging.getLogger("bank")
+logger.setLevel(logging.INFO)
+logger.addHandler(handler)
+
+logger.info("deposit", extra={"account": "XXXX4821", "amount": 500})
+logger.warning("low balance", extra={"account": "XXXX7310"})
+        </script>
+        <script type="text/plain" data-lang="text" data-file="Output">
+{"level": "INFO", "logger": "bank", "message": "deposit", "account": "XXXX4821", "amount": 500}
+{"level": "WARNING", "logger": "bank", "message": "low balance", "account": "XXXX7310"}
+        </script>
+        <p>A real version would also add the time, for example <code>self.formatTime(record)</code>. It is left out here so the output does not change between runs. Packages such as <code>python-json-logger</code> and <code>structlog</code> do this job fully. They need <code>pip install</code>.</p>
+      </section>
+
+      <section class="chapter" id="sensitive-data">
+        <h2>What never to log</h2>
+        <p>Log files are copied, backed up, sent to other systems and read by many people. Anything written to a log should be treated as public inside the company. Never log:</p>
+        <ul>
+          <li>Passwords, PINs, one-time codes and security answers</li>
+          <li>Full card numbers, CVV codes and expiry dates</li>
+          <li>Full account numbers and government identity numbers</li>
+          <li>API keys, tokens and session cookies</li>
+        </ul>
+        <p>Log an identifier that is safe, such as an internal customer id, or mask the value so only the last four digits remain.</p>
+        <script type="text/plain" data-lang="py" data-file="mask.py">
+import logging
+import sys
+
+logging.basicConfig(level=logging.INFO, stream=sys.stdout, format="%(levelname)s %(message)s")
+logger = logging.getLogger("bank")
+
+
+def mask(number, visible=4):
+    text = str(number)
+    return "X" * (len(text) - visible) + text[-visible:]
+
+
+account_number = "50100234564821"
+password = "kesh@2026"
+
+logger.info("Login for account %s", mask(account_number))
+logger.info("Password check passed")           # say what happened, never the value
+print(mask("4111111111111111"))
+        </script>
+        <script type="text/plain" data-lang="text" data-file="Output">
+INFO Login for account XXXXXXXXXX4821
+INFO Password check passed
+XXXXXXXXXXXX1111
+        </script>
+        <p>People forget, so add a safety net. A <b>filter</b> is an object that sees every record before it is written. This one replaces any run of 9 to 18 digits, wherever it appears in a message.</p>
+        <script type="text/plain" data-lang="py" data-file="mask_filter.py">
+import logging
+import re
+import sys
+
+
+class MaskDigits(logging.Filter):
+    pattern = re.compile(r"\d{9,18}")
+
+    def filter(self, record):
+        text = record.getMessage()
+        record.msg = self.pattern.sub(lambda m: "X" * (len(m.group()) - 4) + m.group()[-4:], text)
+        record.args = ()
+        return True                            # True means: keep the record
+
+
+handler = logging.StreamHandler(sys.stdout)
+handler.addFilter(MaskDigits())
+logging.basicConfig(level=logging.INFO, handlers=[handler], format="%(levelname)s %(message)s")
+
+logging.info("Transfer of %s from %s to %s", 500, "50100234564821", "50100998877310")
+        </script>
+        <script type="text/plain" data-lang="text" data-file="Output">
+INFO Transfer of 500 from XXXXXXXXXX4821 to XXXXXXXXXX7310
+        </script>
+        <p class="note"><b>Watch out:</b> A filter like this is a second line of defence, not the first. It cannot recognise a password. The first rule stays: do not pass secrets to the logger at all.</p>
+      </section>
+
+      <section class="chapter" id="logging-mistakes">
+        <h2>Common mistakes</h2>
+        <h3>Calling basicConfig in a library</h3>
+        <p>A library is code that other programs import. It must not decide where log messages go. That is the job of the program that uses it. A library only creates its logger. At most it adds a <code>NullHandler</code>, which does nothing.</p>
+        <script type="text/plain" data-lang="py" data-file="library_logger.py">
+import logging
+
+logger = logging.getLogger("banklib")
+logger.addHandler(logging.NullHandler())       # the library stays silent by default
+
+logger.info("Interest table loaded")           # goes nowhere until the app configures logging
+print(logger.handlers[0].__class__.__name__)   # NullHandler
+        </script>
+        <h3>The root logger everywhere</h3>
+        <p>Writing <code>logging.info(...)</code> in every file puts every message under the name <code>root</code>. You can no longer tell which module wrote a line, or make one module quieter. Use <code>logger = logging.getLogger(__name__)</code> at the top of each file.</p>
+        <h3>Logging in a tight loop</h3>
+        <p>One log line for each of a million rows makes the program slow and the log useless. Log a summary, or one line every so often.</p>
+        <script type="text/plain" data-lang="py" data-file="loop_summary.py">
+import logging
+import sys
+
+logging.basicConfig(level=logging.INFO, stream=sys.stdout, format="%(levelname)s %(message)s")
+logger = logging.getLogger("bank.batch")
+
+total = 0
+for number in range(1, 3001):
+    total += number                            # the work: no log call for each row
+    if number % 1000 == 0:
+        logger.info("Processed %d transactions", number)
+
+logger.info("Done: %d transactions, total %d", number, total)
+        </script>
+        <script type="text/plain" data-lang="text" data-file="Output">
+INFO Processed 1000 transactions
+INFO Processed 2000 transactions
+INFO Processed 3000 transactions
+INFO Done: 3000 transactions, total 4501500
+        </script>
+        <h3>Swallowing exceptions</h3>
+        <p><code>except Exception: pass</code> hides the error completely. The program goes on with wrong data and nobody knows why. If you catch an exception, either handle it properly or log it with its traceback.</p>
+        <script type="text/plain" data-lang="py" data-file="swallow.py">
+import logging
+import sys
+
+logging.basicConfig(level=logging.INFO, stream=sys.stdout, format="%(levelname)s %(message)s")
+logger = logging.getLogger("bank")
+
+
+def parse_amount(text):
+    try:
+        return float(text)
+    except ValueError:
+        pass                                   # bad: the error disappears
+
+
+def parse_amount_logged(text):
+    try:
+        return float(text)
+    except ValueError:
+        logger.error("Not an amount: %r", text)
+        raise                                  # good: recorded, then passed on
+
+
+print(parse_amount("5oo"))                     # None, and no clue why
+try:
+    parse_amount_logged("5oo")
+except ValueError:
+    print("The caller knows the amount was bad")
+        </script>
+        <script type="text/plain" data-lang="text" data-file="Output">
+None
+ERROR Not an amount: '5oo'
+The caller knows the amount was bad
+        </script>
+        <p class="note"><b>Also avoid:</b> logging the same error at every level of the call chain. Log it once, at the place that decides what to do about it.</p>
+      </section>
+
+      <section class="chapter" id="quick-reference">
+        <h2>Quick reference</h2>
+        <div class="scroll">
+          <table>
+            <thead>
+              <tr><th>I want to</th><th>Use</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>Understand a crash</td><td>Read the traceback from the bottom up</td></tr>
+              <tr><td>See a value and its name</td><td><code>print(f"{value=}")</code></td></tr>
+              <tr><td>See hidden spaces, quotes and the type</td><td><code>repr(value)</code>, <code>type(value)</code></td></tr>
+              <tr><td>State something that must be true</td><td><code>assert condition, "message"</code></td></tr>
+              <tr><td>Reject bad input</td><td><code>raise ValueError("message")</code></td></tr>
+              <tr><td>Pause the program and look around</td><td><code>breakpoint()</code>, then <code>n</code>, <code>s</code>, <code>p</code>, <code>c</code></td></tr>
+              <tr><td>Open the debugger where it crashed</td><td><code>python3 -m pdb script.py</code>, or <code>pdb.pm()</code></td></tr>
+              <tr><td>Stop only in the odd case</td><td><code>b 9, balance &lt; 0</code>, or <code>if ...: breakpoint()</code></td></tr>
+              <tr><td>Ignore all breakpoints for one run</td><td><code>PYTHONBREAKPOINT=0</code></td></tr>
+              <tr><td>Find who triggers a warning</td><td><code>python3 -W error script.py</code></td></tr>
+              <tr><td>Keep a traceback as text</td><td><code>traceback.format_exc()</code></td></tr>
+              <tr><td>Set up logging quickly</td><td><code>logging.basicConfig(level=..., format=...)</code></td></tr>
+              <tr><td>Get a logger in a module</td><td><code>logger = logging.getLogger(__name__)</code></td></tr>
+              <tr><td>Log an error with its traceback</td><td><code>logger.exception("message")</code> inside <code>except</code></td></tr>
+              <tr><td>Log to a file and the screen</td><td>Two handlers on one logger</td></tr>
+              <tr><td>Stop the log file growing for ever</td><td><code>RotatingFileHandler</code></td></tr>
+              <tr><td>Set up a whole application</td><td><code>logging.config.dictConfig(...)</code>, once, at the start</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>Next in the practice path: <a href="python-code-quality.html">Python Code Quality</a>.</p>
+      </section>
+
+    </div>
+  </main>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script src="../../assets/tutorial.js"></script>
+</body>
+</html>

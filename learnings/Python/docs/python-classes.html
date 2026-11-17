@@ -1,0 +1,644 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Python Classes</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@500;700&display=swap">
+<link rel="stylesheet" href="../../assets/tutorial.css">
+</head>
+<body data-track="python">
+
+<header class="topbar">
+  <div class="topbar-in">
+    <a class="brand" href="../../../index.html">Learnings</a>
+    <nav class="tracks" aria-label="Python paths">
+      <a href="../../../index.html#python-basics" aria-current="true">Python Basics</a>
+      <a href="../../../index.html#python-advanced">Python Advanced</a>
+      <a href="../../../index.html#python-practice">Python in Practice</a>
+      <a href="../../../index.html#python-design">Python Design</a>
+      <a href="../../../archive.html">Archive</a>
+    </nav>
+    <div class="tools">
+      <button class="btn" id="menu" type="button" aria-expanded="false">Chapters</button>
+      <input id="q" type="search" placeholder="Search chapters" aria-label="Search chapters">
+      <button class="btn" id="theme" type="button">Dark mode</button>
+    </div>
+  </div>
+</header>
+
+<div class="shell">
+  <aside class="side">
+    <p class="side-label">Classes</p>
+    <nav id="toc" aria-label="Chapters"></nav>
+  </aside>
+
+  <main>
+    <div class="page-head">
+      <p class="eyebrow">Python basics, part 5 of 6</p>
+      <h1>Python Classes</h1>
+      <p class="lead">A class lets you make your own kind of value, with its own data and its own functions. This page is a rewrite of the Pythofrank classes lesson from February 2017. The original examples are kept in spirit and updated from Python 2.7 to Python 3. Most of the page uses one small bank: a person, an account and a savings account.</p>
+    </div>
+
+    <div class="chapters">
+
+      <section class="chapter" id="class-and-object">
+        <h2>A class and an object</h2>
+        <p>A <b>class</b> is a plan. It says what data a thing holds and what it can do. An <b>object</b> is one thing built from that plan. An object is also called an <b>instance</b> of its class.</p>
+        <p>You already use classes all the time: <code>"Raipur"</code> is an object of the class <code>str</code>, and <code>[1, 2]</code> is an object of the class <code>list</code>. The <code>class</code> keyword lets you write your own. This is the first example of the 2017 lesson.</p>
+        <script type="text/plain" data-lang="py" data-file="car.py">
+class Car:
+    def __init__(self):               # runs when a new Car is made
+        self.name = "Maruti"
+        self.color = "Red"
+        self.price = 1000000
+
+    def show_details(self):           # a function that belongs to the class
+        print("Name :", self.name)
+        print("Color :", self.color)
+        print("Price :", self.price)
+
+
+car = Car()                           # calling the class makes an object
+car.show_details()
+# Name : Maruti
+# Color : Red
+# Price : 1000000
+
+print(type(car))                      # <class '__main__.Car'>
+        </script>
+        <p class="note"><b>Naming:</b> class names use capital letters for each word, like <code>Car</code> and <code>SavingsAccount</code>. Variables and functions stay in lower case.</p>
+      </section>
+
+      <section class="chapter" id="init-and-self">
+        <h2>__init__ and self</h2>
+        <p><code>__init__</code> is a special function that Python calls for you right after it makes a new object. Its job is to give the object its starting data. The values you pass when calling the class arrive as its parameters.</p>
+        <p><code>self</code> is the object being worked on. Python passes it in for you as the first parameter, so <code>Account(rishikesh, 5000)</code> fills <code>owner</code> and <code>balance</code>, not <code>self</code>.</p>
+        <script type="text/plain" data-lang="py" data-file="person_account.py">
+class Person:
+    def __init__(self, name, city):
+        self.name = name              # store the value on this object
+        self.city = city
+
+
+class Account:
+    def __init__(self, owner, balance=0):
+        self.owner = owner
+        self.balance = balance
+
+
+rishikesh = Person("Rishikesh Agrawani", "Bangalore")
+account = Account(rishikesh, 5000)
+
+print(account.balance)                # 5000
+print(account.owner.name)             # Rishikesh Agrawani
+print(account.owner.city)             # Bangalore
+
+hemkesh = Person("Hemkesh Agrawani", "Raipur")
+print(Account(hemkesh).balance)       # 0
+        </script>
+        <p class="note"><b>Concept:</b> a name stored on an object, like <code>account.balance</code>, is called an <b>attribute</b>. You read and change it with a dot.</p>
+      </section>
+
+      <section class="chapter" id="instance-attributes">
+        <h2>Each object has its own data</h2>
+        <p>Attributes set through <code>self</code> are <b>instance attributes</b>. Every object gets its own copy, so changing one account does not touch another.</p>
+        <script type="text/plain" data-lang="py" data-file="instance_attributes.py">
+class Account:
+    def __init__(self, owner, balance=0):
+        self.owner = owner
+        self.balance = balance
+
+
+sandhya = Account("Sandhya Agrawani", 8000)
+subhash = Account("Subhash Agrawani", 12000)
+
+sandhya.balance += 500                # only this object changes
+print(sandhya.balance)                # 8500
+print(subhash.balance)                # 12000
+
+print(vars(sandhya))                  # {'owner': 'Sandhya Agrawani', 'balance': 8500}
+        </script>
+        <p class="note"><b>Concept:</b> <code>vars(obj)</code> shows the instance attributes of an object as a dictionary. It is handy when you want to see what an object holds.</p>
+      </section>
+
+      <section class="chapter" id="class-attributes">
+        <h2>Class attributes are shared</h2>
+        <p>A name assigned directly inside the class, outside any function, is a <b>class attribute</b>. There is one copy and every object sees it. Use it for a value that is the same for all objects, like the name of the bank.</p>
+        <script type="text/plain" data-lang="py" data-file="class_attributes.py">
+class Account:
+    bank = "Agrawani Family Bank"     # class attribute: one copy for all
+    opened = 0
+
+    def __init__(self, owner):
+        self.owner = owner            # instance attribute: one per object
+        Account.opened += 1           # count every account that is made
+
+
+sandhya = Account("Sandhya Agrawani")
+subhash = Account("Subhash Agrawani")
+
+print(sandhya.bank)                   # Agrawani Family Bank
+print(subhash.bank)                   # Agrawani Family Bank
+print(Account.opened)                 # 2
+
+Account.bank = "AFB"                  # change it on the class
+print(sandhya.bank, subhash.bank)     # AFB AFB
+
+sandhya.bank = "My Bank"              # this makes a new instance attribute
+print(sandhya.bank, subhash.bank)     # My Bank AFB
+        </script>
+        <p class="note"><b>Watch out:</b> reading <code>obj.bank</code> looks on the object first and then on the class. Assigning <code>obj.bank = ...</code> always writes on the object. To change the shared value, assign on the class: <code>Account.bank = ...</code>.</p>
+      </section>
+
+      <section class="chapter" id="shared-list-trap">
+        <h2>The shared list trap</h2>
+        <p>A list or dictionary as a class attribute is shared too. If a method adds to it, every object sees the new item. This is almost never what you want.</p>
+        <script type="text/plain" data-lang="py" data-file="shared_trap.py">
+class Account:
+    history = []                      # WRONG: one list for all accounts
+
+    def __init__(self, owner):
+        self.owner = owner
+
+    def deposit(self, amount):
+        self.history.append(amount)
+
+
+sandhya = Account("Sandhya Agrawani")
+subhash = Account("Subhash Agrawani")
+
+sandhya.deposit(500)
+print(subhash.history)                # [500]
+# Subhash never deposited, but the amount is in his history
+print(sandhya.history is subhash.history)   # True
+        </script>
+        <p>The fix is to make the list inside <code>__init__</code>, so each object gets a new one.</p>
+        <script type="text/plain" data-lang="py" data-file="shared_fix.py">
+class Account:
+    def __init__(self, owner):
+        self.owner = owner
+        self.history = []             # RIGHT: a new list for every account
+
+    def deposit(self, amount):
+        self.history.append(amount)
+
+
+sandhya = Account("Sandhya Agrawani")
+subhash = Account("Subhash Agrawani")
+
+sandhya.deposit(500)
+print(sandhya.history)                # [500]
+print(subhash.history)                # []
+        </script>
+        <p class="note"><b>Rule:</b> values that can change in place (lists, dictionaries, sets) belong in <code>__init__</code>. Class attributes are for fixed values such as strings and numbers.</p>
+      </section>
+
+      <section class="chapter" id="methods">
+        <h2>Methods</h2>
+        <p>A function defined inside a class is called a <b>method</b>. It takes <code>self</code> first, so it can read and change the object it was called on. A method can return a value like any function, and it can call other methods through <code>self</code>.</p>
+        <script type="text/plain" data-lang="py" data-file="methods.py">
+class Account:
+    def __init__(self, owner, balance=0):
+        self.owner = owner
+        self.balance = balance
+
+    def deposit(self, amount):
+        self.balance += amount
+        return self.balance
+
+    def withdraw(self, amount):
+        if amount > self.balance:
+            print("Not enough money")
+            return self.balance
+        self.balance -= amount
+        return self.balance
+
+    def transfer(self, other, amount):
+        self.withdraw(amount)         # one method calling another
+        other.deposit(amount)
+
+
+sandhya = Account("Sandhya Agrawani", 8000)
+malinikesh = Account("Malinikesh Agrawani")
+
+print(sandhya.deposit(2000))          # 10000
+print(sandhya.withdraw(50000))
+# Not enough money
+# 10000
+
+sandhya.transfer(malinikesh, 3000)
+print(sandhya.balance, malinikesh.balance)   # 7000 3000
+        </script>
+        <p class="note"><b>Concept:</b> <code>sandhya.deposit(2000)</code> is a short way to write <code>Account.deposit(sandhya, 2000)</code>. That is where <code>self</code> comes from.</p>
+      </section>
+
+      <section class="chapter" id="str-and-repr">
+        <h2>__str__ and __repr__</h2>
+        <p>Printing a plain object gives something like <code>&lt;__main__.Account object at 0x10f3a2b50&gt;</code>, which tells you very little. Two special methods fix that. <code>__str__</code> returns the friendly text that <code>print()</code> shows. <code>__repr__</code> returns the exact text for developers, ideally the code that would rebuild the object.</p>
+        <script type="text/plain" data-lang="py" data-file="str_repr.py">
+class Account:
+    def __init__(self, owner, balance=0):
+        self.owner = owner
+        self.balance = balance
+
+    def __str__(self):
+        return f"{self.owner} has Rs. {self.balance}"
+
+    def __repr__(self):
+        return f"Account({self.owner!r}, {self.balance!r})"
+
+
+account = Account("Subhash Agrawani", 12000)
+
+print(account)                        # Subhash Agrawani has Rs. 12000
+print(str(account))                   # Subhash Agrawani has Rs. 12000
+print(repr(account))                  # Account('Subhash Agrawani', 12000)
+print([account])                      # [Account('Subhash Agrawani', 12000)]
+        </script>
+        <p class="note"><b>Tip:</b> if you write only one, write <code>__repr__</code>. Python uses it for <code>print()</code> as well when there is no <code>__str__</code>. Inside an f-string, <code>!r</code> asks for the <code>repr</code> of a value, which is why the name appears in quotes.</p>
+      </section>
+
+      <section class="chapter" id="inheritance">
+        <h2>Inheritance</h2>
+        <p>A class can be built on top of another class. The new class, called the <b>child</b> or subclass, gets every attribute and method of the <b>parent</b> and can add its own. Put the parent in brackets after the class name.</p>
+        <p>This is the inheritance example of the 2017 lesson. <code>super()</code> means "my parent class", so <code>super().__init__(a, b)</code> lets the parent set up its part of the object.</p>
+        <script type="text/plain" data-lang="py" data-file="three_nums.py">
+class TwoNums:
+    def __init__(self, a, b):
+        self.num1 = a
+        self.num2 = b
+
+    def add_two_nums(self):
+        return self.num1 + self.num2
+
+
+class ThreeNums(TwoNums):             # ThreeNums inherits from TwoNums
+    def __init__(self, a, b, c):
+        super().__init__(a, b)        # let the parent store num1 and num2
+        self.num3 = c
+
+    def add_three_nums(self):
+        return self.add_two_nums() + self.num3   # an inherited method
+
+
+obj = ThreeNums(10, 30, 60)
+print(obj.add_two_nums())             # 40
+print(obj.add_three_nums())           # 100
+        </script>
+      </section>
+
+      <section class="chapter" id="overriding">
+        <h2>Overriding and super()</h2>
+        <p>A child can also <b>override</b> a method: define one with the same name, and the child's version is used. Inside it, <code>super().method()</code> still reaches the parent's version, so you can add to the old behaviour without copying it.</p>
+        <p>A savings account is an account that earns interest and must keep a minimum balance.</p>
+        <script type="text/plain" data-lang="py" data-file="savings.py">
+class Account:
+    def __init__(self, owner, balance=0):
+        self.owner = owner
+        self.balance = balance
+
+    def deposit(self, amount):
+        self.balance += amount
+
+    def withdraw(self, amount):
+        if amount > self.balance:
+            print("Not enough money")
+            return
+        self.balance -= amount
+
+
+class SavingsAccount(Account):
+    minimum = 1000
+
+    def __init__(self, owner, balance=0, rate=0.04):
+        super().__init__(owner, balance)
+        self.rate = rate              # new attribute, only on savings accounts
+
+    def add_interest(self):           # new method
+        self.deposit(self.balance * self.rate)
+
+    def withdraw(self, amount):       # overrides Account.withdraw
+        if self.balance - amount < self.minimum:
+            print("Must keep Rs.", self.minimum)
+            return
+        super().withdraw(amount)      # the parent does the real work
+
+
+savings = SavingsAccount("Malinikesh Agrawani", 5000)
+savings.add_interest()
+print(savings.balance)                # 5200.0
+
+savings.withdraw(4500)                # Must keep Rs. 1000
+savings.withdraw(4000)
+print(savings.balance)                # 1200.0
+        </script>
+        <p class="note"><b>Python 2:</b> the old lesson wrote <code>TwoNums.__init__(self, a, b)</code>. That still works, but <code>super()</code> is shorter and does not repeat the parent's name.</p>
+      </section>
+
+      <section class="chapter" id="isinstance">
+        <h2>isinstance and issubclass</h2>
+        <p><code>isinstance(obj, cls)</code> asks whether an object was built from a class or from one of its children. <code>issubclass(a, b)</code> asks the same about two classes. Every class is a child of <code>object</code>, the parent of everything in Python.</p>
+        <script type="text/plain" data-lang="py" data-file="isinstance.py">
+class Account:
+    pass                              # pass means an empty body
+
+
+class SavingsAccount(Account):
+    pass
+
+
+plain = Account()
+savings = SavingsAccount()
+
+print(isinstance(savings, SavingsAccount))   # True
+print(isinstance(savings, Account))          # True
+# a savings account is also an account
+print(isinstance(plain, SavingsAccount))     # False
+
+print(type(savings) == Account)              # False
+# type() gives the exact class only
+print(issubclass(SavingsAccount, Account))   # True
+print(issubclass(Account, object))           # True
+print(isinstance(5, (int, float)))           # True
+# a tuple of classes means "any of these"
+        </script>
+        <p class="note"><b>Tip:</b> prefer <code>isinstance()</code> over comparing <code>type()</code>. Code that accepts an <code>Account</code> should accept a <code>SavingsAccount</code> as well.</p>
+      </section>
+
+      <section class="chapter" id="class-methods">
+        <h2>Class methods</h2>
+        <p>A <b>class method</b> receives the class itself as its first parameter, named <code>cls</code>, in place of an object. Mark it with <code>@classmethod</code>. You call it on the class, before any object exists.</p>
+        <p>Its main use is a second way to build an object. Here an account is built from one line of text.</p>
+        <script type="text/plain" data-lang="py" data-file="class_method.py">
+class Account:
+    def __init__(self, owner, balance=0):
+        self.owner = owner
+        self.balance = balance
+
+    @classmethod
+    def from_text(cls, text):         # cls is the class, not an object
+        owner, balance = text.split(",")
+        return cls(owner, int(balance))
+
+
+class SavingsAccount(Account):
+    pass
+
+
+account = Account.from_text("Hemkesh Agrawani,2500")
+print(account.owner)                  # Hemkesh Agrawani
+print(account.balance)                # 2500
+
+savings = SavingsAccount.from_text("Malinikesh Agrawani,7000")
+print(type(savings).__name__)         # SavingsAccount
+        </script>
+        <p class="note"><b>Why cls:</b> the method calls <code>cls(...)</code>, not <code>Account(...)</code>. So when it is called on <code>SavingsAccount</code> it builds a <code>SavingsAccount</code>, with no extra code in the child.</p>
+      </section>
+
+      <section class="chapter" id="static-methods">
+        <h2>Static methods</h2>
+        <p>A <b>static method</b> receives neither <code>self</code> nor <code>cls</code>. It is a plain function that lives inside the class because it belongs to the same topic. Mark it with <code>@staticmethod</code>.</p>
+        <script type="text/plain" data-lang="py" data-file="static_method.py">
+class Account:
+    def __init__(self, owner, balance=0):
+        self.owner = owner
+        self.balance = balance
+
+    @staticmethod
+    def is_valid_amount(amount):      # no self, no cls
+        return isinstance(amount, (int, float)) and amount > 0
+
+    def deposit(self, amount):
+        if not Account.is_valid_amount(amount):
+            print("Invalid amount:", amount)
+            return
+        self.balance += amount
+
+
+print(Account.is_valid_amount(500))   # True
+print(Account.is_valid_amount(-20))   # False
+
+account = Account("Rishikesh Agrawani")
+account.deposit(-20)                  # Invalid amount: -20
+account.deposit(500)
+print(account.balance)                # 500
+        </script>
+        <h3>When to use each</h3>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Kind</th><th>First parameter</th><th>Use it when</th></tr></thead>
+            <tbody>
+              <tr><td>Method (the normal kind)</td><td><code>self</code>, the object</td><td>The code reads or changes one object. This is the usual case.</td></tr>
+              <tr><td><code>@classmethod</code></td><td><code>cls</code>, the class</td><td>The code needs the class but no object yet, most often to build an object in another way.</td></tr>
+              <tr><td><code>@staticmethod</code></td><td>none</td><td>The code needs neither. It is a helper that is kept in the class to stay near related code.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="chapter" id="properties">
+        <h2>Properties</h2>
+        <p>A <b>property</b> is a method that is used like an attribute, with no brackets. The method under <code>@property</code> is the <b>getter</b>: it runs when the value is read. An optional <b>setter</b> runs when the value is assigned, which is the place to check the new value.</p>
+        <script type="text/plain" data-lang="py" data-file="properties.py">
+class Account:
+    def __init__(self, owner, balance=0):
+        self.owner = owner
+        self.balance = balance        # this already goes through the setter
+
+    @property
+    def balance(self):                # getter
+        return self._balance
+
+    @balance.setter
+    def balance(self, value):         # setter with a check
+        if value < 0:
+            raise ValueError("Balance cannot be negative")
+        self._balance = value
+
+    @property
+    def first_name(self):             # no setter, so it is read-only
+        return self.owner.split()[0]
+
+
+account = Account("Sandhya Agrawani", 8000)
+account.balance = 9000                # runs the setter
+print(account.balance)                # 9000
+print(account.first_name)             # Sandhya
+
+try:
+    account.balance = -50
+except ValueError as error:
+    print(error)                      # Balance cannot be negative
+
+try:
+    account.first_name = "Sandy"
+except AttributeError:
+    print("first_name is read-only")  # first_name is read-only
+        </script>
+        <p class="note"><b>Concept:</b> <code>raise</code> stops with an error and <code>try</code> / <code>except</code> catches it. Both are explained on the next page. The real value is kept in <code>_balance</code>, a different name from the property, or the getter would call itself for ever.</p>
+      </section>
+
+      <section class="chapter" id="private-names">
+        <h2>Private by convention</h2>
+        <p>Python has no truly private attributes. It has two naming habits. One leading underscore, <code>_balance</code>, tells other programmers "this is internal, please do not touch it from outside". Python does not enforce it.</p>
+        <p>Two leading underscores, <code>__pin</code>, make Python rename the attribute to <code>_ClassName__pin</code> behind the scenes. This is called <b>name mangling</b>. It stops a child class from reusing the name by accident. It is not a lock.</p>
+        <script type="text/plain" data-lang="py" data-file="private_names.py">
+class Account:
+    def __init__(self, owner, pin):
+        self.owner = owner
+        self._balance = 0             # internal by convention
+        self.__pin = pin              # stored as _Account__pin
+
+    def check_pin(self, pin):
+        return pin == self.__pin      # inside the class the short name works
+
+
+account = Account("Subhash Agrawani", "4321")
+
+print(account._balance)               # 0
+# it works, but the underscore asked you not to
+print(account.check_pin("4321"))      # True
+
+try:
+    print(account.__pin)
+except AttributeError as error:
+    print(error)                      # 'Account' object has no attribute '__pin'
+
+print(account._Account__pin)          # 4321
+# still reachable under the mangled name
+print(sorted(vars(account)))          # ['_Account__pin', '_balance', 'owner']
+        </script>
+        <p class="note"><b>Tip:</b> one underscore is enough in almost all code. Never rely on either form to hide a secret.</p>
+      </section>
+
+      <section class="chapter" id="eq">
+        <h2>Comparing objects with __eq__</h2>
+        <p>By default <code>==</code> on your own objects is true only when both sides are the very same object. Two accounts with the same data are still "not equal". Define <code>__eq__</code> to say what equal means for your class.</p>
+        <script type="text/plain" data-lang="py" data-file="equality.py">
+class Plain:
+    def __init__(self, owner, balance):
+        self.owner = owner
+        self.balance = balance
+
+
+class Account(Plain):
+    def __eq__(self, other):
+        if not isinstance(other, Account):
+            return NotImplemented     # "I cannot compare with that"
+        return (self.owner, self.balance) == (other.owner, other.balance)
+
+
+print(Plain("Hemkesh Agrawani", 100) == Plain("Hemkesh Agrawani", 100))   # False
+
+a = Account("Hemkesh Agrawani", 100)
+b = Account("Hemkesh Agrawani", 100)
+c = Account("Hemkesh Agrawani", 900)
+
+print(a == b)                         # True
+# equal, because the data is the same
+print(a is b)                         # False
+# but they are still two objects
+print(a == c)                         # False
+print(a != c)                         # True
+# != is worked out from __eq__ for free
+print(a == "Hemkesh Agrawani")        # False
+        </script>
+        <p class="note"><b>Watch out:</b> a class that defines <code>__eq__</code> can no longer be put in a set or used as a dictionary key, unless it also defines <code>__hash__</code>.</p>
+      </section>
+
+      <section class="chapter" id="dataclasses">
+        <h2>Dataclasses: the short way</h2>
+        <p>Many classes only hold a few values, and writing <code>__init__</code>, <code>__repr__</code> and <code>__eq__</code> for each one is repetitive. The <code>@dataclass</code> decorator writes all three for you from a list of field names and types.</p>
+        <script type="text/plain" data-lang="py" data-file="dataclass_account.py">
+from dataclasses import dataclass, field
+
+
+@dataclass
+class Person:
+    name: str
+    city: str = "Raipur"              # a default value
+
+
+@dataclass
+class Account:
+    owner: Person
+    balance: float = 0
+    history: list = field(default_factory=list)   # a new list per object
+
+    def deposit(self, amount):        # normal methods still work
+        self.balance += amount
+        self.history.append(amount)
+
+
+rishikesh = Person("Rishikesh Agrawani", "Bangalore")
+print(rishikesh)                      # Person(name='Rishikesh Agrawani', city='Bangalore')
+print(Person("Hemkesh Agrawani"))     # Person(name='Hemkesh Agrawani', city='Raipur')
+print(rishikesh == Person("Rishikesh Agrawani", "Bangalore"))   # True
+
+account = Account(rishikesh)
+account.deposit(1500)
+print(account.balance)                # 1500
+print(account.history)                # [1500]
+print(Account(rishikesh).history)     # []
+        </script>
+        <p class="note"><b>Concept:</b> the types after the colons are hints for readers and tools. Python does not check them when the program runs. <code>field(default_factory=list)</code> is the dataclass answer to the <a href="#shared-list-trap">shared list trap</a>: writing <code>history: list = []</code> is refused with an error.</p>
+      </section>
+
+      <section class="chapter" id="quick-reference">
+        <h2>Quick reference</h2>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>You want to</th><th>Write</th></tr></thead>
+            <tbody>
+              <tr><td>Define a class</td><td><code>class Account:</code></td></tr>
+              <tr><td>Set up a new object</td><td><code>def __init__(self, owner):</code></td></tr>
+              <tr><td>Make an object</td><td><code>account = Account("Sandhya Agrawani")</code></td></tr>
+              <tr><td>Store data on one object</td><td><code>self.balance = 0</code> inside a method</td></tr>
+              <tr><td>Share one value between all objects</td><td><code>bank = "AFB"</code> directly in the class</td></tr>
+              <tr><td>Control what <code>print()</code> shows</td><td><code>def __str__(self):</code> or <code>def __repr__(self):</code></td></tr>
+              <tr><td>Build on another class</td><td><code>class SavingsAccount(Account):</code></td></tr>
+              <tr><td>Call the parent's version</td><td><code>super().withdraw(amount)</code></td></tr>
+              <tr><td>Check what an object is</td><td><code>isinstance(obj, Account)</code></td></tr>
+              <tr><td>Build an object another way</td><td><code>@classmethod</code> with <code>cls</code></td></tr>
+              <tr><td>Keep a helper inside the class</td><td><code>@staticmethod</code></td></tr>
+              <tr><td>Check a value when it is assigned</td><td><code>@property</code> and <code>@name.setter</code></td></tr>
+              <tr><td>Mark something as internal</td><td><code>self._balance</code></td></tr>
+              <tr><td>Decide what <code>==</code> means</td><td><code>def __eq__(self, other):</code></td></tr>
+              <tr><td>Get all of that with less typing</td><td><code>@dataclass</code></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="chapter" id="python2">
+        <h2>What changed since Python 2</h2>
+        <p>The original lesson was written for Python 2.7. If you meet old code, these are the differences that matter for classes.</p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Python 2.7 (2017 lesson)</th><th>Python 3 (this page)</th></tr></thead>
+            <tbody>
+              <tr><td><code>print "Name : ", self.name</code></td><td><code>print("Name :", self.name)</code></td></tr>
+              <tr><td><code>class Car(object):</code> was needed for a modern class</td><td><code>class Car:</code> is enough, every class inherits from <code>object</code></td></tr>
+              <tr><td><code>TwoNums.__init__(self, a, b)</code></td><td><code>super().__init__(a, b)</code></td></tr>
+              <tr><td><code>super(ThreeNums, self).__init__(a, b)</code></td><td><code>super().__init__(a, b)</code></td></tr>
+              <tr><td>No dataclasses</td><td><code>@dataclass</code>, since Python 3.7</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="chapter" id="next">
+        <h2>Where to go next</h2>
+        <p>The 2017 page is still online as it was written, with its Python 2.7 code: <a href="../../../pages/classes.html">Pythofrank: Classes</a>.</p>
+        <p>The property setter above stopped a bad value with <code>raise</code>. Continue with <a href="python-errors-and-files.html">Python Errors and Files</a> to see how errors are raised, caught and used.</p>
+      </section>
+
+    </div>
+  </main>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script src="../../assets/tutorial.js"></script>
+</body>
+</html>

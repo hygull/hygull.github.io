@@ -129,7 +129,7 @@ body::before {
   font-size: 14px;
 }
 .tracks a:hover { color: var(--fg); background: var(--bg); }
-.tracks a[aria-current="page"] { color: var(--surface); background: var(--accent); }
+.tracks a[aria-current] { color: var(--surface); background: var(--accent); }
 .tools { margin-left: auto; display: flex; gap: 8px; align-items: center; }
 .tools input {
   width: 180px;
@@ -154,6 +154,12 @@ body::before {
 }
 .btn:hover { border-color: var(--accent); }
 #menu { display: none; }
+.view-switch { display: flex; }
+.view-switch .btn { border-radius: 0; margin-left: -1px; }
+.view-switch .btn:first-child { border-radius: 6px 0 0 6px; margin-left: 0; }
+.view-switch .btn:last-child { border-radius: 0 6px 6px 0; }
+.view-switch .btn:hover { position: relative; }
+.view-switch .btn[aria-pressed="true"] { background: var(--fg); color: var(--surface); border-color: var(--fg); position: relative; }
 
 /* Shell */
 .shell {
@@ -363,6 +369,32 @@ th { font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; color: 
 .track.design { --accent: var(--design); }
 .track.python { --accent: var(--python); }
 .track.bash { --accent: var(--bash); }
+
+/* Hub layouts: list is the default; grid and card are chosen with the view switch */
+.hub[data-view="grid"], .hub[data-view="card"] { max-width: 1180px; }
+.hub[data-view="grid"] .track-list, .hub[data-view="card"] .track-list { display: grid; gap: 16px; }
+.hub[data-view="grid"] .track-list { grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); }
+.hub[data-view="card"] .track-list { grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); }
+.hub[data-view="grid"] .track, .hub[data-view="card"] .track {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 18px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+.hub[data-view="grid"] .track h2, .hub[data-view="grid"] .track h3 { font-size: 19px; }
+.hub[data-view="grid"] .track p { font-size: 14px; line-height: 1.5; margin: 0; color: var(--muted); }
+.hub[data-view="grid"] .track .step { margin-bottom: 4px; }
+.hub[data-view="grid"] .track .path, .hub[data-view="grid"] .track .chips { display: none; }
+.hub[data-view="grid"] .track { position: relative; transition: border-color 0.15s; }
+.hub[data-view="grid"] .track:hover { border-color: var(--accent); }
+.hub[data-view="grid"] .track h2 a::after, .hub[data-view="grid"] .track h3 a::after { content: ""; position: absolute; inset: 0; border-radius: 10px; }
+.hub[data-view="card"] .track { border-top: 3px solid var(--accent); padding: 20px 22px 22px; }
+.hub[data-view="card"] .track h2, .hub[data-view="card"] .track h3 { font-size: 22px; }
+.hub[data-view="card"] .track p { font-size: 15px; }
+.hub[data-view="card"] .track .path { display: none; }
 .jump { margin-top: 20px; font-size: 15px; }
 .group { margin-top: 64px; scroll-margin-top: calc(var(--bar-h) + 20px); }
 .group > h2 { font-size: 30px; margin: 0 0 8px; }

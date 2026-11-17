@@ -1,0 +1,822 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Python Errors and Files</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@500;700&display=swap">
+<link rel="stylesheet" href="../../assets/tutorial.css">
+</head>
+<body data-track="python">
+
+<header class="topbar">
+  <div class="topbar-in">
+    <a class="brand" href="../../../index.html">Learnings</a>
+    <nav class="tracks" aria-label="Python paths">
+      <a href="../../../index.html#python-basics" aria-current="true">Python Basics</a>
+      <a href="../../../index.html#python-advanced">Python Advanced</a>
+      <a href="../../../index.html#python-practice">Python in Practice</a>
+      <a href="../../../index.html#python-design">Python Design</a>
+      <a href="../../../archive.html">Archive</a>
+    </nav>
+    <div class="tools">
+      <button class="btn" id="menu" type="button" aria-expanded="false">Chapters</button>
+      <input id="q" type="search" placeholder="Search chapters" aria-label="Search chapters">
+      <button class="btn" id="theme" type="button">Dark mode</button>
+    </div>
+  </div>
+</header>
+
+<div class="shell">
+  <aside class="side">
+    <p class="side-label">Errors and Files</p>
+    <nav id="toc" aria-label="Chapters"></nav>
+  </aside>
+
+  <main>
+    <div class="page-head">
+      <p class="eyebrow">Python basics, part 6 of 6</p>
+      <h1>Python Errors and Files</h1>
+      <p class="lead">Real programs meet bad input, missing files and dates. This page covers all three: how to catch and raise errors, how to read and write files, and how to work with dates and times. The first two parts are rewrites of the Pythofrank lessons on exception handling and file handling from February 2017, updated from Python 2.7 to Python 3. The part on dates is new.</p>
+    </div>
+
+    <div class="chapters">
+
+      <section class="chapter part" id="errors">
+        <h2>Errors</h2>
+        <p class="kind">Part 1 of 3 &middot; when something goes wrong</p>
+        <p>When Python cannot carry out a statement, it creates an <b>exception</b>: an object that describes what went wrong. If nothing deals with it, the program stops. This part shows how to read the message, how to catch an exception and carry on, and how to create your own.</p>
+        <ul>
+          <li><a href="#traceback">Reading a traceback</a>: what Python prints when it stops</li>
+          <li><a href="#try-except">try and except</a>: catch an error and carry on</li>
+          <li><a href="#specific">Catching specific exceptions</a>: ZeroDivisionError, TypeError, ValueError</li>
+          <li><a href="#lookup-errors">Things that are not there</a>: KeyError, IndexError, FileNotFoundError</li>
+          <li><a href="#several">Several exceptions in one try</a>: one handler each, or one for a group</li>
+          <li><a href="#else-finally">else and finally</a>: code for "no error" and for "always"</li>
+          <li><a href="#raise">Raising an exception</a>: report a problem yourself</li>
+          <li><a href="#custom">Your own exception classes</a>: InsufficientFunds</li>
+          <li><a href="#common-exceptions">Common built-in exceptions</a>: a table to look things up</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="traceback">
+        <h2>Reading a traceback</h2>
+        <p>This program asks for the balance of a person who has no account. It is marked as not runnable here because it stops with an error on purpose.</p>
+        <script type="text/plain" data-lang="py" data-file="balances.py" data-norun>
+balances = {"Sandhya Agrawani": 8000}
+
+
+def show_balance(name):
+    print(balances[name])
+
+
+show_balance("Sandhya Agrawani")
+show_balance("Hemkesh Agrawani")
+print("Done")
+        </script>
+        <script type="text/plain" data-lang="text" data-file="Output">
+8000
+Traceback (most recent call last):
+  File "balances.py", line 9, in <module>
+    show_balance("Hemkesh Agrawani")
+  File "balances.py", line 5, in show_balance
+    print(balances[name])
+KeyError: 'Hemkesh Agrawani'
+        </script>
+        <p>The text after the first line of output is a <b>traceback</b>. Python prints the full path of the file, which is shortened to <code>balances.py</code> here. Read the traceback from the bottom up.</p>
+        <ul>
+          <li>The <b>last line</b> is the answer: the kind of exception (<code>KeyError</code>) and its message (the key that was not found).</li>
+          <li>The lines above it show the path Python took. The lowest pair is where the error happened: line 5, inside <code>show_balance</code>.</li>
+          <li>The pair above that is who called it: line 9 of the file.</li>
+        </ul>
+        <p class="note"><b>Notice:</b> <code>Done</code> was never printed. An exception that nobody catches ends the program at that point.</p>
+      </section>
+
+      <section class="chapter" id="try-except">
+        <h2>try and except</h2>
+        <p>Put the risky statements in a <code>try</code> block. If one of them raises an exception, Python jumps to the matching <code>except</code> block and then carries on after it. If nothing goes wrong, the <code>except</code> block is skipped.</p>
+        <script type="text/plain" data-lang="py" data-file="try_except.py">
+a = 3
+b = 4
+name = "Randy"
+
+try:
+    print(a + b)                      # 7
+except TypeError:
+    print("Error while adding")       # skipped, nothing went wrong
+
+try:
+    print(a + name)                   # a number plus a string raises TypeError
+    print("This line is never reached")
+except TypeError:
+    print("Error while adding")       # Error while adding
+
+print("The program carries on")       # The program carries on
+        </script>
+        <p class="note"><b>Concept:</b> the jump happens at the exact statement that fails. The rest of the <code>try</code> block is skipped.</p>
+      </section>
+
+      <section class="chapter" id="specific">
+        <h2>Catching specific exceptions</h2>
+        <p>Every kind of error has its own class. Name the one you expect after <code>except</code>. Add <code>as error</code> to get the exception object, which prints as its message.</p>
+        <script type="text/plain" data-lang="py" data-file="specific.py">
+try:
+    print(10 / 0)
+except ZeroDivisionError as error:    # dividing by zero
+    print("Cannot divide:", error)    # Cannot divide: division by zero
+
+try:
+    print(10 + "Peter")
+except TypeError as error:            # a value of the wrong type
+    print("Wrong type:", error)
+# Wrong type: unsupported operand type(s) for +: 'int' and 'str'
+
+print(int("1234"))                    # 1234
+
+try:
+    print(int("1234y"))
+except ValueError as error:           # right type, but a value that cannot work
+    print("Bad value:", error)
+# Bad value: invalid literal for int() with base 10: '1234y'
+        </script>
+        <h3>Do not use a bare except</h3>
+        <p>The 2017 lesson often wrote <code>except:</code> with no name. That catches everything, including typing mistakes in your own code and Ctrl+C from the keyboard, so real bugs stay hidden. Here a misspelled name is reported as bad input.</p>
+        <script type="text/plain" data-lang="py" data-file="too_broad.py">
+amount = "500"
+
+try:
+    total = int(amuont) + 100         # typo: amuont
+except Exception:                     # too broad
+    print("Please enter a number")    # Please enter a number
+
+try:
+    total = int(amount) + 100
+except ValueError:                    # only what you expect
+    print("Please enter a number")
+print(total)                          # 600
+        </script>
+        <p class="note"><b>Rule:</b> catch the most specific exception you can. With <code>except ValueError</code> the typo would have stopped the program with a clear <code>NameError</code>, which is what you want for a bug.</p>
+      </section>
+
+      <section class="chapter" id="lookup-errors">
+        <h2>Things that are not there</h2>
+        <p>Three exceptions mean "you asked for something that does not exist": a dictionary key, a list position, or a file.</p>
+        <script type="text/plain" data-lang="py" data-file="lookup_errors.py">
+details = {"name": "Rishikesh Agrawani", "city": "Bangalore"}
+try:
+    print(details["name"])            # Rishikesh Agrawani
+    print(details["profession"])
+except KeyError as error:
+    print("No such key:", error)      # No such key: 'profession'
+
+fruits = ["Apple", "Orange", "Grape", "Blackberry", "Gooseberry", "Strawberry"]
+try:
+    print(fruits[4], fruits[5])       # Gooseberry Strawberry
+    print(fruits[6])
+except IndexError as error:
+    print(error)                      # list index out of range
+
+try:
+    f = open("no_such_file.txt")
+except FileNotFoundError as error:
+    print(error.filename, "is missing")   # no_such_file.txt is missing
+        </script>
+        <p class="note"><b>Tip:</b> you can often avoid the error. <code>details.get("profession", "unknown")</code> returns a default when the key is missing, and <code>len(fruits)</code> tells you the last valid position.</p>
+      </section>
+
+      <section class="chapter" id="several">
+        <h2>Several exceptions in one try</h2>
+        <p>One <code>try</code> can have several <code>except</code> blocks. Python checks them from top to bottom and runs the first that matches. To handle a group the same way, put the classes in a tuple.</p>
+        <script type="text/plain" data-lang="py" data-file="several.py">
+def share(total, people):
+    try:
+        print(int(total) / int(people))
+    except ValueError:
+        print("Both values must be whole numbers")
+    except ZeroDivisionError:
+        print("There must be at least one person")
+
+
+share("1000", "4")                    # 250.0
+share("1000", "0")                    # There must be at least one person
+share("1000", "four")                 # Both values must be whole numbers
+
+
+def share_quietly(total, people):
+    try:
+        return int(total) / int(people)
+    except (ValueError, ZeroDivisionError) as error:   # one handler for both
+        print(type(error).__name__)
+        return None
+
+
+print(share_quietly("1000", "0"))
+# ZeroDivisionError
+# None
+        </script>
+      </section>
+
+      <section class="chapter" id="else-finally">
+        <h2>else and finally</h2>
+        <p>Two more blocks can follow. <code>else</code> runs only when the <code>try</code> block finished with no exception. <code>finally</code> runs every time, error or not, which makes it the place for clean-up work.</p>
+        <script type="text/plain" data-lang="py" data-file="else_finally.py">
+def test_func(b, s):
+    try:
+        print(10 / b)
+        number = int(s)
+    except ZeroDivisionError:
+        print("ZeroDivisionError occurred")
+    except ValueError:
+        print("ValueError occurred")
+    else:
+        print("No error occurred, number is", number)
+    finally:
+        print("finally always runs")
+
+
+test_func(5, "1235")
+# 2.0
+# No error occurred, number is 1235
+# finally always runs
+
+test_func(0, "1235")
+# ZeroDivisionError occurred
+# finally always runs
+
+test_func(5, "1235abc")
+# 2.0
+# ValueError occurred
+# finally always runs
+        </script>
+        <p class="note"><b>Order:</b> the blocks must be written as <code>try</code>, <code>except</code>, <code>else</code>, <code>finally</code>. Only <code>try</code> plus one of <code>except</code> or <code>finally</code> is required.</p>
+      </section>
+
+      <section class="chapter" id="raise">
+        <h2>Raising an exception</h2>
+        <p>Your own code can report a problem with <code>raise</code>. Create an exception object with a clear message and raise it. The function stops at that line, and the caller decides what to do.</p>
+        <script type="text/plain" data-lang="py" data-file="raise.py">
+def deposit(balance, amount):
+    if not isinstance(amount, (int, float)):
+        raise TypeError("Amount must be a number")
+    if amount <= 0:
+        raise ValueError("Amount must be positive")
+    return balance + amount
+
+
+print(deposit(1000, 500))             # 1500
+
+try:
+    deposit(1000, -50)
+except ValueError as error:
+    print(error)                      # Amount must be positive
+
+try:
+    deposit(1000, "fifty")
+except TypeError as error:
+    print(error)                      # Amount must be a number
+        </script>
+        <p class="note"><b>Why raise and not print:</b> a function that only prints "invalid amount" lets the program continue with wrong data. An exception cannot be ignored by accident.</p>
+      </section>
+
+      <section class="chapter" id="custom">
+        <h2>Your own exception classes</h2>
+        <p>An exception is a class, so you can write your own by inheriting from <code>Exception</code>. A custom class gives the error a name that says what it means in your program, and callers can catch exactly that.</p>
+        <script type="text/plain" data-lang="py" data-file="insufficient_funds.py">
+class InsufficientFunds(Exception):
+    def __init__(self, balance, amount):
+        super().__init__(f"Cannot withdraw {amount}, balance is only {balance}")
+        self.balance = balance
+        self.amount = amount
+
+
+class Account:
+    def __init__(self, owner, balance=0):
+        self.owner = owner
+        self.balance = balance
+
+    def withdraw(self, amount):
+        if amount > self.balance:
+            raise InsufficientFunds(self.balance, amount)
+        self.balance -= amount
+
+
+account = Account("Malinikesh Agrawani", 3000)
+account.withdraw(1000)
+print(account.balance)                # 2000
+
+try:
+    account.withdraw(5000)
+except InsufficientFunds as error:
+    print(error)                      # Cannot withdraw 5000, balance is only 2000
+    print(error.amount - error.balance)   # 3000
+
+print(account.balance)                # 2000
+        </script>
+        <p class="note"><b>Concept:</b> the simplest custom exception is two lines: <code>class InsufficientFunds(Exception): pass</code>. Add an <code>__init__</code> only when you want to carry extra data, as here.</p>
+      </section>
+
+      <section class="chapter" id="common-exceptions">
+        <h2>Common built-in exceptions</h2>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Exception</th><th>Raised when</th><th>Example</th></tr></thead>
+            <tbody>
+              <tr><td><code>ZeroDivisionError</code></td><td>Dividing by zero</td><td><code>10 / 0</code></td></tr>
+              <tr><td><code>TypeError</code></td><td>A value has the wrong type for the operation</td><td><code>10 + "Peter"</code></td></tr>
+              <tr><td><code>ValueError</code></td><td>The type is right but the value cannot be used</td><td><code>int("1234y")</code></td></tr>
+              <tr><td><code>KeyError</code></td><td>A dictionary has no such key</td><td><code>details["profession"]</code></td></tr>
+              <tr><td><code>IndexError</code></td><td>A list or string has no such position</td><td><code>fruits[6]</code></td></tr>
+              <tr><td><code>AttributeError</code></td><td>An object has no such attribute or method</td><td><code>"abc".push("d")</code></td></tr>
+              <tr><td><code>NameError</code></td><td>A name was never defined, often a typo</td><td><code>print(amuont)</code></td></tr>
+              <tr><td><code>UnboundLocalError</code></td><td>A function uses a local variable before giving it a value</td><td><code>n += 1</code> on an outer <code>n</code> inside a function</td></tr>
+              <tr><td><code>FileNotFoundError</code></td><td>The file to open does not exist</td><td><code>open("no_such_file.txt")</code></td></tr>
+              <tr><td><code>PermissionError</code></td><td>You are not allowed to read or write the file</td><td>Writing into a protected folder</td></tr>
+              <tr><td><code>ImportError</code></td><td>A module or a name in it cannot be imported</td><td><code>from math import sqare</code></td></tr>
+              <tr><td><code>KeyboardInterrupt</code></td><td>The user pressed Ctrl+C</td><td>Stopping a long loop</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><b>Family tree:</b> these classes inherit from each other. <code>KeyError</code> and <code>IndexError</code> are children of <code>LookupError</code>, and <code>FileNotFoundError</code> is a child of <code>OSError</code>. Catching a parent also catches its children. <code>KeyboardInterrupt</code> is not a child of <code>Exception</code>, so <code>except Exception</code> lets Ctrl+C through.</p>
+      </section>
+
+      <section class="chapter part" id="files">
+        <h2>Files</h2>
+        <p class="kind">Part 2 of 3 &middot; keeping data after the program ends</p>
+        <p>Variables disappear when a program stops. A <b>file</b> keeps data on disk so that the next run, or another program, can use it. This part reads and writes plain text first, then two formats that every tool understands: CSV for tables and JSON for nested data.</p>
+        <ul>
+          <li><a href="#open-modes">Opening a file</a>: <code>open()</code> and its modes</li>
+          <li><a href="#write-read">Writing and reading text</a>: <code>with open(...)</code></li>
+          <li><a href="#line-by-line">Reading line by line</a>: loop over the file</li>
+          <li><a href="#append">Appending</a>: add to the end without erasing</li>
+          <li><a href="#seek-tell">Moving inside a file</a>: <code>seek()</code> and <code>tell()</code></li>
+          <li><a href="#pathlib">pathlib</a>: paths as objects</li>
+          <li><a href="#csv">CSV files</a>: rows and columns</li>
+          <li><a href="#json">JSON files</a>: dictionaries and lists</li>
+          <li><a href="#missing-file">A missing file</a>: handle it without crashing</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="open-modes">
+        <h2>Opening a file</h2>
+        <p><code>open(name, mode)</code> returns a file object. The <b>mode</b> is a short string that says what you plan to do. The default is <code>"r"</code>, read text.</p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Mode</th><th>Meaning</th><th>If the file exists</th><th>If it does not exist</th></tr></thead>
+            <tbody>
+              <tr><td><code>"r"</code></td><td>Read</td><td>Starts at the beginning</td><td><code>FileNotFoundError</code></td></tr>
+              <tr><td><code>"w"</code></td><td>Write</td><td>Erases the old content first</td><td>Creates it</td></tr>
+              <tr><td><code>"a"</code></td><td>Append</td><td>Adds at the end</td><td>Creates it</td></tr>
+              <tr><td><code>"x"</code></td><td>Create only</td><td><code>FileExistsError</code></td><td>Creates it</td></tr>
+              <tr><td><code>"r+"</code></td><td>Read and write</td><td>Starts at the beginning, keeps the content</td><td><code>FileNotFoundError</code></td></tr>
+              <tr><td><code>"rb"</code>, <code>"wb"</code></td><td>The same in binary mode</td><td colspan="2">Add <code>b</code> for files that are not text, such as images. You then get <code>bytes</code>, not <code>str</code>.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><b>Watch out:</b> <code>"w"</code> empties an existing file the moment it is opened, before you write anything.</p>
+      </section>
+
+      <section class="chapter" id="write-read">
+        <h2>Writing and reading text</h2>
+        <p>Open files inside a <code>with</code> statement. The file is closed for you when the block ends, even if an error happens inside it. <code>write()</code> adds a string exactly as given, so you add <code>\n</code> yourself to end a line. <code>read()</code> returns the whole file as one string.</p>
+        <script type="text/plain" data-lang="py" data-file="write_read.py">
+with open("details.txt", "w", encoding="utf-8") as f:
+    f.write("Hello")
+    f.write("Dear\n")                 # write() does not add a new line
+    f.write("This is a great opportunity to play with you\n")
+
+print(f.closed)                       # True
+# the file was closed when the with block ended
+
+with open("details.txt", encoding="utf-8") as f:
+    text = f.read()
+
+print(text, end="")
+# HelloDear
+# This is a great opportunity to play with you
+
+print(len(text))                      # 55
+        </script>
+        <p class="note"><b>Python 2:</b> the old lesson wrote <code>f = open(...)</code> and later <code>f.close()</code>. If an error happened in between, the file stayed open. <code>with</code> removes that risk. Passing <code>encoding="utf-8"</code> makes the file read the same on every computer.</p>
+      </section>
+
+      <section class="chapter" id="line-by-line">
+        <h2>Reading line by line</h2>
+        <p>A file object can be used in a <code>for</code> loop. It hands over one line at a time, so even a very large file never has to fit in memory. Each line still ends with its <code>\n</code>, which <code>strip()</code> or <code>rstrip("\n")</code> removes.</p>
+        <script type="text/plain" data-lang="py" data-file="lines.py">
+with open("deposits.txt", "w", encoding="utf-8") as f:
+    f.write("Sandhya 2000\nSubhash 3500\nHemkesh 500\n")
+
+total = 0
+with open("deposits.txt", encoding="utf-8") as f:
+    for line in f:                    # one line per round
+        name, amount = line.split()
+        total += int(amount)
+        print(name, "deposited", amount)
+# Sandhya deposited 2000
+# Subhash deposited 3500
+# Hemkesh deposited 500
+print(total)                          # 6000
+
+with open("deposits.txt", encoding="utf-8") as f:
+    print(f.readline(), end="")       # Sandhya 2000
+    print(f.readlines())              # ['Subhash 3500\n', 'Hemkesh 500\n']
+    print(repr(f.read()))             # ''
+        </script>
+        <p class="note"><b>Concept:</b> a file object remembers how far it has read. <code>readline()</code> took the first line, <code>readlines()</code> took the rest as a list, and after that <code>read()</code> has nothing left and returns an empty string.</p>
+      </section>
+
+      <section class="chapter" id="append">
+        <h2>Appending</h2>
+        <p>Mode <code>"a"</code> keeps what is in the file and adds new text at the end. It is the right mode for a log, where every run adds a line.</p>
+        <script type="text/plain" data-lang="py" data-file="append.py">
+with open("log.txt", "w", encoding="utf-8") as f:
+    f.write("Account opened\n")
+
+with open("log.txt", "a", encoding="utf-8") as f:
+    f.write("Deposit 2000\n")
+
+with open("log.txt", "a", encoding="utf-8") as f:
+    print("Withdraw 500", file=f)     # print() can write to a file too
+
+with open("log.txt", encoding="utf-8") as f:
+    print(f.read().splitlines())
+# ['Account opened', 'Deposit 2000', 'Withdraw 500']
+        </script>
+      </section>
+
+      <section class="chapter" id="seek-tell">
+        <h2>Moving inside a file</h2>
+        <p><code>tell()</code> gives the current position in the file and <code>seek(n)</code> moves to position <code>n</code>, counted from the start. With mode <code>"r+"</code> you can then overwrite part of the file in place. This is the second example of the 2017 lesson.</p>
+        <script type="text/plain" data-lang="py" data-file="seek_tell.py">
+with open("letters.txt", "w", encoding="utf-8") as f:
+    f.write("abcdefghijklmnopqrstuvwxyz")
+
+with open("letters.txt", "r+", encoding="utf-8") as f:
+    f.seek(5)                         # jump past "abcde"
+    f.write("NEW_WORD")               # overwrites the next 8 characters
+    print(f.tell())                   # 13
+    print(f.read())                   # nopqrstuvwxyz
+    f.seek(0)                         # back to the start
+    print(f.read())                   # abcdeNEW_WORDnopqrstuvwxyz
+        </script>
+        <p class="note"><b>Tip:</b> you rarely need this for text. Most programs read the whole file, change the data in memory and write the file again.</p>
+      </section>
+
+      <section class="chapter" id="pathlib">
+        <h2>pathlib</h2>
+        <p>The <code>pathlib</code> module treats a file path as an object. A <code>Path</code> can tell you about the file, build other paths with <code>/</code>, and read or write a whole file in one call.</p>
+        <script type="text/plain" data-lang="py" data-file="paths.py">
+from pathlib import Path
+
+folder = Path("statements")
+folder.mkdir(exist_ok=True)           # create the folder, fine if it exists
+
+path = folder / "sandhya.txt"         # join with /
+path.write_text("Balance: 8000\n", encoding="utf-8")
+
+print(path.as_posix())                # statements/sandhya.txt
+print(path.name)                      # sandhya.txt
+print(path.stem, path.suffix)         # sandhya .txt
+print(path.parent.name)               # statements
+print(path.exists(), path.is_file())  # True True
+print(path.read_text(encoding="utf-8").strip())   # Balance: 8000
+
+(folder / "subhash.txt").write_text("Balance: 12000\n", encoding="utf-8")
+print(sorted(p.name for p in folder.glob("*.txt")))
+# ['sandhya.txt', 'subhash.txt']
+
+path.unlink()                         # delete the file
+print(path.exists())                  # False
+        </script>
+        <p class="note"><b>Concept:</b> <code>open(path)</code> accepts a <code>Path</code> as well as a string. <code>as_posix()</code> shows the path with forward slashes on every system. On Windows, printing the path directly shows backslashes.</p>
+      </section>
+
+      <section class="chapter" id="csv">
+        <h2>CSV files</h2>
+        <p>CSV means comma-separated values: one row per line, with commas between the columns. Spreadsheets and databases can all read and write it. The <code>csv</code> module handles the details, such as a comma inside a value.</p>
+        <script type="text/plain" data-lang="py" data-file="accounts_csv.py">
+import csv
+
+rows = [
+    ["owner", "city", "balance"],
+    ["Sandhya Agrawani", "Raipur", 8000],
+    ["Subhash Agrawani", "Raipur", 12000],
+    ["Agrawani, Rishikesh", "Bangalore", 5000],   # a comma inside a value
+]
+
+with open("accounts.csv", "w", newline="", encoding="utf-8") as f:
+    csv.writer(f).writerows(rows)
+
+with open("accounts.csv", encoding="utf-8") as f:
+    print(f.read(), end="")
+        </script>
+        <script type="text/plain" data-lang="text" data-file="accounts.csv">
+owner,city,balance
+Sandhya Agrawani,Raipur,8000
+Subhash Agrawani,Raipur,12000
+"Agrawani, Rishikesh",Bangalore,5000
+        </script>
+        <p><code>csv.DictReader</code> uses the first row as column names and gives each following row as a dictionary. Every value comes back as a string, so convert numbers yourself.</p>
+        <script type="text/plain" data-lang="py" data-file="read_csv.py">
+import csv
+
+with open("accounts.csv", "w", newline="", encoding="utf-8") as f:
+    writer = csv.DictWriter(f, fieldnames=["owner", "balance"])
+    writer.writeheader()
+    writer.writerow({"owner": "Sandhya Agrawani", "balance": 8000})
+    writer.writerow({"owner": "Subhash Agrawani", "balance": 12000})
+
+total = 0
+with open("accounts.csv", newline="", encoding="utf-8") as f:
+    for row in csv.DictReader(f):
+        print(row["owner"], row["balance"])
+        total += int(row["balance"])  # "8000" is a string until converted
+# Sandhya Agrawani 8000
+# Subhash Agrawani 12000
+print(total)                          # 20000
+        </script>
+        <p class="note"><b>Rule:</b> always pass <code>newline=""</code> when opening a file for the <code>csv</code> module. Without it, Windows adds an empty line after every row.</p>
+      </section>
+
+      <section class="chapter" id="json">
+        <h2>JSON files</h2>
+        <p>JSON is a text format that looks very much like Python dictionaries and lists. It keeps nesting and basic types (text, numbers, true and false, nothing), which CSV cannot. <code>json.dump()</code> writes a value to a file and <code>json.load()</code> reads it back.</p>
+        <script type="text/plain" data-lang="py" data-file="account_json.py">
+import json
+
+account = {
+    "owner": "Rishikesh Agrawani",
+    "balance": 5000.5,
+    "active": True,
+    "nominee": None,
+    "deposits": [2000, 3000.5],
+}
+
+with open("account.json", "w", encoding="utf-8") as f:
+    json.dump(account, f, indent=2)   # indent makes the file easy to read
+
+with open("account.json", encoding="utf-8") as f:
+    loaded = json.load(f)
+
+print(loaded["owner"])                # Rishikesh Agrawani
+print(sum(loaded["deposits"]))        # 5000.5
+print(loaded == account)              # True
+
+text = json.dumps({"owner": "Hemkesh Agrawani", "active": False})   # to a string
+print(text)                           # {"owner": "Hemkesh Agrawani", "active": false}
+print(json.loads(text)["active"])     # False
+        </script>
+        <script type="text/plain" data-lang="text" data-file="account.json">
+{
+  "owner": "Rishikesh Agrawani",
+  "balance": 5000.5,
+  "active": true,
+  "nominee": null,
+  "deposits": [
+    2000,
+    3000.5
+  ]
+}
+        </script>
+        <p class="note"><b>Remember:</b> <code>dump</code> and <code>load</code> work with files. <code>dumps</code> and <code>loads</code>, with an <code>s</code> for string, work with text in memory. JSON has no tuples or sets: a tuple comes back as a list, and a set cannot be saved at all.</p>
+      </section>
+
+      <section class="chapter" id="missing-file">
+        <h2>A missing file</h2>
+        <p>The first time a program runs, its data file usually does not exist yet. There are two ways to deal with that. Ask first with <code>Path.exists()</code>, or just try to open the file and catch <code>FileNotFoundError</code>.</p>
+        <script type="text/plain" data-lang="py" data-file="missing_file.py">
+import json
+from pathlib import Path
+
+
+def load_balances(filename):
+    try:
+        with open(filename, encoding="utf-8") as f:
+            return json.load(f)
+    except FileNotFoundError:
+        print(filename, "not found, starting empty")
+        return {}
+
+
+balances = load_balances("balances.json")
+# balances.json not found, starting empty
+print(balances)                       # {}
+
+balances["Sandhya Agrawani"] = 8000
+Path("balances.json").write_text(json.dumps(balances), encoding="utf-8")
+
+print(Path("balances.json").exists()) # True
+print(load_balances("balances.json")) # {'Sandhya Agrawani': 8000}
+        </script>
+        <p class="note"><b>Tip:</b> trying and catching is usually the safer of the two. A file can be deleted in the short moment between the check and the <code>open()</code>.</p>
+      </section>
+
+      <section class="chapter part" id="dates">
+        <h2>Dates and times</h2>
+        <p class="kind">Part 3 of 3 &middot; the datetime module</p>
+        <p>Bank records are full of dates: when an account was opened, when a deposit was made, how many days until a payment is due. The <code>datetime</code> module in the standard library has a type for each need.</p>
+        <p>The examples use fixed dates so that they print the same result every day. In real code, <code>date.today()</code> and <code>datetime.now()</code> give the current date and time.</p>
+        <ul>
+          <li><a href="#date-objects">date and datetime objects</a>: make them and read their parts</li>
+          <li><a href="#strftime">Dates to text and back</a>: <code>strftime</code> and <code>strptime</code></li>
+          <li><a href="#timedelta">Adding and subtracting time</a>: <code>timedelta</code></li>
+          <li><a href="#date-difference">The difference between two dates</a>: days, weeks and age</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="date-objects">
+        <h2>date and datetime objects</h2>
+        <p>A <code>date</code> holds a year, a month and a day. A <code>datetime</code> holds those plus hours, minutes and seconds. Both can be compared with <code>&lt;</code> and <code>&gt;</code>, where earlier is smaller.</p>
+        <script type="text/plain" data-lang="py" data-file="dates.py">
+from datetime import date, datetime
+
+opened = date(2017, 2, 13)            # year, month, day
+print(opened)                         # 2017-02-13
+print(opened.year, opened.month, opened.day)   # 2017 2 13
+print(opened.weekday())               # 0
+# weekday() counts from Monday as 0 to Sunday as 6
+
+deposit = datetime(2017, 2, 13, 9, 30)   # plus hour and minute
+print(deposit)                        # 2017-02-13 09:30:00
+print(deposit.hour, deposit.minute)   # 9 30
+print(deposit.date())                 # 2017-02-13
+print(deposit.time())                 # 09:30:00
+
+print(opened < date(2020, 1, 1))      # True
+print(opened.replace(year=2018))      # 2018-02-13
+        </script>
+        <p>The current moment is different on every run, so this block is marked as not runnable here. The comments show the kind of value you get.</p>
+        <script type="text/plain" data-lang="py" data-file="now.py" data-norun>
+from datetime import date, datetime
+
+print(date.today())                   # for example 2026-11-17
+print(datetime.now())                 # for example 2026-11-17 18:42:07.531962
+        </script>
+        <p class="note"><b>Concept:</b> dates are immutable, which means they cannot be changed in place. <code>replace()</code> returns a new date.</p>
+      </section>
+
+      <section class="chapter" id="strftime">
+        <h2>Dates to text and back</h2>
+        <p><code>strftime()</code> ("string format time") turns a date into text in the layout you choose. <code>strptime()</code> ("string parse time") does the reverse: it reads text into a <code>datetime</code>, given the same kind of layout. The layout is a string of format codes that each start with <code>%</code>.</p>
+        <script type="text/plain" data-lang="py" data-file="formatting.py">
+from datetime import date, datetime
+
+opened = date(2017, 2, 13)
+print(opened.strftime("%d/%m/%Y"))            # 13/02/2017
+print(opened.strftime("%d %b %Y"))            # 13 Feb 2017
+print(opened.strftime("%A, %d %B %Y"))        # Monday, 13 February 2017
+print(f"{opened:%d-%m-%y}")                   # 13-02-17
+print(opened.isoformat())                     # 2017-02-13
+
+deposit = datetime.strptime("13 Feb 2017 09:30", "%d %b %Y %H:%M")
+print(deposit)                                # 2017-02-13 09:30:00
+print(deposit.strftime("%I:%M %p"))           # 09:30 AM
+
+print(date.fromisoformat("2017-02-13"))       # 2017-02-13
+
+try:
+    datetime.strptime("13/02/2017", "%Y-%m-%d")
+except ValueError:
+    print("The text does not match the layout")
+# The text does not match the layout
+        </script>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Code</th><th>Meaning</th><th>Example</th></tr></thead>
+            <tbody>
+              <tr><td><code>%Y</code></td><td>Year with four digits</td><td>2017</td></tr>
+              <tr><td><code>%y</code></td><td>Year with two digits</td><td>17</td></tr>
+              <tr><td><code>%m</code></td><td>Month as a number</td><td>02</td></tr>
+              <tr><td><code>%B</code>, <code>%b</code></td><td>Month name, full and short</td><td>February, Feb</td></tr>
+              <tr><td><code>%d</code></td><td>Day of the month</td><td>13</td></tr>
+              <tr><td><code>%A</code>, <code>%a</code></td><td>Weekday name, full and short</td><td>Monday, Mon</td></tr>
+              <tr><td><code>%H</code></td><td>Hour, 24-hour clock</td><td>09, 21</td></tr>
+              <tr><td><code>%I</code></td><td>Hour, 12-hour clock</td><td>09</td></tr>
+              <tr><td><code>%M</code></td><td>Minute</td><td>30</td></tr>
+              <tr><td><code>%S</code></td><td>Second</td><td>00</td></tr>
+              <tr><td><code>%p</code></td><td>AM or PM</td><td>AM</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><b>Tip:</b> for saving dates in files, use the ISO layout <code>2017-02-13</code>. It has no day and month confusion and it sorts correctly as plain text.</p>
+      </section>
+
+      <section class="chapter" id="timedelta">
+        <h2>Adding and subtracting time</h2>
+        <p>A <code>timedelta</code> is a length of time: a number of days, hours, minutes and so on. Add it to a date to move forward and subtract it to move back. The calendar is handled for you, including month ends and leap years.</p>
+        <script type="text/plain" data-lang="py" data-file="timedelta.py">
+from datetime import date, datetime, timedelta
+
+opened = date(2017, 2, 13)
+
+print(opened + timedelta(days=30))    # 2017-03-15
+print(opened - timedelta(weeks=1))    # 2017-02-06
+print(date(2016, 2, 28) + timedelta(days=1))   # 2016-02-29
+# 2016 was a leap year, 2017 was not
+print(date(2017, 2, 28) + timedelta(days=1))   # 2017-03-01
+
+deposit = datetime(2017, 2, 13, 23, 30)
+print(deposit + timedelta(hours=1, minutes=45))   # 2017-02-14 01:15:00
+
+due = opened                          # a payment every 7 days, three times
+for _ in range(3):
+    due += timedelta(days=7)
+    print(due.strftime("%d %b"), end="  ")
+print()                               # 20 Feb  27 Feb  06 Mar
+        </script>
+        <p class="note"><b>Watch out:</b> <code>timedelta</code> has no <code>months</code> or <code>years</code>, because those are not a fixed length. For "the same day next year" use <code>opened.replace(year=opened.year + 1)</code>.</p>
+      </section>
+
+      <section class="chapter" id="date-difference">
+        <h2>The difference between two dates</h2>
+        <p>Subtracting one date from another gives a <code>timedelta</code>. Its <code>days</code> attribute is the number of days between them. Two <code>datetime</code> values also give the seconds.</p>
+        <script type="text/plain" data-lang="py" data-file="difference.py">
+from datetime import date, datetime
+
+opened = date(2017, 2, 13)
+closed = date(2020, 1, 1)
+
+gap = closed - opened
+print(gap)                            # 1052 days, 0:00:00
+print(gap.days)                       # 1052
+print(gap.days // 7, "weeks")         # 150 weeks
+print((opened - closed).days)         # -1052
+
+start = datetime(2017, 2, 13, 9, 30)
+end = datetime(2017, 2, 13, 17, 15)
+worked = end - start
+print(worked)                         # 7:45:00
+print(worked.total_seconds() / 3600)  # 7.75
+
+
+def age_on(born, day):
+    had_birthday = (day.month, day.day) >= (born.month, born.day)
+    return day.year - born.year - (0 if had_birthday else 1)
+
+
+born = date(1992, 5, 20)
+print(age_on(born, date(2017, 2, 13)))   # 24
+print(age_on(born, date(2017, 5, 20)))   # 25
+        </script>
+        <p class="note"><b>Concept:</b> an age in years cannot be found by dividing days by 365, because of leap years. Comparing the month and day, as <code>age_on</code> does, is always right.</p>
+      </section>
+
+      <section class="chapter" id="quick-reference">
+        <h2>Quick reference</h2>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>You want to</th><th>Write</th></tr></thead>
+            <tbody>
+              <tr><td>Catch one kind of error</td><td><code>try: ... except ValueError as error: ...</code></td></tr>
+              <tr><td>Catch several kinds the same way</td><td><code>except (ValueError, KeyError):</code></td></tr>
+              <tr><td>Run code only when nothing failed</td><td><code>else:</code> after the <code>except</code> blocks</td></tr>
+              <tr><td>Run code no matter what</td><td><code>finally:</code></td></tr>
+              <tr><td>Report a problem</td><td><code>raise ValueError("Amount must be positive")</code></td></tr>
+              <tr><td>Name your own kind of error</td><td><code>class InsufficientFunds(Exception): pass</code></td></tr>
+              <tr><td>Write a text file</td><td><code>with open(name, "w", encoding="utf-8") as f: f.write(text)</code></td></tr>
+              <tr><td>Read a whole file</td><td><code>Path(name).read_text(encoding="utf-8")</code></td></tr>
+              <tr><td>Read line by line</td><td><code>for line in f:</code></td></tr>
+              <tr><td>Add to the end of a file</td><td><code>open(name, "a")</code></td></tr>
+              <tr><td>Read a table</td><td><code>csv.DictReader(f)</code></td></tr>
+              <tr><td>Save and load nested data</td><td><code>json.dump(data, f)</code> and <code>json.load(f)</code></td></tr>
+              <tr><td>Make a date</td><td><code>date(2017, 2, 13)</code></td></tr>
+              <tr><td>Date to text, text to date</td><td><code>d.strftime("%d %b %Y")</code>, <code>datetime.strptime(text, "%d %b %Y")</code></td></tr>
+              <tr><td>Move a date</td><td><code>d + timedelta(days=30)</code></td></tr>
+              <tr><td>Days between two dates</td><td><code>(later - earlier).days</code></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="chapter" id="python2">
+        <h2>What changed since Python 2</h2>
+        <p>The original lessons were written for Python 2.7. If you meet old code, these are the differences that matter for errors and files.</p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Python 2.7 (2017 lessons)</th><th>Python 3 (this page)</th></tr></thead>
+            <tbody>
+              <tr><td><code>except IndexError, err:</code> was allowed</td><td>Only <code>except IndexError as err:</code></td></tr>
+              <tr><td><code>print 10 / 4</code> gives <code>2</code></td><td><code>print(10 / 4)</code> gives <code>2.5</code>, and <code>10 // 4</code> gives <code>2</code></td></tr>
+              <tr><td><code>raw_input()</code></td><td><code>input()</code></td></tr>
+              <tr><td>A missing file raises <code>IOError</code></td><td><code>FileNotFoundError</code>, a child of <code>OSError</code></td></tr>
+              <tr><td><code>f = open(...)</code> then <code>f.close()</code></td><td><code>with open(...) as f:</code></td></tr>
+              <tr><td>Text files hold bytes</td><td>Text files hold Unicode text, so pass <code>encoding="utf-8"</code></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="chapter" id="next">
+        <h2>Where to go next</h2>
+        <p>The 2017 pages are still online as they were written, with their Python 2.7 code: <a href="../../../pages/exception-handling.html">Pythofrank: Exception handling</a> and <a href="../../../pages/file-handling.html">Pythofrank: File handling</a>.</p>
+        <p>That completes the basics. The advanced path starts with <a href="python-decorators.html">Python Decorators</a>.</p>
+      </section>
+
+    </div>
+  </main>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script src="../../assets/tutorial.js"></script>
+</body>
+</html>
