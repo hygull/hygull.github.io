@@ -4,3 +4,5 @@
 *.exe
 .git
 
+tmp
+CLAUDE.md

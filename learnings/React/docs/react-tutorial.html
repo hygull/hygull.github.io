@@ -1,0 +1,489 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>React Essentials</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@500;700&display=swap">
+<link rel="stylesheet" href="../../assets/tutorial.css">
+</head>
+<body data-track="react">
+
+<header class="topbar">
+  <div class="topbar-in">
+    <a class="brand" href="../../../index.html">Learnings</a>
+    <nav class="tracks" aria-label="Tutorials">
+      <a href="react-tutorial.html" aria-current="page">React</a>
+      <a href="../../Next/docs/next-tutorial.html">Next.js</a>
+      <a href="../../Next_React/docs/react-vs-next.html">React vs Next</a>
+      <a href="../../Design/docs/design-to-code.html">Design</a>
+      <a href="../../../archive.html">Archive</a>
+    </nav>
+    <div class="tools">
+      <button class="btn" id="menu" type="button" aria-expanded="false">Chapters</button>
+      <input id="q" type="search" placeholder="Search chapters" aria-label="Search chapters">
+      <button class="btn" id="theme" type="button">Dark mode</button>
+    </div>
+  </div>
+</header>
+
+<div class="shell">
+  <aside class="side">
+    <p class="side-label">React chapters</p>
+    <nav id="toc" aria-label="Chapters"></nav>
+  </aside>
+
+  <main>
+    <div class="page-head">
+      <p class="eyebrow">Tutorial 1 of 4</p>
+      <h1>React Essentials</h1>
+      <p class="lead">React is a library for building a UI out of components. You describe what the screen should look like for the current data, and React updates the page when the data changes. Examples use React 19, Vite and TypeScript.</p>
+    </div>
+
+    <div class="chapters">
+
+      <section class="chapter" id="setup">
+        <h2>Create the app</h2>
+        <p>Vite is the build tool. It gives you a dev server with instant reload and a production build.</p>
+        <script type="text/plain" data-lang="bash">
+npm create vite@latest my-app -- --template react-ts
+cd my-app
+npm install
+npm run dev        # http://localhost:5173
+        </script>
+        <p>Three files matter at the start:</p>
+        <script type="text/plain" data-lang="text">
+index.html        the only HTML page, contains <div id="root">
+src/main.tsx      mounts React into that div
+src/App.tsx       your root component
+        </script>
+        <script type="text/plain" data-lang="tsx" data-file="src/main.tsx">
+import { createRoot } from "react-dom/client";
+import App from "./App";
+
+createRoot(document.getElementById("root")!).render(<App />);
+        </script>
+        <p class="note"><b>Concept:</b> this is a single page app (SPA). The server sends one empty HTML file, and JavaScript builds everything in the browser.</p>
+      </section>
+
+      <section class="chapter" id="components">
+        <h2>Components and JSX</h2>
+        <p>A component is a function that returns JSX. JSX looks like HTML but is JavaScript, so you can drop any expression inside <code>{ }</code>.</p>
+        <script type="text/plain" data-lang="tsx" data-file="src/components/Greeting.tsx">
+export function Greeting() {
+  const name = "Rishi";
+  return (
+    <section className="greeting">
+      <h1>Hello, {name}</h1>
+      <p>Today is {new Date().toLocaleDateString()}</p>
+    </section>
+  );
+}
+        </script>
+        <ul>
+          <li>Component names start with a capital letter: <code>&lt;Greeting /&gt;</code>.</li>
+          <li>Return one root element. Use <code>&lt;&gt;...&lt;/&gt;</code> if you do not want a wrapper.</li>
+          <li>Write <code>className</code>, not <code>class</code>.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="props">
+        <h2>Props</h2>
+        <p>Props are the inputs of a component. The parent passes them, the child reads them and never changes them. <code>children</code> is whatever you put between the tags.</p>
+        <script type="text/plain" data-lang="tsx" data-file="src/components/Card.tsx">
+import type { ReactNode } from "react";
+
+type CardProps = {
+  title: string;
+  children: ReactNode;
+};
+
+export function Card({ title, children }: CardProps) {
+  return (
+    <article className="card">
+      <h2>{title}</h2>
+      {children}
+    </article>
+  );
+}
+
+// usage
+<Card title="Profile">
+  <p>Any JSX goes here</p>
+</Card>
+        </script>
+      </section>
+
+      <section class="chapter" id="state">
+        <h2>State and events</h2>
+        <p>State is data a component remembers between renders. Calling the setter makes React run the component again and update the screen.</p>
+        <script type="text/plain" data-lang="tsx" data-file="src/components/Counter.tsx">
+import { useState } from "react";
+
+export function Counter() {
+  const [count, setCount] = useState(0);
+
+  return (
+    <button onClick={() => setCount(count + 1)}>
+      Clicked {count} times
+    </button>
+  );
+}
+        </script>
+        <p class="note"><b>Rule:</b> never change state in place. Create a new value: <code>setItems([...items, newItem])</code>, not <code>items.push(newItem)</code>.</p>
+      </section>
+
+      <section class="chapter" id="lists">
+        <h2>Lists and conditions</h2>
+        <p>Use <code>map</code> to render a list. Every item needs a stable <code>key</code> so React can track it. Use <code>&amp;&amp;</code> or a ternary to show things conditionally.</p>
+        <script type="text/plain" data-lang="tsx" data-file="src/components/TodoList.tsx">
+type Todo = { id: number; text: string; done: boolean };
+
+export function TodoList({ todos }: { todos: Todo[] }) {
+  if (todos.length === 0) return <p>Nothing to do</p>;
+
+  return (
+    <ul>
+      {todos.map((todo) => (
+        <li key={todo.id}>
+          {todo.text} {todo.done && <span>(done)</span>}
+        </li>
+      ))}
+    </ul>
+  );
+}
+        </script>
+      </section>
+
+      <section class="chapter" id="forms">
+        <h2>Forms</h2>
+        <p>A controlled input keeps its value in state. The input shows the state, and typing updates the state.</p>
+        <script type="text/plain" data-lang="tsx" data-file="src/components/AddTodo.tsx">
+import { useState, type FormEvent } from "react";
+
+export function AddTodo({ onAdd }: { onAdd: (text: string) => void }) {
+  const [text, setText] = useState("");
+
+  function handleSubmit(event: FormEvent) {
+    event.preventDefault();       // stop the full page reload
+    if (!text.trim()) return;
+    onAdd(text);
+    setText("");
+  }
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <input value={text} onChange={(e) => setText(e.target.value)} />
+      <button type="submit">Add</button>
+    </form>
+  );
+}
+        </script>
+        <p class="note"><b>Concept:</b> data flows down through props, events flow up through callback props like <code>onAdd</code>.</p>
+      </section>
+
+      <section class="chapter" id="effects">
+        <h2>Effects and data fetching</h2>
+        <p><code>useEffect</code> runs code after render, to sync with something outside React such as an API. The dependency array says when to run it again.</p>
+        <script type="text/plain" data-lang="tsx" data-file="src/pages/Users.tsx">
+import { useEffect, useState } from "react";
+
+type User = { id: number; name: string };
+
+export function Users() {
+  const [users, setUsers] = useState<User[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    fetch("/api/users", { signal: controller.signal })
+      .then((res) => res.json())
+      .then(setUsers)
+      .catch((err) => {
+        if (err.name !== "AbortError") setError("Could not load users");
+      })
+      .finally(() => setIsLoading(false));
+
+    return () => controller.abort();   // cleanup when the component leaves
+  }, []);                              // [] = run once after first render
+
+  if (isLoading) return <p>Loading...</p>;
+  if (error) return <p>{error}</p>;
+  return <ul>{users.map((u) => <li key={u.id}>{u.name}</li>)}</ul>;
+}
+        </script>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Dependency array</th><th>Effect runs</th></tr></thead>
+            <tbody>
+              <tr><td><code>[]</code></td><td>Once, after the first render</td></tr>
+              <tr><td><code>[userId]</code></td><td>After the first render and whenever <code>userId</code> changes</td></tr>
+              <tr><td>none</td><td>After every render (rarely what you want)</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>In real apps, a library such as TanStack Query replaces this loading and error boilerplate and adds caching.</p>
+      </section>
+
+      <section class="chapter" id="hooks">
+        <h2>Custom hooks</h2>
+        <p>A custom hook is a function whose name starts with <code>use</code> and that calls other hooks. It lets you reuse stateful logic. Here the fetch logic from the last chapter becomes one line per component.</p>
+        <script type="text/plain" data-lang="tsx" data-file="src/hooks/useFetch.ts">
+import { useEffect, useState } from "react";
+
+export function useFetch<T>(url: string) {
+  const [data, setData] = useState<T | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    setIsLoading(true);
+    fetch(url)
+      .then((res) => res.json())
+      .then(setData)
+      .finally(() => setIsLoading(false));
+  }, [url]);
+
+  return { data, isLoading };
+}
+
+// usage
+const { data: users, isLoading } = useFetch<User[]>("/api/users");
+        </script>
+        <p class="note"><b>Rule of hooks:</b> call hooks only at the top level of a component or another hook. Never inside <code>if</code>, loops or nested functions.</p>
+      </section>
+
+      <section class="chapter" id="context">
+        <h2>Context: shared state</h2>
+        <p>Passing props through many levels gets tedious. Context lets a provider near the top share a value with any component below it.</p>
+        <script type="text/plain" data-lang="tsx" data-file="src/context/ThemeContext.tsx">
+import { createContext, useContext, useState, type ReactNode } from "react";
+
+type Theme = { isDark: boolean; toggle: () => void };
+const ThemeContext = createContext<Theme | null>(null);
+
+export function ThemeProvider({ children }: { children: ReactNode }) {
+  const [isDark, setIsDark] = useState(false);
+  const toggle = () => setIsDark((value) => !value);
+
+  return (
+    <ThemeContext.Provider value={{ isDark, toggle }}>
+      {children}
+    </ThemeContext.Provider>
+  );
+}
+
+export function useTheme() {
+  const theme = useContext(ThemeContext);
+  if (!theme) throw new Error("useTheme must be used inside ThemeProvider");
+  return theme;
+}
+        </script>
+        <p>Wrap the app once with <code>&lt;ThemeProvider&gt;</code>, then call <code>useTheme()</code> anywhere. Use context for app-wide things: user, theme, language. Keep everything else as local state.</p>
+      </section>
+
+      <section class="chapter" id="routing">
+        <h2>Routing</h2>
+        <p>React has no router built in. React Router maps URLs to components without reloading the page.</p>
+        <script type="text/plain" data-lang="bash">
+npm install react-router
+        </script>
+        <script type="text/plain" data-lang="tsx" data-file="src/App.tsx">
+import { BrowserRouter, Routes, Route, Link, Outlet, useParams } from "react-router";
+
+function Layout() {
+  return (
+    <>
+      <nav>
+        <Link to="/">Home</Link> <Link to="/users/42">User 42</Link>
+      </nav>
+      <Outlet />            {/* the matched child route renders here */}
+    </>
+  );
+}
+
+function User() {
+  const { id } = useParams();      // reads :id from the URL
+  return <h1>User {id}</h1>;
+}
+
+export default function App() {
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route element={<Layout />}>
+          <Route path="/" element={<h1>Home</h1>} />
+          <Route path="/users/:id" element={<User />} />
+          <Route path="*" element={<h1>Not found</h1>} />
+        </Route>
+      </Routes>
+    </BrowserRouter>
+  );
+}
+        </script>
+        <p>To navigate from code: <code>const navigate = useNavigate(); navigate("/dashboard");</code></p>
+      </section>
+
+      <section class="chapter" id="auth">
+        <h2>Auth</h2>
+        <p>The pattern has three parts: a context that holds the token, a login function that calls your API, and a route wrapper that redirects when there is no token.</p>
+        <script type="text/plain" data-lang="tsx" data-file="src/context/AuthContext.tsx">
+import { createContext, useContext, useState, type ReactNode } from "react";
+
+type Auth = {
+  token: string | null;
+  login: (email: string, password: string) => Promise<void>;
+  logout: () => void;
+};
+const AuthContext = createContext<Auth | null>(null);
+
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const [token, setToken] = useState<string | null>(localStorage.getItem("token"));
+
+  async function login(email: string, password: string) {
+    const res = await fetch("/api/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password }),
+    });
+    if (!res.ok) throw new Error("Wrong email or password");
+    const data = await res.json();
+    localStorage.setItem("token", data.token);
+    setToken(data.token);
+  }
+
+  function logout() {
+    localStorage.removeItem("token");
+    setToken(null);
+  }
+
+  return (
+    <AuthContext.Provider value={{ token, login, logout }}>
+      {children}
+    </AuthContext.Provider>
+  );
+}
+
+export function useAuth() {
+  const auth = useContext(AuthContext);
+  if (!auth) throw new Error("useAuth must be used inside AuthProvider");
+  return auth;
+}
+        </script>
+        <script type="text/plain" data-lang="tsx" data-file="src/components/ProtectedRoute.tsx">
+import { Navigate, Outlet } from "react-router";
+import { useAuth } from "../context/AuthContext";
+
+export function ProtectedRoute() {
+  const { token } = useAuth();
+  return token ? <Outlet /> : <Navigate to="/login" replace />;
+}
+
+// in App.tsx
+<Route element={<ProtectedRoute />}>
+  <Route path="/dashboard" element={<Dashboard />} />
+</Route>
+        </script>
+        <p>Send the token on every API call: <code>headers: { Authorization: `Bearer ${token}` }</code>.</p>
+        <p class="note"><b>Important:</b> a protected route in the browser is only for user experience. Anyone can edit browser code, so the API must check the token on every request.</p>
+      </section>
+
+      <section class="chapter" id="styling">
+        <h2>Styling</h2>
+        <h3>CSS Modules (built into Vite)</h3>
+        <p>Name the file <code>*.module.css</code>. Class names become local to the component, so they never clash.</p>
+        <script type="text/plain" data-lang="tsx" data-file="src/components/Button.tsx">
+import styles from "./Button.module.css";   // .primary { background: teal; }
+
+export function Button({ label }: { label: string }) {
+  return <button className={styles.primary}>{label}</button>;
+}
+        </script>
+        <h3>Tailwind CSS</h3>
+        <p>Utility classes written directly in JSX. Most Figma handoffs map well to it.</p>
+        <script type="text/plain" data-lang="bash">
+npm install tailwindcss @tailwindcss/vite
+        </script>
+        <script type="text/plain" data-lang="ts" data-file="vite.config.ts">
+import { defineConfig } from "vite";
+import react from "@vitejs/plugin-react";
+import tailwindcss from "@tailwindcss/vite";
+
+export default defineConfig({ plugins: [react(), tailwindcss()] });
+        </script>
+        <script type="text/plain" data-lang="tsx" data-file="src/index.css + usage">
+/* src/index.css */
+@import "tailwindcss";
+
+// any component
+<button className="rounded-md bg-teal-700 px-4 py-2 text-white">Save</button>
+        </script>
+      </section>
+
+      <section class="chapter" id="figma">
+        <h2>From Figma to components</h2>
+        <p>A Figma file and a React app have the same shape. Translate one into the other in this order:</p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>In Figma</th><th>In React</th></tr></thead>
+            <tbody>
+              <tr><td>Variables (colors, spacing, radius)</td><td>CSS variables or the Tailwind theme</td></tr>
+              <tr><td>Component</td><td>Component file</td></tr>
+              <tr><td>Variant (size, state)</td><td>Prop: <code>&lt;Button size="lg" /&gt;</code></td></tr>
+              <tr><td>Auto layout</td><td>Flexbox: direction, gap, padding</td></tr>
+              <tr><td>Frame or page</td><td>Route component</td></tr>
+              <tr><td>Icons and images</td><td>Export as SVG or WebP into <code>src/assets</code></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <h3>By hand</h3>
+        <p>Open the file in Dev Mode, click a layer, and read its size, spacing and color in the Inspect panel. Copy tokens first, then build the smallest components (button, input), then compose pages from them.</p>
+        <script type="text/plain" data-lang="css" data-file="src/index.css">
+:root {
+  --color-primary: #0b7285;   /* Figma variable: color/primary */
+  --space-4: 16px;            /* Figma variable: space/4 */
+  --radius-md: 8px;
+}
+        </script>
+        <h3>With an AI agent (Figma MCP)</h3>
+        <p>The Figma MCP server lets a coding agent read a frame directly: layout, tokens, and a screenshot. Connect it once, then paste a frame link.</p>
+        <script type="text/plain" data-lang="bash">
+claude mcp add --transport http figma https://mcp.figma.com/mcp
+# then, in Claude Code:
+# "Implement this frame using my existing components: <figma frame link>"
+        </script>
+        <p>Figma Code Connect goes one step further: it links each Figma component to your real React component, so generated code imports <code>Button</code> from your codebase and does not invent new markup.</p>
+      </section>
+
+      <section class="chapter" id="build">
+        <h2>Build and deploy</h2>
+        <script type="text/plain" data-lang="bash">
+npm run build      # outputs static files to dist/
+npm run preview    # serves dist/ locally to check it
+        </script>
+        <p><code>dist/</code> is plain HTML, CSS and JS. Host it anywhere static: S3 with CloudFront, Netlify, Nginx.</p>
+        <p class="note"><b>One catch:</b> because routing happens in the browser, the host must return <code>index.html</code> for every path. Otherwise a refresh on <code>/users/42</code> gives a 404.</p>
+        <p>Environment values go in <code>.env</code> and must start with <code>VITE_</code>. Read them with <code>import.meta.env.VITE_API_URL</code>. They end up in the browser bundle, so never put secrets there.</p>
+      </section>
+
+      <section class="chapter" id="recap">
+        <h2>The mental model</h2>
+        <ul>
+          <li>The UI is a function of state. Change state, React redraws.</li>
+          <li>Props go down, events go up.</li>
+          <li>Keep state as low in the tree as possible. Lift it up only when two components need it.</li>
+          <li>Effects are for talking to the outside world, not for computing values.</li>
+          <li>Hooks are how you reuse logic. Components are how you reuse UI.</li>
+        </ul>
+        <p>React leaves routing, data fetching, the server and SEO to you. That gap is what Next.js fills. Continue with <a href="../../Next/docs/next-tutorial.html">Next.js Essentials</a>, or see both <a href="../../Next_React/docs/react-vs-next.html">side by side</a>.</p>
+      </section>
+
+    </div>
+  </main>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script src="../../assets/tutorial.js"></script>
+</body>
+</html>

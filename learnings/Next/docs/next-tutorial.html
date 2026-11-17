@@ -1,0 +1,495 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Next.js Essentials</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@500;700&display=swap">
+<link rel="stylesheet" href="../../assets/tutorial.css">
+</head>
+<body data-track="next">
+
+<header class="topbar">
+  <div class="topbar-in">
+    <a class="brand" href="../../../index.html">Learnings</a>
+    <nav class="tracks" aria-label="Tutorials">
+      <a href="../../React/docs/react-tutorial.html">React</a>
+      <a href="next-tutorial.html" aria-current="page">Next.js</a>
+      <a href="../../Next_React/docs/react-vs-next.html">React vs Next</a>
+      <a href="../../Design/docs/design-to-code.html">Design</a>
+      <a href="../../../archive.html">Archive</a>
+    </nav>
+    <div class="tools">
+      <button class="btn" id="menu" type="button" aria-expanded="false">Chapters</button>
+      <input id="q" type="search" placeholder="Search chapters" aria-label="Search chapters">
+      <button class="btn" id="theme" type="button">Dark mode</button>
+    </div>
+  </div>
+</header>
+
+<div class="shell">
+  <aside class="side">
+    <p class="side-label">Next.js chapters</p>
+    <nav id="toc" aria-label="Chapters"></nav>
+  </aside>
+
+  <main>
+    <div class="page-head">
+      <p class="eyebrow">Tutorial 2 of 4</p>
+      <h1>Next.js Essentials</h1>
+      <p class="lead">Next.js is a framework built on React. You still write React components, and Next adds the parts React leaves out: routing, a server, data fetching, caching and deployment. Examples use Next 16 with the App Router and TypeScript.</p>
+    </div>
+
+    <div class="chapters">
+
+      <section class="chapter" id="setup">
+        <h2>Create the app</h2>
+        <script type="text/plain" data-lang="bash">
+npx create-next-app@latest my-app     # accept the defaults
+cd my-app
+npm run dev                           # http://localhost:3000
+        </script>
+        <p>The defaults give you TypeScript, Tailwind CSS, a linter and the App Router. The structure:</p>
+        <script type="text/plain" data-lang="text">
+app/
+  layout.tsx      shell around every page (html, body, nav)
+  page.tsx        the home page, URL "/"
+  globals.css     global styles
+public/           static files, served from "/"
+next.config.ts    framework settings
+        </script>
+        <p class="note"><b>Concept:</b> a Next app runs in two places. Some code runs on the server, some in the browser. Most of this tutorial is about knowing which is which.</p>
+      </section>
+
+      <section class="chapter" id="pages">
+        <h2>Pages and routes</h2>
+        <p>Folders inside <code>app/</code> are URL segments. A folder becomes a page when it contains <code>page.tsx</code>. There is no router config.</p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>File</th><th>URL</th></tr></thead>
+            <tbody>
+              <tr><td><code>app/page.tsx</code></td><td><code>/</code></td></tr>
+              <tr><td><code>app/about/page.tsx</code></td><td><code>/about</code></td></tr>
+              <tr><td><code>app/users/[id]/page.tsx</code></td><td><code>/users/42</code>, <code>/users/7</code></td></tr>
+              <tr><td><code>app/(shop)/cart/page.tsx</code></td><td><code>/cart</code> (parentheses group folders without changing the URL)</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <script type="text/plain" data-lang="tsx" data-file="app/users/[id]/page.tsx">
+type Props = { params: Promise<{ id: string }> };
+
+export default async function UserPage({ params }: Props) {
+  const { id } = await params;     // params is a Promise, so await it
+  return <h1>User {id}</h1>;
+}
+        </script>
+      </section>
+
+      <section class="chapter" id="layouts">
+        <h2>Layouts and special files</h2>
+        <p>A <code>layout.tsx</code> wraps every page in its folder and below. It stays mounted while you navigate, so the nav does not re-render.</p>
+        <script type="text/plain" data-lang="tsx" data-file="app/layout.tsx">
+import Link from "next/link";
+import "./globals.css";
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <html lang="en">
+      <body>
+        <nav>
+          <Link href="/">Home</Link> <Link href="/dashboard">Dashboard</Link>
+        </nav>
+        {children}
+      </body>
+    </html>
+  );
+}
+        </script>
+        <p>Next looks for a few file names in each route folder and wires them up for you:</p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>File</th><th>Shown when</th></tr></thead>
+            <tbody>
+              <tr><td><code>loading.tsx</code></td><td>The page is still fetching data</td></tr>
+              <tr><td><code>error.tsx</code></td><td>The page threw an error (must start with <code>"use client"</code>)</td></tr>
+              <tr><td><code>not-found.tsx</code></td><td>You call <code>notFound()</code> or no route matches</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <script type="text/plain" data-lang="tsx" data-file="app/dashboard/loading.tsx">
+export default function Loading() {
+  return <p>Loading dashboard...</p>;
+}
+        </script>
+      </section>
+
+      <section class="chapter" id="navigation">
+        <h2>Navigation</h2>
+        <p><code>Link</code> navigates without a full reload and preloads the target page when the link scrolls into view.</p>
+        <script type="text/plain" data-lang="tsx">
+import Link from "next/link";
+<Link href="/users/42">Open user</Link>
+
+// from server code (pages, actions)
+import { redirect } from "next/navigation";
+redirect("/login");
+
+// from a client component
+"use client";
+import { useRouter, usePathname } from "next/navigation";
+const router = useRouter();
+router.push("/dashboard");
+const pathname = usePathname();    // "/dashboard", handy for active links
+        </script>
+      </section>
+
+      <section class="chapter" id="server-client">
+        <h2>Server and client components</h2>
+        <p>This is the main idea of Next. Every component is a <b>server component</b> by default. It runs only on the server, and its code never reaches the browser. Add <code>"use client"</code> at the top of a file when the component needs the browser.</p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Need</th><th>Server component</th><th>Client component</th></tr></thead>
+            <tbody>
+              <tr><td>Read the database, use secrets</td><td>Yes</td><td>No</td></tr>
+              <tr><td><code>async</code> / <code>await</code> in the component</td><td>Yes</td><td>No</td></tr>
+              <tr><td><code>useState</code>, <code>useEffect</code></td><td>No</td><td>Yes</td></tr>
+              <tr><td><code>onClick</code>, <code>onChange</code></td><td>No</td><td>Yes</td></tr>
+              <tr><td>Adds JavaScript to the browser bundle</td><td>No</td><td>Yes</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>The usual pattern: the page is a server component that fetches data, and it passes that data to a small client component for the interactive part.</p>
+        <script type="text/plain" data-lang="tsx" data-file="app/products/page.tsx (server)">
+import { LikeButton } from "./LikeButton";
+
+export default async function ProductsPage() {
+  const res = await fetch("https://api.example.com/products");
+  const products: { id: number; name: string }[] = await res.json();
+
+  return (
+    <ul>
+      {products.map((p) => (
+        <li key={p.id}>
+          {p.name} <LikeButton productId={p.id} />
+        </li>
+      ))}
+    </ul>
+  );
+}
+        </script>
+        <script type="text/plain" data-lang="tsx" data-file="app/products/LikeButton.tsx (client)">
+"use client";
+import { useState } from "react";
+
+export function LikeButton({ productId }: { productId: number }) {
+  const [isLiked, setIsLiked] = useState(false);
+  return (
+    <button onClick={() => setIsLiked(!isLiked)}>
+      {isLiked ? "Liked" : "Like"}
+    </button>
+  );
+}
+        </script>
+        <p class="note"><b>Rule of thumb:</b> start on the server. Move to the client only the smallest piece that needs state or clicks.</p>
+      </section>
+
+      <section class="chapter" id="data">
+        <h2>Data fetching and caching</h2>
+        <p>In a server component you just <code>await</code>. No <code>useEffect</code>, no loading state, and the user receives finished HTML.</p>
+        <script type="text/plain" data-lang="tsx" data-file="app/dashboard/page.tsx">
+async function getStats() {
+  const res = await fetch(`${process.env.API_URL}/stats`);
+  if (!res.ok) throw new Error("Failed to load stats");   // shows error.tsx
+  return res.json();
+}
+
+export default async function Dashboard() {
+  const stats = await getStats();
+  return <p>Active users: {stats.activeUsers}</p>;
+}
+        </script>
+        <p>By default each request fetches fresh data. You opt in to caching per call:</p>
+        <script type="text/plain" data-lang="ts">
+fetch(url);                                  // fresh on every request
+fetch(url, { cache: "force-cache" });        // cache until you invalidate it
+fetch(url, { next: { revalidate: 60 } });    // reuse for 60 seconds, then refresh
+        </script>
+        <p>Need two things at once? Start both, then await together: <code>const [user, posts] = await Promise.all([getUser(), getPosts()]);</code></p>
+      </section>
+
+      <section class="chapter" id="actions">
+        <h2>Server Actions: forms and mutations</h2>
+        <p>A Server Action is a function marked <code>"use server"</code>. You pass it to a form, and Next calls it on the server when the form submits. No API endpoint and no <code>fetch</code> to write.</p>
+        <script type="text/plain" data-lang="ts" data-file="app/todos/actions.ts">
+"use server";
+import { revalidatePath } from "next/cache";
+
+export async function addTodo(formData: FormData) {
+  const text = String(formData.get("text") ?? "").trim();
+  if (!text) return;
+
+  await fetch(`${process.env.API_URL}/todos`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ text }),
+  });
+
+  revalidatePath("/todos");    // refresh the list on that page
+}
+        </script>
+        <script type="text/plain" data-lang="tsx" data-file="app/todos/page.tsx">
+import { addTodo } from "./actions";
+
+export default function TodosPage() {
+  return (
+    <form action={addTodo}>
+      <input name="text" />
+      <button type="submit">Add</button>
+    </form>
+  );
+}
+        </script>
+        <p class="note"><b>Important:</b> a Server Action is a public endpoint under the hood. Validate the input and check the user inside every action.</p>
+      </section>
+
+      <section class="chapter" id="api">
+        <h2>Route handlers: API endpoints</h2>
+        <p>A <code>route.ts</code> file is an HTTP endpoint. Export a function per method.</p>
+        <script type="text/plain" data-lang="ts" data-file="app/api/health/route.ts">
+import { NextResponse } from "next/server";
+
+export async function GET() {
+  return NextResponse.json({ status: "ok" });
+}
+
+export async function POST(request: Request) {
+  const body = await request.json();
+  return NextResponse.json({ received: body }, { status: 201 });
+}
+        </script>
+        <p>Use route handlers for things called from outside your UI: webhooks, mobile apps, other services. For your own pages, server components and Server Actions are simpler.</p>
+      </section>
+
+      <section class="chapter" id="auth">
+        <h2>Auth</h2>
+        <p>The pattern: a Server Action logs in and stores the token in an <b>httpOnly cookie</b> (JavaScript in the browser cannot read it). A proxy file blocks protected URLs before they render. Server code reads the cookie when it needs the user.</p>
+        <h3>1. Log in and set the cookie</h3>
+        <script type="text/plain" data-lang="ts" data-file="app/login/actions.ts">
+"use server";
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
+
+export async function login(formData: FormData) {
+  const res = await fetch(`${process.env.API_URL}/login`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      email: formData.get("email"),
+      password: formData.get("password"),
+    }),
+  });
+  if (!res.ok) redirect("/login?error=1");
+
+  const { token } = await res.json();
+  const cookieStore = await cookies();
+  cookieStore.set("session", token, {
+    httpOnly: true,
+    secure: true,
+    sameSite: "lax",
+    path: "/",
+  });
+  redirect("/dashboard");
+}
+
+export async function logout() {
+  (await cookies()).delete("session");
+  redirect("/login");
+}
+        </script>
+        <script type="text/plain" data-lang="tsx" data-file="app/login/page.tsx">
+import { login } from "./actions";
+
+export default function LoginPage() {
+  return (
+    <form action={login}>
+      <input name="email" type="email" required />
+      <input name="password" type="password" required />
+      <button type="submit">Log in</button>
+    </form>
+  );
+}
+        </script>
+        <h3>2. Block protected routes</h3>
+        <script type="text/plain" data-lang="ts" data-file="proxy.ts (project root)">
+import { NextResponse, type NextRequest } from "next/server";
+
+export function proxy(request: NextRequest) {
+  if (!request.cookies.has("session")) {
+    return NextResponse.redirect(new URL("/login", request.url));
+  }
+  return NextResponse.next();
+}
+
+export const config = { matcher: ["/dashboard/:path*"] };
+        </script>
+        <p>Before Next 16 this file was called <code>middleware.ts</code> and the function <code>middleware</code>. Same idea.</p>
+        <h3>3. Use the session on the server</h3>
+        <script type="text/plain" data-lang="tsx" data-file="app/dashboard/page.tsx">
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
+
+export default async function Dashboard() {
+  const token = (await cookies()).get("session")?.value;
+  if (!token) redirect("/login");
+
+  const res = await fetch(`${process.env.API_URL}/me`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  const user = await res.json();
+  return <h1>Welcome, {user.name}</h1>;
+}
+        </script>
+        <p class="note"><b>Important:</b> the proxy is a fast first check, not the only one. Check the session again where the data is read, as the page above does.</p>
+        <p>For Google or GitHub login, password reset and session rotation, use a library instead of writing it yourself: Auth.js, Better Auth or Clerk.</p>
+      </section>
+
+      <section class="chapter" id="assets">
+        <h2>Styling, images and fonts</h2>
+        <p>Tailwind is already set up by <code>create-next-app</code>. CSS Modules also work with no setup.</p>
+        <script type="text/plain" data-lang="tsx" data-file="app/page.tsx">
+import Image from "next/image";
+
+export default function Home() {
+  return (
+    <main className="mx-auto max-w-2xl p-6">
+      <h1 className="text-3xl font-bold">Hello</h1>
+      <Image src="/hero.png" alt="Product screenshot" width={800} height={450} priority />
+    </main>
+  );
+}
+        </script>
+        <p><code>Image</code> resizes the file, serves a modern format, lazy loads it, and reserves space so the page does not jump. Put the file in <code>public/</code>.</p>
+        <script type="text/plain" data-lang="tsx" data-file="app/layout.tsx">
+import { Inter } from "next/font/google";
+
+const inter = Inter({ subsets: ["latin"] });
+
+// then: <body className={inter.className}>
+        </script>
+        <p><code>next/font</code> downloads the font at build time and serves it from your own domain. No request to Google from the browser, no flash of the wrong font.</p>
+      </section>
+
+      <section class="chapter" id="metadata">
+        <h2>Metadata and SEO</h2>
+        <p>Export <code>metadata</code> from a page or layout. Next writes the <code>&lt;title&gt;</code> and meta tags into the server HTML, so search engines and link previews see them.</p>
+        <script type="text/plain" data-lang="tsx" data-file="app/about/page.tsx">
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "About us",
+  description: "Who we are and what we build",
+};
+        </script>
+        <script type="text/plain" data-lang="tsx" data-file="app/users/[id]/page.tsx (dynamic title)">
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  return { title: `User ${id}` };
+}
+        </script>
+      </section>
+
+      <section class="chapter" id="env">
+        <h2>Environment variables</h2>
+        <script type="text/plain" data-lang="bash" data-file=".env.local">
+API_URL=http://localhost:8001            # server only
+JWT_SECRET=change-me                     # server only
+NEXT_PUBLIC_APP_NAME=My App              # also available in the browser
+        </script>
+        <p>Read them with <code>process.env.API_URL</code>. Only names starting with <code>NEXT_PUBLIC_</code> are sent to the browser. Everything else stays on the server, so secrets are safe in server components, actions and route handlers.</p>
+      </section>
+
+      <section class="chapter" id="figma">
+        <h2>From Figma to pages</h2>
+        <p>The mapping is the same as in React, with a Next home for each piece:</p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>In Figma</th><th>In Next</th></tr></thead>
+            <tbody>
+              <tr><td>Variables (colors, spacing)</td><td><code>@theme</code> block in <code>app/globals.css</code></td></tr>
+              <tr><td>Component and variants</td><td>File in <code>components/</code>, variants as props</td></tr>
+              <tr><td>Frame (a screen)</td><td><code>app/&lt;route&gt;/page.tsx</code></td></tr>
+              <tr><td>Shared header, sidebar</td><td><code>layout.tsx</code></td></tr>
+              <tr><td>Images</td><td><code>public/</code> + <code>next/image</code></td></tr>
+              <tr><td>Text styles and fonts</td><td><code>next/font</code></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <script type="text/plain" data-lang="css" data-file="app/globals.css">
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #5a3fd0;    /* Figma variable: color/primary */
+  --radius-card: 12px;
+}
+/* now usable as: className="bg-primary rounded-card" */
+        </script>
+        <h3>With an AI agent (Figma MCP)</h3>
+        <script type="text/plain" data-lang="bash">
+claude mcp add --transport http figma https://mcp.figma.com/mcp
+# then, in Claude Code:
+# "Build app/pricing/page.tsx from this frame. Reuse components/ui.
+#  Keep it a server component: <figma frame link>"
+        </script>
+        <p>Tell the agent which parts are interactive. Only those become client components. The rest stays on the server.</p>
+      </section>
+
+      <section class="chapter" id="rendering">
+        <h2>How pages get rendered</h2>
+        <p>Next decides per route, based on what the page uses.</p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Mode</th><th>HTML is built</th><th>Triggered by</th><th>Good for</th></tr></thead>
+            <tbody>
+              <tr><td>Static</td><td>Once, at build time</td><td>No request data, cached fetches</td><td>Marketing pages, docs</td></tr>
+              <tr><td>Revalidated</td><td>At build, then refreshed on a timer</td><td><code>revalidate: 60</code></td><td>Product lists, blogs</td></tr>
+              <tr><td>Dynamic</td><td>On every request</td><td><code>cookies()</code>, <code>headers()</code>, <code>searchParams</code>, uncached fetches</td><td>Dashboards, anything per user</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p><code>npm run build</code> prints which mode each route got. For dynamic segments you can prebuild known pages with <code>generateStaticParams</code>.</p>
+      </section>
+
+      <section class="chapter" id="build">
+        <h2>Build and deploy</h2>
+        <script type="text/plain" data-lang="bash">
+npm run build      # compiles and prerenders
+npm run start      # runs the production server on port 3000
+        </script>
+        <p>Unlike a plain React build, this is a running Node server, not a folder of static files. Three common ways to host it:</p>
+        <ul>
+          <li><b>Vercel:</b> connect the Git repo and push. Zero config.</li>
+          <li><b>Docker or Kubernetes:</b> set <code>output: "standalone"</code> in <code>next.config.ts</code>, copy <code>.next/standalone</code> into the image, run <code>node server.js</code>.</li>
+          <li><b>Static only:</b> set <code>output: "export"</code> to get plain files, but you lose server features (actions, cookies, dynamic rendering).</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="recap">
+        <h2>The mental model</h2>
+        <ul>
+          <li>Folders are routes. Special file names (<code>page</code>, <code>layout</code>, <code>loading</code>, <code>error</code>) are roles.</li>
+          <li>Components run on the server unless you say <code>"use client"</code>.</li>
+          <li>Read data by awaiting in server components. Change data with Server Actions.</li>
+          <li>Secrets and cookies live on the server. The browser gets HTML and only the JavaScript it needs.</li>
+          <li>Caching is opt in, per fetch.</li>
+        </ul>
+        <p>To see exactly what each of these replaced in plain React, open <a href="../../Next_React/docs/react-vs-next.html">React vs Next</a>.</p>
+      </section>
+
+    </div>
+  </main>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script src="../../assets/tutorial.js"></script>
+</body>
+</html>

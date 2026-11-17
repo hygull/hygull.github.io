@@ -1,136 +1,121 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-    <title>Home Page</title>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-
-    <!--https://maxcdn.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css-->
-    <link rel="stylesheet" href="web/assets/css/bootstrap4.3.1.min.css">
-
-    <!--https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js-->
-    <script src="web/assets/js/jquery3.4.1.min.js"></script>
-
-    <!--https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js-->
-    <script src="web/assets/js/popper1.14.7.min.js"></script>
-
-    <!--https://maxcdn.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap4.3.1.min.js-->
-    <script src="web/assets/js/bootstrap4.3.1.min.js"></script>
-
-    <link rel="stylesheet" type="text/css" href="web/assets/css/custom/befcoded/modal_images.css">
-
-    <link rel="stylesheet" type="text/css" href="web/assets/css/custom/coded/modal_images.css">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Rishikesh Agrawani | Learnings</title>
+<meta name="description" content="Short, ordered tutorials on React, Next.js and turning designs into code.">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@500;700&display=swap">
+<link rel="stylesheet" href="learnings/assets/tutorial.css">
 </head>
-<body>
+<body data-track="hub">
 
-    <!--https://www.w3schools.com/howto/tryit.asp?filename=tryhow_css_modal_img-->
-    <div class="container" id="hygull-container-01">
-        <div class="row">
-            <div class="col-12 col-sm-4 col-md-6 col-lg-4 col-xl-4">
-                <img id="hygull-img-01" src="https://raw.githubusercontent.com/hygull/fileserver/master/2019/screenshots/get_numbers_from.png" alt="Numbers from text (Regex in Python), re module" class="hygull-img-cls">
-            </div>
+<header class="topbar">
+  <div class="topbar-in">
+    <a class="brand" href="index.html">hygull</a>
+    <nav class="tracks" aria-label="Site">
+      <a href="index.html" aria-current="page">Learnings</a>
+      <a href="archive.html">Archive</a>
+    </nav>
+    <div class="tools">
+      <button class="btn" id="theme" type="button">Dark mode</button>
+    </div>
+  </div>
+</header>
 
-            <div class="col-12 col-sm-4 col-md-6 col-lg-4 col-xl-4">
-                <img id="hygull-img-02" src="https://raw.githubusercontent.com/hygull/fileserver/master/2019/screenshots/update_images_and_modal_in_dom.png" alt="Get modal configurations (Modal images, JS), 1st" class="hygull-img-cls">
-            </div>
+<main class="hub" id="hub">
+  <p class="eyebrow">Frontend learning path</p>
+  <h1>React to Next Path</h1>
+  <p class="lead">Four short tutorials, meant to be read in order. Each one explains a concept in a few lines, shows the code, and gives the command to run. Learn React first, then Next, use the comparison to lock in what Next changed, and finish with the design skills that turn a Figma file into components.</p>
 
-            <div class="col-12 col-sm-4 col-md-6 col-lg-4 col-xl-4">
-                <img id="hygull-img-03" src="https://raw.githubusercontent.com/hygull/fileserver/master/2019/screenshots/get_modal_configs_1.png" alt="Get modal configurations (Modal images), 1st" class="hygull-img-cls">
-            </div>
+  <div class="track-list">
 
-            <div class="col-12 col-sm-4 col-md-6 col-lg-4 col-xl-4">
-                <img id="hygull-img-04" src="https://raw.githubusercontent.com/hygull/fileserver/master/2019/screenshots/get_modal_configs_2.png" alt="Get modal configurations (Modal images), 2nd" class="hygull-img-cls">
-            </div>
-
-            <div class="col-12 col-sm-4 col-md-6 col-lg-4 col-xl-4">
-                <img id="hygull-img-05" src="https://raw.githubusercontent.com/hygull/fileserver/master/2019/screenshots/func_name_inside.png" alt="Getting name of function inside (Python)" class="hygull-img-cls">
-            </div>
-
-            <div class="col-12 col-sm-4 col-md-6 col-lg-4 col-xl-4">
-                <img id="hygull-img-06" src="https://raw.githubusercontent.com/hygull/fileserver/master/2019/screenshots/list_comprehension_ex1.png" alt="Using list comprehension to get squares, evens, odds" class="hygull-img-cls">
-            </div>
-            
-            <div class="col-12 col-sm-4 col-md-6 col-lg-4 col-xl-4">
-                <img id="hygull-img-07" src="https://raw.githubusercontent.com/hygull/fileserver/master/2019/screenshots/exception_handling_ex1.png" alt="Exception handling, try, except, else, finally blocks" class="hygull-img-cls">
-            </div>
-        </div>
+    <div class="track react">
+      <div>
+        <p class="step">Step 1</p>
+        <h2><a href="learnings/React/docs/react-tutorial.html">React Essentials</a></h2>
+        <p class="path">learnings/React/docs/react-tutorial.html</p>
+      </div>
+      <div>
+        <p>Components, props, state, effects, hooks, context, routing with React Router, auth with a protected route, styling, and turning a Figma file into components.</p>
+        <ul class="chips">
+          <li><a href="learnings/React/docs/react-tutorial.html#setup">Setup</a></li>
+          <li><a href="learnings/React/docs/react-tutorial.html#components">Components</a></li>
+          <li><a href="learnings/React/docs/react-tutorial.html#state">State</a></li>
+          <li><a href="learnings/React/docs/react-tutorial.html#effects">Data fetching</a></li>
+          <li><a href="learnings/React/docs/react-tutorial.html#hooks">Hooks</a></li>
+          <li><a href="learnings/React/docs/react-tutorial.html#routing">Routing</a></li>
+          <li><a href="learnings/React/docs/react-tutorial.html#auth">Auth</a></li>
+          <li><a href="learnings/React/docs/react-tutorial.html#figma">Figma</a></li>
+        </ul>
+      </div>
     </div>
 
-    <div class="container" id="hygull-container-02">
-        <!-- The Modal -->
-        <div id="hygull-modal-01" class="modal hygull-modal-cls">
-            <span class="close">&times;</span>
-            <img class="modal-content" id="hygull-modal-img-01">
-            <div id="hygull-caption-01" class="hygull-caption-cls"></div>
-        </div>
-
-        <div id="hygull-modal-02" class="modal hygull-modal-cls">
-            <span class="close">&times;</span>
-            <img class="modal-content" id="hygull-modal-img-02">
-            <div id="hygull-caption-02" class="hygull-caption-cls"></div>
-        </div>
-
-        <div id="hygull-modal-03" class="modal hygull-modal-cls">
-            <span class="close">&times;</span>
-            <img class="modal-content" id="hygull-modal-img-03">
-            <div id="hygull-caption-03" class="hygull-caption-cls"></div>
-        </div>
-
-        <div id="hygull-modal-04" class="modal hygull-modal-cls">
-            <span class="close">&times;</span>
-            <img class="modal-content" id="hygull-modal-img-04">
-            <div id="hygull-caption-04" class="hygull-caption-cls"></div>
-        </div>
-
-        <div id="hygull-modal-05" class="modal hygull-modal-cls">
-            <span class="close">&times;</span>
-            <img class="modal-content" id="hygull-modal-img-05">
-            <div id="hygull-caption-05" class="hygull-caption-cls"></div>
-        </div>
-
-        <div id="hygull-modal-06" class="modal hygull-modal-cls">
-            <span class="close">&times;</span>
-            <img class="modal-content" id="hygull-modal-img-06">
-            <div id="hygull-caption-06" class="hygull-caption-cls"></div>
-        </div>
-
-        <div id="hygull-modal-07" class="modal hygull-modal-cls">
-            <span class="close">&times;</span>
-            <img class="modal-content" id="hygull-modal-img-07">
-            <div id="hygull-caption-07" class="hygull-caption-cls"></div>
-        </div>
+    <div class="track next">
+      <div>
+        <p class="step">Step 2</p>
+        <h2><a href="learnings/Next/docs/next-tutorial.html">Next.js Essentials</a></h2>
+        <p class="path">learnings/Next/docs/next-tutorial.html</p>
+      </div>
+      <div>
+        <p>File based pages and layouts, server and client components, data fetching and caching, Server Actions, API routes, cookie based auth, images, fonts, SEO and deployment.</p>
+        <ul class="chips">
+          <li><a href="learnings/Next/docs/next-tutorial.html#pages">Pages</a></li>
+          <li><a href="learnings/Next/docs/next-tutorial.html#layouts">Layouts</a></li>
+          <li><a href="learnings/Next/docs/next-tutorial.html#server-client">Server and client</a></li>
+          <li><a href="learnings/Next/docs/next-tutorial.html#data">Data</a></li>
+          <li><a href="learnings/Next/docs/next-tutorial.html#actions">Server Actions</a></li>
+          <li><a href="learnings/Next/docs/next-tutorial.html#auth">Auth</a></li>
+          <li><a href="learnings/Next/docs/next-tutorial.html#figma">Figma</a></li>
+          <li><a href="learnings/Next/docs/next-tutorial.html#build">Deploy</a></li>
+        </ul>
+      </div>
     </div>
 
-    <script type="text/javascript" src="web/assets/js/custom/befcoded/modal_images.js"></script>
+    <div class="track">
+      <div>
+        <p class="step">Step 3</p>
+        <h2><a href="learnings/Next_React/docs/react-vs-next.html">React vs Next.js</a></h2>
+        <p class="path">learnings/Next_React/docs/react-vs-next.html</p>
+      </div>
+      <div>
+        <p>Seventeen tasks shown side by side, React on the left and Next on the right, each with one line on what Next added. Only topics where Next changed something.</p>
+        <ul class="chips">
+          <li><a href="learnings/Next_React/docs/react-vs-next.html#routing">Routing</a></li>
+          <li><a href="learnings/Next_React/docs/react-vs-next.html#data">Data fetching</a></li>
+          <li><a href="learnings/Next_React/docs/react-vs-next.html#forms">Forms</a></li>
+          <li><a href="learnings/Next_React/docs/react-vs-next.html#auth">Auth</a></li>
+          <li><a href="learnings/Next_React/docs/react-vs-next.html#images">Images</a></li>
+          <li><a href="learnings/Next_React/docs/react-vs-next.html#rendering">Rendering</a></li>
+          <li><a href="learnings/Next_React/docs/react-vs-next.html#choose">Which to pick</a></li>
+        </ul>
+      </div>
+    </div>
 
-    <script type="text/javascript" src="web/assets/js/custom/coded/modal_images.js"></script>
+    <div class="track design">
+      <div>
+        <p class="step">Step 4</p>
+        <h2><a href="learnings/Design/docs/design-to-code.html">Design to Code</a></h2>
+        <p class="path">learnings/Design/docs/design-to-code.html</p>
+      </div>
+      <div>
+        <p>Reading a Figma file, design tokens, spacing, typography, color, responsive layout, states, a reusable component kit, accessibility, and the Figma MCP and Code Connect workflow.</p>
+        <ul class="chips">
+          <li><a href="learnings/Design/docs/design-to-code.html#read-figma">Read Figma</a></li>
+          <li><a href="learnings/Design/docs/design-to-code.html#tokens">Tokens</a></li>
+          <li><a href="learnings/Design/docs/design-to-code.html#spacing">Spacing</a></li>
+          <li><a href="learnings/Design/docs/design-to-code.html#states">States</a></li>
+          <li><a href="learnings/Design/docs/design-to-code.html#component-api">Component API</a></li>
+          <li><a href="learnings/Design/docs/design-to-code.html#kit">Component kit</a></li>
+          <li><a href="learnings/Design/docs/design-to-code.html#figma-mcp">Figma MCP</a></li>
+          <li><a href="learnings/Design/docs/design-to-code.html#code-connect">Code Connect</a></li>
+        </ul>
+      </div>
+    </div>
 
-    <script type="text/javascript" src="web/assets/js/custom/coded/modal_images_list.js"></script>
-    <script type="text/javascript">
-        $.each(modalImages, function(i, path) {
-            if(path.indexOf(".svg") === -1) {
-                // Add to container 1 
-                let parts = path.split('/')
-                let divImageContainer1 = $(`
-                    <div class="col-12 col-sm-4 col-md-6 col-lg-4 col-xl-4">
-                        <img id="hygull-img-00${i + 1}" src="${path}" alt="${parts[parts.length - 1]}" class="hygull-img-cls" style="height:300px">
-                    </div>
-                `)
-                $('#hygull-container-01 .row').append(divImageContainer1)
+  </div>
+</main>
 
-                // Add to container 2
-                let divImageContainer2 = $(`
-                    <div id="hygull-modal-00${i + 1}" class="modal hygull-modal-cls">
-                        <span class="close">&times;</span>
-                        <img class="modal-content" id="hygull-modal-img-00${i + 1}">
-                        <div id="hygull-caption-00${i + 1}" class="hygull-caption-cls"></div>
-                    </div>
-                `)
-                $('#hygull-container-02').append(divImageContainer2)
-            }
-        })
-
-    </script>
-
+<script src="learnings/assets/tutorial.js"></script>
 </body>
 </html>

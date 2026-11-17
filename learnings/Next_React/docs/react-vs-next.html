@@ -1,0 +1,622 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>React vs Next.js</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@500;700&display=swap">
+<link rel="stylesheet" href="../../assets/tutorial.css">
+</head>
+<body data-track="both">
+
+<header class="topbar">
+  <div class="topbar-in">
+    <a class="brand" href="../../../index.html">Learnings</a>
+    <nav class="tracks" aria-label="Tutorials">
+      <a href="../../React/docs/react-tutorial.html">React</a>
+      <a href="../../Next/docs/next-tutorial.html">Next.js</a>
+      <a href="react-vs-next.html" aria-current="page">React vs Next</a>
+      <a href="../../Design/docs/design-to-code.html">Design</a>
+      <a href="../../../archive.html">Archive</a>
+    </nav>
+    <div class="tools">
+      <button class="btn" id="menu" type="button" aria-expanded="false">Topics</button>
+      <input id="q" type="search" placeholder="Search topics" aria-label="Search topics">
+      <button class="btn" id="theme" type="button">Dark mode</button>
+    </div>
+  </div>
+</header>
+
+<div class="shell">
+  <aside class="side">
+    <p class="side-label">What Next enhanced</p>
+    <nav id="toc" aria-label="Topics"></nav>
+  </aside>
+
+  <main>
+    <div class="page-head">
+      <p class="eyebrow">Tutorial 3 of 4</p>
+      <h1>React vs Next.js</h1>
+      <p class="lead">Only the places where Next changed or improved something you already do in React. Same task on both sides: plain React (Vite + React Router) on the left, Next (App Router) on the right. Things that are identical in both, such as props, state and hooks, are left out.</p>
+    </div>
+
+    <div class="chapters">
+
+      <section class="chapter" id="setup">
+        <h2>Project setup</h2>
+        <div class="pair">
+          <div class="col react">
+            <p class="col-tag">React</p>
+            <script type="text/plain" data-lang="bash">
+npm create vite@latest my-app -- --template react-ts
+cd my-app && npm install
+npm install react-router        # routing
+npm install tailwindcss @tailwindcss/vite
+npm run dev                     # :5173
+            </script>
+          </div>
+          <div class="col next">
+            <p class="col-tag">Next</p>
+            <script type="text/plain" data-lang="bash">
+npx create-next-app@latest my-app
+cd my-app
+npm run dev                     # :3000
+            </script>
+          </div>
+        </div>
+        <p class="added"><b>What Next added:</b> routing, Tailwind, linting and a server come preconfigured. In React you pick and wire each one.</p>
+      </section>
+
+      <section class="chapter" id="routing">
+        <h2>Routing</h2>
+        <div class="pair">
+          <div class="col react">
+            <p class="col-tag">React</p>
+            <script type="text/plain" data-lang="tsx" data-file="src/App.tsx">
+import { BrowserRouter, Routes, Route } from "react-router";
+
+<BrowserRouter>
+  <Routes>
+    <Route path="/" element={<Home />} />
+    <Route path="/about" element={<About />} />
+  </Routes>
+</BrowserRouter>
+            </script>
+          </div>
+          <div class="col next">
+            <p class="col-tag">Next</p>
+            <script type="text/plain" data-lang="text">
+app/
+  page.tsx           ->  /
+  about/
+    page.tsx         ->  /about
+            </script>
+            <script type="text/plain" data-lang="tsx" data-file="app/about/page.tsx">
+export default function About() {
+  return <h1>About</h1>;
+}
+            </script>
+          </div>
+        </div>
+        <p class="added"><b>What Next added:</b> the folder structure is the route table. No router library, no central config file to keep in sync.</p>
+      </section>
+
+      <section class="chapter" id="params">
+        <h2>Dynamic routes</h2>
+        <div class="pair">
+          <div class="col react">
+            <p class="col-tag">React</p>
+            <script type="text/plain" data-lang="tsx">
+// <Route path="/users/:id" element={<User />} />
+import { useParams } from "react-router";
+
+function User() {
+  const { id } = useParams();
+  return <h1>User {id}</h1>;
+}
+            </script>
+          </div>
+          <div class="col next">
+            <p class="col-tag">Next</p>
+            <script type="text/plain" data-lang="tsx" data-file="app/users/[id]/page.tsx">
+export default async function User(
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params;
+  return <h1>User {id}</h1>;
+}
+            </script>
+          </div>
+        </div>
+        <p class="added"><b>What Next added:</b> the parameter arrives as a prop on the server, so you can use it to load data before any HTML is sent.</p>
+      </section>
+
+      <section class="chapter" id="layouts">
+        <h2>Shared layouts</h2>
+        <div class="pair">
+          <div class="col react">
+            <p class="col-tag">React</p>
+            <script type="text/plain" data-lang="tsx">
+import { Outlet } from "react-router";
+
+function Layout() {
+  return (
+    <>
+      <Nav />
+      <Outlet />
+    </>
+  );
+}
+
+<Route element={<Layout />}>
+  <Route path="/" element={<Home />} />
+</Route>
+            </script>
+          </div>
+          <div class="col next">
+            <p class="col-tag">Next</p>
+            <script type="text/plain" data-lang="tsx" data-file="app/layout.tsx">
+export default function RootLayout(
+  { children }: { children: React.ReactNode }
+) {
+  return (
+    <html lang="en">
+      <body>
+        <Nav />
+        {children}
+      </body>
+    </html>
+  );
+}
+            </script>
+          </div>
+        </div>
+        <p class="added"><b>What Next added:</b> any folder can have its own <code>layout.tsx</code>, and layouts nest automatically. The layout also owns <code>&lt;html&gt;</code> and <code>&lt;body&gt;</code>, which React never touches.</p>
+      </section>
+
+      <section class="chapter" id="links">
+        <h2>Links</h2>
+        <div class="pair">
+          <div class="col react">
+            <p class="col-tag">React</p>
+            <script type="text/plain" data-lang="tsx">
+import { Link, useNavigate } from "react-router";
+
+<Link to="/about">About</Link>
+
+const navigate = useNavigate();
+navigate("/dashboard");
+            </script>
+          </div>
+          <div class="col next">
+            <p class="col-tag">Next</p>
+            <script type="text/plain" data-lang="tsx">
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+
+<Link href="/about">About</Link>
+
+const router = useRouter();   // client component
+router.push("/dashboard");
+            </script>
+          </div>
+        </div>
+        <p class="added"><b>What Next added:</b> <code>Link</code> preloads the target page when it scrolls into view, so the click feels instant. On the server you also get <code>redirect("/login")</code>.</p>
+      </section>
+
+      <section class="chapter" id="data">
+        <h2>Data fetching</h2>
+        <div class="pair">
+          <div class="col react">
+            <p class="col-tag">React</p>
+            <script type="text/plain" data-lang="tsx">
+function Users() {
+  const [users, setUsers] = useState<User[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    fetch("/api/users")
+      .then((res) => res.json())
+      .then(setUsers)
+      .finally(() => setIsLoading(false));
+  }, []);
+
+  if (isLoading) return <p>Loading...</p>;
+  return <List users={users} />;
+}
+            </script>
+          </div>
+          <div class="col next">
+            <p class="col-tag">Next</p>
+            <script type="text/plain" data-lang="tsx" data-file="app/users/page.tsx">
+export default async function Users() {
+  const res = await fetch(`${process.env.API_URL}/users`);
+  const users: User[] = await res.json();
+
+  return <List users={users} />;
+}
+            </script>
+          </div>
+        </div>
+        <p class="added"><b>What Next added:</b> server components can be <code>async</code>. The data is fetched on the server and the browser receives ready HTML: no effect, no loading state, no empty first paint, and the API URL and keys stay private.</p>
+      </section>
+
+      <section class="chapter" id="loading">
+        <h2>Loading and error states</h2>
+        <div class="pair">
+          <div class="col react">
+            <p class="col-tag">React</p>
+            <script type="text/plain" data-lang="tsx">
+const [isLoading, setIsLoading] = useState(true);
+const [error, setError] = useState<string | null>(null);
+
+if (isLoading) return <Spinner />;
+if (error) return <p>{error}</p>;
+// repeated in every component that fetches
+            </script>
+          </div>
+          <div class="col next">
+            <p class="col-tag">Next</p>
+            <script type="text/plain" data-lang="tsx" data-file="app/users/loading.tsx">
+export default function Loading() {
+  return <Spinner />;
+}
+            </script>
+            <script type="text/plain" data-lang="tsx" data-file="app/users/error.tsx">
+"use client";
+export default function Error({ reset }: { reset: () => void }) {
+  return <button onClick={reset}>Try again</button>;
+}
+            </script>
+          </div>
+        </div>
+        <p class="added"><b>What Next added:</b> one file per route for each state. Under the hood these are React's own <code>Suspense</code> and error boundaries, set up for you.</p>
+      </section>
+
+      <section class="chapter" id="forms">
+        <h2>Forms and saving data</h2>
+        <div class="pair">
+          <div class="col react">
+            <p class="col-tag">React</p>
+            <script type="text/plain" data-lang="tsx">
+function AddTodo() {
+  const [text, setText] = useState("");
+
+  async function handleSubmit(e: FormEvent) {
+    e.preventDefault();
+    await fetch("/api/todos", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text }),
+    });
+    // then refetch the list yourself
+  }
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <input value={text}
+             onChange={(e) => setText(e.target.value)} />
+      <button>Add</button>
+    </form>
+  );
+}
+            </script>
+          </div>
+          <div class="col next">
+            <p class="col-tag">Next</p>
+            <script type="text/plain" data-lang="ts" data-file="app/todos/actions.ts">
+"use server";
+import { revalidatePath } from "next/cache";
+
+export async function addTodo(formData: FormData) {
+  await saveTodo(String(formData.get("text")));
+  revalidatePath("/todos");
+}
+            </script>
+            <script type="text/plain" data-lang="tsx" data-file="app/todos/page.tsx">
+import { addTodo } from "./actions";
+
+<form action={addTodo}>
+  <input name="text" />
+  <button>Add</button>
+</form>
+            </script>
+          </div>
+        </div>
+        <p class="added"><b>What Next added:</b> Server Actions. The form calls a server function directly, so you write no endpoint and no <code>fetch</code>, and <code>revalidatePath</code> refreshes the page data. React 19 defines <code>&lt;form action&gt;</code>; Next supplies the server side of it.</p>
+      </section>
+
+      <section class="chapter" id="auth">
+        <h2>Auth and protected pages</h2>
+        <div class="pair">
+          <div class="col react">
+            <p class="col-tag">React</p>
+            <script type="text/plain" data-lang="tsx">
+// token kept in localStorage + context
+function ProtectedRoute() {
+  const { token } = useAuth();
+  return token
+    ? <Outlet />
+    : <Navigate to="/login" replace />;
+}
+
+<Route element={<ProtectedRoute />}>
+  <Route path="/dashboard" element={<Dashboard />} />
+</Route>
+            </script>
+            <p>The check runs in the browser, after the page code has already been downloaded.</p>
+          </div>
+          <div class="col next">
+            <p class="col-tag">Next</p>
+            <script type="text/plain" data-lang="ts" data-file="proxy.ts">
+import { NextResponse, type NextRequest } from "next/server";
+
+export function proxy(request: NextRequest) {
+  if (!request.cookies.has("session")) {
+    return NextResponse.redirect(new URL("/login", request.url));
+  }
+  return NextResponse.next();
+}
+
+export const config = { matcher: ["/dashboard/:path*"] };
+            </script>
+            <p>The check runs on the server, before anything is sent.</p>
+          </div>
+        </div>
+        <p class="added"><b>What Next added:</b> a server to do auth on. The token lives in an httpOnly cookie that browser scripts cannot read, and a logged out user never receives the protected page at all.</p>
+      </section>
+
+      <section class="chapter" id="api">
+        <h2>Backend endpoints</h2>
+        <div class="pair">
+          <div class="col react">
+            <p class="col-tag">React</p>
+            <p>None. React runs only in the browser, so you need a separate backend (FastAPI, Express) and usually a dev proxy:</p>
+            <script type="text/plain" data-lang="ts" data-file="vite.config.ts">
+export default defineConfig({
+  server: {
+    proxy: { "/api": "http://localhost:8001" },
+  },
+});
+            </script>
+          </div>
+          <div class="col next">
+            <p class="col-tag">Next</p>
+            <script type="text/plain" data-lang="ts" data-file="app/api/health/route.ts">
+import { NextResponse } from "next/server";
+
+export async function GET() {
+  return NextResponse.json({ status: "ok" });
+}
+            </script>
+          </div>
+        </div>
+        <p class="added"><b>What Next added:</b> route handlers. Frontend and small backend endpoints live in one project and deploy together. You can still call a separate backend from server code.</p>
+      </section>
+
+      <section class="chapter" id="images">
+        <h2>Images</h2>
+        <div class="pair">
+          <div class="col react">
+            <p class="col-tag">React</p>
+            <script type="text/plain" data-lang="tsx">
+<img
+  src="/hero.png"
+  alt="Product screenshot"
+  width={800}
+  height={450}
+  loading="lazy"
+/>
+            </script>
+          </div>
+          <div class="col next">
+            <p class="col-tag">Next</p>
+            <script type="text/plain" data-lang="tsx">
+import Image from "next/image";
+
+<Image
+  src="/hero.png"
+  alt="Product screenshot"
+  width={800}
+  height={450}
+/>
+            </script>
+          </div>
+        </div>
+        <p class="added"><b>What Next added:</b> automatic resizing per screen size, modern formats (WebP, AVIF), lazy loading by default and reserved space so the layout does not jump.</p>
+      </section>
+
+      <section class="chapter" id="fonts">
+        <h2>Fonts</h2>
+        <div class="pair">
+          <div class="col react">
+            <p class="col-tag">React</p>
+            <script type="text/plain" data-lang="html" data-file="index.html">
+<link rel="stylesheet"
+  href="https://fonts.googleapis.com/css2?family=Inter&display=swap">
+            </script>
+          </div>
+          <div class="col next">
+            <p class="col-tag">Next</p>
+            <script type="text/plain" data-lang="tsx" data-file="app/layout.tsx">
+import { Inter } from "next/font/google";
+
+const inter = Inter({ subsets: ["latin"] });
+
+<body className={inter.className}>
+            </script>
+          </div>
+        </div>
+        <p class="added"><b>What Next added:</b> the font is downloaded at build time and served from your own domain. No extra network request, no flash of a fallback font.</p>
+      </section>
+
+      <section class="chapter" id="metadata">
+        <h2>Page title and SEO</h2>
+        <div class="pair">
+          <div class="col react">
+            <p class="col-tag">React</p>
+            <script type="text/plain" data-lang="tsx">
+function About() {
+  return (
+    <>
+      <title>About us</title>   {/* React 19 moves it to <head> */}
+      <h1>About</h1>
+    </>
+  );
+}
+            </script>
+            <p>Set in the browser. A crawler that does not run JavaScript sees an empty page.</p>
+          </div>
+          <div class="col next">
+            <p class="col-tag">Next</p>
+            <script type="text/plain" data-lang="tsx" data-file="app/about/page.tsx">
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "About us",
+  description: "Who we are",
+};
+            </script>
+            <p>Written into the HTML on the server, along with the page content.</p>
+          </div>
+        </div>
+        <p class="added"><b>What Next added:</b> a typed metadata API and server rendered HTML, so search engines and link previews get the real title, description and content.</p>
+      </section>
+
+      <section class="chapter" id="splitting">
+        <h2>Code splitting</h2>
+        <div class="pair">
+          <div class="col react">
+            <p class="col-tag">React</p>
+            <script type="text/plain" data-lang="tsx">
+import { lazy, Suspense } from "react";
+
+const Dashboard = lazy(() => import("./Dashboard"));
+
+<Suspense fallback={<Spinner />}>
+  <Dashboard />
+</Suspense>
+            </script>
+          </div>
+          <div class="col next">
+            <p class="col-tag">Next</p>
+            <script type="text/plain" data-lang="tsx">
+// Nothing to write: every route is its own bundle.
+
+// Optional, for one heavy client component:
+import dynamic from "next/dynamic";
+const Chart = dynamic(() => import("./Chart"));
+            </script>
+          </div>
+        </div>
+        <p class="added"><b>What Next added:</b> splitting per route by default, and server components ship no JavaScript at all.</p>
+      </section>
+
+      <section class="chapter" id="env">
+        <h2>Environment variables</h2>
+        <div class="pair">
+          <div class="col react">
+            <p class="col-tag">React</p>
+            <script type="text/plain" data-lang="bash" data-file=".env">
+VITE_API_URL=https://api.example.com
+            </script>
+            <script type="text/plain" data-lang="ts">
+import.meta.env.VITE_API_URL
+            </script>
+            <p>Every value is visible in the browser bundle.</p>
+          </div>
+          <div class="col next">
+            <p class="col-tag">Next</p>
+            <script type="text/plain" data-lang="bash" data-file=".env.local">
+API_SECRET=only-on-the-server
+NEXT_PUBLIC_API_URL=https://api.example.com
+            </script>
+            <script type="text/plain" data-lang="ts">
+process.env.API_SECRET            // server code only
+process.env.NEXT_PUBLIC_API_URL   // server and browser
+            </script>
+          </div>
+        </div>
+        <p class="added"><b>What Next added:</b> real secrets. Variables without the <code>NEXT_PUBLIC_</code> prefix never leave the server.</p>
+      </section>
+
+      <section class="chapter" id="rendering">
+        <h2>Where rendering happens</h2>
+        <div class="pair">
+          <div class="col react">
+            <p class="col-tag">React</p>
+            <script type="text/plain" data-lang="text">
+1. Browser gets an empty <div id="root">
+2. Downloads the JavaScript bundle
+3. React renders the page
+4. Effects fetch data, page renders again
+            </script>
+            <p>One mode: client side rendering.</p>
+          </div>
+          <div class="col next">
+            <p class="col-tag">Next</p>
+            <script type="text/plain" data-lang="text">
+1. Server fetches data and renders HTML
+2. Browser shows the full page at once
+3. JavaScript loads only for client
+   components and makes them interactive
+            </script>
+            <p>Per route: static at build time, refreshed on a timer, or rendered on every request.</p>
+          </div>
+        </div>
+        <p class="added"><b>What Next added:</b> the server/client split (<code>"use client"</code>), faster first paint, and a choice of rendering mode for each page.</p>
+      </section>
+
+      <section class="chapter" id="deploy">
+        <h2>Build and deploy</h2>
+        <div class="pair">
+          <div class="col react">
+            <p class="col-tag">React</p>
+            <script type="text/plain" data-lang="bash">
+npm run build      # -> dist/ (static files)
+            </script>
+            <p>Upload <code>dist/</code> to any static host. Configure it to serve <code>index.html</code> for every path.</p>
+          </div>
+          <div class="col next">
+            <p class="col-tag">Next</p>
+            <script type="text/plain" data-lang="bash">
+npm run build      # -> .next/
+npm run start      # Node server on :3000
+            </script>
+            <p>Needs a Node runtime: Vercel, or Docker with <code>output: "standalone"</code>.</p>
+          </div>
+        </div>
+        <p class="added"><b>What Next added:</b> a production server, which is what makes everything above possible. The cost is that hosting is no longer a folder of files.</p>
+      </section>
+
+      <section class="chapter" id="choose">
+        <h2>Which one to pick</h2>
+        <div class="pair">
+          <div class="col react">
+            <p class="col-tag">Plain React fits when</p>
+            <ul>
+              <li>The app sits behind a login and SEO does not matter (internal tools, admin panels).</li>
+              <li>You already have a backend API and want a static frontend.</li>
+              <li>You want the smallest set of concepts to learn first.</li>
+            </ul>
+          </div>
+          <div class="col next">
+            <p class="col-tag">Next fits when</p>
+            <ul>
+              <li>Pages must be found by search engines or load fast on first visit.</li>
+              <li>You want auth, data access and UI in one project.</li>
+              <li>You would otherwise assemble router, data layer and server yourself.</li>
+            </ul>
+          </div>
+        </div>
+        <p class="added"><b>Remember:</b> everything from the React tutorial still applies inside Next. Next changes where code runs and how pages are wired, not how components work.</p>
+      </section>
+
+    </div>
+  </main>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script src="../../assets/tutorial.js"></script>
+</body>
+</html>
