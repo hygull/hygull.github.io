@@ -32,8 +32,113 @@
       root.setAttribute("data-theme", next);
       writeStore(THEME_KEY, next);
       labelTheme();
+      drawDiagrams();
     });
   }
+
+  /* Diagrams: figure.diagram > script[type="text/x-mermaid"]. Mermaid is loaded only on pages that have one,
+     takes its colours from the page's CSS variables, and is redrawn when the theme changes. */
+  var MERMAID_URL = "https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.4.0/mermaid.min.js";
+  var diagramSources = Array.prototype.slice.call(document.querySelectorAll('figure.diagram > script[type="text/x-mermaid"]'));
+  var diagrams = diagramSources.map(function (src) {
+    var canvas = document.createElement("div");
+    canvas.className = "diagram-canvas";
+    src.parentNode.insertBefore(canvas, src);
+    return { figure: src.parentNode, canvas: canvas, text: src.textContent.replace(/^\s*\n/, "").replace(/\s+$/, "") };
+  });
+  var mermaidState = "idle";   // idle | loading | ready | failed
+  var drawCount = 0;
+  function cssVar(name) {
+    return getComputedStyle(document.body).getPropertyValue(name).trim();
+  }
+  function showSource(d, message) {
+    var pre = document.createElement("pre");
+    pre.textContent = d.text;
+    d.canvas.textContent = "";
+    d.canvas.appendChild(pre);
+    d.figure.setAttribute("data-error", message);
+  }
+  function renderDiagrams() {
+    var m = window.mermaid;
+    m.initialize({
+      startOnLoad: false,
+      securityLevel: "strict",
+      theme: "base",
+      fontFamily: cssVar("--font-body"),
+      flowchart: { curve: "basis", padding: 12, nodeSpacing: 40, rankSpacing: 48 },
+      sequence: { mirrorActors: false, showSequenceNumbers: false },
+      themeVariables: {
+        darkMode: isDark(),
+        background: cssVar("--surface"),
+        primaryColor: cssVar("--note-bg"),
+        primaryTextColor: cssVar("--fg"),
+        primaryBorderColor: cssVar("--accent"),
+        secondaryColor: cssVar("--bg"),
+        secondaryTextColor: cssVar("--fg"),
+        secondaryBorderColor: cssVar("--line"),
+        tertiaryColor: cssVar("--bg"),
+        tertiaryTextColor: cssVar("--fg"),
+        tertiaryBorderColor: cssVar("--line"),
+        lineColor: cssVar("--muted"),
+        textColor: cssVar("--fg"),
+        mainBkg: cssVar("--note-bg"),
+        nodeBorder: cssVar("--accent"),
+        clusterBkg: cssVar("--bg"),
+        clusterBorder: cssVar("--line"),
+        titleColor: cssVar("--fg"),
+        edgeLabelBackground: cssVar("--surface"),
+        actorBkg: cssVar("--note-bg"),
+        actorBorder: cssVar("--accent"),
+        actorTextColor: cssVar("--fg"),
+        actorLineColor: cssVar("--line"),
+        signalColor: cssVar("--muted"),
+        signalTextColor: cssVar("--fg"),
+        labelBoxBkgColor: cssVar("--note-bg"),
+        labelBoxBorderColor: cssVar("--line"),
+        labelTextColor: cssVar("--fg"),
+        loopTextColor: cssVar("--fg"),
+        noteBkgColor: cssVar("--bg"),
+        noteBorderColor: cssVar("--line"),
+        noteTextColor: cssVar("--fg"),
+        activationBkgColor: cssVar("--bg"),
+        activationBorderColor: cssVar("--accent"),
+        classText: cssVar("--fg"),
+        fontSize: "14px"
+      }
+    });
+    diagrams.forEach(function (d, i) {
+      drawCount += 1;
+      m.render("diagram-" + i + "-" + drawCount, d.text).then(function (out) {
+        d.canvas.innerHTML = out.svg;
+        d.figure.removeAttribute("data-error");
+      }, function (err) {
+        showSource(d, String(err && err.message ? err.message : err).split("\n")[0]);
+      });
+    });
+  }
+  function drawDiagrams() {
+    if (!diagrams.length) return;
+    if (mermaidState === "ready") { renderDiagrams(); return; }
+    if (mermaidState !== "idle") return;
+    mermaidState = "loading";
+    var tag = document.createElement("script");
+    tag.src = MERMAID_URL;
+    tag.onload = function () {
+      mermaidState = "ready";
+      /* Mermaid sizes boxes by measuring text, so the web font must be loaded first or labels get clipped */
+      var fonts = document.fonts;
+      var wait = fonts && fonts.load
+        ? Promise.all([fonts.load('400 14px "Inter"'), fonts.load('600 14px "Inter"'), fonts.ready])
+        : Promise.resolve();
+      wait.then(renderDiagrams, renderDiagrams);
+    };
+    tag.onerror = function () {
+      mermaidState = "failed";
+      diagrams.forEach(function (d) { showSource(d, "diagram library did not load"); });
+    };
+    document.head.appendChild(tag);
+  }
+  drawDiagrams();
 
   /* Hub layout switch: list, grid or cards, remembered per browser */
   var hub = document.getElementById("hub");

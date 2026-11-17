@@ -11,6 +11,7 @@
   --design: #b0256e;
   --python: #1c64a0;
   --bash: #2a7a3c;
+  --system: #b4541a;
   --accent: var(--react);
   --note-bg: #ecf2fb;
   --code-bg: #121826;
@@ -42,6 +43,7 @@
     --design: #ff8fc4;
     --python: #7db7f5;
     --bash: #7fd392;
+    --system: #f2a36b;
     --note-bg: #172134;
     --code-bg: #090d15;
     --code-line: #1f2940;
@@ -59,6 +61,7 @@
   --design: #ff8fc4;
   --python: #7db7f5;
   --bash: #7fd392;
+  --system: #f2a36b;
   --note-bg: #172134;
   --code-bg: #090d15;
   --code-line: #1f2940;
@@ -80,6 +83,8 @@ body[data-track="next"] { --accent: var(--next); }
 body[data-track="design"] { --accent: var(--design); }
 body[data-track="python"] { --accent: var(--python); }
 body[data-track="bash"] { --accent: var(--bash); }
+body[data-track="system"] { --accent: var(--system); }
+body[data-track="system"] main { max-width: 900px; }
 [data-track="hub"] { --accent: var(--fg); }
 a { color: var(--accent); text-underline-offset: 3px; }
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
@@ -316,6 +321,21 @@ figure.code code {
 .hljs-tag, .hljs-name, .hljs-selector-class, .hljs-selector-tag { color: var(--tok-tag); }
 .hljs-comment { color: var(--tok-com); font-style: italic; }
 
+/* Diagrams: Mermaid source in <script type="text/x-mermaid"> inside figure.diagram, drawn by tutorial.js */
+figure.diagram {
+  margin: 0 0 18px;
+  padding: 18px 16px 12px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  min-width: 0;
+}
+.diagram-canvas { overflow-x: auto; text-align: center; }
+.diagram-canvas svg { max-width: 100%; height: auto; }
+.diagram-canvas pre { text-align: left; font-family: var(--font-mono); font-size: 12.5px; color: var(--muted); margin: 0; white-space: pre; }
+figure.diagram figcaption { margin-top: 10px; font-size: 13.5px; color: var(--muted); text-align: center; }
+figure.diagram[data-error] { border-color: #c0392b; }
+
 /* Tables */
 .scroll { overflow-x: auto; margin: 0 0 16px; }
 table { border-collapse: collapse; width: 100%; font-size: 15px; }
@@ -354,6 +374,40 @@ th { font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; color: 
 .pager .nx { margin-left: auto; }
 
 /* Hub */
+.profile { display: flex; gap: 28px; align-items: flex-start; padding-bottom: 44px; margin-bottom: 44px; border-bottom: 1px solid var(--line); }
+.profile .avatar {
+  flex: none;
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--fg);
+  color: var(--bg);
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 34px;
+  letter-spacing: 0.02em;
+}
+.profile-text { min-width: 0; }
+.socials { display: flex; flex-wrap: wrap; gap: 8px; list-style: none; padding: 0; margin: 20px 0 0; }
+.socials a {
+  display: inline-block;
+  padding: 6px 14px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--fg);
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 500;
+}
+.socials a:hover { border-color: var(--fg); }
+.hub-title { font-size: clamp(30px, 5vw, 42px); margin: 0 0 12px; letter-spacing: -0.01em; }
+@media (max-width: 600px) {
+  .profile { flex-direction: column; gap: 18px; }
+  .profile .avatar { width: 72px; height: 72px; font-size: 26px; }
+}
 .hub { max-width: 920px; margin: 0 auto; padding-block: 48px 96px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
 .track-list { display: flex; flex-direction: column; margin-top: 40px; }
 .track { display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: 12px 32px; padding-block: 28px; border-top: 1px solid var(--line); }
@@ -369,6 +423,7 @@ th { font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; color: 
 .track.design { --accent: var(--design); }
 .track.python { --accent: var(--python); }
 .track.bash { --accent: var(--bash); }
+.track.system { --accent: var(--system); }
 
 /* Hub layouts: list is the default; grid and card are chosen with the view switch */
 .hub[data-view="grid"], .hub[data-view="card"] { max-width: 1180px; }
