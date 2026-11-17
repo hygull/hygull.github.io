@@ -1,0 +1,1159 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Python Threads and Processes</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@500;700&display=swap">
+<link rel="stylesheet" href="../../assets/tutorial.css">
+</head>
+<body data-track="python">
+
+<header class="topbar">
+  <div class="topbar-in">
+    <a class="brand" href="../../../index.html">Learnings</a>
+    <nav class="tracks" aria-label="Python paths">
+      <a href="../../../index.html#python-basics">Python Basics</a>
+      <a href="../../../index.html#python-advanced" aria-current="true">Python Advanced</a>
+      <a href="../../../index.html#python-practice">Python in Practice</a>
+      <a href="../../../index.html#python-design">Python Design</a>
+      <a href="../../../archive.html">Archive</a>
+    </nav>
+    <div class="tools">
+      <button class="btn" id="menu" type="button" aria-expanded="false">Chapters</button>
+      <input id="q" type="search" placeholder="Search chapters" aria-label="Search chapters">
+      <button class="btn" id="theme" type="button">Dark mode</button>
+    </div>
+  </div>
+</header>
+
+<div class="shell">
+  <aside class="side">
+    <p class="side-label">Threads and Processes</p>
+    <nav id="toc" aria-label="Chapters"></nav>
+  </aside>
+
+  <main>
+    <div class="page-head">
+      <p class="eyebrow">Python advanced, part 3 of 5</p>
+      <h1>Python Threads and Processes</h1>
+      <p class="lead">A normal Python program does one thing at a time, from the first line to the last. Threads and processes let it work on several things in the same period of time. This page explains the ideas in plain words first, then shows the tools, and spends most of its time on the hard part: what goes wrong when two pieces of code touch the same data. The running example is a small bank whose customers are the Agrawani family: Rishikesh, Sandhya, Subhash, Malinikesh and Hemkesh.</p>
+    </div>
+
+    <div class="chapters">
+
+      <section class="chapter part" id="ideas">
+        <h2>The ideas</h2>
+        <p class="kind">Part 1 of 5 &middot; the words you need before any code</p>
+        <p>Most confusion about this topic comes from a handful of words that sound alike. This part defines each one with an everyday picture, and explains the one rule that decides which tool you should pick.</p>
+        <ul>
+          <li><a href="#concurrency-parallelism">Concurrency and parallelism</a>: one cook switching dishes, or several cooks</li>
+          <li><a href="#io-cpu">Waiting work and thinking work</a>: I/O-bound and CPU-bound</li>
+          <li><a href="#three-tools">The three tools</a>: threading, multiprocessing, asyncio</li>
+          <li><a href="#gil">The GIL</a>: why Python threads take turns</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="concurrency-parallelism">
+        <h2>Concurrency and parallelism</h2>
+        <p>Start with four words.</p>
+        <ul>
+          <li>A <b>CPU core</b> is the part of the computer that actually carries out instructions. One core can do one thing at one moment. A laptop today usually has 4 to 16 cores.</li>
+          <li>A <b>process</b> is one running program. It has its own private memory. When you type <code>python3 bank.py</code>, the operating system starts one process.</li>
+          <li>A <b>thread</b> is one line of work inside a process. Every process starts with one thread, called the main thread. It can start more. All threads of a process share the same memory, so they see the same variables.</li>
+          <li>A <b>task</b> here just means one job you want done, such as "fetch Sandhya's statement".</li>
+        </ul>
+        <p>Now the two big words. <b>Concurrency</b> means several tasks are in progress during the same period. They may take turns. <b>Parallelism</b> means several tasks are running at the very same instant, which needs more than one core.</p>
+        <p>Picture a kitchen. One cook making three dishes puts rice on to boil, chops vegetables while it boils, then stirs the dal. Only one pair of hands, but three dishes are in progress. That is concurrency. Three cooks each making one dish at the same moment is parallelism.</p>
+        <div class="scroll">
+          <table>
+            <thead>
+              <tr><th></th><th>Concurrency</th><th>Parallelism</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>Meaning</td><td>Dealing with many tasks in the same period</td><td>Doing many tasks at the same instant</td></tr>
+              <tr><td>Kitchen</td><td>One cook switching between dishes</td><td>Several cooks, one dish each</td></tr>
+              <tr><td>Bank</td><td>One teller who serves the next customer while the first fills in a form</td><td>Several counters open at once</td></tr>
+              <tr><td>Cores needed</td><td>One is enough</td><td>Two or more</td></tr>
+              <tr><td>Helps when</td><td>Tasks spend most of their time waiting</td><td>Tasks spend most of their time calculating</td></tr>
+              <tr><td>In Python</td><td><code>threading</code>, <code>asyncio</code></td><td><code>multiprocessing</code></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><b>Concept:</b> Parallelism is one way to get concurrency, but not the only way. A single cook is concurrent without being parallel.</p>
+      </section>
+
+      <section class="chapter" id="io-cpu">
+        <h2>Waiting work and thinking work</h2>
+        <p><b>I/O</b> means input and output: reading a file, asking a database, calling a web service. During I/O the program mostly waits for something outside it to answer. A task that spends most of its time like this is <b>I/O-bound</b>. The cook waiting for rice to boil is I/O-bound.</p>
+        <p>A task that spends most of its time calculating is <b>CPU-bound</b>: adding up a million transactions, resizing an image, checking a password hash. The cook chopping onions is CPU-bound. The hands are busy the whole time.</p>
+        <p>This one question decides everything else on this page. A waiting task can step aside and let another task use the core, so one core is enough and threads work well. A calculating task never steps aside, so the only way to go faster is more cores, which in Python means more processes.</p>
+        <script type="text/plain" data-lang="py" data-file="two_kinds.py">
+import time
+
+def fetch_statement(owner):          # I/O-bound: almost all the time is waiting
+    time.sleep(0.2)                  # stands in for a slow network call
+    return f"statement for {owner}"
+
+def checksum(account_no):            # CPU-bound: almost all the time is arithmetic
+    total = 0
+    for i in range(100_000):
+        total = (total + account_no * i) % 1_000_003
+    return total
+
+print(fetch_statement("Sandhya"))    # statement for Sandhya
+print(checksum(1001))                # 935198
+        </script>
+        <p class="note"><b>Remember:</b> On this page <code>time.sleep()</code> always stands in for slow I/O. It behaves the same way as a real network call: the thread waits and uses no CPU.</p>
+      </section>
+
+      <section class="chapter" id="three-tools">
+        <h2>The three tools</h2>
+        <p>The standard library has three ways to run tasks concurrently. This page covers the first two. The third has <a href="python-asyncio.html">its own page</a>.</p>
+        <div class="scroll">
+          <table>
+            <thead>
+              <tr><th></th><th><code>threading</code></th><th><code>multiprocessing</code></th><th><code>asyncio</code></th></tr>
+            </thead>
+            <tbody>
+              <tr><td>Unit of work</td><td>Thread</td><td>Process</td><td>Coroutine (a function that can pause itself)</td></tr>
+              <tr><td>Who switches tasks</td><td>The operating system, at any moment</td><td>The operating system, at any moment</td><td>Your code, only at <code>await</code></td></tr>
+              <tr><td>Runs Python code in parallel</td><td>No (because of the GIL, next chapter)</td><td>Yes</td><td>No, it uses one thread</td></tr>
+              <tr><td>Memory</td><td>Shared</td><td>Separate for each process</td><td>Shared</td></tr>
+              <tr><td>Cost of one more task</td><td>Small</td><td>Large</td><td>Tiny</td></tr>
+              <tr><td>Best for</td><td>I/O-bound work, tens of tasks</td><td>CPU-bound work</td><td>I/O-bound work, thousands of tasks</td></tr>
+              <tr><td>Main danger</td><td>Race conditions on shared data</td><td>Slow start, data must be copied</td><td>One slow call blocks everything</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="chapter" id="gil">
+        <h2>The GIL</h2>
+        <p>CPython is the standard Python that you download from python.org. Inside it there is one lock called the <b>GIL</b>, the Global Interpreter Lock. A thread must hold the GIL to run Python code, and only one thread can hold it at a time. Think of a kitchen with several cooks but a single knife: whoever holds the knife works, the others wait.</p>
+        <p><b>Why it exists.</b> CPython keeps a counter on every object to know when the object can be deleted. If two threads changed such a counter at the same instant, it could end up wrong and crash the interpreter. One big lock protects all of that. It keeps the interpreter simple and keeps single-threaded programs fast.</p>
+        <p><b>What it means for you:</b></p>
+        <ul>
+          <li>Threads do not run Python code in parallel. Two threads doing arithmetic take turns on one core, so CPU-bound work does not get faster with threads.</li>
+          <li>A thread gives up the GIL whenever it waits: during <code>time.sleep()</code>, file and network I/O, and many slow calls into C code. That is why threads do speed up I/O-bound work.</li>
+          <li>A running thread is also asked to give up the GIL every few milliseconds, so that others get a turn. This can happen between any two small steps of your code.</li>
+          <li>The GIL does <b>not</b> make your code thread-safe. It protects Python's own internals, not your data. The whole third part of this page is about that.</li>
+        </ul>
+        <script type="text/plain" data-lang="py" data-file="switch_interval.py">
+import sys
+
+print(sys.getswitchinterval())   # 0.005
+# a running thread is asked to hand over the GIL after 5 milliseconds
+        </script>
+        <p>The next block counts down twice, first one after the other, then in two threads. It is marked as not runnable here because timings differ on every machine. The output shown is from one run on a 10-core laptop with standard Python 3.9.</p>
+        <script type="text/plain" data-lang="py" data-file="gil_demo.py" data-norun>
+import threading, time
+
+def count_down(n):               # pure calculation, no waiting
+    while n > 0:
+        n -= 1
+
+N = 5_000_000
+
+start = time.perf_counter()
+count_down(N)
+count_down(N)
+print("one after the other:", round(time.perf_counter() - start, 2))
+
+start = time.perf_counter()
+threads = [threading.Thread(target=count_down, args=(N,)) for _ in range(2)]
+for t in threads:
+    t.start()
+for t in threads:
+    t.join()
+print("in two threads:     ", round(time.perf_counter() - start, 2))
+        </script>
+        <script type="text/plain" data-lang="text" data-file="Output">
+one after the other: 0.18
+in two threads:      0.17
+        </script>
+        <p>Two threads were no faster, even though nine other cores were free.</p>
+        <p class="note"><b>Note:</b> Python 3.13 and later can be installed as an optional "free-threaded" build that has no GIL. It is not the default build. Everything on this page describes standard CPython with the GIL.</p>
+      </section>
+
+      <section class="chapter part" id="threads">
+        <h2>Threads</h2>
+        <p class="kind">Part 2 of 5 &middot; several lines of work in one program</p>
+        <p>A thread is cheap to start and shares the program's variables. Use threads when tasks spend their time waiting. In this part no two threads change the same data, so nothing can go wrong yet.</p>
+        <ul>
+          <li><a href="#first-thread">Starting a thread</a>: <code>start()</code>, <code>join()</code> and arguments</li>
+          <li><a href="#overlap">Waiting at the same time</a>: three slow calls in the time of one</li>
+          <li><a href="#daemon">Daemon threads</a>: background threads that do not keep the program alive</li>
+          <li><a href="#thread-pool">Getting results back</a>: <code>ThreadPoolExecutor</code></li>
+          <li><a href="#thread-local">Thread-local data</a>: one private copy for each thread</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="first-thread">
+        <h2>Starting a thread</h2>
+        <p>Create a <code>threading.Thread</code>, tell it which function to run with <code>target</code>, and call <code>start()</code>. The function now runs in a new thread while the main thread carries on. <code>join()</code> makes the main thread wait until that thread has finished.</p>
+        <script type="text/plain" data-lang="py" data-file="first_thread.py">
+import threading
+
+def print_statement(owner, bank="Family Bank"):
+    worker = threading.current_thread().name
+    print(f"{worker} prints the {bank} statement for {owner}")
+
+t = threading.Thread(
+    target=print_statement,          # the function itself, no brackets
+    args=("Sandhya",),               # positional arguments, as a tuple
+    kwargs={"bank": "City Bank"},    # keyword arguments, as a dict
+    name="teller-1",
+)
+t.start()                            # the new thread begins running
+t.join()                             # wait here until it is finished
+print(threading.current_thread().name, "carries on")
+        </script>
+        <script type="text/plain" data-lang="text" data-file="Output">
+teller-1 prints the City Bank statement for Sandhya
+MainThread carries on
+        </script>
+        <p class="note"><b>Mistake to avoid:</b> <code>target=print_statement("Sandhya")</code> calls the function straight away in the main thread and hands its return value, <code>None</code>, to the thread. Pass the function and its arguments separately. Also note the comma in <code>("Sandhya",)</code>: without it the brackets do not make a tuple.</p>
+      </section>
+
+      <section class="chapter" id="overlap">
+        <h2>Waiting at the same time</h2>
+        <p>Three statements take 0.3, 0.2 and 0.1 seconds to fetch. One after the other that is 0.6 seconds. In three threads the waits overlap, so the total is about the longest single wait.</p>
+        <script type="text/plain" data-lang="py" data-file="overlap.py">
+import threading, time
+
+finished = []
+
+def fetch_statement(owner, seconds):
+    time.sleep(seconds)              # waiting for the network
+    finished.append(owner)
+
+jobs = [("Rishikesh", 0.3), ("Sandhya", 0.2), ("Subhash", 0.1)]
+threads = [threading.Thread(target=fetch_statement, args=job) for job in jobs]
+
+start = time.perf_counter()
+for t in threads:
+    t.start()                        # start all three first
+for t in threads:
+    t.join()                         # then wait for all three
+elapsed = time.perf_counter() - start
+
+print(finished)                      # ['Subhash', 'Sandhya', 'Rishikesh']
+print(round(elapsed, 1))             # 0.3
+print(elapsed < 0.6)                 # True
+        </script>
+        <p>The shortest wait finished first, whatever order the threads were started in. The exact time changes a little on every run, which is why the code rounds it.</p>
+        <p class="note"><b>Mistake to avoid:</b> Calling <code>start()</code> and <code>join()</code> in the same loop runs the threads one after the other: each one is started and then waited for before the next begins. Start them all, then join them all.</p>
+      </section>
+
+      <section class="chapter" id="daemon">
+        <h2>Daemon threads</h2>
+        <p>A Python program ends only when all its normal threads have finished. A <b>daemon</b> thread is a background helper that does not count: when the main thread and all other normal threads are done, the program exits and daemon threads are simply stopped.</p>
+        <script type="text/plain" data-lang="py" data-file="daemon.py">
+import threading, time
+
+def heartbeat():                     # runs for ever
+    while True:
+        time.sleep(0.05)
+
+t = threading.Thread(target=heartbeat, daemon=True)
+t.start()
+
+print(t.daemon)                      # True
+print(t.is_alive())                  # True
+print("main thread is done")         # main thread is done
+        </script>
+        <p>The program ends here. With <code>daemon=False</code>, the default, it would never end.</p>
+        <p class="note"><b>Careful:</b> A daemon thread is cut off wherever it happens to be, with no clean-up. Do not use one for work that must finish, such as writing a file.</p>
+      </section>
+
+      <section class="chapter" id="thread-pool">
+        <h2>Getting results back</h2>
+        <p>A thread's <code>target</code> function cannot hand its return value back to you. The easy answer is a <b>pool</b>: a fixed group of worker threads that you give jobs to. <code>ThreadPoolExecutor.map()</code> works like the built-in <code>map()</code>, runs the calls in the pool, and returns the results in the same order as the inputs.</p>
+        <script type="text/plain" data-lang="py" data-file="pool_map.py">
+from concurrent.futures import ThreadPoolExecutor
+import time
+
+BALANCES = {"Rishikesh": 50000, "Sandhya": 82000, "Subhash": 76000,
+            "Malinikesh": 31000, "Hemkesh": 12500}
+
+def fetch_balance(owner):
+    time.sleep(0.1)                  # a slow call to the bank's server
+    return BALANCES[owner]
+
+owners = ["Rishikesh", "Sandhya", "Subhash", "Malinikesh", "Hemkesh"]
+
+start = time.perf_counter()
+with ThreadPoolExecutor(max_workers=5) as pool:
+    results = list(pool.map(fetch_balance, owners))
+elapsed = time.perf_counter() - start
+
+print(results)        # [50000, 82000, 76000, 31000, 12500]
+print(elapsed < 0.4)  # True
+        </script>
+        <p>Five calls of 0.1 seconds finished in well under 0.5 seconds. Leaving the <code>with</code> block waits for all the workers, so no <code>join()</code> is needed.</p>
+        <h3>submit and as_completed</h3>
+        <p><code>submit()</code> schedules one call and returns a <b>future</b> straight away. A future is a ticket for a result that is not ready yet. <code>future.result()</code> waits for the value. <code>as_completed()</code> gives you the futures as each one finishes, fastest first.</p>
+        <script type="text/plain" data-lang="py" data-file="pool_submit.py">
+from concurrent.futures import ThreadPoolExecutor, as_completed
+import time
+
+BALANCES = {"Rishikesh": 50000, "Sandhya": 82000, "Hemkesh": 12500}
+
+def fetch_balance(owner):
+    time.sleep(0.1)
+    if owner not in BALANCES:
+        raise KeyError(f"no account for {owner}")
+    return BALANCES[owner]
+
+report = {}
+with ThreadPoolExecutor(max_workers=4) as pool:
+    futures = {pool.submit(fetch_balance, name): name
+               for name in ["Rishikesh", "Sandhya", "Hemkesh", "Stranger"]}
+    for future in as_completed(futures):
+        name = futures[future]
+        try:
+            report[name] = future.result()
+        except KeyError as error:    # the worker's exception is raised here
+            report[name] = f"failed: {error}"
+
+for name in sorted(report):          # sorted, because finish order varies
+    print(name, report[name])
+        </script>
+        <script type="text/plain" data-lang="text" data-file="Output">
+Hemkesh 12500
+Rishikesh 50000
+Sandhya 82000
+Stranger failed: 'no account for Stranger'
+        </script>
+        <p class="note"><b>Concept:</b> An exception inside a worker does not crash the program or print anything. It is stored in the future and raised again when you call <code>result()</code>. If you never ask for the result, you never see the error.</p>
+      </section>
+
+      <section class="chapter" id="thread-local">
+        <h2>Thread-local data</h2>
+        <p>Sometimes each thread needs its own value under the same name, for example "the customer I am serving now". A <code>threading.local()</code> object gives every thread a private set of attributes.</p>
+        <script type="text/plain" data-lang="py" data-file="thread_local.py">
+import threading, time
+
+session = threading.local()          # one object, a separate copy per thread
+seen = {}
+
+def serve(customer):
+    session.customer = customer      # visible only to this thread
+    time.sleep(0.05)                 # the other threads set theirs meanwhile
+    seen[threading.current_thread().name] = session.customer
+
+threads = [threading.Thread(target=serve, args=(name,), name=f"teller-{i}")
+           for i, name in enumerate(["Rishikesh", "Malinikesh", "Hemkesh"], 1)]
+for t in threads:
+    t.start()
+for t in threads:
+    t.join()
+
+for teller in sorted(seen):
+    print(teller, seen[teller])
+print(hasattr(session, "customer"))  # the main thread never set one
+        </script>
+        <script type="text/plain" data-lang="text" data-file="Output">
+teller-1 Rishikesh
+teller-2 Malinikesh
+teller-3 Hemkesh
+False
+        </script>
+        <p>With an ordinary global variable, all three tellers would have seen the last name that was written.</p>
+      </section>
+
+      <section class="chapter part" id="races">
+        <h2>Race conditions and locks</h2>
+        <p class="kind">Part 3 of 5 &middot; when threads share data</p>
+        <p>Threads share memory. That is what makes them convenient, and it is where almost every threading bug comes from. A <b>shared resource</b> is anything more than one thread can reach: a global variable, an object, a file. A <b>race condition</b> is a bug where the result depends on which thread happens to get there first. It is the worst kind of bug, because the program usually works and fails only now and then.</p>
+        <ul>
+          <li><a href="#check-then-act">Check, then act</a>: two withdrawals from one account</li>
+          <li><a href="#lost-update">The lost update</a>: why <code>balance += 1</code> is three steps</li>
+          <li><a href="#lock">Fixing it with a lock</a>: one thread at a time</li>
+          <li><a href="#critical-section">Critical sections</a>: lock as little as possible</li>
+          <li><a href="#rlock">RLock</a>: a lock the same thread can take twice</li>
+          <li><a href="#deadlock">Deadlock</a>: two threads waiting for each other for ever</li>
+          <li><a href="#semaphore">Semaphore</a>: at most N at a time</li>
+          <li><a href="#event-condition">Event and Condition</a>: waiting for a signal</li>
+          <li><a href="#queue">Queue</a>: handing work over safely</li>
+          <li><a href="#thread-safe">What is thread-safe</a>: a short list</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="check-then-act">
+        <h2>Check, then act</h2>
+        <p>Sandhya and Subhash share one account with 1000 in it. Both try to withdraw 800 at the same moment, from two different counters. The code checks the balance first, so it looks safe.</p>
+        <script type="text/plain" data-lang="py" data-file="check_then_act.py">
+import threading, time
+
+balance = 1000                       # the shared resource
+paid = []
+
+def withdraw(name, amount):
+    global balance
+    if balance >= amount:            # 1. check
+        time.sleep(0.05)             #    the teller counts the notes
+        balance -= amount            # 2. act
+        paid.append(name)
+
+t1 = threading.Thread(target=withdraw, args=("Sandhya", 800))
+t2 = threading.Thread(target=withdraw, args=("Subhash", 800))
+t1.start()
+t2.start()
+t1.join()
+t2.join()
+
+print(sorted(paid))                  # ['Sandhya', 'Subhash']
+print(balance)                       # -600
+        </script>
+        <p>Both were paid and the account is 600 overdrawn. Each thread did its check while the balance was still 1000, and each then acted on an answer that was no longer true. The order of events, called the <b>interleaving</b>, was:</p>
+        <div class="scroll">
+          <table>
+            <thead>
+              <tr><th>Time</th><th>Sandhya's thread</th><th>Subhash's thread</th><th>balance</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>1</td><td>checks: 1000 &gt;= 800, yes</td><td></td><td>1000</td></tr>
+              <tr><td>2</td><td>counting notes</td><td>checks: 1000 &gt;= 800, yes</td><td>1000</td></tr>
+              <tr><td>3</td><td>subtracts 800</td><td>counting notes</td><td>200</td></tr>
+              <tr><td>4</td><td></td><td>subtracts 800</td><td>-600</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><b>Honest note:</b> The <code>time.sleep(0.05)</code> between the check and the update is there to make the bug appear on every run. Without it the gap is a few millionths of a second and the bug shows up perhaps once in many thousand runs. That is not safer. It is the same bug, harder to find.</p>
+      </section>
+
+      <section class="chapter" id="lost-update">
+        <h2>The lost update</h2>
+        <p>There is a race even with no <code>if</code>. The line <code>balance += 1</code> looks like one action, but the computer does it in three steps. This pattern is called <b>read-modify-write</b>.</p>
+        <div class="scroll">
+          <table>
+            <thead>
+              <tr><th>Step</th><th>What happens</th><th>Written out</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>1. Read</td><td>Fetch the current value of <code>balance</code></td><td><code>current = balance</code></td></tr>
+              <tr><td>2. Modify</td><td>Add 1 to that private copy</td><td><code>new = current + 1</code></td></tr>
+              <tr><td>3. Write</td><td>Store the result back in <code>balance</code></td><td><code>balance = new</code></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>If a second thread reads between another thread's step 1 and step 3, both start from the same old value and one deposit is lost. The block below writes the three steps out and puts a short sleep in the middle, so that all five threads read before any of them writes.</p>
+        <script type="text/plain" data-lang="py" data-file="lost_update.py">
+import threading, time
+
+balance = 0
+
+def deposit_one():
+    global balance
+    current = balance                # 1. read
+    new = current + 1                # 2. modify
+    time.sleep(0.05)                 #    other threads get a turn here
+    balance = new                    # 3. write
+
+family = ["Rishikesh", "Sandhya", "Subhash", "Malinikesh", "Hemkesh"]
+threads = [threading.Thread(target=deposit_one) for _ in family]
+for t in threads:
+    t.start()
+for t in threads:
+    t.join()
+
+print(balance)                       # 1
+        </script>
+        <p>Five deposits, and the balance is 1. All five threads read 0 and all five wrote 1.</p>
+        <p>The real one-line version is below. It is marked as not runnable because its result varies: it depends on the Python version, the machine and luck. On the Python 3.9 used to check this page it printed a different wrong number on almost every run. On Python 3.10 and later, a simple loop like this one often prints the right answer, because the interpreter switches threads at fewer points. The line is still not safe there. In a larger program, where the switch points fall differently, updates can still be lost.</p>
+        <script type="text/plain" data-lang="py" data-file="lost_update_real.py" data-norun>
+import threading
+
+balance = 0
+
+def deposit_many():
+    global balance
+    for _ in range(500_000):
+        balance += 1                 # read, modify, write: not one step
+
+threads = [threading.Thread(target=deposit_many) for _ in range(2)]
+for t in threads:
+    t.start()
+for t in threads:
+    t.join()
+
+print(balance)                       # should be 1000000; one run gave 725331
+        </script>
+      </section>
+
+      <section class="chapter" id="lock">
+        <h2>Fixing it with a lock</h2>
+        <p>A <b>lock</b> is an object that only one thread can hold at a time. Its other name is <b>mutex</b>, short for mutual exclusion: if I am in, you are out. Picture a cabin at the bank with one key. Whoever has the key goes in. Everyone else waits at the door until the key comes back.</p>
+        <p><code>with lock:</code> takes the key at the top of the block and gives it back at the bottom, even if an exception is raised inside.</p>
+        <script type="text/plain" data-lang="py" data-file="lock.py">
+import threading, time
+
+balance = 1000
+lock = threading.Lock()              # one lock guards the balance
+outcome = {}
+
+def withdraw(name, amount):
+    global balance
+    with lock:                       # only one thread at a time past here
+        if balance >= amount:        # check
+            time.sleep(0.05)
+            balance -= amount        # act
+            outcome[name] = "paid"
+        else:
+            outcome[name] = "refused"
+
+t1 = threading.Thread(target=withdraw, args=("Sandhya", 800))
+t2 = threading.Thread(target=withdraw, args=("Subhash", 800))
+t1.start()
+t2.start()
+t1.join()
+t2.join()
+
+print(sorted(outcome.values()))      # ['paid', 'refused']
+print(balance)                       # 200
+        </script>
+        <p>The check and the update now happen as one unit. The second thread cannot even look at the balance until the first has finished changing it. Which of the two gets there first is still up to the operating system, but either way exactly one is paid.</p>
+        <p>The same lock repairs the lost update:</p>
+        <script type="text/plain" data-lang="py" data-file="lock_counter.py">
+import threading
+
+balance = 0
+lock = threading.Lock()
+
+def deposit_many():
+    global balance
+    for _ in range(50_000):
+        with lock:
+            balance += 1             # read, modify, write as one unit
+
+threads = [threading.Thread(target=deposit_many) for _ in range(4)]
+for t in threads:
+    t.start()
+for t in threads:
+    t.join()
+
+print(balance)                       # 200000
+        </script>
+        <p class="note"><b>Remember:</b> A lock only works if every piece of code that touches the data uses the same lock. Python does not connect the lock to the variable. One function that forgets the lock brings the race back. You can also call <code>lock.acquire()</code> and <code>lock.release()</code> yourself, but <code>with</code> is safer because it can never forget to release.</p>
+      </section>
+
+      <section class="chapter" id="critical-section">
+        <h2>Critical sections</h2>
+        <p>A <b>critical section</b> is a piece of code that must be run by only one thread at a time, because it uses a shared resource. In the last chapter it was the lines inside <code>with lock:</code>.</p>
+        <p>While one thread is inside, every other thread that wants the lock stands still. So keep the critical section small: lock the shared read and write, and do slow work outside. Below, four tellers each print a receipt (0.1 seconds) and add 100 to the day's total.</p>
+        <script type="text/plain" data-lang="py" data-file="critical_section.py">
+import threading, time
+
+total = 0
+lock = threading.Lock()
+
+def slow_inside():
+    global total
+    with lock:
+        time.sleep(0.1)              # printing the receipt while holding the lock
+        total += 100
+
+def slow_outside():
+    global total
+    time.sleep(0.1)                  # printing needs no shared data: no lock
+    with lock:
+        total += 100                 # only the shared update is locked
+
+def run(worker):
+    threads = [threading.Thread(target=worker) for _ in range(4)]
+    start = time.perf_counter()
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+    return round(time.perf_counter() - start, 1)
+
+print(run(slow_inside))              # 0.4
+print(run(slow_outside))             # 0.1
+print(total)                         # 800
+        </script>
+        <p>Both versions are correct. The first one makes the four tellers queue up, so the threads gave no speed-up at all.</p>
+        <p class="note"><b>Rule of thumb:</b> Inside a lock, do only what must not be interrupted. Never wait for the network, a file or a person while holding one.</p>
+      </section>
+
+      <section class="chapter" id="rlock">
+        <h2>RLock</h2>
+        <p>A plain <code>Lock</code> does not know who holds it. If the thread that already holds it asks for it again, that thread waits for itself for ever. The block shows this safely by giving up after 0.1 seconds.</p>
+        <script type="text/plain" data-lang="py" data-file="lock_twice.py">
+import threading
+
+lock = threading.Lock()
+with lock:
+    got_it = lock.acquire(timeout=0.1)     # same thread asks again
+    print(got_it)                          # False
+
+rlock = threading.RLock()
+with rlock:
+    got_it = rlock.acquire(timeout=0.1)    # same thread asks again
+    print(got_it)                          # True
+    rlock.release()                        # release once for every acquire
+        </script>
+        <p>An <code>RLock</code>, a re-entrant lock, remembers its owner and lets that same thread take it again. Other threads still have to wait. You need it when one locked method calls another locked method on the same object:</p>
+        <script type="text/plain" data-lang="py" data-file="rlock_account.py">
+import threading
+
+class Account:
+    def __init__(self, owner, balance):
+        self.owner = owner
+        self.balance = balance
+        self.lock = threading.RLock()
+
+    def deposit(self, amount):
+        with self.lock:
+            self.balance += amount
+
+    def add_interest(self, percent):
+        with self.lock:                              # first acquire
+            interest = self.balance * percent // 100
+            self.deposit(interest)                   # acquires again: fine
+
+account = Account("Malinikesh", 31000)
+account.add_interest(4)
+print(account.balance)               # 32240
+        </script>
+        <p>With <code>threading.Lock()</code> in place of <code>RLock()</code>, <code>add_interest()</code> would hang on the call to <code>deposit()</code> and never return.</p>
+      </section>
+
+      <section class="chapter" id="deadlock">
+        <h2>Deadlock</h2>
+        <p>A <b>deadlock</b> is when threads wait for each other and none can ever continue. The classic case needs two locks. Each account has its own lock, and a transfer must hold both. Rishikesh sends money to Hemkesh at the same moment as Hemkesh sends money to Rishikesh.</p>
+        <p>This block is marked as not runnable because it hangs for ever.</p>
+        <script type="text/plain" data-lang="py" data-file="deadlock.py" data-norun>
+import threading, time
+
+class Account:
+    def __init__(self, number, owner, balance):
+        self.number, self.owner, self.balance = number, owner, balance
+        self.lock = threading.Lock()
+
+def transfer(source, target, amount):
+    with source.lock:                # take my own lock first
+        time.sleep(0.05)
+        with target.lock:            # then wait for the other one
+            source.balance -= amount
+            target.balance += amount
+
+rishikesh = Account(1, "Rishikesh", 50000)
+hemkesh = Account(2, "Hemkesh", 12500)
+
+t1 = threading.Thread(target=transfer, args=(rishikesh, hemkesh, 1000))
+t2 = threading.Thread(target=transfer, args=(hemkesh, rishikesh, 500))
+t1.start()
+t2.start()
+t1.join()                            # never returns
+t2.join()
+        </script>
+        <p>Thread 1 holds Rishikesh's lock and waits for Hemkesh's. Thread 2 holds Hemkesh's lock and waits for Rishikesh's. Neither will let go. It is two people in a narrow corridor, each waiting for the other to step back.</p>
+        <p>The fix is simple: <b>always take locks in the same fixed order</b>. Here, the lower account number first, whichever way the money flows. Then two threads can never hold one lock each.</p>
+        <script type="text/plain" data-lang="py" data-file="lock_order.py">
+import threading, time
+
+class Account:
+    def __init__(self, number, owner, balance):
+        self.number, self.owner, self.balance = number, owner, balance
+        self.lock = threading.Lock()
+
+def transfer(source, target, amount):
+    first, second = sorted([source, target], key=lambda acc: acc.number)
+    with first.lock:                 # always the lower number first
+        time.sleep(0.05)
+        with second.lock:
+            source.balance -= amount
+            target.balance += amount
+
+rishikesh = Account(1, "Rishikesh", 50000)
+hemkesh = Account(2, "Hemkesh", 12500)
+
+t1 = threading.Thread(target=transfer, args=(rishikesh, hemkesh, 1000))
+t2 = threading.Thread(target=transfer, args=(hemkesh, rishikesh, 500))
+t1.start()
+t2.start()
+t1.join()
+t2.join()
+
+print(rishikesh.balance)             # 49500
+print(hemkesh.balance)               # 13000
+        </script>
+        <p class="note"><b>Rule of thumb:</b> Code that holds one lock at a time cannot deadlock in this way. If you need two, decide the order once and follow it everywhere.</p>
+      </section>
+
+      <section class="chapter" id="semaphore">
+        <h2>Semaphore</h2>
+        <p>A lock lets one thread in. A <b>semaphore</b> lets up to N in. It is a counter of free places: taking a place lowers it, leaving raises it, and at zero you wait. The bank has two tellers and five customers arrive together.</p>
+        <script type="text/plain" data-lang="py" data-file="semaphore.py">
+import threading, time
+
+tellers = threading.Semaphore(2)     # two free tellers
+lock = threading.Lock()
+at_counter = 0
+most_at_once = 0
+
+def visit(name):
+    global at_counter, most_at_once
+    with tellers:                    # wait for a free teller
+        with lock:
+            at_counter += 1
+            most_at_once = max(most_at_once, at_counter)
+        time.sleep(0.05)             # being served
+        with lock:
+            at_counter -= 1
+
+family = ["Rishikesh", "Sandhya", "Subhash", "Malinikesh", "Hemkesh"]
+threads = [threading.Thread(target=visit, args=(name,)) for name in family]
+for t in threads:
+    t.start()
+for t in threads:
+    t.join()
+
+print(most_at_once)                  # 2
+print(at_counter)                    # 0
+        </script>
+        <p>Never more than two customers were at a counter. The usual real use is the same idea: at most N open connections to a database or a web service.</p>
+        <p class="note"><b>Note:</b> The semaphore limits how many threads are inside, but two threads are still inside together. The shared counters therefore still need their own lock.</p>
+      </section>
+
+      <section class="chapter" id="event-condition">
+        <h2>Event and Condition</h2>
+        <p>An <b>Event</b> is a flag that threads can wait for. It starts off. <code>wait()</code> blocks until some other thread calls <code>set()</code>. Here the customers wait until the doors open.</p>
+        <script type="text/plain" data-lang="py" data-file="event.py">
+import threading, time
+
+doors_open = threading.Event()
+inside = []
+
+def customer(name):
+    doors_open.wait()                # sleep here until the flag is set
+    inside.append(name)
+
+threads = [threading.Thread(target=customer, args=(name,))
+           for name in ["Sandhya", "Subhash", "Hemkesh"]]
+for t in threads:
+    t.start()
+
+time.sleep(0.05)
+print(inside)                        # []
+doors_open.set()                     # wake up everyone who is waiting
+for t in threads:
+    t.join()
+print(sorted(inside))                # ['Hemkesh', 'Sandhya', 'Subhash']
+        </script>
+        <p>A <b>Condition</b> is a lock plus a way to wait until the shared data reaches some state. Below, a withdrawal of 500 waits until enough money has been deposited. <code>wait_for()</code> gives up the lock while it waits and takes it back before it returns. <code>notify_all()</code> tells the waiting threads to look again.</p>
+        <script type="text/plain" data-lang="py" data-file="condition.py">
+import threading
+
+balance = 0
+changed = threading.Condition()
+
+def withdraw(amount):
+    global balance
+    with changed:
+        changed.wait_for(lambda: balance >= amount)   # wait until true
+        balance -= amount
+
+def deposit(amount):
+    global balance
+    with changed:
+        balance += amount
+        changed.notify_all()         # the balance changed: check again
+
+t = threading.Thread(target=withdraw, args=(500,))
+t.start()
+deposit(300)                         # not enough yet, the thread keeps waiting
+deposit(300)                         # 600: now the withdrawal goes through
+t.join()
+print(balance)                       # 100
+        </script>
+        <p class="note"><b>In practice:</b> You will rarely write a <code>Condition</code> yourself. The queue in the next chapter is built from one, and it covers most needs.</p>
+      </section>
+
+      <section class="chapter" id="queue">
+        <h2>Queue</h2>
+        <p>The safest way for threads to work together is not to share data at all, but to pass it along. <code>queue.Queue</code> is a line of items with all the locking already done inside. One thread puts work in, this is the <b>producer</b>. Another takes work out, this is the <b>consumer</b>. <code>get()</code> waits when the queue is empty.</p>
+        <p>To tell the consumer there is no more work, the producer puts in a special value called a <b>sentinel</b>. <code>None</code> is the usual choice.</p>
+        <script type="text/plain" data-lang="py" data-file="queue_teller.py">
+import queue, threading
+
+requests = queue.Queue()
+balances = {"Rishikesh": 50000, "Sandhya": 82000}
+
+def customer_line():                 # the producer
+    for owner, amount in [("Sandhya", 500), ("Rishikesh", -2000), ("Sandhya", 250)]:
+        requests.put((owner, amount))
+    requests.put(None)               # sentinel: nothing more is coming
+
+def teller():                        # the consumer
+    while True:
+        item = requests.get()        # waits if the queue is empty
+        if item is None:
+            break
+        owner, amount = item
+        balances[owner] += amount    # only this thread touches balances
+        print(f"{owner}: {amount:+} -> {balances[owner]}")
+
+producer = threading.Thread(target=customer_line)
+consumer = threading.Thread(target=teller)
+producer.start()
+consumer.start()
+producer.join()
+consumer.join()
+        </script>
+        <script type="text/plain" data-lang="text" data-file="Output">
+Sandhya: +500 -> 82500
+Rishikesh: -2000 -> 48000
+Sandhya: +250 -> 82750
+        </script>
+        <p>No lock appears in this code. The balances are changed by one thread only, and the queue itself is safe to use from many threads. Items come out in the order they went in.</p>
+        <p class="note"><b>Note:</b> With several consumers, put one sentinel in the queue for each of them, otherwise some will wait for ever. And if several consumers change the same data, that data needs a lock again.</p>
+      </section>
+
+      <section class="chapter" id="thread-safe">
+        <h2>What is thread-safe</h2>
+        <p>Code is <b>thread-safe</b> when it gives correct results however the threads happen to interleave. A short guide:</p>
+        <div class="scroll">
+          <table>
+            <thead>
+              <tr><th>Safe to use from several threads</th><th>Not safe without a lock</th></tr>
+            </thead>
+            <tbody>
+              <tr><td><code>queue.Queue</code>: <code>put()</code> and <code>get()</code></td><td><code>x += 1</code>, <code>x = x + 1</code>, <code>d[key] += 1</code></td></tr>
+              <tr><td><code>Lock</code>, <code>RLock</code>, <code>Semaphore</code>, <code>Event</code>, <code>Condition</code></td><td>Check then act: <code>if balance &gt;= amount: balance -= amount</code></td></tr>
+              <tr><td>One single <code>list.append(x)</code> or <code>d[key] = value</code> in CPython</td><td><code>if key not in d: d[key] = value</code></td></tr>
+              <tr><td>Reading data that no thread changes</td><td>Two or more updates that must stay in step, such as both sides of a transfer</td></tr>
+              <tr><td>Local variables inside a function (each thread has its own)</td><td>Looping over a list or dict while another thread changes it</td></tr>
+              <tr><td>The <code>logging</code> module</td><td>Several <code>print()</code> calls that must appear together as one block</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>The third row of the left column is why the examples on this page could use <code>finished.append(owner)</code> without a lock. It is a property of CPython, not a promise of the language, and it covers one single operation only. As soon as you read a value and then write based on it, you need a lock.</p>
+        <p class="note"><b>Rule of thumb:</b> If two threads can reach the same data and at least one of them changes it, protect it with a lock or pass it through a queue.</p>
+      </section>
+
+      <section class="chapter part" id="processes">
+        <h2>Processes</h2>
+        <p class="kind">Part 4 of 5 &middot; real parallelism on several cores</p>
+        <p>Threads take turns because they share one interpreter and one GIL. A separate process is a whole separate Python: its own interpreter, its own GIL and its own memory. Four processes can calculate on four cores at the same instant. This is the several-cooks kitchen, with each cook in their own kitchen.</p>
+        <ul>
+          <li><a href="#first-process">Starting a process</a>: <code>Process</code> and the <code>__main__</code> guard</li>
+          <li><a href="#process-pool">A pool of processes</a>: CPU-bound work on every core</li>
+          <li><a href="#no-shared-memory">Nothing is shared</a>: a global that does not change</li>
+          <li><a href="#sharing">Sharing on purpose</a>: <code>Value</code>, <code>Queue</code>, <code>Manager</code></li>
+          <li><a href="#process-cost">What processes cost</a>: start-up and pickling</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="first-process">
+        <h2>Starting a process</h2>
+        <p><code>multiprocessing.Process</code> is used just like <code>threading.Thread</code>: <code>target</code>, <code>args</code>, <code>start()</code>, <code>join()</code>. Two things are different. The target must be a function defined at the top level of the file, and the code that starts processes must sit under <code>if __name__ == "__main__":</code>.</p>
+        <script type="text/plain" data-lang="py" data-file="first_process.py">
+import multiprocessing, os
+
+def print_statement(owner):
+    worker = multiprocessing.current_process().name
+    print(f"{worker} prints the statement for {owner}")
+
+if __name__ == "__main__":
+    p = multiprocessing.Process(target=print_statement, args=("Sandhya",))
+    p.start()
+    p.join()
+    print(p.exitcode)                # 0 means it ended without an error
+    print(p.pid != os.getpid())      # the child has its own process id
+        </script>
+        <script type="text/plain" data-lang="text" data-file="Output">
+Process-1 prints the statement for Sandhya
+0
+True
+        </script>
+        <h3>Why the guard is required</h3>
+        <p>There are different ways to start a child process. On macOS and Windows, Python uses <b>spawn</b>: it starts a brand-new Python and that new Python imports your file to find the target function. Importing a file runs all its top-level code. Without the guard, the child would reach <code>p.start()</code> again and try to start its own child. Python stops this with a <code>RuntimeError</code>.</p>
+        <p>Inside the child, <code>__name__</code> is not <code>"__main__"</code>, so everything under the guard is skipped there. You can see the second import happen:</p>
+        <script type="text/plain" data-lang="py" data-file="guard.py">
+import multiprocessing
+
+print("loading the file, __name__ is", __name__, flush=True)
+
+def work():
+    print("child is working", flush=True)
+
+if __name__ == "__main__":
+    p = multiprocessing.Process(target=work)
+    p.start()
+    p.join()
+        </script>
+        <script type="text/plain" data-lang="text" data-file="Output">
+loading the file, __name__ is __main__
+loading the file, __name__ is __mp_main__
+child is working
+        </script>
+        <p>That is the output with spawn. On Linux the long-standing default is <b>fork</b>, which copies the running parent instead of importing the file, so the first line appears once. Write the guard anyway. It is harmless with fork, and your code then works on every system.</p>
+        <p class="note"><b>Remember:</b> Every block in this part has the guard and top-level functions. Save the code in a <code>.py</code> file and run that file. Functions typed straight into the interactive <code>&gt;&gt;&gt;</code> prompt cannot be found by a spawned child.</p>
+      </section>
+
+      <section class="chapter" id="process-pool">
+        <h2>A pool of processes</h2>
+        <p>For CPU-bound work you usually want "run this function on every item, using all my cores". <code>ProcessPoolExecutor</code> has the same <code>map()</code> and <code>submit()</code> as the thread pool, but its workers are processes. Here each account gets a checksum, which is pure arithmetic.</p>
+        <script type="text/plain" data-lang="py" data-file="process_pool.py">
+from concurrent.futures import ProcessPoolExecutor
+
+def checksum(account_no):            # CPU-bound: a loop of arithmetic
+    total = 0
+    for i in range(100_000):
+        total = (total + account_no * i) % 1_000_003
+    return total
+
+if __name__ == "__main__":
+    accounts = [1001, 1002, 1003, 1004, 1005]
+    with ProcessPoolExecutor(max_workers=2) as pool:
+        results = list(pool.map(checksum, accounts))
+    for account_no, value in zip(accounts, results):
+        print(account_no, value)
+        </script>
+        <script type="text/plain" data-lang="text" data-file="Output">
+1001 935198
+1002 870198
+1003 805198
+1004 740198
+1005 675198
+        </script>
+        <p>Leave out <code>max_workers</code> and the pool uses one worker for each core of the machine. The workload here is kept tiny so that the page's examples run quickly. With so little work, the pool is slower than a plain loop. Processes pay off when each call takes a good fraction of a second or more.</p>
+        <h3>multiprocessing.Pool</h3>
+        <p>The older <code>multiprocessing.Pool</code> does the same job and you will meet it in existing code. This one works out a year's interest at 4 percent.</p>
+        <script type="text/plain" data-lang="py" data-file="mp_pool.py">
+from multiprocessing import Pool
+
+def yearly_interest(balance):
+    return balance * 4 // 100
+
+if __name__ == "__main__":
+    balances = [50000, 82000, 76000, 31000, 12500]
+    with Pool(processes=2) as pool:
+        print(pool.map(yearly_interest, balances))
+        # [2000, 3280, 3040, 1240, 500]
+        </script>
+      </section>
+
+      <section class="chapter" id="no-shared-memory">
+        <h2>Nothing is shared</h2>
+        <p>Each process has its own memory. A child gets its own copy of the module's variables, and whatever it changes stays in the child. The parent never sees it.</p>
+        <script type="text/plain" data-lang="py" data-file="no_sharing.py">
+import multiprocessing
+
+balance = 1000
+
+def withdraw(amount):
+    global balance
+    balance -= amount
+    print("child sees", balance)
+
+if __name__ == "__main__":
+    p = multiprocessing.Process(target=withdraw, args=(800,))
+    p.start()
+    p.join()
+    print("parent sees", balance)
+        </script>
+        <script type="text/plain" data-lang="text" data-file="Output">
+child sees 200
+parent sees 1000
+        </script>
+        <p>The same code with a thread would print 200 twice. This is good news and bad news. Two processes cannot have a race on an ordinary variable, because they do not share it. But they also cannot hand results back by changing one. Results must travel another way: as the return value from a pool, or through one of the tools in the next chapter.</p>
+      </section>
+
+      <section class="chapter" id="sharing">
+        <h2>Sharing on purpose</h2>
+        <p><code>multiprocessing</code> has three main ways to share. Each one must be created in the parent and passed to the children as an argument.</p>
+        <h3>Value: one shared number</h3>
+        <p><code>Value("i", 0)</code> is one integer kept in memory that all the processes can see. It is truly shared, so the lost update is back, and this time the processes really do run at the same instant. A <code>Value</code> carries its own lock. Use it.</p>
+        <script type="text/plain" data-lang="py" data-file="shared_value.py">
+import multiprocessing
+
+def deposit_many(balance, times):
+    for _ in range(times):
+        with balance.get_lock():     # without this, deposits get lost
+            balance.value += 1
+
+if __name__ == "__main__":
+    balance = multiprocessing.Value("i", 0)      # "i" means a C integer
+    workers = [multiprocessing.Process(target=deposit_many, args=(balance, 2000))
+               for _ in range(3)]
+    for p in workers:
+        p.start()
+    for p in workers:
+        p.join()
+    print(balance.value)             # 6000
+        </script>
+        <h3>Queue: passing messages</h3>
+        <p><code>multiprocessing.Queue</code> works like <code>queue.Queue</code>, but between processes. Children put results in, the parent takes them out.</p>
+        <script type="text/plain" data-lang="py" data-file="process_queue.py">
+import multiprocessing
+
+def yearly_interest(owner, balance, results):
+    results.put((owner, balance * 4 // 100))
+
+if __name__ == "__main__":
+    results = multiprocessing.Queue()
+    accounts = [("Rishikesh", 50000), ("Sandhya", 82000), ("Hemkesh", 12500)]
+    workers = [multiprocessing.Process(target=yearly_interest,
+                                       args=(owner, balance, results))
+               for owner, balance in accounts]
+    for p in workers:
+        p.start()
+    answers = [results.get() for _ in workers]   # take the results out first
+    for p in workers:
+        p.join()                                 # then wait for the workers
+    print(sorted(answers))
+    # [('Hemkesh', 500), ('Rishikesh', 2000), ('Sandhya', 3280)]
+        </script>
+        <h3>Manager: shared dicts and lists</h3>
+        <p>A <code>Manager</code> starts one more process that holds real Python objects. The other processes get stand-ins that send every operation to it. It is the most flexible of the three and the slowest.</p>
+        <script type="text/plain" data-lang="py" data-file="manager.py">
+import multiprocessing
+
+def open_account(accounts, owner, amount):
+    accounts[owner] = amount         # sent to the manager process
+
+if __name__ == "__main__":
+    with multiprocessing.Manager() as manager:
+        accounts = manager.dict()
+        workers = [multiprocessing.Process(target=open_account,
+                                           args=(accounts, owner, amount))
+                   for owner, amount in [("Subhash", 76000), ("Malinikesh", 31000)]]
+        for p in workers:
+            p.start()
+        for p in workers:
+            p.join()
+        print(sorted(accounts.items()))
+        # [('Malinikesh', 31000), ('Subhash', 76000)]
+        </script>
+        <p class="note"><b>Careful:</b> Shared data between processes has the same races as shared data between threads. <code>accounts[owner] += 100</code> on a manager dict is still read, modify, write. Guard it with a lock from <code>manager.Lock()</code>, or better, let each worker return its result and combine the results in the parent.</p>
+      </section>
+
+      <section class="chapter" id="process-cost">
+        <h2>What processes cost</h2>
+        <p>Parallelism is not free. Two costs matter.</p>
+        <p><b>Start-up.</b> Starting a process means starting a new Python interpreter and, with spawn, importing your file again. That takes far longer than starting a thread.</p>
+        <script type="text/plain" data-lang="py" data-file="startup_cost.py">
+import multiprocessing, threading, time
+
+def nothing():
+    pass
+
+def time_to_run(kind):
+    start = time.perf_counter()
+    worker = kind(target=nothing)
+    worker.start()
+    worker.join()
+    return time.perf_counter() - start
+
+if __name__ == "__main__":
+    thread_time = time_to_run(threading.Thread)
+    process_time = time_to_run(multiprocessing.Process)
+    print(process_time > thread_time * 10)   # True
+        </script>
+        <p><b>Pickling.</b> Processes share no memory, so every argument and every return value is turned into bytes, sent across, and rebuilt on the other side. Python does this with the <code>pickle</code> module. Sending a large list to a worker copies the whole list. And some things cannot be pickled at all, such as a <code>lambda</code>, an open file or a lock from <code>threading</code>.</p>
+        <script type="text/plain" data-lang="py" data-file="pickling.py">
+import pickle
+
+def yearly_interest(balance):
+    return balance * 4 // 100
+
+data = pickle.dumps(yearly_interest)     # a top-level function: fine
+print(type(data).__name__)               # bytes
+
+try:
+    pickle.dumps(lambda balance: balance * 4 // 100)
+except Exception as error:
+    print(type(error).__name__)          # PicklingError
+        </script>
+        <p>A top-level function is pickled as just its name, which the child then looks up after importing the file. That is why targets must be defined at the top level.</p>
+        <p class="note"><b>Rule of thumb:</b> Use processes for a small number of heavy jobs. Send little data in, get little data back, and reuse a pool so the workers are started only once.</p>
+      </section>
+
+      <section class="chapter part" id="choosing">
+        <h2>Choosing</h2>
+        <p class="kind">Part 5 of 5 &middot; which tool for which job</p>
+        <p>The choice comes back to the question from the first part: does the task wait, or does it calculate?</p>
+        <ul>
+          <li><a href="#which-one">Which one to use</a>: a decision table</li>
+          <li><a href="#futures">One API for both pools</a>: <code>concurrent.futures</code></li>
+          <li><a href="#mistakes">Common mistakes</a>: a checklist</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="which-one">
+        <h2>Which one to use</h2>
+        <div class="scroll">
+          <table>
+            <thead>
+              <tr><th>Your work</th><th>Use</th><th>Why</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>Fast enough already</td><td>Nothing. A plain loop</td><td>Concurrent code is harder to write, read and debug</td></tr>
+              <tr><td>I/O-bound, a few tasks to a few hundred</td><td>Threads, through <code>ThreadPoolExecutor</code></td><td>The GIL is released while waiting. Works with ordinary blocking code</td></tr>
+              <tr><td>I/O-bound, thousands of tasks</td><td><code>asyncio</code></td><td>A waiting coroutine costs far less memory than a waiting thread</td></tr>
+              <tr><td>CPU-bound</td><td>Processes, through <code>ProcessPoolExecutor</code></td><td>Each process has its own GIL, so all cores are used</td></tr>
+              <tr><td>CPU-bound, but each call is very short</td><td>A plain loop</td><td>Start-up and pickling cost more than the work</td></tr>
+              <tr><td>A mix of both</td><td>Threads or <code>asyncio</code> for the waiting, a process pool for the calculating</td><td>Each part gets the tool that suits it</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><b>Rule of thumb:</b> Waiting: threads. Waiting on a very large scale: asyncio. Calculating: processes.</p>
+      </section>
+
+      <section class="chapter" id="futures">
+        <h2>One API for both pools</h2>
+        <p><code>concurrent.futures</code> gives threads and processes the same interface: <code>map()</code>, <code>submit()</code>, futures, <code>as_completed()</code>. You can write the code once and switch between the two by changing one name. For new code it is the best place to start.</p>
+        <script type="text/plain" data-lang="py" data-file="one_api.py">
+from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
+
+def yearly_interest(balance):
+    return balance * 4 // 100
+
+def run(pool_class, balances):
+    with pool_class(max_workers=2) as pool:
+        return list(pool.map(yearly_interest, balances))
+
+if __name__ == "__main__":
+    balances = [50000, 82000, 76000]
+    print(run(ThreadPoolExecutor, balances))     # [2000, 3280, 3040]
+    print(run(ProcessPoolExecutor, balances))    # [2000, 3280, 3040]
+        </script>
+        <p>Start with whichever pool matches your work. If you guessed wrong, the change is one word.</p>
+      </section>
+
+      <section class="chapter" id="mistakes">
+        <h2>Common mistakes</h2>
+        <div class="scroll">
+          <table>
+            <thead>
+              <tr><th>Mistake</th><th>What you see</th><th>Fix</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>Sharing data without a lock</td><td>Wrong totals, now and then, never when you are watching</td><td>One lock around every read and write of that data, or a queue</td></tr>
+              <tr><td>Forgetting <code>join()</code></td><td>The main thread reads results before the workers have finished</td><td>Join every thread, or use a pool in a <code>with</code> block</td></tr>
+              <tr><td>CPU-bound work in threads</td><td>No speed-up, sometimes slower</td><td>Use processes</td></tr>
+              <tr><td>Forgetting the <code>__main__</code> guard</td><td><code>RuntimeError</code> on macOS and Windows</td><td>Put the starting code under <code>if __name__ == "__main__":</code></td></tr>
+              <tr><td>Creating too many threads</td><td>Memory use climbs, everything slows down, the server you call refuses you</td><td>A pool with a fixed <code>max_workers</code>, or a semaphore</td></tr>
+              <tr><td>Slow work inside a lock</td><td>Threads queue up, no speed-up</td><td>Keep the critical section small</td></tr>
+              <tr><td>Taking two locks in different orders</td><td>The program hangs</td><td>One fixed order everywhere</td></tr>
+              <tr><td><code>target=work()</code> with brackets</td><td>The work runs in the main thread, the new thread does nothing</td><td><code>target=work, args=(...)</code></td></tr>
+              <tr><td>Never calling <code>future.result()</code></td><td>Errors in workers vanish silently</td><td>Ask every future for its result</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>Threads and processes are run by the operating system, which may switch between them at any moment. The other way to handle many waiting tasks is to let the code itself decide when to switch, and that is the subject of the next page: <a href="python-asyncio.html">Python Async IO</a>.</p>
+      </section>
+
+    </div>
+  </main>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script src="../../assets/tutorial.js"></script>
+</body>
+</html>

@@ -1,0 +1,555 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Python Functions</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@500;700&display=swap">
+<link rel="stylesheet" href="../../assets/tutorial.css">
+</head>
+<body data-track="python">
+
+<header class="topbar">
+  <div class="topbar-in">
+    <a class="brand" href="../../../index.html">Learnings</a>
+    <nav class="tracks" aria-label="Python paths">
+      <a href="../../../index.html#python-basics" aria-current="true">Python Basics</a>
+      <a href="../../../index.html#python-advanced">Python Advanced</a>
+      <a href="../../../index.html#python-practice">Python in Practice</a>
+      <a href="../../../index.html#python-design">Python Design</a>
+      <a href="../../../archive.html">Archive</a>
+    </nav>
+    <div class="tools">
+      <button class="btn" id="menu" type="button" aria-expanded="false">Chapters</button>
+      <input id="q" type="search" placeholder="Search chapters" aria-label="Search chapters">
+      <button class="btn" id="theme" type="button">Dark mode</button>
+    </div>
+  </div>
+</header>
+
+<div class="shell">
+  <aside class="side">
+    <p class="side-label">Functions</p>
+    <nav id="toc" aria-label="Chapters"></nav>
+  </aside>
+
+  <main>
+    <div class="page-head">
+      <p class="eyebrow">Python basics, part 4 of 6</p>
+      <h1>Python Functions</h1>
+      <p class="lead">A function is a named block of code that you write once and run whenever you need it. This page is a Python 3 rewrite of the Pythofrank lessons on functions and <code>map</code> from February 2017. The original examples are kept and updated from Python 2.7, and the parts a beginner needs next are added: arguments, scope, lambda, recursion and type hints.</p>
+    </div>
+
+    <div class="chapters">
+
+      <section class="chapter" id="define-call">
+        <h2>Defining and calling</h2>
+        <p><code>def</code> defines a function: a name, a list of parameters in brackets, a colon, then an indented body. Nothing in the body runs until the function is called by writing its name followed by brackets.</p>
+        <script type="text/plain" data-lang="py" data-file="add.py">
+def add(a, b):                    # a and b are the parameters
+    return a + b                  # hand the result back to the caller
+
+print(add(10, 5))                 # 15   (10 and 5 are the arguments)
+print(add(6, 8))                  # 14
+print(add("Banga", "lore"))       # Bangalore
+
+
+def greet():                      # a function may take no parameters
+    print("Welcome to the bank")
+
+greet()                           # Welcome to the bank
+        </script>
+        <p class="note"><b>Terms:</b> a <b>parameter</b> is the name in the definition. An <b>argument</b> is the value you pass in the call. The 2017 lesson named this function <code>sum</code>. That works, but it hides Python's built-in <code>sum()</code>, so it is called <code>add</code> here.</p>
+      </section>
+
+      <section class="chapter" id="return">
+        <h2>Return values</h2>
+        <p><code>return</code> ends the function and sends a value back to the place it was called from. A function that reaches its end without <code>return</code> gives back <code>None</code>, Python's value for "nothing".</p>
+        <script type="text/plain" data-lang="py" data-file="return_values.py">
+def addition_of_all(nums):        # works for a list or a tuple of numbers
+    s = 0
+    for num in nums:
+        s += num
+    return s
+
+print(addition_of_all([1, 2, 3, 4, 5]))   # 15
+print(addition_of_all((11, 22, 33)))      # 66
+
+
+def print_from_last(nums):        # prints, but returns nothing
+    for num in reversed(nums):
+        print(num, end=" ")
+    print()
+
+result = print_from_last([5, 6, 0, 3, 2, 1])   # 1 2 3 0 6 5
+print(result)                     # None
+        </script>
+        <p>A function can have more than one <code>return</code>. The first one reached ends it. To return several values, separate them with commas. They travel back together as one tuple, which the caller can unpack into separate names.</p>
+        <script type="text/plain" data-lang="py" data-file="several_values.py">
+def withdraw(balance, amount):
+    if amount > balance:
+        return balance, False     # leave early, nothing below runs
+    return balance - amount, True
+
+result = withdraw(5000, 1200)
+print(result)                     # (3800, True)
+
+balance, done = withdraw(5000, 9000)      # unpack into two names
+print(balance, done)              # 5000 False
+        </script>
+        <p class="note"><b>Difference:</b> <code>print()</code> shows a value to a person. <code>return</code> gives a value to the rest of the program. A function that only prints cannot be used in a calculation.</p>
+      </section>
+
+      <section class="chapter" id="arguments">
+        <h2>Positional and keyword arguments</h2>
+        <p>Arguments are matched to parameters by position: first to first, second to second. You can also name the parameter in the call. Named arguments are called keyword arguments and can be given in any order.</p>
+        <script type="text/plain" data-lang="py" data-file="transfer.py">
+def transfer(sender, receiver, amount):
+    return f"{sender} pays {receiver} {amount}"
+
+print(transfer("Subhash", "Sandhya", 500))
+# Subhash pays Sandhya 500
+
+print(transfer(amount=500, receiver="Sandhya", sender="Subhash"))
+# Subhash pays Sandhya 500
+
+print(transfer("Subhash", amount=750, receiver="Hemkesh"))
+# Subhash pays Hemkesh 750
+
+print(transfer("Sandhya", "Subhash", 500))
+# Sandhya pays Subhash 500   (same values, other order, other meaning)
+        </script>
+        <p class="note"><b>Rule:</b> in a call, positional arguments come first and keyword arguments after them. Use keywords when the meaning of a value is not obvious from the call alone.</p>
+      </section>
+
+      <section class="chapter" id="defaults">
+        <h2>Default values</h2>
+        <p>A parameter can have a default value, written with <code>=</code> in the definition. The caller may then leave that argument out.</p>
+        <script type="text/plain" data-lang="py" data-file="open_account.py">
+def open_account(owner, balance=0, currency="INR"):
+    return f"{owner}: {balance} {currency}"
+
+print(open_account("Rishikesh Agrawani"))
+# Rishikesh Agrawani: 0 INR
+
+print(open_account("Sandhya Agrawani", 5000))
+# Sandhya Agrawani: 5000 INR
+
+print(open_account("Hemkesh Agrawani", currency="USD"))
+# Hemkesh Agrawani: 0 USD
+        </script>
+        <p class="note"><b>Rule:</b> parameters with defaults must come after the ones without. <code>def open_account(balance=0, owner):</code> is a syntax error.</p>
+      </section>
+
+      <section class="chapter" id="mutable-default">
+        <h2>The mutable default trap</h2>
+        <p>A default value is created once, when the <code>def</code> line runs, not on every call. If the default is a list or a dictionary, which can be changed in place (they are <b>mutable</b>), every call that uses the default shares the same object.</p>
+        <script type="text/plain" data-lang="py" data-file="trap.py">
+def add_deposit(amount, history=[]):      # one list, shared by all calls
+    history.append(amount)
+    return history
+
+print(add_deposit(500))           # [500]
+print(add_deposit(200))           # [500, 200]   (the first deposit is still there)
+        </script>
+        <p>The fix is to use <code>None</code> as the default and make a new list inside the function.</p>
+        <script type="text/plain" data-lang="py" data-file="trap_fixed.py">
+def add_deposit(amount, history=None):
+    if history is None:
+        history = []              # a fresh list on every call
+    history.append(amount)
+    return history
+
+print(add_deposit(500))           # [500]
+print(add_deposit(200))           # [200]
+
+mine = [100]
+print(add_deposit(300, mine))     # [100, 300]   (a list you pass in is still used)
+        </script>
+        <p class="note"><b>Rule:</b> never use a list, dictionary or set as a default value. Numbers, strings, tuples and <code>None</code> cannot be changed in place, so they are safe.</p>
+      </section>
+
+      <section class="chapter" id="args-kwargs">
+        <h2>*args and **kwargs</h2>
+        <p>Sometimes you do not know how many arguments will come. A parameter with one star collects all extra positional arguments into a tuple. A parameter with two stars collects all extra keyword arguments into a dictionary. The names <code>args</code> and <code>kwargs</code> are only a habit. The stars do the work.</p>
+        <script type="text/plain" data-lang="py" data-file="args_kwargs.py">
+def total(*amounts):              # amounts is a tuple
+    print(amounts)
+    return sum(amounts)
+
+print(total(100, 200, 300))
+# (100, 200, 300)
+# 600
+print(total())
+# ()
+# 0
+
+
+def describe(owner, **details):   # details is a dictionary
+    print(owner, details)
+
+describe("Malinikesh", city="Raipur", balance=7000)
+# Malinikesh {'city': 'Raipur', 'balance': 7000}
+        </script>
+        <p>The stars also work the other way round. In a call, <code>*</code> spreads a list over positional parameters and <code>**</code> spreads a dictionary over keyword parameters.</p>
+        <script type="text/plain" data-lang="py" data-file="unpacking.py">
+def transfer(sender, receiver, amount):
+    return f"{sender} pays {receiver} {amount}"
+
+people = ["Subhash", "Sandhya"]
+print(transfer(*people, 500))             # Subhash pays Sandhya 500
+
+order = {"sender": "Hemkesh", "receiver": "Malinikesh", "amount": 250}
+print(transfer(**order))                  # Hemkesh pays Malinikesh 250
+        </script>
+      </section>
+
+      <section class="chapter" id="keyword-only">
+        <h2>Keyword-only arguments</h2>
+        <p>Parameters written after a bare <code>*</code> can only be passed by name. This protects options, such as on and off switches, from being set by accident.</p>
+        <script type="text/plain" data-lang="py" data-file="keyword_only.py">
+def withdraw(balance, amount, *, allow_overdraft=False):
+    if amount > balance and not allow_overdraft:
+        return balance
+    return balance - amount
+
+print(withdraw(1000, 1500))                           # 1000
+print(withdraw(1000, 1500, allow_overdraft=True))     # -500
+
+try:
+    withdraw(1000, 1500, True)    # True is not allowed here by position
+except TypeError as error:
+    print(error)
+# withdraw() takes 2 positional arguments but 3 were given
+        </script>
+        <p class="note"><b>Why:</b> <code>withdraw(1000, 1500, True)</code> tells the reader nothing about what <code>True</code> means. Forcing the name makes every call explain itself.</p>
+      </section>
+
+      <section class="chapter" id="docstrings">
+        <h2>Docstrings</h2>
+        <p>A string written as the first statement of a function is its docstring, short for documentation string. It says what the function does. Python stores it in <code>__doc__</code>, and <code>help()</code> and code editors show it.</p>
+        <script type="text/plain" data-lang="py" data-file="docstring.py">
+def simple_interest(principal, rate, years):
+    """Return the simple interest earned on principal.
+
+    rate is a yearly rate such as 0.08 for 8 percent.
+    """
+    return principal * rate * years
+
+print(simple_interest(10000, 0.08, 2))    # 1600.0
+print(simple_interest.__name__)           # simple_interest
+print(simple_interest.__doc__)
+        </script>
+        <script type="text/plain" data-lang="text" data-file="Output">
+1600.0
+simple_interest
+Return the simple interest earned on principal.
+
+    rate is a yearly rate such as 0.08 for 8 percent.
+
+        </script>
+        <p class="note"><b>Convention:</b> use triple double quotes, start with one short line that says what the function returns or does, and add details after a blank line only when they are needed. In interactive mode, <code>help(simple_interest)</code> prints the same text.</p>
+      </section>
+
+      <section class="chapter" id="scope">
+        <h2>Scope: local and global</h2>
+        <p>Scope is the part of a program where a name can be seen. A name assigned inside a function is <b>local</b>: it exists only while that call runs. A name assigned at the top level of the file is <b>global</b>. A function can read a global name, but assigning to that name inside the function makes a new local one.</p>
+        <script type="text/plain" data-lang="py" data-file="scope.py">
+rate = 0.04                       # global
+
+def interest(balance):
+    amount = balance * rate       # amount is local, rate is read from outside
+    return amount
+
+print(interest(5000))             # 200.0
+
+def change_rate():
+    rate = 0.10                   # a new local name, the global is untouched
+    return rate
+
+print(change_rate())              # 0.1
+print(rate)                       # 0.04
+
+try:
+    print(amount)                 # the local name is gone after the call
+except NameError as error:
+    print(error)                  # name 'amount' is not defined
+        </script>
+        <p>The <code>global</code> statement tells Python that an assignment inside the function should change the global name.</p>
+        <script type="text/plain" data-lang="py" data-file="global_keyword.py">
+transactions = 0
+
+def record():
+    global transactions           # without this line Python raises UnboundLocalError
+    transactions += 1
+
+record()
+record()
+print(transactions)               # 2
+        </script>
+        <p class="note"><b>Advice:</b> use <code>global</code> rarely. A function that takes values as arguments and returns its result is easier to test and to reuse than one that quietly changes a variable somewhere else.</p>
+      </section>
+
+      <section class="chapter" id="nonlocal">
+        <h2>Functions inside functions and nonlocal</h2>
+        <p>A function can be defined inside another function. The inner one can read the names of the outer one. To assign to such a name, declare it <code>nonlocal</code>. The inner function keeps those names alive even after the outer function has returned. This is called a closure.</p>
+        <script type="text/plain" data-lang="py" data-file="nonlocal_keyword.py">
+def make_account(balance):
+    def deposit(amount):
+        nonlocal balance          # balance belongs to make_account
+        balance += amount
+        return balance
+    return deposit                # return the inner function itself
+
+rishikesh = make_account(1000)
+print(rishikesh(500))             # 1500
+print(rishikesh(250))             # 1750
+
+sandhya = make_account(100)       # a separate balance
+print(sandhya(50))                # 150
+print(rishikesh(0))               # 1750
+        </script>
+        <p class="note"><b>Lookup order:</b> Python searches for a name in the local scope first, then in any enclosing functions, then in the globals, then in the built-ins. This order is often called LEGB.</p>
+      </section>
+
+      <section class="chapter" id="functions-as-values">
+        <h2>Functions as values</h2>
+        <p>A function is a value like a number or a string. Without brackets, its name refers to the function itself. You can give it a second name, put it in a list or dictionary, and pass it to another function.</p>
+        <script type="text/plain" data-lang="py" data-file="functions_as_values.py">
+def square(n):
+    return n ** 2
+
+def cube(n):
+    return n ** 3
+
+print(square(10), square(11), square(5))  # 100 121 25
+print(cube(5), cube(6), cube(3))          # 125 216 27
+
+power = cube                      # no brackets: the function, not its result
+print(power(7))                   # 343
+
+def apply_twice(func, value):     # a function that takes a function
+    return func(func(value))
+
+print(apply_twice(square, 3))     # 81
+
+operations = {"square": square, "cube": cube}
+print(operations["cube"](8))      # 512
+        </script>
+      </section>
+
+      <section class="chapter" id="lambda">
+        <h2>lambda</h2>
+        <p><code>lambda</code> writes a small function without a name, in one line. After the word come the parameters, then a colon, then one expression whose value is returned. It is meant for short functions that are passed straight to another function.</p>
+        <script type="text/plain" data-lang="py" data-file="lambda.py">
+add = lambda a, b: a + b          # the same as: def add(a, b): return a + b
+print(add(5, 6))                  # 11
+
+print((lambda n: n ** 2)(9))      # 81   (defined and called at once)
+
+def apply_twice(func, value):
+    return func(func(value))
+
+print(apply_twice(lambda n: n + 10, 5))   # 25
+        </script>
+        <p class="note"><b>Limit:</b> a lambda holds one expression only: no statements, no assignments, no several lines. If you need a name for it or more than one line, use <code>def</code>.</p>
+      </section>
+
+      <section class="chapter" id="map">
+        <h2>map</h2>
+        <p><code>map(func, items)</code> calls <code>func</code> on every item and gives the results in the same order. In Python 3 it returns a lazy <code>map</code> object that produces values only when asked, so wrap it in <code>list()</code> to see them.</p>
+        <script type="text/plain" data-lang="py" data-file="map_one.py">
+def square(n):
+    return n ** 2
+
+def cube(n):
+    return n ** 3
+
+l = [1, 2, 3, 4, 5, 6]
+t = 1, 2, 3, 4, 5                 # a tuple, the brackets are optional
+
+print(list(map(square, l)))       # [1, 4, 9, 16, 25, 36]
+print(list(map(cube, t)))         # [1, 8, 27, 64, 125]
+print(type(map(square, l)))       # <class 'map'>
+        </script>
+        <p>Give <code>map</code> two sequences and the function receives one item from each. It stops when the shorter sequence ends.</p>
+        <script type="text/plain" data-lang="py" data-file="map_two.py">
+def add_elems_of_two_sequences(a, b):
+    return a + b
+
+l = [1, 2, 3, 4, 5, 6]
+t = 1, 2, 3, 4, 5
+l2 = [3, 6, 9, 12, 15, 18]
+
+print(list(map(add_elems_of_two_sequences, l, t)))    # [2, 4, 6, 8, 10]
+print(list(map(add_elems_of_two_sequences, l2, t)))   # [4, 8, 12, 16, 20]
+
+t = 6, 7, 8, 9, 10
+t2 = 3, 4, 5, 6, 7
+print(list(map(lambda a, b: a + b, [5, 4, 3, 2, 1], t)))   # [11, 11, 11, 11, 11]
+print(list(map(lambda a, b: a + b, t, t2)))                # [9, 11, 13, 15, 17]
+        </script>
+        <p>The function may return anything, including a list. Here each number becomes its multiplication table.</p>
+        <script type="text/plain" data-lang="py" data-file="map_tables.py">
+def table(n):
+    return [i * n for i in range(1, 11)]
+
+for row in map(table, [5, 10, 15, 20, 25, 30]):
+    print(row)
+        </script>
+        <script type="text/plain" data-lang="text" data-file="Output">
+[5, 10, 15, 20, 25, 30, 35, 40, 45, 50]
+[10, 20, 30, 40, 50, 60, 70, 80, 90, 100]
+[15, 30, 45, 60, 75, 90, 105, 120, 135, 150]
+[20, 40, 60, 80, 100, 120, 140, 160, 180, 200]
+[25, 50, 75, 100, 125, 150, 175, 200, 225, 250]
+[30, 60, 90, 120, 150, 180, 210, 240, 270, 300]
+        </script>
+        <p class="note"><b>Python 2:</b> in the 2017 lesson <code>map()</code> returned a list directly, and a shorter second sequence was filled up with <code>None</code>. Python 3 returns a lazy object and stops at the shorter sequence. A <code>map</code> object can be looped over only once.</p>
+      </section>
+
+      <section class="chapter" id="filter-sorted">
+        <h2>filter and sorted with key</h2>
+        <p><code>filter(func, items)</code> keeps the items for which <code>func</code> returns a true value. Like <code>map</code>, it is lazy.</p>
+        <script type="text/plain" data-lang="py" data-file="filter.py">
+balances = [5000, 0, 12500, 300, 0, 800]
+
+print(list(filter(lambda b: b >= 1000, balances)))    # [5000, 12500]
+
+def is_empty(balance):
+    return balance == 0
+
+print(len(list(filter(is_empty, balances))))          # 2
+        </script>
+        <p><code>sorted()</code> returns a new sorted list. Its <code>key</code> argument is a function that is called on each item, and the items are ordered by what that function returns. <code>min()</code> and <code>max()</code> accept <code>key</code> too.</p>
+        <script type="text/plain" data-lang="py" data-file="sorted_key.py">
+accounts = [
+    ("Rishikesh", 5000),
+    ("Sandhya", 12500),
+    ("Hemkesh", 800),
+    ("Malinikesh", 7000),
+]
+
+by_balance = sorted(accounts, key=lambda account: account[1])
+print([name for name, balance in by_balance])
+# ['Hemkesh', 'Rishikesh', 'Malinikesh', 'Sandhya']
+
+richest_first = sorted(accounts, key=lambda account: account[1], reverse=True)
+print(richest_first[0])                               # ('Sandhya', 12500)
+
+names = ["Subhash", "Hemkesh", "Sandhya", "Rishikesh"]
+print(sorted(names, key=len))
+# ['Subhash', 'Hemkesh', 'Sandhya', 'Rishikesh']   (equal lengths keep their order)
+
+print(max(accounts, key=lambda account: account[1]))  # ('Sandhya', 12500)
+        </script>
+      </section>
+
+      <section class="chapter" id="comprehension">
+        <h2>Comprehensions instead of map and filter</h2>
+        <p>A list comprehension does the work of <code>map</code> and <code>filter</code> in one expression, and usually reads better because no lambda is needed. The part before <code>for</code> is the map step. The <code>if</code> at the end is the filter step.</p>
+        <script type="text/plain" data-lang="py" data-file="comprehension.py">
+nums = [1, 2, 3, 4, 5, 6]
+
+print(list(map(lambda n: n ** 2, nums)))              # [1, 4, 9, 16, 25, 36]
+print([n ** 2 for n in nums])                         # [1, 4, 9, 16, 25, 36]
+
+print(list(filter(lambda n: n % 2 == 0, nums)))       # [2, 4, 6]
+print([n for n in nums if n % 2 == 0])                # [2, 4, 6]
+
+# both steps together: squares of the even numbers
+print(list(map(lambda n: n ** 2, filter(lambda n: n % 2 == 0, nums))))   # [4, 16, 36]
+print([n ** 2 for n in nums if n % 2 == 0])                              # [4, 16, 36]
+
+l = [5, 4, 3, 2, 1]
+t = 6, 7, 8, 9, 10
+print([a + b for a, b in zip(l, t)])                  # [11, 11, 11, 11, 11]
+        </script>
+        <p class="note"><b>Which one:</b> use a comprehension when you would otherwise write a lambda. <code>map</code> is still neat when the function already exists, as in <code>list(map(int, ["1", "2", "3"]))</code>.</p>
+      </section>
+
+      <section class="chapter" id="recursion">
+        <h2>Recursion</h2>
+        <p>A function that calls itself is recursive. It needs two parts: a <b>base case</b> that returns without another call, and a step that calls the function again with a smaller problem. Without a base case the calls would never stop.</p>
+        <script type="text/plain" data-lang="py" data-file="recursion.py">
+def factorial(n):
+    if n <= 1:                    # base case
+        return 1
+    return n * factorial(n - 1)   # a smaller problem each time
+
+print(factorial(5))               # 120   (5 * 4 * 3 * 2 * 1)
+print(factorial(1))               # 1
+
+
+def addition_of_all(nums):        # the sum from earlier, written recursively
+    if not nums:                  # an empty list adds up to 0
+        return 0
+    return nums[0] + addition_of_all(nums[1:])
+
+print(addition_of_all([1, 2, 3, 4, 5]))   # 15
+        </script>
+        <p class="note"><b>Limit:</b> Python stops a chain of calls that grows too deep, by default at about 1000 levels, and raises <code>RecursionError</code>. For plain counting or adding, a loop is simpler and faster. Recursion fits data that is nested, such as folders inside folders.</p>
+      </section>
+
+      <section class="chapter" id="type-hints">
+        <h2>Type hints</h2>
+        <p>A type hint notes which type a parameter should be and which type the function returns. Write <code>name: type</code> for a parameter and <code>-&gt; type</code> before the colon for the return value.</p>
+        <script type="text/plain" data-lang="py" data-file="type_hints.py">
+def add_interest(balance: float, rate: float = 0.04) -> float:
+    return balance + balance * rate
+
+print(add_interest(1000))         # 1040.0
+
+
+def owners(accounts: dict) -> list:
+    return sorted(accounts)
+
+print(owners({"Sandhya": 12500, "Hemkesh": 800}))     # ['Hemkesh', 'Sandhya']
+
+
+def double(n: int) -> int:
+    return n * 2
+
+print(double(21))                 # 42
+print(double("ab"))               # abab   (the hint is not checked when the code runs)
+        </script>
+        <p class="note"><b>Concept:</b> Python does not enforce hints. They are for the reader, for editors that complete and check code as you type, and for separate checking tools such as mypy.</p>
+      </section>
+
+      <section class="chapter" id="quick-reference">
+        <h2>Quick reference</h2>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>You want to</th><th>Write</th></tr></thead>
+            <tbody>
+              <tr><td>Define a function</td><td><code>def add(a, b):</code></td></tr>
+              <tr><td>Give a result back</td><td><code>return a + b</code></td></tr>
+              <tr><td>Return several values</td><td><code>return balance, True</code>, then <code>balance, done = withdraw(...)</code></td></tr>
+              <tr><td>Pass an argument by name</td><td><code>transfer("Subhash", receiver="Sandhya", amount=500)</code></td></tr>
+              <tr><td>Make an argument optional</td><td><code>def open_account(owner, balance=0):</code></td></tr>
+              <tr><td>Default to an empty list safely</td><td><code>history=None</code>, then <code>if history is None: history = []</code></td></tr>
+              <tr><td>Accept any number of arguments</td><td><code>def total(*amounts):</code>, <code>def describe(**details):</code></td></tr>
+              <tr><td>Force an argument to be named</td><td><code>def withdraw(balance, amount, *, allow_overdraft=False):</code></td></tr>
+              <tr><td>Document a function</td><td><code>"""Return ..."""</code> as its first statement</td></tr>
+              <tr><td>Change a global name</td><td><code>global transactions</code></td></tr>
+              <tr><td>Change a name of the outer function</td><td><code>nonlocal balance</code></td></tr>
+              <tr><td>Write a one-line function</td><td><code>lambda n: n ** 2</code></td></tr>
+              <tr><td>Change every item</td><td><code>[n ** 2 for n in nums]</code> or <code>list(map(square, nums))</code></td></tr>
+              <tr><td>Keep some items</td><td><code>[n for n in nums if n &gt; 0]</code> or <code>list(filter(func, nums))</code></td></tr>
+              <tr><td>Sort by a rule</td><td><code>sorted(accounts, key=lambda account: account[1])</code></td></tr>
+              <tr><td>Note the expected types</td><td><code>def double(n: int) -&gt; int:</code></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>The 2017 originals, with their Python 2.7 code, are still online: <a href="../../../pages/functions.html">Functions</a> and <a href="../../../pages/map.html">The map function</a>.</p>
+        <p>Next, bundle data and the functions that work on it into one unit in <a href="python-classes.html">Python Classes</a>.</p>
+      </section>
+
+    </div>
+  </main>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script src="../../assets/tutorial.js"></script>
+</body>
+</html>

@@ -1,0 +1,1136 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Python Decorators</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@500;700&display=swap">
+<link rel="stylesheet" href="../../assets/tutorial.css">
+</head>
+<body data-track="python">
+
+<header class="topbar">
+  <div class="topbar-in">
+    <a class="brand" href="../../../index.html">Learnings</a>
+    <nav class="tracks" aria-label="Python paths">
+      <a href="../../../index.html#python-basics">Python Basics</a>
+      <a href="../../../index.html#python-advanced" aria-current="true">Python Advanced</a>
+      <a href="../../../index.html#python-practice">Python in Practice</a>
+      <a href="../../../index.html#python-design">Python Design</a>
+      <a href="../../../archive.html">Archive</a>
+    </nav>
+    <div class="tools">
+      <button class="btn" id="menu" type="button" aria-expanded="false">Chapters</button>
+      <input id="q" type="search" placeholder="Search chapters" aria-label="Search chapters">
+      <button class="btn" id="theme" type="button">Dark mode</button>
+    </div>
+  </div>
+</header>
+
+<div class="shell">
+  <aside class="side">
+    <p class="side-label">Decorators</p>
+    <nav id="toc" aria-label="Chapters"></nav>
+  </aside>
+
+  <main>
+    <div class="page-head">
+      <p class="eyebrow">Python advanced, part 1 of 5</p>
+      <h1>Python Decorators</h1>
+      <p class="lead">A decorator is a function that takes another function and gives back a new one that does a little more. It lets you add logging, checks, caching or retries to many functions without touching the code inside them. This page builds the idea one small step at a time, starting from plain functions, and uses a small family bank as the running example.</p>
+    </div>
+
+    <div class="chapters">
+
+      <section class="chapter part" id="foundations">
+        <h2>Foundations</h2>
+        <p class="kind">Part 1 of 4 &middot; what a function really is</p>
+        <p>A decorator uses nothing new. It is built from three things Python functions can already do. Once these three feel ordinary, the decorator itself is a short step.</p>
+        <ul>
+          <li><a href="#functions-are-objects">Functions are objects</a>: store them, pass them, return them</li>
+          <li><a href="#inner-functions">Inner functions</a>: define a function inside a function</li>
+          <li><a href="#closures">Closures</a>: an inner function that remembers values</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="functions-are-objects">
+        <h2>Functions are objects</h2>
+        <p>A function is a value, just like a number or a list. The name <code>deposit</code> is a variable that points to it. Without brackets you get the function itself. With brackets you call it.</p>
+        <script type="text/plain" data-lang="py" data-file="assign.py">
+def deposit(balance, amount):
+    return balance + amount
+
+add_money = deposit              # no brackets: a second name for the same function
+print(add_money(1000, 500))      # 1500
+print(add_money is deposit)      # True
+print(deposit.__name__)          # deposit
+print(type(deposit))             # <class 'function'>
+        </script>
+        <h3>Pass a function to a function</h3>
+        <p>Because a function is a value, you can hand it to another function as an argument.</p>
+        <script type="text/plain" data-lang="py" data-file="pass.py">
+def deposit(balance, amount):
+    return balance + amount
+
+def withdraw(balance, amount):
+    return balance - amount
+
+def apply(operation, balance, amount):
+    return operation(balance, amount)     # call whatever was passed in
+
+print(apply(deposit, 1000, 500))     # 1500
+print(apply(withdraw, 1000, 300))    # 700
+        </script>
+        <h3>Return a function from a function</h3>
+        <p>A function can also give a function back as its result.</p>
+        <script type="text/plain" data-lang="py" data-file="return.py">
+def deposit(balance, amount):
+    return balance + amount
+
+def withdraw(balance, amount):
+    return balance - amount
+
+def pick(kind):
+    if kind == "deposit":
+        return deposit        # no brackets: return the function, do not call it
+    return withdraw
+
+operation = pick("withdraw")
+print(operation.__name__)        # withdraw
+print(operation(1000, 300))      # 700
+        </script>
+        <p class="note"><b>Remember:</b> a decorator does both at once. It takes a function in and returns a function out.</p>
+      </section>
+
+      <section class="chapter" id="inner-functions">
+        <h2>Inner functions</h2>
+        <p>You can write a <code>def</code> inside another <code>def</code>. The inner function exists only while the outer one runs, like any other local variable.</p>
+        <script type="text/plain" data-lang="py" data-file="inner.py">
+def welcome(name):
+    def tidy(text):                      # a helper, visible only inside welcome
+        return text.strip().title()
+    return "Welcome, " + tidy(name)
+
+print(welcome("  sandhya agrawani "))    # Welcome, Sandhya Agrawani
+        </script>
+        <p>The outer function can also return the inner function instead of calling it. The caller then holds a function that was made on the spot.</p>
+        <script type="text/plain" data-lang="py" data-file="return_inner.py">
+def make_welcome():
+    def welcome(name):
+        return "Welcome, " + name
+    return welcome                 # hand the inner function out
+
+greet = make_welcome()
+print(greet.__name__)              # welcome
+print(greet("Subhash"))            # Welcome, Subhash
+        </script>
+      </section>
+
+      <section class="chapter" id="closures">
+        <h2>Closures</h2>
+        <p>An inner function can use the variables of the function around it. If the inner function is returned, it keeps those variables alive and carries them along. A function that remembers values like this is called a <b>closure</b>.</p>
+        <script type="text/plain" data-lang="py" data-file="closure.py">
+def make_interest(rate):
+    def interest(balance):
+        return balance * rate / 100     # rate comes from the outer function
+    return interest
+
+savings = make_interest(4)       # remembers rate = 4
+fixed = make_interest(7)         # a separate closure, remembers rate = 7
+
+print(savings(10000))            # 400.0
+print(fixed(10000))              # 700.0
+print(savings.__closure__[0].cell_contents)   # 4
+        </script>
+        <p><code>make_interest</code> finished long before <code>savings(10000)</code> ran, yet <code>rate</code> was still there. Each call to <code>make_interest</code> makes a new closure with its own copy.</p>
+        <h3>A closure can also change what it remembers</h3>
+        <p>To assign to a remembered variable, declare it with <code>nonlocal</code>. Without that word Python would create a new local variable instead.</p>
+        <script type="text/plain" data-lang="py" data-file="nonlocal.py">
+def make_account_numbers(start):
+    last = start
+    def next_number():
+        nonlocal last            # use the outer variable, do not make a new one
+        last += 1
+        return last
+    return next_number
+
+new_number = make_account_numbers(1000)
+print(new_number())     # 1001
+print(new_number())     # 1002
+print(new_number())     # 1003
+        </script>
+        <p class="note"><b>Concept:</b> a closure remembers the variables it uses from the enclosing function, not the whole function. In a decorator, the remembered value is the original function.</p>
+      </section>
+
+      <section class="chapter part" id="writing">
+        <h2>Writing decorators</h2>
+        <p class="kind">Part 2 of 4 &middot; wrap a function, step by step</p>
+        <p>Now put the three ideas together. Take a function in, define an inner function that calls it and does something extra, and return the inner function. Each chapter here fixes one weakness of the chapter before it.</p>
+        <ul>
+          <li><a href="#first-decorator">The first decorator</a>: written by hand, no special syntax</li>
+          <li><a href="#at-syntax">The @ syntax</a>: a shorter way to write the same thing</li>
+          <li><a href="#args-and-result">Arguments and return value</a>: make the wrapper fit any function</li>
+          <li><a href="#wraps">functools.wraps</a>: keep the name and docstring</li>
+          <li><a href="#stacking">Stacking decorators</a>: more than one, and their order</li>
+          <li><a href="#methods">Decorating methods</a>: the same thing inside a class</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="first-decorator">
+        <h2>The first decorator</h2>
+        <p>We want a line printed before and after every deposit, without editing <code>deposit</code>. <code>announce</code> takes the function, builds a <code>wrapper</code> around it and returns the wrapper. The wrapper is a closure: it remembers <code>func</code>.</p>
+        <script type="text/plain" data-lang="py" data-file="by_hand.py">
+def announce(func):
+    def wrapper(owner, amount):
+        print("-- start --")
+        func(owner, amount)          # the original function, remembered by the closure
+        print("-- done --")
+    return wrapper
+
+def deposit(owner, amount):
+    print(f"{owner} deposits {amount}")
+
+deposit = announce(deposit)          # replace deposit with the wrapped version
+deposit("Rishikesh", 500)
+        </script>
+        <script type="text/plain" data-lang="text" data-file="Output">
+-- start --
+Rishikesh deposits 500
+-- done --
+        </script>
+        <p>After the line <code>deposit = announce(deposit)</code>, the name <code>deposit</code> points to <code>wrapper</code>. Every caller gets the extra behaviour without knowing it.</p>
+        <p class="note"><b>Definition:</b> a decorator is any callable that takes a function and returns something to use in its place, usually a new function that wraps the old one.</p>
+      </section>
+
+      <section class="chapter" id="at-syntax">
+        <h2>The @ syntax</h2>
+        <p>Writing <code>deposit = announce(deposit)</code> after every function is easy to forget. Python has a shorthand: put <code>@announce</code> on the line above the <code>def</code>. It means exactly the same thing.</p>
+        <script type="text/plain" data-lang="py" data-file="at_syntax.py">
+def announce(func):
+    def wrapper(owner, amount):
+        print("-- start --")
+        func(owner, amount)
+        print("-- done --")
+    return wrapper
+
+@announce                            # same as: deposit = announce(deposit)
+def deposit(owner, amount):
+    print(f"{owner} deposits {amount}")
+
+@announce
+def withdraw(owner, amount):
+    print(f"{owner} withdraws {amount}")
+
+deposit("Rishikesh", 500)
+withdraw("Sandhya", 200)
+        </script>
+        <script type="text/plain" data-lang="text" data-file="Output">
+-- start --
+Rishikesh deposits 500
+-- done --
+-- start --
+Sandhya withdraws 200
+-- done --
+        </script>
+        <p class="note"><b>Timing:</b> the decorator runs once, when Python reads the <code>def</code>. The wrapper runs every time the function is called.</p>
+      </section>
+
+      <section class="chapter" id="args-and-result">
+        <h2>Arguments and return value</h2>
+        <p>The wrapper so far has two problems. It only fits functions with exactly two parameters, and it throws away what the function returns.</p>
+        <script type="text/plain" data-lang="py" data-file="lost_result.py">
+def announce(func):
+    def wrapper(owner, amount):
+        print("calling", func.__name__)
+        func(owner, amount)              # the result is dropped here
+    return wrapper
+
+@announce
+def deposit(owner, amount):
+    return f"{owner} +{amount}"
+
+print(deposit("Hemkesh", 200))
+# calling deposit
+# None
+        </script>
+        <p>The fix has two parts. Accept <code>*args, **kwargs</code>, which collect any positional and keyword arguments, and pass them straight on. Then <code>return</code> whatever the function returned.</p>
+        <script type="text/plain" data-lang="py" data-file="pass_through.py">
+def announce(func):
+    def wrapper(*args, **kwargs):
+        print("calling", func.__name__)
+        result = func(*args, **kwargs)   # pass everything through
+        return result                    # and hand the result back
+    return wrapper
+
+@announce
+def deposit(owner, amount):
+    return f"{owner} +{amount}"
+
+@announce
+def transfer(sender, receiver, amount=100):
+    return f"{sender} -> {receiver}: {amount}"
+
+print(deposit("Hemkesh", 200))
+print(transfer("Subhash", "Malinikesh", amount=900))
+        </script>
+        <script type="text/plain" data-lang="text" data-file="Output">
+calling deposit
+Hemkesh +200
+calling transfer
+Subhash -> Malinikesh: 900
+        </script>
+        <p class="note"><b>Rule:</b> unless the decorator needs to look at specific arguments, write the wrapper as <code>wrapper(*args, **kwargs)</code> and return the result. Then it works on any function.</p>
+      </section>
+
+      <section class="chapter" id="wraps">
+        <h2>functools.wraps</h2>
+        <p>After decorating, the name <code>transfer</code> points to <code>wrapper</code>. So the function's own name and docstring are gone. That confuses <code>help()</code>, error messages and debugging tools.</p>
+        <script type="text/plain" data-lang="py" data-file="without_wraps.py">
+def announce(func):
+    def wrapper(*args, **kwargs):
+        return func(*args, **kwargs)
+    return wrapper
+
+@announce
+def transfer(sender, receiver, amount):
+    """Move money from one account to another."""
+    return amount
+
+print(transfer.__name__)     # wrapper
+print(transfer.__doc__)      # None
+        </script>
+        <p><code>functools.wraps</code> is a decorator for the wrapper. It copies the name, docstring and a few other details from the original function onto the wrapper.</p>
+        <script type="text/plain" data-lang="py" data-file="with_wraps.py">
+import functools
+
+def announce(func):
+    @functools.wraps(func)           # copy name and docstring from func
+    def wrapper(*args, **kwargs):
+        return func(*args, **kwargs)
+    return wrapper
+
+@announce
+def transfer(sender, receiver, amount):
+    """Move money from one account to another."""
+    return amount
+
+print(transfer.__name__)     # transfer
+print(transfer.__doc__)      # Move money from one account to another.
+print(transfer.__wrapped__("a", "b", 5))   # 5
+        </script>
+        <p><code>wraps</code> also stores the original function as <code>__wrapped__</code>, which is handy in tests when you want to call it without the decorator.</p>
+        <p class="note"><b>Habit:</b> put <code>@functools.wraps(func)</code> on every wrapper you write. The rest of this page always does.</p>
+      </section>
+
+      <section class="chapter" id="stacking">
+        <h2>Stacking decorators</h2>
+        <p>A function can have several decorators. Python applies them from the bottom up, so the one closest to the <code>def</code> wraps first and the top one ends up on the outside.</p>
+        <script type="text/plain" data-lang="py" data-file="stacking.py">
+import functools
+
+def audit(func):
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        print("audit: before")
+        result = func(*args, **kwargs)
+        print("audit: after")
+        return result
+    return wrapper
+
+def check_amount(func):
+    @functools.wraps(func)
+    def wrapper(owner, amount):
+        print("check: amount is", amount)
+        if amount <= 0:
+            raise ValueError("amount must be positive")
+        return func(owner, amount)
+    return wrapper
+
+@audit
+@check_amount
+def deposit(owner, amount):          # same as: deposit = audit(check_amount(deposit))
+    print(f"{owner} deposits {amount}")
+
+deposit("Malinikesh", 700)
+        </script>
+        <script type="text/plain" data-lang="text" data-file="Output">
+audit: before
+check: amount is 700
+Malinikesh deposits 700
+audit: after
+        </script>
+        <p>Think of layers around the function. A call enters through the top decorator, moves inward to the function, then comes back out the same way.</p>
+        <p class="note"><b>Order matters:</b> with <code>@audit</code> on top, a refused deposit still passes through the audit layer. Swap the two lines and the check runs first, so a refused deposit never reaches <code>audit</code>.</p>
+      </section>
+
+      <section class="chapter" id="methods">
+        <h2>Decorating methods</h2>
+        <p>A method is a function whose first argument is <code>self</code>. A wrapper written with <code>*args, **kwargs</code> passes <code>self</code> through without any change. If the decorator needs the object, name <code>self</code> as the wrapper's first parameter.</p>
+        <script type="text/plain" data-lang="py" data-file="methods.py">
+import functools
+
+def positive_amount(method):
+    @functools.wraps(method)
+    def wrapper(self, amount):           # self arrives like any other argument
+        if amount <= 0:
+            raise ValueError(f"{self.owner}: amount must be positive")
+        return method(self, amount)
+    return wrapper
+
+class Account:
+    def __init__(self, owner, balance=0):
+        self.owner = owner
+        self.balance = balance
+
+    @positive_amount
+    def deposit(self, amount):
+        self.balance += amount
+        return self.balance
+
+    @positive_amount
+    def withdraw(self, amount):
+        self.balance -= amount
+        return self.balance
+
+account = Account("Sandhya", 1000)
+print(account.deposit(500))          # 1500
+try:
+    account.withdraw(-50)
+except ValueError as error:
+    print("Refused:", error)         # Refused: Sandhya: amount must be positive
+        </script>
+        <p class="note"><b>With built-in decorators:</b> when you combine your own decorator with <code>@property</code>, <code>@staticmethod</code> or <code>@classmethod</code>, put the built-in one on top so that yours wraps the plain function.</p>
+      </section>
+
+      <section class="chapter part" id="with-parameters">
+        <h2>Decorators with parameters</h2>
+        <p class="kind">Part 3 of 4 &middot; settings, state and classes</p>
+        <p>So far a decorator did one fixed thing. Often you want to set it up first: retry <b>3</b> times, allow only a <b>manager</b>. That needs one more layer of function. This part also shows decorators written as classes, and decorators applied to classes.</p>
+        <ul>
+          <li><a href="#parameters">A decorator that takes arguments</a>: <code>@require_role("manager")</code></li>
+          <li><a href="#three-levels">Why three levels</a>: what runs when</li>
+          <li><a href="#optional-parentheses">With or without brackets</a>: one decorator, both spellings</li>
+          <li><a href="#class-based">Class-based decorators</a>: an object with <code>__call__</code></li>
+          <li><a href="#decorating-classes">Decorating classes</a>: the same idea, one level up</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="parameters">
+        <h2>A decorator that takes arguments</h2>
+        <p>Start with a decorator that lets only a manager through. The role is fixed inside the code.</p>
+        <script type="text/plain" data-lang="py" data-file="managers_only.py">
+import functools
+
+def managers_only(func):
+    @functools.wraps(func)
+    def wrapper(user, *args, **kwargs):
+        if user["role"] != "manager":
+            raise PermissionError(f"{user['name']} is not a manager")
+        return func(user, *args, **kwargs)
+    return wrapper
+
+@managers_only
+def approve_loan(user, amount):
+    return f"Loan of {amount} approved by {user['name']}"
+
+subhash = {"name": "Subhash", "role": "manager"}
+print(approve_loan(subhash, 200000))     # Loan of 200000 approved by Subhash
+        </script>
+        <p>A teller-only decorator would be a copy with one word changed. Better to pass the role in. Wrap the whole decorator in one more function that takes the role, and return the decorator from it.</p>
+        <script type="text/plain" data-lang="py" data-file="require_role.py">
+import functools
+
+def require_role(role):                          # level 1: takes the setting
+    def decorator(func):                         # level 2: takes the function
+        @functools.wraps(func)
+        def wrapper(user, *args, **kwargs):      # level 3: takes the call
+            if user["role"] != role:
+                raise PermissionError(f"{user['name']} is not a {role}")
+            return func(user, *args, **kwargs)
+        return wrapper
+    return decorator
+
+@require_role("manager")
+def approve_loan(user, amount):
+    return f"Loan of {amount} approved by {user['name']}"
+
+@require_role("teller")
+def open_account(user, owner):
+    return f"Account for {owner} opened by {user['name']}"
+
+subhash = {"name": "Subhash", "role": "manager"}
+sandhya = {"name": "Sandhya", "role": "teller"}
+
+print(approve_loan(subhash, 200000))     # Loan of 200000 approved by Subhash
+print(open_account(sandhya, "Hemkesh"))  # Account for Hemkesh opened by Sandhya
+try:
+    approve_loan(sandhya, 200000)
+except PermissionError as error:
+    print("Refused:", error)             # Refused: Sandhya is not a manager
+        </script>
+        <p class="note"><b>Name:</b> the outer function, <code>require_role</code>, is often called a decorator factory, because calling it makes a decorator.</p>
+      </section>
+
+      <section class="chapter" id="three-levels">
+        <h2>Why three levels</h2>
+        <p>Python allows any expression after <code>@</code>. It works that expression out first, then uses the result as the decorator. So <code>@require_role("manager")</code> first <b>calls</b> <code>require_role</code>, and what comes back must be an ordinary decorator. Each level has its own job and runs at its own time.</p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Level</th><th>Receives</th><th>Runs</th><th>Returns</th></tr></thead>
+            <tbody>
+              <tr><td>1. factory</td><td>the settings, such as <code>"manager"</code></td><td>once, on the <code>@</code> line</td><td>the decorator</td></tr>
+              <tr><td>2. decorator</td><td>the function</td><td>once, right after the <code>def</code></td><td>the wrapper</td></tr>
+              <tr><td>3. wrapper</td><td>the arguments of one call</td><td>on every call</td><td>the result</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>Prints at each level show the order.</p>
+        <script type="text/plain" data-lang="py" data-file="three_levels.py">
+def tag(label):
+    print("1. factory got", label)
+    def decorator(func):
+        print("2. decorator got", func.__name__)
+        def wrapper(*args, **kwargs):
+            print(f"3. wrapper got {args}, label is {label}")
+            return func(*args, **kwargs)
+        return wrapper
+    return decorator
+
+@tag("AUDIT")
+def deposit(amount):
+    return amount
+
+print("--- definition finished ---")
+deposit(100)
+deposit(200)
+        </script>
+        <script type="text/plain" data-lang="text" data-file="Output">
+1. factory got AUDIT
+2. decorator got deposit
+--- definition finished ---
+3. wrapper got (100,), label is AUDIT
+3. wrapper got (200,), label is AUDIT
+        </script>
+        <p>Written without <code>@</code>, the two steps are easy to see.</p>
+        <script type="text/plain" data-lang="py" data-file="by_hand_levels.py">
+def tag(label):
+    def decorator(func):
+        def wrapper(*args, **kwargs):
+            return f"[{label}] {func(*args, **kwargs)}"
+        return wrapper
+    return decorator
+
+def deposit(amount):
+    return f"deposit {amount}"
+
+audit_tag = tag("AUDIT")         # step 1: make a decorator
+deposit = audit_tag(deposit)     # step 2: decorate, as before
+print(deposit(100))              # [AUDIT] deposit 100
+        </script>
+        <p class="note"><b>Concept:</b> the wrapper is a closure over two things now: <code>func</code> from level 2 and the settings from level 1.</p>
+      </section>
+
+      <section class="chapter" id="optional-parentheses">
+        <h2>With or without brackets</h2>
+        <p>This chapter is optional. Some decorators can be written both as <code>@audit</code> and as <code>@audit(label="LOAN")</code>. The trick: when used bare, Python passes the function as the first argument. When used with brackets, the first argument is missing, so the function returns a decorator instead.</p>
+        <script type="text/plain" data-lang="py" data-file="optional_brackets.py">
+import functools
+
+def audit(func=None, *, label="AUDIT"):      # settings are keyword-only
+    def decorator(f):
+        @functools.wraps(f)
+        def wrapper(*args, **kwargs):
+            print(f"[{label}] {f.__name__} {args}")
+            return f(*args, **kwargs)
+        return wrapper
+    if func is None:
+        return decorator         # used as @audit(label="LOAN")
+    return decorator(func)       # used as plain @audit
+
+@audit
+def deposit(owner, amount):
+    return amount
+
+@audit(label="LOAN")
+def approve_loan(owner, amount):
+    return amount
+
+deposit("Rishikesh", 500)        # [AUDIT] deposit ('Rishikesh', 500)
+approve_loan("Hemkesh", 90000)   # [LOAN] approve_loan ('Hemkesh', 90000)
+        </script>
+        <p class="note"><b>Why the star:</b> the <code>*</code> forces <code>label</code> to be given by name. Then the first positional argument can only ever be the function, and the two cases cannot be mixed up.</p>
+      </section>
+
+      <section class="chapter" id="class-based">
+        <h2>Class-based decorators</h2>
+        <p>An object can be called like a function if its class defines <code>__call__</code>. So a class can be a decorator: <code>__init__</code> receives the function and <code>__call__</code> plays the wrapper. This reads well when the decorator keeps state, such as a count.</p>
+        <script type="text/plain" data-lang="py" data-file="count_calls.py">
+import functools
+
+class CountCalls:
+    def __init__(self, func):
+        functools.update_wrapper(self, func)   # same job as functools.wraps
+        self.func = func
+        self.calls = 0
+
+    def __call__(self, *args, **kwargs):
+        self.calls += 1
+        return self.func(*args, **kwargs)
+
+@CountCalls                      # same as: check_balance = CountCalls(check_balance)
+def check_balance(owner):
+    return f"Balance of {owner}: 1000"
+
+check_balance("Rishikesh")
+check_balance("Sandhya")
+print(check_balance("Hemkesh"))          # Balance of Hemkesh: 1000
+print(check_balance.calls)               # 3
+print(check_balance.__name__)            # check_balance
+print(type(check_balance).__name__)      # CountCalls
+        </script>
+        <p>For a class-based decorator with parameters, the roles shift by one: <code>__init__</code> takes the settings and <code>__call__</code> takes the function and returns a wrapper.</p>
+        <script type="text/plain" data-lang="py" data-file="tag_class.py">
+import functools
+
+class Tag:
+    def __init__(self, label):           # the settings
+        self.label = label
+
+    def __call__(self, func):            # the function
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):    # the call
+            return f"[{self.label}] {func(*args, **kwargs)}"
+        return wrapper
+
+@Tag("TELLER")
+def deposit(owner, amount):
+    return f"{owner} deposits {amount}"
+
+print(deposit("Malinikesh", 300))    # [TELLER] Malinikesh deposits 300
+        </script>
+        <p class="note"><b>Limit:</b> the <code>CountCalls</code> shape does not work on methods as it stands, because the object replaces the function and <code>self</code> is no longer passed in. For methods, use a function-based decorator.</p>
+      </section>
+
+      <section class="chapter" id="decorating-classes">
+        <h2>Decorating classes</h2>
+        <p>The <code>@</code> line also works above a <code>class</code>. The decorator receives the class and returns the class to use. A common use is a registry: a dictionary that collects classes as they are defined.</p>
+        <script type="text/plain" data-lang="py" data-file="register_class.py">
+ACCOUNT_TYPES = {}
+
+def register(cls):
+    ACCOUNT_TYPES[cls.__name__.lower()] = cls
+    return cls                       # hand the class back unchanged
+
+@register
+class Savings:
+    rate = 4
+
+@register
+class Current:
+    rate = 0
+
+print(sorted(ACCOUNT_TYPES))                    # ['current', 'savings']
+account = ACCOUNT_TYPES["savings"]()            # make an object from a name
+print(type(account).__name__, account.rate)     # Savings 4
+        </script>
+        <p>A class decorator can also add something to the class before returning it.</p>
+        <script type="text/plain" data-lang="py" data-file="add_method.py">
+def with_summary(cls):
+    def summary(self):
+        return f"{type(self).__name__} of {self.owner}: {self.balance}"
+    cls.summary = summary            # attach a new method
+    return cls
+
+@with_summary
+class Savings:
+    def __init__(self, owner, balance):
+        self.owner = owner
+        self.balance = balance
+
+print(Savings("Subhash", 80000).summary())   # Savings of Subhash: 80000
+        </script>
+        <p class="note"><b>You have met one:</b> <code>@dataclass</code> is a class decorator. It reads the fields of the class and adds <code>__init__</code>, <code>__repr__</code> and <code>__eq__</code> for you.</p>
+      </section>
+
+      <section class="chapter part" id="use-cases">
+        <h2>Use cases</h2>
+        <p class="kind">Part 4 of 4 &middot; where decorators earn their place</p>
+        <p>A decorator fits when the same extra step is needed around many functions and has nothing to do with what each function is for. These are the jobs you will meet most often, each as a small working example.</p>
+        <ul>
+          <li><a href="#audit-log">Logging and audit</a>: record every transfer</li>
+          <li><a href="#timing">Timing</a>: measure how long a call takes</li>
+          <li><a href="#retry">Retry on failure</a>: try again when a call fails</li>
+          <li><a href="#caching">Caching</a>: remember answers already worked out</li>
+          <li><a href="#checks">Permission and input checks</a>: stop a bad call before it starts</li>
+          <li><a href="#registry">Registering handlers</a>: collect functions in a table</li>
+          <li><a href="#limit-calls">Limiting calls</a>: count and refuse</li>
+          <li><a href="#built-in">Built-in decorators</a>: the ones Python ships with</li>
+          <li><a href="#quick-reference">Quick reference</a> and <a href="#mistakes">common mistakes</a></li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="audit-log">
+        <h2>Logging and audit</h2>
+        <p>A bank must record every transfer, including the ones that fail. The decorator writes one line per call. <code>transfer</code> itself stays about moving money.</p>
+        <script type="text/plain" data-lang="py" data-file="audit.py">
+import functools
+
+AUDIT_LOG = []
+
+def audited(func):
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        try:
+            result = func(*args, **kwargs)
+        except Exception as error:
+            AUDIT_LOG.append(f"{func.__name__}{args} FAILED: {error}")
+            raise                            # let the caller see the error too
+        AUDIT_LOG.append(f"{func.__name__}{args} ok")
+        return result
+    return wrapper
+
+balances = {"Rishikesh": 5000, "Sandhya": 2000}
+
+@audited
+def transfer(sender, receiver, amount):
+    if balances[sender] < amount:
+        raise ValueError("not enough money")
+    balances[sender] -= amount
+    balances[receiver] += amount
+
+transfer("Rishikesh", "Sandhya", 1500)
+try:
+    transfer("Sandhya", "Rishikesh", 9000)
+except ValueError:
+    pass
+
+for line in AUDIT_LOG:
+    print(line)
+print(balances)
+        </script>
+        <script type="text/plain" data-lang="text" data-file="Output">
+transfer('Rishikesh', 'Sandhya', 1500) ok
+transfer('Sandhya', 'Rishikesh', 9000) FAILED: not enough money
+{'Rishikesh': 3500, 'Sandhya': 3500}
+        </script>
+        <p class="note"><b>In real code:</b> replace the list with the <code>logging</code> module or a database table. The decorator stays the same shape.</p>
+      </section>
+
+      <section class="chapter" id="timing">
+        <h2>Timing</h2>
+        <p>Read a clock before the call and after it. <code>time.perf_counter()</code> is the clock made for measuring short durations.</p>
+        <script type="text/plain" data-lang="py" data-file="timing.py">
+import functools
+import time
+
+def timed(func):
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        start = time.perf_counter()
+        result = func(*args, **kwargs)
+        elapsed = time.perf_counter() - start
+        print(f"{func.__name__} took {elapsed:.0f} s")     # rounded to whole seconds
+        return result
+    return wrapper
+
+@timed
+def total_interest(balance, rate, years):
+    total = 0
+    for _ in range(years):
+        interest = balance * rate / 100
+        total += interest
+        balance += interest
+    return round(total, 2)
+
+print(total_interest(10000, 5, 10))
+# total_interest took 0 s
+# 6288.95
+        </script>
+        <p class="note"><b>About the output:</b> the real time is a tiny fraction of a second and differs on every run, so this example rounds it to whole seconds. In your own code print more digits, for example <code>{elapsed:.4f}</code>.</p>
+      </section>
+
+      <section class="chapter" id="retry">
+        <h2>Retry on failure</h2>
+        <p>Calls over a network sometimes fail and then work a moment later. A retry decorator calls the function again, up to a limit. The number of tries is a setting, so this is a three-level decorator.</p>
+        <script type="text/plain" data-lang="py" data-file="retry.py">
+import functools
+
+def retry(times):
+    def decorator(func):
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            for attempt in range(1, times + 1):
+                try:
+                    return func(*args, **kwargs)     # success ends the loop
+                except ConnectionError as error:
+                    print(f"attempt {attempt} failed: {error}")
+                    if attempt == times:
+                        raise                        # out of tries: give up
+        return wrapper
+    return decorator
+
+attempts = {"count": 0}
+
+@retry(times=3)
+def fetch_balance(owner):
+    attempts["count"] += 1
+    if attempts["count"] < 3:                # pretend the first two calls fail
+        raise ConnectionError("bank server busy")
+    return f"{owner}: 5000"
+
+print(fetch_balance("Rishikesh"))
+        </script>
+        <script type="text/plain" data-lang="text" data-file="Output">
+attempt 1 failed: bank server busy
+attempt 2 failed: bank server busy
+Rishikesh: 5000
+        </script>
+        <p class="note"><b>In real code:</b> wait between tries with <code>time.sleep()</code>, and retry only errors that can go away by themselves. Retrying a <code>ValueError</code> would fail the same way every time.</p>
+      </section>
+
+      <section class="chapter" id="caching">
+        <h2>Caching</h2>
+        <p>If a function always gives the same answer for the same arguments, the answer can be stored and reused. This is called memoizing. The store is a dictionary kept in the closure, with the arguments as the key.</p>
+        <script type="text/plain" data-lang="py" data-file="memoize.py">
+import functools
+
+def memoize(func):
+    cache = {}                           # lives as long as the wrapper does
+    @functools.wraps(func)
+    def wrapper(*args):
+        if args not in cache:
+            cache[args] = func(*args)    # first time: do the work and store it
+        return cache[args]
+    return wrapper
+
+@memoize
+def credit_score(owner):
+    print("  working out the score for", owner)
+    return 600 + len(owner) * 10
+
+print(credit_score("Rishikesh"))
+print(credit_score("Rishikesh"))         # answered from the cache
+print(credit_score("Sandhya"))
+        </script>
+        <script type="text/plain" data-lang="text" data-file="Output">
+  working out the score for Rishikesh
+690
+690
+  working out the score for Sandhya
+670
+        </script>
+        <h3>functools.lru_cache</h3>
+        <p>You rarely need to write this yourself. <code>functools.lru_cache</code> does the same job, handles keyword arguments, and can limit how many answers it keeps. LRU means "least recently used": when the cache is full, the answer that has gone unused the longest is dropped.</p>
+        <script type="text/plain" data-lang="py" data-file="lru_cache.py">
+import functools
+
+@functools.lru_cache(maxsize=128)
+def credit_score(owner):
+    print("  working out the score for", owner)
+    return 600 + len(owner) * 10
+
+credit_score("Rishikesh")
+credit_score("Rishikesh")
+credit_score("Sandhya")
+print(credit_score.cache_info())
+credit_score.cache_clear()               # empty the cache
+print(credit_score.cache_info().currsize)
+        </script>
+        <script type="text/plain" data-lang="text" data-file="Output">
+  working out the score for Rishikesh
+  working out the score for Sandhya
+CacheInfo(hits=1, misses=2, maxsize=128, currsize=2)
+0
+        </script>
+        <p class="note"><b>Limits:</b> the arguments must be hashable, so a list or dictionary argument raises <code>TypeError</code>. And do not cache a function whose answer changes over time, such as a live balance.</p>
+      </section>
+
+      <section class="chapter" id="checks">
+        <h2>Permission and input checks</h2>
+        <p>A check decorator looks at the arguments before the function runs and raises an error if something is wrong. The function body can then assume its input is fine.</p>
+        <h3>Permission</h3>
+        <p>Only the owner may take money out of an account.</p>
+        <script type="text/plain" data-lang="py" data-file="owner_only.py">
+import functools
+
+def owner_only(func):
+    @functools.wraps(func)
+    def wrapper(user, account, *args, **kwargs):
+        if user != account["owner"]:
+            raise PermissionError(f"{user} cannot use the account of {account['owner']}")
+        return func(user, account, *args, **kwargs)
+    return wrapper
+
+@owner_only
+def withdraw(user, account, amount):
+    account["balance"] -= amount
+    return account["balance"]
+
+account = {"owner": "Malinikesh", "balance": 4000}
+print(withdraw("Malinikesh", account, 1000))     # 3000
+try:
+    withdraw("Hemkesh", account, 1000)
+except PermissionError as error:
+    print("Refused:", error)     # Refused: Hemkesh cannot use the account of Malinikesh
+        </script>
+        <h3>Input validation</h3>
+        <p>The limits are settings, so this one takes parameters.</p>
+        <script type="text/plain" data-lang="py" data-file="validate.py">
+import functools
+
+def amount_between(low, high):
+    def decorator(func):
+        @functools.wraps(func)
+        def wrapper(owner, amount):
+            if not isinstance(amount, (int, float)):
+                raise TypeError("amount must be a number")
+            if not low <= amount <= high:
+                raise ValueError(f"amount must be between {low} and {high}")
+            return func(owner, amount)
+        return wrapper
+    return decorator
+
+@amount_between(1, 50000)
+def deposit(owner, amount):
+    return f"{owner} deposits {amount}"
+
+print(deposit("Subhash", 20000))         # Subhash deposits 20000
+for bad in [0, 75000, "500"]:
+    try:
+        deposit("Subhash", bad)
+    except (TypeError, ValueError) as error:
+        print("Refused:", error)
+        </script>
+        <script type="text/plain" data-lang="text" data-file="Output">
+Subhash deposits 20000
+Refused: amount must be between 1 and 50000
+Refused: amount must be between 1 and 50000
+Refused: amount must be a number
+        </script>
+      </section>
+
+      <section class="chapter" id="registry">
+        <h2>Registering handlers</h2>
+        <p>Some decorators do not wrap anything. They note the function down in a table and return it unchanged. The program can then find the right function by name, and adding a new command means writing one new function, with no <code>if</code> chain to edit. Plugin systems and web frameworks use this shape for their routes.</p>
+        <script type="text/plain" data-lang="py" data-file="handlers.py">
+HANDLERS = {}
+
+def handles(command):
+    def decorator(func):
+        HANDLERS[command] = func     # note it down
+        return func                  # no wrapper: the function is not changed
+    return decorator
+
+@handles("deposit")
+def do_deposit(balance, amount):
+    return balance + amount
+
+@handles("withdraw")
+def do_withdraw(balance, amount):
+    return balance - amount
+
+@handles("interest")
+def add_interest(balance, rate):
+    return balance + balance * rate // 100
+
+balance = 1000
+for command, value in [("deposit", 500), ("withdraw", 200), ("interest", 10)]:
+    balance = HANDLERS[command](balance, value)
+    print(command, value, "->", balance)
+        </script>
+        <script type="text/plain" data-lang="text" data-file="Output">
+deposit 500 -> 1500
+withdraw 200 -> 1300
+interest 10 -> 1430
+        </script>
+      </section>
+
+      <section class="chapter" id="limit-calls">
+        <h2>Limiting calls</h2>
+        <p>A decorator can count calls in its closure and refuse once a limit is reached. Here a cash machine allows three withdrawals.</p>
+        <script type="text/plain" data-lang="py" data-file="limit_calls.py">
+import functools
+
+def limit_calls(maximum):
+    def decorator(func):
+        calls = 0                        # one counter per decorated function
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            nonlocal calls
+            if calls >= maximum:
+                raise RuntimeError(f"{func.__name__} is allowed only {maximum} times")
+            calls += 1
+            return func(*args, **kwargs)
+        return wrapper
+    return decorator
+
+@limit_calls(3)
+def atm_withdraw(owner, amount):
+    return f"{owner} takes {amount}"
+
+for amount in [500, 1000, 200, 300]:
+    try:
+        print(atm_withdraw("Hemkesh", amount))
+    except RuntimeError as error:
+        print("Blocked:", error)
+        </script>
+        <script type="text/plain" data-lang="text" data-file="Output">
+Hemkesh takes 500
+Hemkesh takes 1000
+Hemkesh takes 200
+Blocked: atm_withdraw is allowed only 3 times
+        </script>
+        <p class="note"><b>Rate limiting:</b> a real rate limiter, such as "5 calls per minute", works the same way. It stores the time of each call instead of a plain count and forgets the ones older than a minute.</p>
+      </section>
+
+      <section class="chapter" id="built-in">
+        <h2>Built-in decorators</h2>
+        <p>You have already used decorators that come with Python. Now you can read them for what they are: functions or classes that take your function or class and return something in its place.</p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Decorator</th><th>Goes on</th><th>What it does</th></tr></thead>
+            <tbody>
+              <tr><td><code>@property</code></td><td>method</td><td>Lets you read the method like an attribute, without brackets</td></tr>
+              <tr><td><code>@staticmethod</code></td><td>method</td><td>A plain function kept inside the class. It gets no <code>self</code></td></tr>
+              <tr><td><code>@classmethod</code></td><td>method</td><td>Receives the class as <code>cls</code> instead of an object. Often used for extra ways to build an object</td></tr>
+              <tr><td><code>@dataclass</code></td><td>class</td><td>Writes <code>__init__</code>, <code>__repr__</code> and <code>__eq__</code> from the listed fields</td></tr>
+              <tr><td><code>@functools.cached_property</code></td><td>method</td><td>Like <code>@property</code>, but worked out once per object and then stored</td></tr>
+              <tr><td><code>@functools.lru_cache</code></td><td>function</td><td>Remembers results by argument</td></tr>
+              <tr><td><code>@functools.wraps</code></td><td>wrapper</td><td>Copies name and docstring onto a wrapper</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <script type="text/plain" data-lang="py" data-file="built_in.py">
+from dataclasses import dataclass
+from functools import cached_property
+
+@dataclass
+class Account:
+    owner: str
+    balance: float = 0
+
+    @property
+    def is_empty(self):
+        return self.balance == 0
+
+    @cached_property
+    def statement(self):
+        print("  building the statement")
+        return f"{self.owner} has {self.balance}"
+
+    @classmethod
+    def joint(cls, first, second, balance=0):
+        return cls(f"{first} and {second}", balance)
+
+    @staticmethod
+    def valid_amount(amount):
+        return amount > 0
+
+account = Account.joint("Sandhya", "Subhash", 90000)
+print(account)                       # Account(owner='Sandhya and Subhash', balance=90000)
+print(account.is_empty)              # False
+print(Account.valid_amount(-5))      # False
+print(account.statement)
+print(account.statement)             # second time: no rebuilding
+        </script>
+        <script type="text/plain" data-lang="text" data-file="Output">
+Account(owner='Sandhya and Subhash', balance=90000)
+False
+False
+  building the statement
+Sandhya and Subhash has 90000
+Sandhya and Subhash has 90000
+        </script>
+      </section>
+
+      <section class="chapter" id="quick-reference">
+        <h2>Quick reference</h2>
+        <p>Find what you need in the left column. The right column is the shape to write.</p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>You need</th><th>Shape of the decorator</th><th>Chapter</th></tr></thead>
+            <tbody>
+              <tr><td>Do something before or after every call</td><td>Two levels: <code>decorator(func)</code> returns <code>wrapper(*args, **kwargs)</code></td><td><a href="#args-and-result">Arguments and return value</a></td></tr>
+              <tr><td>Keep the name and docstring</td><td><code>@functools.wraps(func)</code> on the wrapper</td><td><a href="#wraps">functools.wraps</a></td></tr>
+              <tr><td>Settings such as a role or a count</td><td>Three levels: <code>factory(settings)</code> returns <code>decorator(func)</code> returns <code>wrapper</code></td><td><a href="#parameters">A decorator that takes arguments</a></td></tr>
+              <tr><td>Both <code>@name</code> and <code>@name(...)</code></td><td><code>def name(func=None, *, option=...)</code></td><td><a href="#optional-parentheses">With or without brackets</a></td></tr>
+              <tr><td>State you want to read from outside</td><td>A class with <code>__init__(func)</code> and <code>__call__</code></td><td><a href="#class-based">Class-based decorators</a></td></tr>
+              <tr><td>State only the wrapper needs</td><td>A variable in the closure, changed with <code>nonlocal</code></td><td><a href="#limit-calls">Limiting calls</a></td></tr>
+              <tr><td>Check arguments or permissions</td><td>Wrapper raises before calling <code>func</code></td><td><a href="#checks">Permission and input checks</a></td></tr>
+              <tr><td>Try again after an error</td><td>Wrapper calls <code>func</code> in a loop with <code>try</code></td><td><a href="#retry">Retry on failure</a></td></tr>
+              <tr><td>Remember results</td><td><code>@functools.lru_cache</code>, or a dictionary in the closure</td><td><a href="#caching">Caching</a></td></tr>
+              <tr><td>Collect functions or classes in a table</td><td>No wrapper: store it and return it unchanged</td><td><a href="#registry">Registering handlers</a></td></tr>
+              <tr><td>Use it on a method</td><td>Same as a function. <code>self</code> is the first argument</td><td><a href="#methods">Decorating methods</a></td></tr>
+              <tr><td>Change or record a class</td><td><code>decorator(cls)</code> returns <code>cls</code></td><td><a href="#decorating-classes">Decorating classes</a></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="chapter" id="mistakes">
+        <h2>Common mistakes</h2>
+        <h3>Forgetting to return the wrapper</h3>
+        <p>A function without <code>return</code> gives back <code>None</code>. So the decorated name becomes <code>None</code>, and calling it fails.</p>
+        <script type="text/plain" data-lang="py" data-file="no_return_wrapper.py">
+def announce(func):
+    def wrapper(*args, **kwargs):
+        return func(*args, **kwargs)
+    # missing: return wrapper
+
+@announce
+def deposit(amount):
+    return amount
+
+print(deposit)                   # None
+try:
+    deposit(100)
+except TypeError as error:
+    print(error)                 # 'NoneType' object is not callable
+        </script>
+        <h3>Forgetting to return the result</h3>
+        <p>The wrapper calls the function but does not pass the answer on. Nothing fails. The caller just gets <code>None</code>, which is harder to notice.</p>
+        <script type="text/plain" data-lang="py" data-file="no_return_result.py">
+def announce(func):
+    def wrapper(*args, **kwargs):
+        func(*args, **kwargs)        # should be: return func(*args, **kwargs)
+    return wrapper
+
+@announce
+def new_balance(balance, amount):
+    return balance + amount
+
+print(new_balance(1000, 500))    # None
+        </script>
+        <h3>Forgetting functools.wraps</h3>
+        <p>Every decorated function then reports the name <code>wrapper</code> and loses its docstring. See <a href="#wraps">functools.wraps</a>.</p>
+        <h3>Leaving the brackets off a decorator with parameters</h3>
+        <p>A three-level decorator must be called on the <code>@</code> line. Without brackets, the function is passed in as the setting, and the name ends up pointing to the middle level. There is no error at the definition. The first call quietly returns a wrapper instead of doing the work.</p>
+        <script type="text/plain" data-lang="py" data-file="missing_brackets.py">
+def retry(times):
+    def decorator(func):
+        def wrapper(*args, **kwargs):
+            return func(*args, **kwargs)
+        return wrapper
+    return decorator
+
+@retry                           # wrong: should be @retry(3)
+def fetch_balance(owner):
+    return f"{owner}: 5000"
+
+print(fetch_balance.__name__)                    # decorator
+result = fetch_balance("Rishikesh")              # "Rishikesh" is taken as func
+print(callable(result), result.__name__)         # True wrapper
+        </script>
+        <p>The opposite slip is adding brackets to a two-level decorator, as in <code>@announce()</code>. That one fails at once with a <code>TypeError</code>, because <code>announce</code> is called without the function it needs.</p>
+        <p class="note"><b>Check:</b> if a decorated function returns a function when you expected a value, look at the <code>@</code> line first.</p>
+        <p>Next, see how a <code>for</code> loop really works and how to produce values one at a time in <a href="python-iterators-generators.html">Python Iterators and Generators</a>.</p>
+      </section>
+
+    </div>
+  </main>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script src="../../assets/tutorial.js"></script>
+</body>
+</html>

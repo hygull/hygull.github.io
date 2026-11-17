@@ -35,6 +35,30 @@
     });
   }
 
+  /* Hub layout switch: list, grid or cards, remembered per browser */
+  var hub = document.getElementById("hub");
+  var viewBtns = Array.prototype.slice.call(document.querySelectorAll("[data-set-view]"));
+  if (hub && viewBtns.length) {
+    var VIEW_KEY = "learnings-view";
+    var setView = function (view) {
+      if (view === "list") hub.removeAttribute("data-view"); else hub.setAttribute("data-view", view);
+      viewBtns.forEach(function (b) {
+        b.setAttribute("aria-pressed", b.getAttribute("data-set-view") === view ? "true" : "false");
+      });
+    };
+    var savedView = readStore(VIEW_KEY);
+    var asked = /[?&]view=(list|grid|card)\b/.exec(location.search);   // index.html?view=grid links straight to a layout
+    if (asked) savedView = asked[1];
+    setView(savedView === "grid" || savedView === "card" ? savedView : "list");
+    viewBtns.forEach(function (b) {
+      b.addEventListener("click", function () {
+        var view = b.getAttribute("data-set-view");
+        setView(view);
+        writeStore(VIEW_KEY, view);
+      });
+    });
+  }
+
   /* Code blocks: <script type="text/plain" data-lang data-file> becomes a highlighted figure */
   function copyText(text, btn, codeEl) {
     function done() {

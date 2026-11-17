@@ -1,0 +1,1471 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Python Web APIs</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@500;700&display=swap">
+<link rel="stylesheet" href="../../assets/tutorial.css">
+</head>
+<body data-track="python">
+
+<header class="topbar">
+  <div class="topbar-in">
+    <a class="brand" href="../../../index.html">Learnings</a>
+    <nav class="tracks" aria-label="Python paths">
+      <a href="../../../index.html#python-basics">Python Basics</a>
+      <a href="../../../index.html#python-advanced">Python Advanced</a>
+      <a href="../../../index.html#python-practice" aria-current="true">Python in Practice</a>
+      <a href="../../../index.html#python-design">Python Design</a>
+      <a href="../../../archive.html">Archive</a>
+    </nav>
+    <div class="tools">
+      <button class="btn" id="menu" type="button" aria-expanded="false">Chapters</button>
+      <input id="q" type="search" placeholder="Search chapters" aria-label="Search chapters">
+      <button class="btn" id="theme" type="button">Dark mode</button>
+    </div>
+  </div>
+</header>
+
+<div class="shell">
+  <aside class="side">
+    <p class="side-label">Web APIs</p>
+    <nav id="toc" aria-label="Chapters"></nav>
+  </aside>
+
+  <main>
+    <div class="page-head">
+      <p class="eyebrow">Python in practice, part 9 of 9</p>
+      <h1>Python Web APIs</h1>
+      <p class="lead">An API is a way for one program to ask another program to do something. On the web, the asking is done over HTTP. This page uses the family bank from <a href="python-databases.html">Python Databases</a> to show both sides: how to call an API from Python, and how to build one with FastAPI. You need to know Python, and nothing about the web. No example on this page touches the internet.</p>
+    </div>
+
+    <div class="chapters">
+
+      <section class="chapter part" id="http-part">
+        <h2>How the web talks</h2>
+        <p class="kind">Part 1 of 4 &middot; the vocabulary: requests, responses, methods, status codes</p>
+        <p>Before any code, the words. Every web API, in any language, is built from the same few ideas. This part needs nothing installed.</p>
+        <ul>
+          <li><a href="#http">HTTP in plain words</a>: client, server, request, response</li>
+          <li><a href="#methods">Methods</a>: GET, POST, PUT, PATCH, DELETE</li>
+          <li><a href="#status-codes">Status codes</a>: 200, 404 and friends</li>
+          <li><a href="#headers-json">Headers and JSON</a></li>
+          <li><a href="#rest">What REST means in practice</a></li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="http">
+        <h2>HTTP in plain words</h2>
+        <p><b>HTTP</b> is the set of rules that browsers and web programs use to talk. The program that asks is the <b>client</b>. The program that answers is the <b>server</b>. The client sends one <b>request</b>, the server sends back one <b>response</b>, and that is the whole conversation.</p>
+        <p>Both are plain text. Here a client asks the bank's server for account 1, and the server answers.</p>
+        <script type="text/plain" data-lang="text" data-file="A request and its response">
+GET /accounts/1 HTTP/1.1                  <- method, path, protocol version
+Host: bank.example                        <- headers: extra details about the request
+Accept: application/json
+
+HTTP/1.1 200 OK                           <- status code: did it work?
+Content-Type: application/json            <- headers: extra details about the response
+Content-Length: 57
+
+{"id": 1, "owner": "Rishikesh Agrawani", "balance": 5000}      <- the body
+        </script>
+        <div class="scroll">
+          <table>
+            <thead>
+              <tr><th>Term</th><th>Meaning</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>Client</td><td>The program that sends the request: a browser, a phone app, a Python script</td></tr>
+              <tr><td>Server</td><td>The program that waits for requests and answers them</td></tr>
+              <tr><td>Request</td><td>A method, a URL, some headers and sometimes a body</td></tr>
+              <tr><td>Response</td><td>A status code, some headers and usually a body</td></tr>
+              <tr><td>URL</td><td>The address of the thing you ask for, such as <code>https://bank.example/accounts/1</code></td></tr>
+              <tr><td>Endpoint</td><td>One method plus one path that the server answers, such as <code>GET /accounts/{id}</code></td></tr>
+              <tr><td>API</td><td>Application programming interface: the full list of endpoints a server offers, and the rules for using them</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><b>Concept:</b> the server does not remember the client between requests. Each request must carry everything the server needs, including who is asking. HTTP is called <b>stateless</b> for this reason.</p>
+      </section>
+
+      <section class="chapter" id="methods">
+        <h2>Methods</h2>
+        <p>The <b>method</b> is the first word of the request. It says what kind of action the client wants.</p>
+        <div class="scroll">
+          <table>
+            <thead>
+              <tr><th>Method</th><th>Meaning</th><th>Bank example</th><th>Safe to repeat?</th></tr>
+            </thead>
+            <tbody>
+              <tr><td><code>GET</code></td><td>Read something. Changes nothing</td><td><code>GET /accounts/1</code></td><td>Yes</td></tr>
+              <tr><td><code>POST</code></td><td>Create something new, or run an action</td><td><code>POST /accounts</code>, <code>POST /transfers</code></td><td>No: twice means two accounts, two transfers</td></tr>
+              <tr><td><code>PUT</code></td><td>Replace the whole thing with what is sent</td><td><code>PUT /accounts/1</code></td><td>Yes: the result is the same</td></tr>
+              <tr><td><code>PATCH</code></td><td>Change part of it</td><td><code>PATCH /accounts/1</code> with a new nickname</td><td>Depends on the change</td></tr>
+              <tr><td><code>DELETE</code></td><td>Remove it</td><td><code>DELETE /accounts/1</code></td><td>Yes: it stays deleted</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>A request that gives the same result however many times it is sent is called <b>idempotent</b>. The last column matters when a network fails halfway and the client wants to try again. It comes back in <a href="#idempotency">Idempotency</a>.</p>
+      </section>
+
+      <section class="chapter" id="status-codes">
+        <h2>Status codes</h2>
+        <p>Every response starts with a three-digit <b>status code</b>. The first digit gives the family: 2xx worked, 4xx the client made a mistake, 5xx the server failed.</p>
+        <div class="scroll">
+          <table>
+            <thead>
+              <tr><th>Code</th><th>Name</th><th>When the bank sends it</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>200</td><td>OK</td><td>The request worked, and here is the result</td></tr>
+              <tr><td>201</td><td>Created</td><td>A new account or transfer was created</td></tr>
+              <tr><td>204</td><td>No Content</td><td>It worked and there is nothing to send back, for example after a delete</td></tr>
+              <tr><td>400</td><td>Bad Request</td><td>The request makes no sense, for example broken JSON</td></tr>
+              <tr><td>401</td><td>Unauthorized</td><td>The server does not know who you are: no token, or a wrong one</td></tr>
+              <tr><td>403</td><td>Forbidden</td><td>The server knows who you are, and you may not do this: Hemkesh asking for Sandhya's account</td></tr>
+              <tr><td>404</td><td>Not Found</td><td>There is no account 99</td></tr>
+              <tr><td>409</td><td>Conflict</td><td>The request is valid but clashes with the current state: not enough money for the transfer</td></tr>
+              <tr><td>422</td><td>Unprocessable Content</td><td>The JSON is readable but a value is wrong: an amount of -5</td></tr>
+              <tr><td>500</td><td>Internal Server Error</td><td>A bug or crash in the server. Not the client's fault</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><b>Rule:</b> the status code is the first thing a client checks, so it must tell the truth. Never send 200 with <code>{"error": "..."}</code> in the body.</p>
+      </section>
+
+      <section class="chapter" id="headers-json">
+        <h2>Headers and JSON</h2>
+        <p><b>Headers</b> are name and value pairs sent before the body. They describe the message, not the bank. The ones you meet first:</p>
+        <div class="scroll">
+          <table>
+            <thead>
+              <tr><th>Header</th><th>Says</th></tr>
+            </thead>
+            <tbody>
+              <tr><td><code>Content-Type: application/json</code></td><td>The body of this message is JSON</td></tr>
+              <tr><td><code>Accept: application/json</code></td><td>The client would like JSON back</td></tr>
+              <tr><td><code>Authorization: Bearer abc123</code></td><td>Who is asking, as a secret token</td></tr>
+              <tr><td><code>User-Agent: my-script/1.0</code></td><td>Which program is the client</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p><b>JSON</b> is the text format almost every API uses for the body. It looks like Python dicts and lists, with a few differences: strings always use double quotes, and <code>True</code>, <code>False</code> and <code>None</code> are written <code>true</code>, <code>false</code> and <code>null</code>. The standard <code>json</code> module converts both ways.</p>
+        <script type="text/plain" data-lang="py" data-file="json_basics.py">
+import json
+
+account = {"id": 1, "owner": "Rishikesh Agrawani", "balance": 5000, "active": True, "nickname": None}
+
+text = json.dumps(account)           # Python object -> JSON text
+print(text)
+# {"id": 1, "owner": "Rishikesh Agrawani", "balance": 5000, "active": true, "nickname": null}
+print(type(text).__name__)           # str
+
+back = json.loads(text)              # JSON text -> Python object
+print(back["balance"] + 500)         # 5500
+print(back == account)               # True
+        </script>
+      </section>
+
+      <section class="chapter" id="rest">
+        <h2>What REST means in practice</h2>
+        <p><b>REST</b> is a style for designing APIs. In practice it comes down to this: the URLs name <b>things</b>, called resources, and the HTTP method says what to do with them. The path is a noun. The method is the verb.</p>
+        <div class="scroll">
+          <table>
+            <thead>
+              <tr><th>Request</th><th>Meaning</th><th>Success code</th></tr>
+            </thead>
+            <tbody>
+              <tr><td><code>GET /accounts</code></td><td>List the accounts</td><td>200</td></tr>
+              <tr><td><code>POST /accounts</code></td><td>Open a new account</td><td>201</td></tr>
+              <tr><td><code>GET /accounts/1</code></td><td>Read account 1</td><td>200</td></tr>
+              <tr><td><code>PATCH /accounts/1</code></td><td>Change part of account 1</td><td>200</td></tr>
+              <tr><td><code>DELETE /accounts/1</code></td><td>Close account 1</td><td>204</td></tr>
+              <tr><td><code>POST /accounts/1/deposit</code></td><td>Pay money into account 1</td><td>200</td></tr>
+              <tr><td><code>POST /transfers</code></td><td>Create a transfer between two accounts</td><td>201</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>Use plural nouns, put the id in the path, and keep verbs out of URLs where you can: <code>DELETE /accounts/1</code>, not <code>POST /deleteAccount?id=1</code>. A transfer fits this by being a thing too. You do not "do" a transfer, you create one.</p>
+        <p class="note"><b>Honest note:</b> not every action is a neat noun. <code>POST /accounts/1/deposit</code> is a small, common compromise. Being consistent matters more than being pure.</p>
+      </section>
+
+      <section class="chapter part" id="client-part">
+        <h2>Calling an API</h2>
+        <p class="kind">Part 2 of 4 &middot; Python as the client</p>
+        <p>Python can call an API with the standard library alone, through <code>urllib.request</code>. Most people install <code>requests</code> or <code>httpx</code>, which do the same job with less code.</p>
+        <script type="text/plain" data-lang="bash" data-file="Terminal">
+pip install requests httpx
+        </script>
+        <p>The two <code>urllib</code> chapters run on the standard library. The chapters from <a href="#requests">requests and httpx</a> onwards need the install above.</p>
+        <p><b>About the practice server.</b> These examples must run without the internet. So each one starts a tiny bank server inside the same program, using the standard <code>http.server</code> module in a background thread, and then calls it. Asking for port <code>0</code> lets the operating system choose any free port. The server lines are scaffolding. The part to study in each block comes after the comment <code># ---- the client ----</code>. Against a real API you would write only that part, with the real URL.</p>
+        <ul>
+          <li><a href="#urllib-get">GET with urllib</a>: query parameters, status, JSON</li>
+          <li><a href="#urllib-post">POST with urllib</a>: sending a JSON body</li>
+          <li><a href="#requests">requests and httpx</a>: the same two calls, shorter</li>
+          <li><a href="#client-errors">Timeouts and errors</a></li>
+          <li><a href="#tokens">Headers, tokens and API keys</a></li>
+          <li><a href="#sessions">A Session or Client for reuse</a></li>
+          <li><a href="#retries">Retries</a></li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="urllib-get">
+        <h2>GET with urllib</h2>
+        <p>Extra options for a <code>GET</code> go at the end of the URL as <b>query parameters</b>: <code>/accounts?min_balance=4000</code>. <code>urlencode()</code> builds that text from a dict and escapes awkward characters. <code>urlopen()</code> sends the request.</p>
+        <script type="text/plain" data-lang="py" data-file="urllib_get.py">
+import json
+import threading
+from http.server import BaseHTTPRequestHandler, HTTPServer
+from urllib.parse import parse_qs, urlencode, urlparse
+from urllib.request import urlopen
+
+ACCOUNTS = [
+    {"id": 1, "owner": "Rishikesh Agrawani", "balance": 5000},
+    {"id": 2, "owner": "Sandhya Agrawani", "balance": 12000},
+    {"id": 3, "owner": "Hemkesh Agrawani", "balance": 1500},
+]
+
+class BankHandler(BaseHTTPRequestHandler):
+    def do_GET(self):                                    # runs for every GET request
+        query = parse_qs(urlparse(self.path).query)      # {'min_balance': ['4000']}
+        minimum = int(query.get("min_balance", ["0"])[0])
+        body = json.dumps([a for a in ACCOUNTS if a["balance"] >= minimum]).encode()
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json")
+        self.end_headers()
+        self.wfile.write(body)
+
+    def log_message(self, *args):                        # keep the server quiet
+        pass
+
+server = HTTPServer(("127.0.0.1", 0), BankHandler)       # port 0: the OS picks a free port
+threading.Thread(target=server.serve_forever, daemon=True).start()
+base_url = f"http://127.0.0.1:{server.server_port}"
+
+# ---- the client ----
+query = urlencode({"min_balance": 4000})
+print(query)                                 # min_balance=4000
+
+with urlopen(f"{base_url}/accounts?{query}", timeout=5) as response:
+    print(response.status)                   # 200
+    print(response.headers["Content-Type"])  # application/json
+    accounts = json.loads(response.read())   # bytes -> Python list
+
+for account in accounts:
+    print(account["owner"], account["balance"])
+# Rishikesh Agrawani 5000
+# Sandhya Agrawani 12000
+
+server.shutdown()
+        </script>
+        <p>The response body arrives as bytes. <code>json.loads()</code> turns it into normal Python lists and dicts, and from there it is ordinary Python.</p>
+        <p class="note"><b>Rule:</b> always pass <code>timeout</code>. Without it, a server that never answers makes your program wait for ever.</p>
+      </section>
+
+      <section class="chapter" id="urllib-post">
+        <h2>POST with urllib</h2>
+        <p>A <code>POST</code> carries its data in the <b>body</b>. Convert the dict to JSON text, encode it to bytes, and say what it is with the <code>Content-Type</code> header. A <code>Request</code> object holds the URL, body, headers and method together.</p>
+        <script type="text/plain" data-lang="py" data-file="urllib_post.py">
+import json
+import threading
+from http.server import BaseHTTPRequestHandler, HTTPServer
+from urllib.request import Request, urlopen
+
+class BankHandler(BaseHTTPRequestHandler):
+    def do_POST(self):                                   # runs for every POST request
+        length = int(self.headers["Content-Length"])
+        data = json.loads(self.rfile.read(length))       # the JSON body the client sent
+        account = {"id": 4, "owner": data["owner"], "balance": data.get("balance", 0)}
+        self.send_response(201)
+        self.send_header("Content-Type", "application/json")
+        self.end_headers()
+        self.wfile.write(json.dumps(account).encode())
+
+    def log_message(self, *args):
+        pass
+
+server = HTTPServer(("127.0.0.1", 0), BankHandler)
+threading.Thread(target=server.serve_forever, daemon=True).start()
+base_url = f"http://127.0.0.1:{server.server_port}"
+
+# ---- the client ----
+payload = json.dumps({"owner": "Malinikesh Agrawani", "balance": 3000}).encode()
+request = Request(
+    f"{base_url}/accounts",
+    data=payload,
+    headers={"Content-Type": "application/json"},
+    method="POST",
+)
+with urlopen(request, timeout=5) as response:
+    print(response.status)                   # 201
+    print(json.loads(response.read()))
+    # {'id': 4, 'owner': 'Malinikesh Agrawani', 'balance': 3000}
+
+server.shutdown()
+        </script>
+        <p class="note"><b>Concept:</b> with <code>urllib</code>, a 4xx or 5xx answer is raised as <code>urllib.error.HTTPError</code>. Catch it and read <code>error.code</code> to get the status.</p>
+      </section>
+
+      <section class="chapter" id="requests">
+        <h2>requests and httpx</h2>
+        <p><code>requests</code> is the long-standing favourite. <code>httpx</code> is newer, has almost the same interface, and also supports <code>async</code>. Both build the query string from <code>params=</code>, send a dict as JSON with <code>json=</code>, and decode the answer with <code>.json()</code>.</p>
+        <script type="text/plain" data-lang="py" data-file="requests_basics.py">
+import json
+import threading
+from http.server import BaseHTTPRequestHandler, HTTPServer
+from urllib.parse import parse_qs, urlparse
+
+import httpx
+import requests
+
+ACCOUNTS = [
+    {"id": 1, "owner": "Rishikesh Agrawani", "balance": 5000},
+    {"id": 2, "owner": "Sandhya Agrawani", "balance": 12000},
+    {"id": 3, "owner": "Hemkesh Agrawani", "balance": 1500},
+]
+
+class BankHandler(BaseHTTPRequestHandler):
+    def send_json(self, status, data):
+        self.send_response(status)
+        self.send_header("Content-Type", "application/json")
+        self.end_headers()
+        self.wfile.write(json.dumps(data).encode())
+
+    def do_GET(self):
+        query = parse_qs(urlparse(self.path).query)
+        minimum = int(query.get("min_balance", ["0"])[0])
+        self.send_json(200, [a for a in ACCOUNTS if a["balance"] >= minimum])
+
+    def do_POST(self):
+        data = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
+        self.send_json(201, {"id": 4, "owner": data["owner"], "balance": data.get("balance", 0)})
+
+    def log_message(self, *args):
+        pass
+
+server = HTTPServer(("127.0.0.1", 0), BankHandler)
+threading.Thread(target=server.serve_forever, daemon=True).start()
+base_url = f"http://127.0.0.1:{server.server_port}"
+
+# ---- the client ----
+response = requests.get(f"{base_url}/accounts", params={"min_balance": 4000}, timeout=5)
+print(response.status_code)                      # 200
+print(response.headers["Content-Type"])          # application/json
+print([a["owner"] for a in response.json()])     # ['Rishikesh Agrawani', 'Sandhya Agrawani']
+
+response = requests.post(f"{base_url}/accounts",
+                         json={"owner": "Malinikesh Agrawani", "balance": 3000}, timeout=5)
+print(response.status_code, response.json())
+# 201 {'id': 4, 'owner': 'Malinikesh Agrawani', 'balance': 3000}
+
+response = httpx.get(f"{base_url}/accounts", params={"min_balance": 10000}, timeout=5)
+print(response.status_code, response.json())
+# 200 [{'id': 2, 'owner': 'Sandhya Agrawani', 'balance': 12000}]
+
+server.shutdown()
+        </script>
+        <p class="note"><b>Pitfall:</b> <code>requests</code> has no default timeout and will wait for ever. <code>httpx</code> defaults to 5 seconds. Set one yourself in both, so the next reader does not have to remember which is which.</p>
+      </section>
+
+      <section class="chapter" id="client-errors">
+        <h2>Timeouts and errors</h2>
+        <p>Three different things can go wrong. The server answers with an error status. The server is too slow. The server cannot be reached at all. <code>requests</code> does not raise for a 404 by itself: you get a normal response whose <code>status_code</code> is 404. Call <code>raise_for_status()</code> to turn any 4xx or 5xx into an exception.</p>
+        <script type="text/plain" data-lang="py" data-file="client_errors.py">
+import json
+import threading
+import time
+from http.server import BaseHTTPRequestHandler, HTTPServer
+
+import requests
+
+class BankHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        if self.path == "/slow":
+            time.sleep(0.5)                              # a server that takes too long
+        if self.path == "/accounts/1":
+            status, data = 200, {"id": 1, "owner": "Subhash Agrawani", "balance": 8000}
+        else:
+            status, data = 404, {"detail": "Account not found"}
+        self.send_response(status)
+        self.send_header("Content-Type", "application/json")
+        self.end_headers()
+        self.wfile.write(json.dumps(data).encode())
+
+    def log_message(self, *args):
+        pass
+
+server = HTTPServer(("127.0.0.1", 0), BankHandler)
+threading.Thread(target=server.serve_forever, daemon=True).start()
+base_url = f"http://127.0.0.1:{server.server_port}"
+
+# ---- the client ----
+response = requests.get(f"{base_url}/accounts/99", timeout=5)
+print(response.status_code, response.ok)     # 404 False
+print(response.json())                       # {'detail': 'Account not found'}
+
+def fetch(path, timeout=5):
+    try:
+        response = requests.get(base_url + path, timeout=timeout)
+        response.raise_for_status()          # raises HTTPError for 4xx and 5xx
+        return response.json()
+    except requests.HTTPError as error:
+        return f"server said {error.response.status_code}"
+    except requests.Timeout:
+        return "gave up waiting"
+    except requests.ConnectionError:
+        return "could not connect"
+
+print(fetch("/accounts/1"))             # {'id': 1, 'owner': 'Subhash Agrawani', 'balance': 8000}
+print(fetch("/accounts/99"))            # server said 404
+print(fetch("/slow", timeout=0.2))      # gave up waiting
+
+server.shutdown()
+server.server_close()                   # the server is gone now
+print(fetch("/accounts/1"))             # could not connect
+        </script>
+        <p>All of these exceptions inherit from <code>requests.RequestException</code>, so one <code>except requests.RequestException</code> catches the lot when you do not need to tell them apart. <code>httpx</code> works the same way, with <code>httpx.HTTPStatusError</code>, <code>httpx.TimeoutException</code> and <code>httpx.ConnectError</code>, all under <code>httpx.HTTPError</code>.</p>
+        <p class="note"><b>Habit:</b> the network is the least reliable part of any program. Every call to another service needs a timeout and a decision about what happens when it fails. Exceptions are covered in <a href="python-errors-and-files.html">Python Errors and Files</a>.</p>
+      </section>
+
+      <section class="chapter" id="tokens">
+        <h2>Headers, tokens and API keys</h2>
+        <p>Most APIs want to know who is calling. The common way is a secret string, called an <b>API key</b> or <b>token</b>, sent in the <code>Authorization</code> header with the word <code>Bearer</code> in front. Extra headers are passed as a dict.</p>
+        <p>The token is a password. Do not write it in the code. Read it from an <b>environment variable</b>, a named value that the operating system hands to the program. The fallback value here exists only so that the example runs.</p>
+        <script type="text/plain" data-lang="py" data-file="bearer_token.py">
+import json
+import os
+import threading
+from http.server import BaseHTTPRequestHandler, HTTPServer
+
+import requests
+
+class BankHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        if self.headers.get("Authorization") == "Bearer demo-token":
+            status, data = 200, {"id": 2, "owner": "Sandhya Agrawani", "balance": 12000}
+        else:
+            status, data = 401, {"detail": "Missing or wrong token"}
+        self.send_response(status)
+        self.send_header("Content-Type", "application/json")
+        self.end_headers()
+        self.wfile.write(json.dumps(data).encode())
+
+    def log_message(self, *args):
+        pass
+
+server = HTTPServer(("127.0.0.1", 0), BankHandler)
+threading.Thread(target=server.serve_forever, daemon=True).start()
+base_url = f"http://127.0.0.1:{server.server_port}"
+
+# ---- the client ----
+token = os.environ.get("BANK_API_TOKEN", "demo-token")   # real code: no fallback, fail if it is missing
+
+response = requests.get(f"{base_url}/accounts/2", timeout=5)
+print(response.status_code, response.json())
+# 401 {'detail': 'Missing or wrong token'}
+
+headers = {"Authorization": f"Bearer {token}", "Accept": "application/json"}
+response = requests.get(f"{base_url}/accounts/2", headers=headers, timeout=5)
+print(response.status_code, response.json())
+# 200 {'id': 2, 'owner': 'Sandhya Agrawani', 'balance': 12000}
+
+server.shutdown()
+        </script>
+        <script type="text/plain" data-lang="bash" data-file="Terminal">
+export BANK_API_TOKEN="the-real-secret"      # set once in the shell, never in the code
+python bearer_token.py
+        </script>
+        <p class="note"><b>Pitfall:</b> a key written in a source file gets committed, pushed and copied. Treat any key that reached version control as stolen, and replace it. Send tokens only over <code>https://</code> URLs, where the traffic is encrypted.</p>
+      </section>
+
+      <section class="chapter" id="sessions">
+        <h2>A Session or Client for reuse</h2>
+        <p>When you make several calls to the same API, create one <code>requests.Session</code> or <code>httpx.Client</code> and reuse it. It keeps your headers in one place, and it keeps the network connection open between calls, which is faster than opening a new one each time.</p>
+        <script type="text/plain" data-lang="py" data-file="sessions.py">
+import json
+import threading
+from http.server import BaseHTTPRequestHandler, HTTPServer
+
+import httpx
+import requests
+
+OWNERS = {"/accounts/1": "Rishikesh Agrawani", "/accounts/2": "Sandhya Agrawani"}
+
+class BankHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        if self.headers.get("Authorization") != "Bearer demo-token":
+            status, data = 401, {"detail": "Missing or wrong token"}
+        else:
+            status, data = 200, {"owner": OWNERS[self.path]}
+        self.send_response(status)
+        self.send_header("Content-Type", "application/json")
+        self.end_headers()
+        self.wfile.write(json.dumps(data).encode())
+
+    def log_message(self, *args):
+        pass
+
+server = HTTPServer(("127.0.0.1", 0), BankHandler)
+threading.Thread(target=server.serve_forever, daemon=True).start()
+base_url = f"http://127.0.0.1:{server.server_port}"
+
+# ---- the client ----
+with requests.Session() as session:
+    session.headers.update({"Authorization": "Bearer demo-token"})    # sent with every call
+    for account_id in (1, 2):
+        response = session.get(f"{base_url}/accounts/{account_id}", timeout=5)
+        print(response.status_code, response.json()["owner"])
+# 200 Rishikesh Agrawani
+# 200 Sandhya Agrawani
+
+with httpx.Client(base_url=base_url, timeout=5,
+                  headers={"Authorization": "Bearer demo-token"}) as client:
+    response = client.get("/accounts/2")             # base URL, timeout and headers are remembered
+    print(response.status_code, response.json()["owner"])
+# 200 Sandhya Agrawani
+
+server.shutdown()
+        </script>
+        <p class="note"><b>Difference:</b> <code>httpx.Client</code> remembers a base URL and a timeout. A <code>requests.Session</code> does not remember a timeout, so you still pass it on every call.</p>
+      </section>
+
+      <section class="chapter" id="retries">
+        <h2>Retries</h2>
+        <p>Some failures are temporary: the server was restarting, or busy for a moment. Trying again a little later often works. Wait longer after each failure, which is called <b>backoff</b>, and stop after a few attempts. The practice server below answers 503 (Service Unavailable) twice, then works.</p>
+        <script type="text/plain" data-lang="py" data-file="retries.py">
+import json
+import threading
+import time
+from http.server import BaseHTTPRequestHandler, HTTPServer
+
+import requests
+
+calls = []
+
+class BankHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        calls.append(self.path)
+        status = 503 if len(calls) <= 2 else 200         # fail twice, then work
+        self.send_response(status)
+        self.send_header("Content-Type", "application/json")
+        self.end_headers()
+        self.wfile.write(json.dumps({"balance": 8000}).encode())
+
+    def log_message(self, *args):
+        pass
+
+server = HTTPServer(("127.0.0.1", 0), BankHandler)
+threading.Thread(target=server.serve_forever, daemon=True).start()
+base_url = f"http://127.0.0.1:{server.server_port}"
+
+# ---- the client ----
+def get_with_retry(url, attempts=4, wait=0.05):
+    for attempt in range(1, attempts + 1):
+        try:
+            response = requests.get(url, timeout=5)
+            if response.status_code < 500:               # success, or our own mistake: stop
+                return response
+            print(f"attempt {attempt}: status {response.status_code}")
+        except (requests.ConnectionError, requests.Timeout):
+            print(f"attempt {attempt}: no answer")
+        if attempt < attempts:
+            time.sleep(wait)
+            wait *= 2                                    # back off: 0.05, 0.1, 0.2 ...
+    raise RuntimeError(f"gave up after {attempts} attempts")
+
+response = get_with_retry(f"{base_url}/accounts/3")
+print(response.status_code, response.json())
+
+server.shutdown()
+        </script>
+        <script type="text/plain" data-lang="text" data-file="Output">
+attempt 1: status 503
+attempt 2: status 503
+200 {'balance': 8000}
+        </script>
+        <p>Retry only what is worth retrying: connection failures, timeouts and 5xx answers. A 400 or 404 will fail the same way every time. Real waits are seconds, not hundredths. Both libraries can do this for you: <code>requests</code> through <code>urllib3</code>'s <code>Retry</code> class mounted on a session, and <code>httpx</code> through <code>httpx.HTTPTransport(retries=3)</code>, which retries failed connections only.</p>
+        <p class="note"><b>Danger:</b> retrying a <code>GET</code> is safe. Retrying a <code>POST /transfers</code> may pay twice, because you cannot tell whether the first try reached the server. The cure is in <a href="#idempotency">Idempotency</a>.</p>
+      </section>
+
+      <section class="chapter part" id="fastapi-part">
+        <h2>Building an API with FastAPI</h2>
+        <p class="kind">Part 3 of 4 &middot; Python as the server</p>
+        <p>FastAPI is a framework for writing web APIs. You write normal functions with type hints, and it turns them into endpoints that check their input and produce JSON. It is not in the standard library. Everything in this part needs:</p>
+        <script type="text/plain" data-lang="bash" data-file="Terminal">
+pip install fastapi uvicorn httpx
+        </script>
+        <p><code>uvicorn</code> is the server program that runs the app. <code>httpx</code> is needed by FastAPI's test client. The examples were checked with FastAPI 0.128 and Pydantic 2 on Python 3.9, so they write <code>Optional[str]</code> and <code>List[...]</code> from <code>typing</code>, which work on every version.</p>
+        <p><b>How these examples run.</b> Each block builds an app and then calls it with <code>TestClient</code>, which sends requests straight to the app inside the same program. No server is started and no port is opened, yet the app handles each request exactly as it would for real.</p>
+        <ul>
+          <li><a href="#first-app">A first app</a>, and how to run it</li>
+          <li><a href="#path-query">Path and query parameters</a></li>
+          <li><a href="#bodies">Request bodies with Pydantic</a></li>
+          <li><a href="#response-models">Response models and status codes</a></li>
+          <li><a href="#http-exception">Errors with HTTPException</a></li>
+          <li><a href="#bank-api">The bank API</a>: all of it together</li>
+          <li><a href="#depends">Dependencies with Depends</a></li>
+          <li><a href="#docs">Automatic docs</a></li>
+          <li><a href="#async-def">def or async def</a></li>
+          <li><a href="#testing">Testing the API</a></li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="first-app">
+        <h2>A first app</h2>
+        <p>Create a <code>FastAPI</code> object. Put a decorator on a function to say which method and path it answers. Whatever the function returns is sent back as JSON.</p>
+        <script type="text/plain" data-lang="py" data-file="main.py">
+from fastapi import FastAPI
+from fastapi.testclient import TestClient
+
+app = FastAPI(title="Family Bank")
+
+@app.get("/")                        # answer GET requests for the path "/"
+def home():
+    return {"message": "Welcome to the Family Bank"}
+
+client = TestClient(app)             # calls the app directly, without a server
+response = client.get("/")
+print(response.status_code)          # 200
+print(response.json())               # {'message': 'Welcome to the Family Bank'}
+        </script>
+        <p>To run it as a real server, save the file as <code>main.py</code> (the last four lines are not needed then) and start it with uvicorn. <code>main:app</code> means "the object <code>app</code> in <code>main.py</code>". <code>--reload</code> restarts the server whenever you save the file, which suits development only.</p>
+        <script type="text/plain" data-lang="bash" data-file="Terminal">
+uvicorn main:app --reload
+# then open http://127.0.0.1:8000/ in a browser
+        </script>
+        <p class="note"><b>Concept:</b> decorators such as <code>@app.get</code> register the function with the app. They are explained in <a href="python-decorators.html">Python Decorators</a>.</p>
+      </section>
+
+      <section class="chapter" id="path-query">
+        <h2>Path and query parameters</h2>
+        <p>A name in braces in the path, such as <code>{account_id}</code>, is a <b>path parameter</b>. It is passed to the function argument of the same name. Any other argument is a <b>query parameter</b>, read from the part after <code>?</code>. The type hints do real work: FastAPI converts the text from the URL to that type, and rejects the request if it cannot.</p>
+        <script type="text/plain" data-lang="py" data-file="path_query.py">
+from typing import Optional
+
+from fastapi import FastAPI
+from fastapi.testclient import TestClient
+
+app = FastAPI()
+
+ACCOUNTS = {
+    1: {"id": 1, "owner": "Rishikesh Agrawani", "balance": 5000},
+    2: {"id": 2, "owner": "Sandhya Agrawani", "balance": 12000},
+    3: {"id": 3, "owner": "Subhash Agrawani", "balance": 8000},
+}
+
+@app.get("/accounts/{account_id}")
+def get_account(account_id: int):                    # from the path, converted to int
+    return ACCOUNTS[account_id]
+
+@app.get("/accounts")
+def list_accounts(min_balance: int = 0, owner: Optional[str] = None):    # from the query
+    found = [a for a in ACCOUNTS.values() if a["balance"] >= min_balance]
+    if owner is not None:
+        found = [a for a in found if owner.lower() in a["owner"].lower()]
+    return found
+
+client = TestClient(app)
+
+print(client.get("/accounts/2").json())
+# {'id': 2, 'owner': 'Sandhya Agrawani', 'balance': 12000}
+
+response = client.get("/accounts", params={"min_balance": 6000})
+print([a["owner"] for a in response.json()])         # ['Sandhya Agrawani', 'Subhash Agrawani']
+
+response = client.get("/accounts", params={"owner": "rishi"})
+print([a["owner"] for a in response.json()])         # ['Rishikesh Agrawani']
+
+response = client.get("/accounts/abc")               # not a number
+print(response.status_code)                          # 422
+print(response.json()["detail"][0]["msg"])
+# Input should be a valid integer, unable to parse string as an integer
+        </script>
+        <p>A query parameter with a default value is optional. <code>Optional[str] = None</code> means "text, or left out". The function body never sees <code>"abc"</code>: FastAPI answered 422 before calling it.</p>
+        <p class="note"><b>Still missing:</b> <code>/accounts/99</code> would crash with a <code>KeyError</code>, and the client would get a 500. The proper 404 comes in <a href="#http-exception">Errors with HTTPException</a>.</p>
+      </section>
+
+      <section class="chapter" id="bodies">
+        <h2>Request bodies with Pydantic</h2>
+        <p>For <code>POST</code>, the data arrives as JSON in the body. You describe its shape with a <b>Pydantic model</b>: a class that inherits from <code>BaseModel</code> and lists the fields with their types. <code>Field()</code> adds rules such as "greater than zero". Use the model as the type of an argument, and FastAPI reads the body, checks it and hands you a ready object.</p>
+        <script type="text/plain" data-lang="py" data-file="bodies.py">
+import json
+
+from fastapi import FastAPI
+from fastapi.testclient import TestClient
+from pydantic import BaseModel, Field
+
+class AccountCreate(BaseModel):
+    owner: str = Field(min_length=1)
+    balance: int = Field(default=0, ge=0)        # ge: greater than or equal to
+
+class Transfer(BaseModel):
+    from_id: int
+    to_id: int
+    amount: int = Field(gt=0)                    # gt: greater than
+
+app = FastAPI()
+
+@app.post("/accounts")
+def create_account(data: AccountCreate):         # the JSON body, already checked
+    return {"opened_for": data.owner, "balance": data.balance}
+
+@app.post("/transfers")
+def create_transfer(data: Transfer):
+    return {"moved": data.amount}
+
+client = TestClient(app)
+
+response = client.post("/accounts", json={"owner": "Hemkesh Agrawani"})
+print(response.status_code, response.json())
+# 200 {'opened_for': 'Hemkesh Agrawani', 'balance': 0}
+
+response = client.post("/accounts", json={"owner": "Hemkesh Agrawani", "balance": -5})
+print(response.status_code)                      # 422
+print(json.dumps(response.json(), indent=2))
+
+response = client.post("/transfers", json={"from_id": 1, "amount": "lots"})
+for error in response.json()["detail"]:
+    print(error["loc"], error["msg"])
+        </script>
+        <script type="text/plain" data-lang="text" data-file="Output from the second request onwards">
+422
+{
+  "detail": [
+    {
+      "type": "greater_than_equal",
+      "loc": [
+        "body",
+        "balance"
+      ],
+      "msg": "Input should be greater than or equal to 0",
+      "input": -5,
+      "ctx": {
+        "ge": 0
+      }
+    }
+  ]
+}
+['body', 'to_id'] Field required
+['body', 'amount'] Input should be a valid integer, unable to parse string as an integer
+        </script>
+        <p>You wrote no checking code. The 422 response lists every problem, says where it is (<code>loc</code>) and what is wrong (<code>msg</code>), so the caller can fix the request. This is the real response body, with nothing left out.</p>
+        <p class="note"><b>Rule:</b> never trust input. Anyone can send anything to a public API. A model with strict types and limits is your front door. Rules that depend on the data, such as "is there enough money", still have to be checked in your own code.</p>
+      </section>
+
+      <section class="chapter" id="response-models">
+        <h2>Response models and status codes</h2>
+        <p>A <b>response model</b> describes what goes out. FastAPI keeps only the fields named in it, so nothing private slips into a response by accident. <code>status_code=</code> sets the code for a successful call: 201 for something created, 204 for "done, nothing to return".</p>
+        <script type="text/plain" data-lang="py" data-file="response_models.py">
+from fastapi import FastAPI
+from fastapi.testclient import TestClient
+from pydantic import BaseModel
+
+class AccountOut(BaseModel):                 # what a client is allowed to see
+    id: int
+    owner: str
+    balance: int
+
+app = FastAPI()
+
+ACCOUNTS = {
+    1: {"id": 1, "owner": "Sandhya Agrawani", "balance": 12000, "pin": "4321"},
+}
+
+@app.get("/accounts/{account_id}", response_model=AccountOut)
+def get_account(account_id: int):
+    return ACCOUNTS[account_id]              # the pin is in here ...
+
+@app.post("/accounts", response_model=AccountOut, status_code=201)
+def create_account(owner: str):
+    account = {"id": len(ACCOUNTS) + 1, "owner": owner, "balance": 0, "pin": "0000"}
+    ACCOUNTS[account["id"]] = account
+    return account
+
+@app.delete("/accounts/{account_id}", status_code=204)
+def close_account(account_id: int) -> None:
+    del ACCOUNTS[account_id]
+
+client = TestClient(app)
+
+print(client.get("/accounts/1").json())      # ... but not in the response
+# {'id': 1, 'owner': 'Sandhya Agrawani', 'balance': 12000}
+
+response = client.post("/accounts", params={"owner": "Subhash Agrawani"})
+print(response.status_code, response.json())
+# 201 {'id': 2, 'owner': 'Subhash Agrawani', 'balance': 0}
+
+response = client.delete("/accounts/2")
+print(response.status_code, response.content)    # 204 b''
+        </script>
+        <p class="note"><b>Habit:</b> use separate models for input and output. <code>AccountCreate</code> has no <code>id</code>, because the server chooses it. <code>AccountOut</code> has no <code>pin</code>, because nobody should read it back.</p>
+      </section>
+
+      <section class="chapter" id="http-exception">
+        <h2>Errors with HTTPException</h2>
+        <p>When a request cannot be carried out, raise <code>HTTPException</code> with the right status code and a short message. FastAPI stops the function there and sends that code, with the message under the key <code>detail</code>.</p>
+        <script type="text/plain" data-lang="py" data-file="http_exception.py">
+from fastapi import FastAPI, HTTPException
+from fastapi.testclient import TestClient
+from pydantic import BaseModel, Field
+
+class Withdrawal(BaseModel):
+    amount: int = Field(gt=0)
+
+app = FastAPI()
+BALANCES = {1: 5000}                         # account id -> balance
+
+@app.post("/accounts/{account_id}/withdraw")
+def withdraw(account_id: int, body: Withdrawal):
+    if account_id not in BALANCES:
+        raise HTTPException(status_code=404, detail="Account not found")
+    if BALANCES[account_id] < body.amount:
+        raise HTTPException(status_code=409, detail="Insufficient funds")
+    BALANCES[account_id] -= body.amount
+    return {"id": account_id, "balance": BALANCES[account_id]}
+
+client = TestClient(app)
+
+for account_id, amount in [(1, 2000), (99, 2000), (1, 9000)]:
+    response = client.post(f"/accounts/{account_id}/withdraw", json={"amount": amount})
+    print(response.status_code, response.json())
+        </script>
+        <script type="text/plain" data-lang="text" data-file="Output">
+200 {'id': 1, 'balance': 3000}
+404 {'detail': 'Account not found'}
+409 {'detail': 'Insufficient funds'}
+        </script>
+        <p>Which code for "not enough money"? The request is well formed, so it is not a 422. It clashes with the current state of the account, which is what 409 Conflict is for. Some APIs answer 400 here. Either is acceptable. Choose one, write it down and use it everywhere.</p>
+        <p class="note"><b>Pitfall:</b> an exception you did not expect becomes a 500 with a plain "Internal Server Error" body. That is correct: the details belong in your logs, not in the response. See <a href="python-debugging-logging.html">Python Debugging and Logging</a>.</p>
+      </section>
+
+      <section class="chapter" id="bank-api">
+        <h2>The bank API</h2>
+        <p>Here is the whole small bank: open an account, read one, list them all, deposit and transfer. The accounts live in a dict in memory, so they vanish when the program stops. That is fine for learning. This block is longer than the others because it is a complete program.</p>
+        <script type="text/plain" data-lang="py" data-file="bank_api.py">
+from typing import Dict, List
+
+from fastapi import FastAPI, HTTPException
+from fastapi.testclient import TestClient
+from pydantic import BaseModel, Field
+
+class AccountCreate(BaseModel):
+    owner: str = Field(min_length=1)
+    balance: int = Field(default=0, ge=0)
+
+class Account(AccountCreate):                # the same fields, plus an id
+    id: int
+
+class Amount(BaseModel):
+    amount: int = Field(gt=0)
+
+class Transfer(BaseModel):
+    from_id: int
+    to_id: int
+    amount: int = Field(gt=0)
+
+app = FastAPI(title="Family Bank")
+accounts: Dict[int, Account] = {}
+
+def find(account_id: int) -> Account:
+    if account_id not in accounts:
+        raise HTTPException(status_code=404, detail=f"Account {account_id} not found")
+    return accounts[account_id]
+
+@app.post("/accounts", response_model=Account, status_code=201)
+def create_account(data: AccountCreate):
+    account = Account(id=len(accounts) + 1, **data.model_dump())
+    accounts[account.id] = account
+    return account
+
+@app.get("/accounts", response_model=List[Account])
+def list_accounts():
+    return list(accounts.values())
+
+@app.get("/accounts/{account_id}", response_model=Account)
+def get_account(account_id: int):
+    return find(account_id)
+
+@app.post("/accounts/{account_id}/deposit", response_model=Account)
+def deposit(account_id: int, body: Amount):
+    account = find(account_id)
+    account.balance += body.amount
+    return account
+
+@app.post("/transfers", status_code=201)
+def create_transfer(body: Transfer):
+    source, target = find(body.from_id), find(body.to_id)
+    if source.balance < body.amount:
+        raise HTTPException(status_code=409, detail="Insufficient funds")
+    source.balance -= body.amount
+    target.balance += body.amount
+    return {"from_balance": source.balance, "to_balance": target.balance}
+
+client = TestClient(app)
+
+for owner, balance in [("Rishikesh Agrawani", 5000), ("Sandhya Agrawani", 12000)]:
+    response = client.post("/accounts", json={"owner": owner, "balance": balance})
+    print(response.status_code, response.json())
+
+print(client.post("/accounts/1/deposit", json={"amount": 500}).json())
+print(client.post("/transfers", json={"from_id": 2, "to_id": 1, "amount": 2000}).json())
+print(client.post("/transfers", json={"from_id": 1, "to_id": 2, "amount": 99999}).json())
+print(client.post("/transfers", json={"from_id": 1, "to_id": 7, "amount": 100}).json())
+print(client.get("/accounts/1").json())
+print([a["balance"] for a in client.get("/accounts").json()])
+        </script>
+        <script type="text/plain" data-lang="text" data-file="Output">
+201 {'owner': 'Rishikesh Agrawani', 'balance': 5000, 'id': 1}
+201 {'owner': 'Sandhya Agrawani', 'balance': 12000, 'id': 2}
+{'owner': 'Rishikesh Agrawani', 'balance': 5500, 'id': 1}
+{'from_balance': 10000, 'to_balance': 7500}
+{'detail': 'Insufficient funds'}
+{'detail': 'Account 7 not found'}
+{'owner': 'Rishikesh Agrawani', 'balance': 7500, 'id': 1}
+[7500, 10000]
+        </script>
+        <p><code>data.model_dump()</code> turns a Pydantic model into a dict (Pydantic 1 called it <code>.dict()</code>). The helper <code>find()</code> raises the 404 in one place, so every endpoint that needs an account gets the same behaviour. The inheritance used for <code>Account</code> is covered in <a href="python-classes.html">Python Classes</a>.</p>
+        <p class="note"><b>Limits:</b> a dict in memory is lost on restart and is not shared between server processes. A real bank API keeps its data in a database and runs each transfer in a transaction. <a href="#with-database">Connecting the API to a database</a> sketches that.</p>
+      </section>
+
+      <section class="chapter" id="depends">
+        <h2>Dependencies with Depends</h2>
+        <p>The bank API above reaches for a global dict. That makes it hard to test and hard to change. <b>Dependency injection</b> turns it round: the endpoint declares what it needs as an argument, and FastAPI supplies it. <code>Depends(get_bank)</code> means "call <code>get_bank()</code> and pass me the result".</p>
+        <script type="text/plain" data-lang="py" data-file="depends.py">
+from typing import Dict
+
+from fastapi import Depends, FastAPI, HTTPException
+from fastapi.testclient import TestClient
+
+class Bank:
+    def __init__(self, balances: Dict[int, int]):
+        self.balances = balances             # account id -> balance
+
+    def balance(self, account_id: int) -> int:
+        if account_id not in self.balances:
+            raise HTTPException(status_code=404, detail="Account not found")
+        return self.balances[account_id]
+
+real_bank = Bank({1: 5000, 2: 12000})
+
+def get_bank() -> Bank:                      # the dependency
+    return real_bank
+
+app = FastAPI()
+
+@app.get("/accounts/{account_id}/balance")
+def read_balance(account_id: int, bank: Bank = Depends(get_bank)):
+    return {"id": account_id, "balance": bank.balance(account_id)}
+
+client = TestClient(app)
+print(client.get("/accounts/1/balance").json())      # {'id': 1, 'balance': 5000}
+
+# In a test: swap the real bank for a small fake one
+test_bank = Bank({1: 42})
+app.dependency_overrides[get_bank] = lambda: test_bank
+
+print(client.get("/accounts/1/balance").json())      # {'id': 1, 'balance': 42}
+print(client.get("/accounts/2/balance").status_code) # 404
+
+app.dependency_overrides.clear()                     # back to the real bank
+print(client.get("/accounts/2/balance").json())      # {'id': 2, 'balance': 12000}
+        </script>
+        <p>The endpoint does not know or care where the bank comes from. Today it is a dict in memory. Later it can be a database session, and only <code>get_bank</code> changes. Tests replace it through <code>app.dependency_overrides</code> without touching the endpoint code.</p>
+        <p class="note"><b>Design:</b> this is the dependency inversion principle in action. The endpoint depends on "something that gives me a bank", not on one fixed object. See <a href="design-principles.html#dip">Design Principles</a>, and <a href="python-testing.html">Python Testing</a> for fakes in tests.</p>
+      </section>
+
+      <section class="chapter" id="docs">
+        <h2>Automatic docs</h2>
+        <p>FastAPI reads your paths, type hints and models and builds a description of the whole API in a standard format called <b>OpenAPI</b>. From that it serves interactive documentation with no extra work.</p>
+        <div class="scroll">
+          <table>
+            <thead>
+              <tr><th>URL on the running server</th><th>What you get</th></tr>
+            </thead>
+            <tbody>
+              <tr><td><code>/docs</code></td><td>Swagger UI: every endpoint listed with its parameters, models and status codes, and a "Try it out" button that sends real requests from the browser</td></tr>
+              <tr><td><code>/redoc</code></td><td>The same information as a reading-friendly reference page</td></tr>
+              <tr><td><code>/openapi.json</code></td><td>The raw description as JSON, which other tools can use to generate client code</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>Start the bank API with <code>uvicorn main:app --reload</code> and open <code>http://127.0.0.1:8000/docs</code>. It is the fastest way to try an endpoint by hand. The same description is available from Python.</p>
+        <script type="text/plain" data-lang="py" data-file="openapi.py">
+from fastapi import FastAPI
+from fastapi.testclient import TestClient
+
+app = FastAPI(title="Family Bank")
+
+@app.get("/accounts/{account_id}")
+def get_account(account_id: int):
+    """Read one account."""                  # the docstring appears in the docs
+    return {"id": account_id}
+
+client = TestClient(app)
+schema = client.get("/openapi.json").json()
+print(schema["info"]["title"])               # Family Bank
+print(list(schema["paths"]))                 # ['/accounts/{account_id}']
+print(client.get("/docs").status_code)       # 200
+        </script>
+        <p class="note"><b>Benefit:</b> the docs are built from the code, so they cannot drift out of date the way a hand-written document does.</p>
+      </section>
+
+      <section class="chapter" id="async-def">
+        <h2>def or async def</h2>
+        <p>FastAPI accepts both kinds of endpoint, and treats them differently. A plain <code>def</code> endpoint is run in a worker thread from a pool, so a call that blocks, such as a <code>sqlite3</code> query, <code>requests.get()</code> or <code>time.sleep()</code>, holds up only that thread. An <code>async def</code> endpoint runs on the server's single event loop. It can serve a great many requests at once, but only if everything slow inside it is awaited through an async library, such as <code>httpx.AsyncClient</code> or an async database driver. One blocking call inside an <code>async def</code> endpoint freezes the event loop, and every other request waits behind it. So the rule is short: use <code>async def</code> when the body awaits async code, and plain <code>def</code> otherwise. If you are not sure, <code>def</code> is the safe choice. The event loop and <code>await</code> are explained in <a href="python-asyncio.html">Python Async IO</a>.</p>
+        <script type="text/plain" data-lang="py" data-file="async_endpoint.py">
+import asyncio
+
+from fastapi import FastAPI
+from fastapi.testclient import TestClient
+
+app = FastAPI()
+
+@app.get("/sync")
+def sync_endpoint():                         # runs in a worker thread
+    return {"kind": "def"}
+
+@app.get("/async")
+async def async_endpoint():                  # runs on the event loop
+    await asyncio.sleep(0.01)                # awaiting lets other requests run meanwhile
+    return {"kind": "async def"}
+
+client = TestClient(app)
+print(client.get("/sync").json())            # {'kind': 'def'}
+print(client.get("/async").json())           # {'kind': 'async def'}
+        </script>
+      </section>
+
+      <section class="chapter" id="testing">
+        <h2>Testing the API</h2>
+        <p>The <code>TestClient</code> used all through this part is the testing tool. A test sends a request and asserts on the status code and the JSON. This needs <code>pip install pytest</code>. In a real project the app lives in <code>main.py</code> and the test file starts with <code>from main import app</code>. Here both are in one file so that the example is complete.</p>
+        <script type="text/plain" data-lang="py" data-file="test_bank_api.py">
+import pytest
+from fastapi import FastAPI, HTTPException
+from fastapi.testclient import TestClient
+from pydantic import BaseModel, Field
+
+class Amount(BaseModel):
+    amount: int = Field(gt=0)
+
+app = FastAPI()
+balances = {}
+
+@app.post("/accounts/{account_id}/withdraw")
+def withdraw(account_id: int, body: Amount):
+    if account_id not in balances:
+        raise HTTPException(status_code=404, detail="Account not found")
+    if balances[account_id] < body.amount:
+        raise HTTPException(status_code=409, detail="Insufficient funds")
+    balances[account_id] -= body.amount
+    return {"balance": balances[account_id]}
+
+@pytest.fixture
+def client():
+    balances.clear()
+    balances[1] = 5000                       # every test starts from the same state
+    return TestClient(app)
+
+def test_withdraw_lowers_the_balance(client):
+    response = client.post("/accounts/1/withdraw", json={"amount": 2000})
+    assert response.status_code == 200
+    assert response.json() == {"balance": 3000}
+
+def test_unknown_account_is_404(client):
+    response = client.post("/accounts/99/withdraw", json={"amount": 100})
+    assert response.status_code == 404
+
+def test_too_large_a_withdrawal_is_409_and_changes_nothing(client):
+    response = client.post("/accounts/1/withdraw", json={"amount": 9000})
+    assert response.status_code == 409
+    assert balances[1] == 5000
+
+def test_negative_amount_is_rejected(client):
+    assert client.post("/accounts/1/withdraw", json={"amount": -5}).status_code == 422
+        </script>
+        <script type="text/plain" data-lang="bash" data-file="Terminal">
+pytest -q test_bank_api.py
+        </script>
+        <script type="text/plain" data-lang="text" data-file="Output">
+....                                                                     [100%]
+4 passed in 0.17s
+        </script>
+        <p>Test the failures as carefully as the successes: the status code, and that nothing changed. Fixtures and <code>assert</code> are covered in <a href="python-testing.html">Python Testing</a>.</p>
+      </section>
+
+      <section class="chapter part" id="beyond-part">
+        <h2>Beyond the basics</h2>
+        <p class="kind">Part 4 of 4 &middot; what a real API also needs</p>
+        <p>This part is a map, not a course. Each chapter names an idea you will meet as soon as an API has real users, says what it is for, and shows the smallest example that makes it concrete. The Flask example needs <code>pip install flask</code>. The others use FastAPI as before, or the standard library.</p>
+        <ul>
+          <li><a href="#frameworks">Flask and Django</a>, and when to pick which</li>
+          <li><a href="#auth">Authentication</a>: API keys, tokens, password hashing</li>
+          <li><a href="#cors">CORS</a></li>
+          <li><a href="#pagination">Pagination and filtering</a></li>
+          <li><a href="#idempotency">Idempotency</a>: a retried payment must not pay twice</li>
+          <li><a href="#with-database">Connecting the API to a database</a></li>
+          <li><a href="#deployment">Deployment</a></li>
+          <li><a href="#reference">Quick reference</a></li>
+          <li><a href="#mistakes">Common mistakes</a></li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="frameworks">
+        <h2>Flask and Django</h2>
+        <p>FastAPI is one of three frameworks you will hear about most. <b>Flask</b> is the minimal one: routing, requests and responses, and little else. You add the rest yourself. Here is one endpoint in Flask, called through Flask's own test client.</p>
+        <script type="text/plain" data-lang="py" data-file="flask_app.py">
+from flask import Flask, jsonify, request
+
+app = Flask(__name__)
+ACCOUNTS = {1: {"id": 1, "owner": "Malinikesh Agrawani", "balance": 3000}}
+
+@app.get("/accounts/<int:account_id>")           # Flask writes path parameters like this
+def get_account(account_id):
+    account = ACCOUNTS.get(account_id)
+    if account is None:
+        return jsonify(detail="Account not found"), 404
+    return jsonify(account)
+
+@app.post("/accounts")
+def create_account():
+    data = request.get_json()                    # the JSON body as a dict, not validated
+    account = {"id": len(ACCOUNTS) + 1, "owner": data["owner"], "balance": 0}
+    ACCOUNTS[account["id"]] = account
+    return jsonify(account), 201
+
+client = app.test_client()
+
+response = client.get("/accounts/1")
+print(response.status_code, response.get_json())
+# 200 {'balance': 3000, 'id': 1, 'owner': 'Malinikesh Agrawani'}
+
+print(client.get("/accounts/9").status_code)     # 404
+
+response = client.post("/accounts", json={"owner": "Hemkesh Agrawani"})
+print(response.status_code, response.get_json())
+# 201 {'balance': 0, 'id': 2, 'owner': 'Hemkesh Agrawani'}
+        </script>
+        <p>The shape is the same: a decorator with a method and a path, a function, a return value. The difference is what you get for free. Flask does not check the body, so <code>data["owner"]</code> is your job to validate. <b>Django</b> sits at the other end: one large framework with its own ORM, migrations, user accounts, forms and an admin site, built for complete websites. APIs in Django are usually written with the add-on Django REST Framework.</p>
+        <div class="scroll">
+          <table>
+            <thead>
+              <tr><th>Framework</th><th>Style</th><th>Gives you</th><th>Pick it when</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>FastAPI</td><td>API first</td><td>Validation from type hints, automatic docs, async support</td><td>You are building a JSON API, new, today</td></tr>
+              <tr><td>Flask</td><td>Minimal</td><td>Routing and little else. You choose every other piece</td><td>A small service or a few pages, or you want full control</td></tr>
+              <tr><td>Django</td><td>Batteries included</td><td>ORM, migrations, admin site, users and logins, templates</td><td>A full website with pages, users and a database, built by a team</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><b>Advice:</b> the ideas on this page (methods, status codes, validation, errors, tests) are the same in all three. Learn one well and the others are a change of spelling.</p>
+      </section>
+
+      <section class="chapter" id="auth">
+        <h2>Authentication</h2>
+        <p><b>Authentication</b> answers "who is calling?". <b>Authorisation</b> answers "may they do this?". A bank API needs both: know that the caller is Hemkesh (otherwise 401), then refuse to show him Sandhya's account (403).</p>
+        <div class="scroll">
+          <table>
+            <thead>
+              <tr><th>Idea</th><th>How it works</th><th>Typical use</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>API key</td><td>A long random string given to each client program, sent in a header with every request</td><td>One server calling another</td></tr>
+              <tr><td>Bearer token</td><td>The user logs in once with a password and gets back a token that expires. Later requests send <code>Authorization: Bearer &lt;token&gt;</code></td><td>Apps with human users</td></tr>
+              <tr><td>JWT</td><td>A common token format: a small signed piece of JSON that names the user and an expiry time. The server checks the signature instead of looking the token up. It is signed, not secret, so never put private data in it</td><td>Bearer tokens</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>An API key check fits naturally into a dependency. Any endpoint that lists it is protected.</p>
+        <script type="text/plain" data-lang="py" data-file="api_key.py">
+import hmac
+import os
+from typing import Optional
+
+from fastapi import Depends, FastAPI, Header, HTTPException
+from fastapi.testclient import TestClient
+
+API_KEY = os.environ.get("BANK_API_KEY", "demo-key")     # real code: no fallback value
+
+def require_api_key(x_api_key: Optional[str] = Header(default=None)):   # reads the X-API-Key header
+    if x_api_key is None or not hmac.compare_digest(x_api_key, API_KEY):
+        raise HTTPException(status_code=401, detail="Missing or wrong API key")
+
+app = FastAPI()
+
+@app.get("/accounts/1", dependencies=[Depends(require_api_key)])
+def get_account():
+    return {"id": 1, "balance": 5000}
+
+client = TestClient(app)
+print(client.get("/accounts/1").status_code)                                  # 401
+print(client.get("/accounts/1", headers={"X-API-Key": "guess"}).status_code)   # 401
+print(client.get("/accounts/1", headers={"X-API-Key": "demo-key"}).json())     # {'id': 1, 'balance': 5000}
+        </script>
+        <h3>Never store plain passwords</h3>
+        <p>If the database is ever copied, every stored password is exposed. Store a <b>hash</b> instead: the output of a one-way function, from which the password cannot be worked back. Add a random <b>salt</b> per user, so that two people with the same password get different hashes, and use a deliberately slow function made for passwords. At login, hash what was typed and compare.</p>
+        <script type="text/plain" data-lang="py" data-file="password_hash.py">
+import hashlib
+import hmac
+
+def hash_password(password, salt):
+    return hashlib.pbkdf2_hmac("sha256", password.encode(), salt, 200_000)
+
+# Real code: salt = os.urandom(16), a new one for every user. Fixed here so the output repeats.
+salt = bytes.fromhex("00112233445566778899aabbccddeeff")
+stored = hash_password("mango-lassi-42", salt)           # save the salt and this, not the password
+
+print(len(stored))                                                           # 32
+print(hmac.compare_digest(stored, hash_password("mango-lassi-42", salt)))    # True
+print(hmac.compare_digest(stored, hash_password("mango-lassi-43", salt)))    # False
+        </script>
+        <p class="note"><b>Advice:</b> do not invent your own login system for anything real. Use a maintained library for password hashing (argon2 or bcrypt) and for tokens, and send everything over HTTPS. <code>hmac.compare_digest()</code> compares in a way that does not leak, through timing, how much of a secret was right.</p>
+      </section>
+
+      <section class="chapter" id="cors">
+        <h2>CORS</h2>
+        <p>A browser will not let JavaScript on one site read responses from an API on a different site unless that API says it is allowed. This rule is called <b>CORS</b>, cross-origin resource sharing, and the API gives permission through response headers that list the sites it trusts. In FastAPI you add <code>CORSMiddleware</code> with those sites in <code>allow_origins</code>. It applies only to browsers: a Python script calling your API is not affected.</p>
+      </section>
+
+      <section class="chapter" id="pagination">
+        <h2>Pagination and filtering</h2>
+        <p>An endpoint that returns "all the rows" works until the table has a million of them. <b>Pagination</b> returns one page at a time. The simplest form uses two query parameters: <code>limit</code>, how many to return, and <code>offset</code>, how many to skip. <code>Query()</code> sets limits on them, so nobody can ask for a billion.</p>
+        <script type="text/plain" data-lang="py" data-file="pagination.py">
+from fastapi import FastAPI, Query
+from fastapi.testclient import TestClient
+
+app = FastAPI()
+
+LEDGER = [{"id": n, "account_id": 1 + n % 2, "amount": n * 100} for n in range(1, 8)]   # 7 entries
+
+@app.get("/ledger")
+def list_ledger(
+    account_id: int = Query(default=0, ge=0),            # 0 means "any account"
+    limit: int = Query(default=3, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
+):
+    rows = [e for e in LEDGER if account_id in (0, e["account_id"])]
+    page = rows[offset:offset + limit]
+    return {"total": len(rows), "limit": limit, "offset": offset, "items": page}
+
+client = TestClient(app)
+
+page = client.get("/ledger").json()
+print(page["total"], [e["id"] for e in page["items"]])           # 7 [1, 2, 3]
+
+page = client.get("/ledger", params={"offset": 6}).json()
+print(page["total"], [e["id"] for e in page["items"]])           # 7 [7]
+
+page = client.get("/ledger", params={"account_id": 2, "limit": 2}).json()
+print(page["total"], [e["id"] for e in page["items"]])           # 4 [1, 3]
+
+print(client.get("/ledger", params={"limit": 5000}).status_code)   # 422
+        </script>
+        <p>Returning <code>total</code> lets the client work out how many pages there are. Filters such as <code>account_id</code> are ordinary query parameters. With a database behind the API, these become <code>WHERE</code>, <code>ORDER BY</code>, <code>LIMIT</code> and <code>OFFSET</code> in the query, as in <a href="python-databases.html#select">Selecting, filtering and ordering</a>.</p>
+      </section>
+
+      <section class="chapter" id="idempotency">
+        <h2>Idempotency</h2>
+        <p>A client sends <code>POST /transfers</code> and the connection drops before the answer arrives. Did the transfer happen? The client cannot know. If it does not retry, the money may never have moved. If it retries, the money may move twice.</p>
+        <p>The standard cure is an <b>idempotency key</b>. The client invents a unique id for the payment and sends it in a header. The server remembers the result for each key. If the same key arrives again, the server does nothing new and returns the saved result.</p>
+        <script type="text/plain" data-lang="py" data-file="idempotency.py">
+from fastapi import FastAPI, Header
+from fastapi.testclient import TestClient
+from pydantic import BaseModel, Field
+
+class Transfer(BaseModel):
+    from_id: int
+    to_id: int
+    amount: int = Field(gt=0)
+
+app = FastAPI()
+balances = {1: 5000, 2: 12000}
+done = {}                                        # idempotency key -> saved result
+
+@app.post("/transfers", status_code=201)
+def create_transfer(body: Transfer, idempotency_key: str = Header()):   # the Idempotency-Key header
+    if idempotency_key in done:
+        return done[idempotency_key]             # seen before: do not pay again
+    balances[body.from_id] -= body.amount
+    balances[body.to_id] += body.amount
+    result = {"transfer": len(done) + 1, "from_balance": balances[body.from_id]}
+    done[idempotency_key] = result
+    return result
+
+client = TestClient(app)
+payment = {"from_id": 1, "to_id": 2, "amount": 1000}
+
+first = client.post("/transfers", json=payment, headers={"Idempotency-Key": "rent-2026-11"})
+retry = client.post("/transfers", json=payment, headers={"Idempotency-Key": "rent-2026-11"})
+print(first.json())              # {'transfer': 1, 'from_balance': 4000}
+print(retry.json())              # {'transfer': 1, 'from_balance': 4000}
+print(balances)                  # {1: 4000, 2: 13000}
+
+other = client.post("/transfers", json=payment, headers={"Idempotency-Key": "rent-2026-12"})
+print(other.json())              # {'transfer': 2, 'from_balance': 3000}
+        </script>
+        <p>The retry returned the first result and the balances moved once. A new key is a new payment. In real code the client generates the key with <code>uuid.uuid4()</code>, and the server stores it in the database inside the same transaction as the transfer, with a <code>UNIQUE</code> constraint, so that two copies of the request arriving together cannot both pass the check.</p>
+        <p class="note"><b>Kept short:</b> this example leaves out the 404 and 409 checks from <a href="#bank-api">The bank API</a> to keep the idea visible. A real endpoint needs both.</p>
+      </section>
+
+      <section class="chapter" id="with-database">
+        <h2>Connecting the API to a database</h2>
+        <p>The two pages meet here. A dependency opens a SQLAlchemy session for each request and closes it afterwards. The endpoint runs the transfer in one transaction, using the single safe <code>UPDATE</code> from <a href="python-databases.html#races">Two transfers at once</a>. If an <code>HTTPException</code> is raised inside <code>session.begin()</code>, the transaction is rolled back before the error response is sent.</p>
+        <p>This block is an illustrative sketch and is not run with the page. It needs both <code>fastapi</code> and <code>sqlalchemy</code>, it creates a database file, and it has no calls at the end to show output. It uses a file because an in-memory SQLite database is private to one thread, and FastAPI runs <code>def</code> endpoints in worker threads.</p>
+        <script type="text/plain" data-lang="py" data-file="bank_with_database.py" data-norun>
+import os
+
+from fastapi import Depends, FastAPI, HTTPException
+from pydantic import BaseModel, Field
+from sqlalchemy import String, create_engine, update
+from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column
+
+class Base(DeclarativeBase):
+    pass
+
+class Account(Base):
+    __tablename__ = "accounts"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    owner: Mapped[str] = mapped_column(String(100))
+    balance: Mapped[int] = mapped_column(default=0)
+
+class Transfer(BaseModel):
+    from_id: int
+    to_id: int
+    amount: int = Field(gt=0)
+
+engine = create_engine(os.environ.get("DATABASE_URL", "sqlite:///bank.db"))
+Base.metadata.create_all(engine)
+app = FastAPI(title="Family Bank")
+
+def get_session():
+    with Session(engine) as session:
+        yield session                    # the endpoint runs here; the session is closed afterwards
+
+@app.post("/transfers", status_code=201)
+def create_transfer(body: Transfer, session: Session = Depends(get_session)):
+    with session.begin():                # one transaction: commit, or rollback on any exception
+        paid = session.execute(
+            update(Account)
+            .where(Account.id == body.from_id, Account.balance >= body.amount)
+            .values(balance=Account.balance - body.amount)
+        ).rowcount
+        if paid == 0:
+            raise HTTPException(status_code=409, detail="Insufficient funds or unknown account")
+        received = session.execute(
+            update(Account)
+            .where(Account.id == body.to_id)
+            .values(balance=Account.balance + body.amount)
+        ).rowcount
+        if received == 0:
+            raise HTTPException(status_code=404, detail="Target account not found")
+    return {"from_id": body.from_id, "to_id": body.to_id, "amount": body.amount}
+        </script>
+        <p class="note"><b>Design:</b> the endpoint asks for "a session" and does not build one. In tests, <code>app.dependency_overrides[get_session]</code> can supply a session on a throwaway database, exactly as in <a href="#depends">Dependencies with Depends</a>.</p>
+      </section>
+
+      <section class="chapter" id="deployment">
+        <h2>Deployment</h2>
+        <p><b>Deployment</b> means running the API where its users can reach it. <code>uvicorn main:app --reload</code> is for your own machine only. In production you run a production server without <code>--reload</code>, with several worker processes so that all the CPU cores are used: uvicorn for FastAPI, or gunicorn for Flask and Django. In front of it sits a <b>reverse proxy</b> such as nginx, or a cloud load balancer, which receives traffic from the internet, handles HTTPS and passes requests on to your workers. Configuration, such as the database URL, API keys and the list of allowed CORS sites, comes from environment variables set on the server, never from the code, so the same code runs unchanged in development, testing and production.</p>
+        <script type="text/plain" data-lang="bash" data-file="Terminal">
+export DATABASE_URL="postgresql+psycopg2://bank:secret@db.internal/bank"
+uvicorn main:app --host 0.0.0.0 --port 8000 --workers 4
+        </script>
+        <p class="note"><b>Remember:</b> several workers are several separate processes. Anything kept in a Python variable, like the dicts on this page, is not shared between them. Shared state belongs in the database.</p>
+      </section>
+
+      <section class="chapter" id="reference">
+        <h2>Quick reference</h2>
+        <h3>Calling an API</h3>
+        <div class="scroll">
+          <table>
+            <thead>
+              <tr><th>Task</th><th>requests (httpx is the same unless noted)</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>GET with query parameters</td><td><code>requests.get(url, params={"min_balance": 4000}, timeout=5)</code></td></tr>
+              <tr><td>POST a JSON body</td><td><code>requests.post(url, json={"owner": "..."}, timeout=5)</code></td></tr>
+              <tr><td>Status code</td><td><code>response.status_code</code></td></tr>
+              <tr><td>Body as Python data</td><td><code>response.json()</code></td></tr>
+              <tr><td>Raise on 4xx and 5xx</td><td><code>response.raise_for_status()</code></td></tr>
+              <tr><td>Send a token</td><td><code>headers={"Authorization": f"Bearer {token}"}</code></td></tr>
+              <tr><td>Reuse connection and headers</td><td><code>requests.Session()</code>, or <code>httpx.Client(base_url=..., timeout=5)</code></td></tr>
+              <tr><td>Catch everything</td><td><code>except requests.RequestException</code>, or <code>except httpx.HTTPError</code></td></tr>
+              <tr><td>Standard library only</td><td><code>urllib.request.urlopen(url, timeout=5)</code> and <code>json.loads(response.read())</code></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <h3>Building an API with FastAPI</h3>
+        <div class="scroll">
+          <table>
+            <thead>
+              <tr><th>Task</th><th>Code</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>Create the app</td><td><code>app = FastAPI()</code></td></tr>
+              <tr><td>Endpoint</td><td><code>@app.get("/accounts/{account_id}")</code>, also <code>post</code>, <code>put</code>, <code>patch</code>, <code>delete</code></td></tr>
+              <tr><td>Path parameter</td><td><code>def get_account(account_id: int)</code></td></tr>
+              <tr><td>Query parameter</td><td><code>def list_accounts(limit: int = 10, owner: Optional[str] = None)</code></td></tr>
+              <tr><td>Limits on a parameter</td><td><code>limit: int = Query(default=10, ge=1, le=100)</code></td></tr>
+              <tr><td>JSON body</td><td><code>def create(data: AccountCreate)</code>, a Pydantic <code>BaseModel</code></td></tr>
+              <tr><td>Rules on a field</td><td><code>amount: int = Field(gt=0)</code></td></tr>
+              <tr><td>Shape of the response</td><td><code>@app.get(..., response_model=Account)</code></td></tr>
+              <tr><td>Success status</td><td><code>@app.post(..., status_code=201)</code></td></tr>
+              <tr><td>Error response</td><td><code>raise HTTPException(status_code=404, detail="Account not found")</code></td></tr>
+              <tr><td>Read a header</td><td><code>x_api_key: Optional[str] = Header(default=None)</code></td></tr>
+              <tr><td>Dependency</td><td><code>bank: Bank = Depends(get_bank)</code></td></tr>
+              <tr><td>Swap it in a test</td><td><code>app.dependency_overrides[get_bank] = lambda: test_bank</code></td></tr>
+              <tr><td>Call the app in a test</td><td><code>TestClient(app).get("/accounts/1")</code></td></tr>
+              <tr><td>Run for development</td><td><code>uvicorn main:app --reload</code>, docs at <code>/docs</code></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <h3>What needs installing</h3>
+        <div class="scroll">
+          <table>
+            <thead>
+              <tr><th>Examples</th><th>Need</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>JSON, <code>urllib</code>, the practice server, password hashing</td><td>Standard library only</td></tr>
+              <tr><td>requests and httpx, errors, tokens, sessions, retries</td><td><code>pip install requests httpx</code></td></tr>
+              <tr><td>Everything with FastAPI and <code>TestClient</code></td><td><code>pip install fastapi uvicorn httpx</code></td></tr>
+              <tr><td>The test file</td><td><code>pip install pytest</code> as well</td></tr>
+              <tr><td>The Flask example</td><td><code>pip install flask</code></td></tr>
+              <tr><td>The database sketch</td><td><code>pip install sqlalchemy</code> as well</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="chapter" id="mistakes">
+        <h2>Common mistakes</h2>
+        <div class="scroll">
+          <table>
+            <thead>
+              <tr><th>Mistake</th><th>What goes wrong</th><th>Do this</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>No timeout on a call</td><td>One slow server hangs your program for ever</td><td>Pass <code>timeout=</code> on every request</td></tr>
+              <tr><td>Returning 200 for errors</td><td>Clients think it worked, and retries, monitoring and caches all misbehave</td><td>Raise <code>HTTPException</code> with the true status code</td></tr>
+              <tr><td>Trusting input</td><td>Negative amounts, missing fields and oversized requests reach your logic</td><td>Pydantic models with types and limits, then your own business checks</td></tr>
+              <tr><td>Blocking calls in <code>async def</code> endpoints</td><td>One slow request freezes the event loop and every user waits</td><td>Use plain <code>def</code>, or await an async library</td></tr>
+              <tr><td>Leaking stack traces</td><td>Error pages reveal file paths, SQL and library versions to attackers</td><td>Return a short message. Log the details on the server. Keep debug mode off in production</td></tr>
+              <tr><td>Secrets in the code</td><td>Keys and passwords end up in version control</td><td>Environment variables</td></tr>
+              <tr><td>Retrying a payment blindly</td><td>The customer pays twice</td><td>Idempotency keys</td></tr>
+              <tr><td>Returning every row</td><td>Responses grow until they time out</td><td>Pagination with a maximum <code>limit</code></td></tr>
+              <tr><td>Verbs in URLs</td><td>An API nobody can guess their way around</td><td>Nouns for paths, methods for actions</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>That completes the practice path. The bank now has data that survives, rules that protect it and an API in front of it. The next path is about how to shape code like this so that it stays easy to change, starting with <a href="design-principles.html">Design Principles</a>.</p>
+      </section>
+
+    </div>
+  </main>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script src="../../assets/tutorial.js"></script>
+</body>
+</html>

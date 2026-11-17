@@ -1,0 +1,694 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Python First Steps</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@500;700&display=swap">
+<link rel="stylesheet" href="../../assets/tutorial.css">
+</head>
+<body data-track="python">
+
+<header class="topbar">
+  <div class="topbar-in">
+    <a class="brand" href="../../../index.html">Learnings</a>
+    <nav class="tracks" aria-label="Python paths">
+      <a href="../../../index.html#python-basics" aria-current="true">Python Basics</a>
+      <a href="../../../index.html#python-advanced">Python Advanced</a>
+      <a href="../../../index.html#python-practice">Python in Practice</a>
+      <a href="../../../index.html#python-design">Python Design</a>
+      <a href="../../../archive.html">Archive</a>
+    </nav>
+    <div class="tools">
+      <button class="btn" id="menu" type="button" aria-expanded="false">Chapters</button>
+      <input id="q" type="search" placeholder="Search chapters" aria-label="Search chapters">
+      <button class="btn" id="theme" type="button">Dark mode</button>
+    </div>
+  </div>
+</header>
+
+<div class="shell">
+  <aside class="side">
+    <p class="side-label">First Steps</p>
+    <nav id="toc" aria-label="Chapters"></nav>
+  </aside>
+
+  <main>
+    <div class="page-head">
+      <p class="eyebrow">Python basics, part 1 of 6</p>
+      <h1>Python First Steps</h1>
+      <p class="lead">This page takes you from nothing to small working programs: running Python, printing, storing values in variables, working with numbers and making decisions with <code>if</code>. It is a Python 3 rewrite of the opening Pythofrank lessons from February 2017. The number and if-else examples are the original ones, updated from Python 2.7. The rest is written fresh.</p>
+    </div>
+
+    <div class="chapters">
+
+      <section class="chapter part" id="getting-started">
+        <h2>Getting started</h2>
+        <p class="kind">Group 1 of 4 &middot; running Python and showing output</p>
+        <p>Before writing programs you need to know what Python is, how to start it and how to make it show something on the screen.</p>
+        <ul>
+          <li><a href="#what-is-python">What Python is</a>: the language and where it is used</li>
+          <li><a href="#running">Running Python</a>: interactive mode and script files</li>
+          <li><a href="#print">Showing output with print</a>: values, separators and f-strings</li>
+          <li><a href="#comments">Comments</a>: notes for the person reading the code</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="what-is-python">
+        <h2>What Python is</h2>
+        <p>Python is a general purpose programming language, first released by Guido van Rossum in 1991. Its code reads close to plain English, which makes it a common first language.</p>
+        <p>Python is <b>interpreted</b>: a program called the interpreter reads your code and runs it directly, so there is no separate compile step. It is also <b>dynamically typed</b>: you do not declare the type of a variable, Python works it out from the value.</p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Where it is used</th><th>Examples</th></tr></thead>
+            <tbody>
+              <tr><td>Web back ends</td><td>Django, Flask, FastAPI</td></tr>
+              <tr><td>Data analysis and machine learning</td><td>pandas, NumPy, scikit-learn, PyTorch</td></tr>
+              <tr><td>Automation and scripting</td><td>renaming files, calling APIs, scheduled jobs</td></tr>
+              <tr><td>Testing and tooling</td><td>pytest, command line tools</td></tr>
+              <tr><td>Teaching</td><td>schools, universities, coding interviews</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><b>Version:</b> this site uses Python 3. Python 2, which the 2017 lessons were written for, reached its end of life in 2020 and should not be used for new code.</p>
+      </section>
+
+      <section class="chapter" id="running">
+        <h2>Running Python</h2>
+        <p>First check that Python is installed. Open a terminal and ask for the version. On macOS and Linux the command is usually <code>python3</code>. On Windows it is often <code>python</code> or <code>py</code>.</p>
+        <script type="text/plain" data-lang="bash" data-file="Terminal">
+python3 --version
+# Python 3.9.6   (your number may be higher)
+        </script>
+        <p>If the command is not found, install Python from python.org and try again.</p>
+        <h3>Interactive mode</h3>
+        <p>Type <code>python3</code> on its own to start interactive mode. The <code>&gt;&gt;&gt;</code> prompt waits for one statement, runs it and shows the result straight away. It is the quickest way to try an idea.</p>
+        <script type="text/plain" data-lang="bash" data-file="Terminal">
+python3
+>>> 2 + 3
+5
+>>> name = "Rishikesh"
+>>> name
+'Rishikesh'
+>>> exit()
+        </script>
+        <h3>A script file</h3>
+        <p>For anything you want to keep, save the code in a file ending in <code>.py</code> and pass the file name to Python. The file is run from the first line to the last.</p>
+        <script type="text/plain" data-lang="py" data-file="hello.py">
+print("Hello, Python")        # Hello, Python
+        </script>
+        <script type="text/plain" data-lang="bash" data-file="Terminal">
+python3 hello.py
+# Hello, Python
+        </script>
+        <p class="note"><b>Difference:</b> interactive mode shows the value of any expression you type. A script shows nothing unless you call <code>print()</code>.</p>
+      </section>
+
+      <section class="chapter" id="print">
+        <h2>Showing output with print</h2>
+        <p><code>print()</code> writes values to the screen. Give it several values separated by commas and it puts one space between them and a new line at the end.</p>
+        <script type="text/plain" data-lang="py" data-file="print.py">
+print("Welcome to the bank")              # Welcome to the bank
+print("Balance:", 5000)                   # Balance: 5000
+print("Rishikesh", "Agrawani", sep="_")   # Rishikesh_Agrawani
+print("Loading", end="...")               # no new line after this one
+print("done")                             # Loading...done
+print()                                   # an empty line
+
+owner = "Sandhya Agrawani"
+balance = 12500.5
+print(f"{owner} has {balance}")           # Sandhya Agrawani has 12500.5
+print(f"{owner} has {balance:.2f}")       # Sandhya Agrawani has 12500.50
+        </script>
+        <p class="note"><b>Concept:</b> a string with <code>f</code> before the opening quote is an f-string. Python replaces each <code>{...}</code> inside it with the value of the expression. <code>:.2f</code> means two digits after the decimal point.</p>
+      </section>
+
+      <section class="chapter" id="comments">
+        <h2>Comments</h2>
+        <p>A comment is a note for people. Python ignores everything from <code>#</code> to the end of the line. Use comments to say why the code does something, not to repeat what it plainly does.</p>
+        <script type="text/plain" data-lang="py" data-file="comments.py">
+# A comment on a line of its own.
+rate = 0.04                   # a comment after a statement
+
+# print("this line is switched off")
+
+# There is no special syntax for a comment over several lines.
+# Start each line with its own # sign.
+print(rate)                   # 0.04
+print("# inside quotes is just text")     # # inside quotes is just text
+        </script>
+      </section>
+
+      <section class="chapter part" id="building-blocks">
+        <h2>Building blocks</h2>
+        <p class="kind">Group 2 of 4 &middot; the rules every Python file follows</p>
+        <p>These chapters cover how values are named, how they come in from the keyboard and how Python expects code to be laid out.</p>
+        <ul>
+          <li><a href="#variables">Variables and names</a>: giving a value a name</li>
+          <li><a href="#input">Input and type conversion</a>: reading text and turning it into numbers</li>
+          <li><a href="#indentation">Indentation</a>: spaces that are part of the syntax</li>
+          <li><a href="#quotation">Quotation</a>: single, double and triple quotes</li>
+          <li><a href="#lines">Statements and lines</a>: long statements and short ones</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="variables">
+        <h2>Variables and names</h2>
+        <p>A variable is a name that points to a value. It is created the moment you assign to it with <code>=</code>. There is nothing to declare first, and the same name can later point to a value of another type.</p>
+        <script type="text/plain" data-lang="py" data-file="variables.py">
+owner = "Rishikesh Agrawani"
+balance = 5000
+print(owner, balance)             # Rishikesh Agrawani 5000
+
+balance = balance + 1500          # work out the right side, then store it
+print(balance)                    # 6500
+
+balance = "six thousand"          # allowed, but it confuses the reader
+print(type(balance))              # <class 'str'>
+
+a = b = 0                         # one value, two names
+x, y = 10, 20                     # two values, two names
+x, y = y, x                       # swap without a third variable
+print(a, b, x, y)                 # 0 0 20 10
+        </script>
+        <h3>Naming rules</h3>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Rule</th><th>Fine</th><th>Not allowed</th></tr></thead>
+            <tbody>
+              <tr><td>Letters, digits and underscore only</td><td><code>account_no</code></td><td><code>account-no</code>, <code>account no</code></td></tr>
+              <tr><td>Cannot start with a digit</td><td><code>account2</code></td><td><code>2account</code></td></tr>
+              <tr><td>Cannot be a keyword</td><td><code>class_name</code></td><td><code>class</code>, <code>if</code>, <code>for</code>, <code>return</code></td></tr>
+              <tr><td>Upper and lower case differ</td><td colspan="2"><code>balance</code> and <code>Balance</code> are two separate names</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><b>Convention:</b> write variable names in lower case with underscores between words (<code>opening_balance</code>), and values that never change in capitals (<code>MIN_BALANCE = 1000</code>). Choose names that say what the value means.</p>
+      </section>
+
+      <section class="chapter" id="input">
+        <h2>Input and type conversion</h2>
+        <p><code>input()</code> shows a prompt, waits for the user to type a line and press Enter, and returns what was typed. This block waits for the keyboard, so it is not run by the site's checker.</p>
+        <script type="text/plain" data-lang="py" data-file="deposit.py" data-norun>
+name = input("Your name: ")
+amount = input("Amount to deposit: ")
+
+print(f"Hello {name}")
+print(type(amount))               # <class 'str'>, even if you typed 500
+print(int(amount) + 1000)         # convert first, then do the sum
+        </script>
+        <p><code>input()</code> always returns a string, which is Python's type for text. To do arithmetic you must convert it. <code>int()</code>, <code>float()</code> and <code>str()</code> make a new value of that type.</p>
+        <script type="text/plain" data-lang="py" data-file="conversion.py">
+typed = "500"                     # what input() would hand back
+print(typed + "100")              # 500100  (joining text, not adding)
+print(int(typed) + 100)           # 600
+
+print(float("99.5"))              # 99.5
+print(int(" 42 "))                # 42  (spaces around the number are ignored)
+print(str(600) + " rupees")       # 600 rupees
+
+try:
+    int("12.5")                   # text with a decimal point is not an int
+except ValueError as error:
+    print(error)                  # invalid literal for int() with base 10: '12.5'
+        </script>
+        <p class="note"><b>Remember:</b> a conversion that cannot work raises a <code>ValueError</code>. The <code>try</code> and <code>except</code> used here to catch it are explained in Python Errors and Files.</p>
+      </section>
+
+      <section class="chapter" id="indentation">
+        <h2>Indentation</h2>
+        <p>Many languages mark a block of code with braces. Python uses indentation, the spaces at the start of a line. A line ending in a colon opens a block, and every line indented under it belongs to that block.</p>
+        <script type="text/plain" data-lang="py" data-file="indentation.py">
+balance = 800
+
+if balance < 1000:
+    print("Low balance")              # inside the if block
+    print("Please deposit money")     # still inside
+print("Thank you")                    # not indented, so it always runs
+
+# Low balance
+# Please deposit money
+# Thank you
+        </script>
+        <p>Wrong indentation is not a style problem, it is an error. Python refuses to start this file, which is why the block is not run here.</p>
+        <script type="text/plain" data-lang="py" data-file="broken.py" data-norun>
+balance = 800
+
+if balance < 1000:
+print("Low balance")
+# IndentationError: expected an indented block
+        </script>
+        <p class="note"><b>Convention:</b> use 4 spaces for each level and never mix tabs with spaces. Most editors insert 4 spaces when you press Tab in a <code>.py</code> file.</p>
+      </section>
+
+      <section class="chapter" id="quotation">
+        <h2>Quotation</h2>
+        <p>Text goes between quotes. Single and double quotes mean exactly the same thing, so pick the one that does not appear in your text. Three quotes in a row start a string that may run over several lines.</p>
+        <script type="text/plain" data-lang="py" data-file="quotes.py">
+first = 'Hemkesh'
+last = "Agrawani"
+print(first, last)                        # Hemkesh Agrawani
+
+print("It's Malinikesh's account")        # It's Malinikesh's account
+print('He said "deposit it"')             # He said "deposit it"
+print('It\'s done')                       # It's done  (\' is a quote inside quotes)
+
+notice = """Dear customer,
+your balance is low.
+Please deposit money."""
+print(notice)
+        </script>
+        <script type="text/plain" data-lang="text" data-file="Output">
+Hemkesh Agrawani
+It's Malinikesh's account
+He said "deposit it"
+It's done
+Dear customer,
+your balance is low.
+Please deposit money.
+        </script>
+        <p class="note"><b>Concept:</b> a triple quoted string keeps its line breaks. The same form, placed as the first statement of a function or file, is used as its documentation.</p>
+      </section>
+
+      <section class="chapter" id="lines">
+        <h2>Statements and lines</h2>
+        <p>Normally one line holds one statement. A statement that is too long can continue on the next line in two ways: inside any open bracket, or after a backslash at the very end of the line.</p>
+        <script type="text/plain" data-lang="py" data-file="long_lines.py">
+salary = 40000
+bonus = 5000
+interest = 1200
+
+total = (salary               # inside ( ) a statement can run on
+         + bonus
+         + interest)
+print(total)                  # 46200
+
+total = salary + \
+        bonus + \
+        interest              # a backslash also joins lines
+print(total)                  # 46200
+
+family = [
+    "Sandhya",
+    "Subhash",
+    "Rishikesh",
+]
+print(len(family))            # 3
+        </script>
+        <p>The opposite is also possible. A semicolon separates several statements on one line.</p>
+        <script type="text/plain" data-lang="py" data-file="one_line.py">
+a = 10; b = 5; c = 2
+print(a, b, c)                # 10 5 2
+
+if a > b: print("a is larger")    # a is larger
+        </script>
+        <p class="note"><b>Advice:</b> prefer brackets to the backslash, because a single space after a backslash breaks it. Keep one statement per line in real code. The semicolon form is shown so you can read it, not so you write it.</p>
+      </section>
+
+      <section class="chapter part" id="numbers">
+        <h2>Numbers</h2>
+        <p class="kind">Group 3 of 4 &middot; number types and arithmetic</p>
+        <p>These chapters follow the 2017 Numbers lesson. The same values are used, with the results Python 3 gives.</p>
+        <ul>
+          <li><a href="#number-types">Number types</a>: int, float and complex</li>
+          <li><a href="#arithmetic">Arithmetic</a>: the operators, including <code>//</code>, <code>%</code> and <code>**</code></li>
+          <li><a href="#floats-complex">Floats and complex numbers</a>: arithmetic that is not exact</li>
+          <li><a href="#number-conversion">Converting numbers</a>: from one number type to another</li>
+          <li><a href="#math">The math module</a>: square roots, rounding and constants</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="number-types">
+        <h2>Number types</h2>
+        <p>Python has three built-in number types. An <code>int</code> is a whole number. A <code>float</code> has a decimal point. A <code>complex</code> number has a real part and an imaginary part, written with <code>j</code>. <code>type()</code> tells you which one a value is.</p>
+        <script type="text/plain" data-lang="py" data-file="number_types.py">
+a = 128                       # int
+d = 3.14                      # float
+e = 27.567                    # float
+f = 4 + 5j                    # complex
+i = 3 - 6j                    # complex
+
+print(type(a))                # <class 'int'>
+print(type(d))                # <class 'float'>
+print(type(f))                # <class 'complex'>
+print(f.real, f.imag)         # 4.0 5.0
+
+big = 2 ** 100                # an int can be as large as memory allows
+print(big)                    # 1267650600228229401496703205376
+print(1_000_000)              # 1000000  (underscores only help the reader)
+        </script>
+        <p class="note"><b>Python 2:</b> the old lesson also had a <code>long</code> type, written <code>256L</code>. Python 3 has no <code>long</code>. Every whole number is an <code>int</code> of unlimited size, and <code>256L</code> is a syntax error.</p>
+      </section>
+
+      <section class="chapter" id="arithmetic">
+        <h2>Arithmetic</h2>
+        <p>The usual operators work as in school maths. Three need a closer look: <code>//</code> divides and rounds down to a whole number, <code>%</code> gives the remainder, and <code>**</code> raises to a power.</p>
+        <script type="text/plain" data-lang="py" data-file="arithmetic.py">
+a = 4
+b = 5
+
+print(a + b)                  # 9
+print(a - b)                  # -1
+print(a * b)                  # 20
+print(a / b)                  # 0.8   (always a float)
+print(a // b)                 # 0     (floor division)
+print(a ** 3)                 # 64
+print(b ** 2)                 # 25
+print(10 % 3)                 # 1
+print(23 % 3)                 # 2
+
+print(20 / 5)                 # 4.0   (still a float)
+print(-7 // 2)                # -4    (rounds down, not towards zero)
+print(-7 % 2)                 # 1
+print(divmod(23, 3))          # (7, 2)  quotient and remainder together
+        </script>
+        <p>Multiplication and division are done before addition and subtraction, and <code>**</code> before all of them. Brackets change the order. An operator followed by <code>=</code> updates a variable in place.</p>
+        <script type="text/plain" data-lang="py" data-file="order.py">
+print(2 + 3 * 4)              # 14
+print((2 + 3) * 4)            # 20
+print(-2 ** 2)                # -4   (the power is done first)
+print((-2) ** 2)              # 4
+
+balance = 5000
+balance += 1500               # the same as balance = balance + 1500
+balance -= 500
+balance *= 2
+print(balance)                # 12000
+        </script>
+        <p class="note"><b>Python 2:</b> in the 2017 lesson <code>4 / 5</code> gave <code>0</code>, because dividing two whole numbers threw the fraction away. In Python 3 <code>/</code> always gives a float. Use <code>//</code> when you want the whole number.</p>
+      </section>
+
+      <section class="chapter" id="floats-complex">
+        <h2>Floats and complex numbers</h2>
+        <p>The same operators work on floats. A float is stored in binary with a fixed number of digits, so some decimal values cannot be held exactly and a tiny error can show up at the end.</p>
+        <script type="text/plain" data-lang="py" data-file="floats.py">
+f = 23.56
+f2 = 87.56
+
+print(f + f2)                 # 111.12
+print(f2 - f)                 # 64.0
+print(f2 / f)                 # 3.716468590831919
+print(16 ** 0.5)              # 4.0   (power 0.5 is the square root)
+print(16.0 ** 0.25)           # 2.0
+print(62.5 / 2.5)             # 25.0
+print(62.5 % 2.5)             # 0.0
+print(62.7 % 2.5)             # 0.20000000000000284
+
+print(0.1 + 0.2)              # 0.30000000000000004
+print(0.1 + 0.2 == 0.3)       # False
+print(round(0.1 + 0.2, 2))    # 0.3
+        </script>
+        <p>Complex numbers support <code>+</code>, <code>-</code>, <code>*</code>, <code>/</code> and <code>**</code>.</p>
+        <script type="text/plain" data-lang="py" data-file="complex_numbers.py">
+x = 3 + 2j
+y = 4 - 1j
+
+print(x + y)                  # (7+1j)
+print(x - y)                  # (-1+3j)
+print(x * y)                  # (14+5j)
+print(x / y)                  # (0.5882352941176471+0.6470588235294118j)
+print(abs(3 + 4j))            # 5.0   (distance from zero)
+        </script>
+        <p class="note"><b>Money:</b> never compare floats with <code>==</code> after arithmetic, and do not keep money in a float. Store whole paise or cents in an <code>int</code>, or use <code>Decimal</code> from the <code>decimal</code> module. <b>Python 2:</b> the old lesson used <code>%</code> on complex numbers. Python 3 removed that and raises a <code>TypeError</code>.</p>
+      </section>
+
+      <section class="chapter" id="number-conversion">
+        <h2>Converting numbers</h2>
+        <p>Calling a type like a function makes a new number of that type. <code>int()</code> cuts off the fraction. <code>round()</code> goes to the nearest value instead.</p>
+        <script type="text/plain" data-lang="py" data-file="number_conversion.py">
+num1 = 2
+num3 = 4.5
+
+print(int(num3))              # 4      (the fraction is cut off)
+print(int(-4.5))              # -4     (towards zero)
+print(float(num1))            # 2.0
+print(complex(4))             # (4+0j)
+print(complex(4, 5))          # (4+5j)
+print(complex(num1, num3))    # (2+4.5j)
+
+print(round(4.6))             # 5
+print(round(3.14159, 2))      # 3.14
+print(round(4.5), round(5.5)) # 4 6    (a half goes to the even neighbour)
+
+print(3 + 4.5)                # 7.5    (int and float together give a float)
+print(type(3 * 2.0))          # <class 'float'>
+        </script>
+        <p class="note"><b>Surprise:</b> <code>round(4.5)</code> is <code>4</code>, not <code>5</code>. Python rounds an exact half to the nearest even number, which keeps long sums from drifting upwards.</p>
+      </section>
+
+      <section class="chapter" id="math">
+        <h2>The math module</h2>
+        <p>A module is a file of ready made code. <code>import math</code> loads the standard maths module, and its functions are then used as <code>math.name</code>. A few number functions are built in and need no import.</p>
+        <script type="text/plain" data-lang="py" data-file="math_module.py">
+import math
+
+print(math.sqrt(16))          # 4.0
+print(math.pi)                # 3.141592653589793
+print(math.floor(4.7))        # 4     (round down)
+print(math.ceil(4.2))         # 5     (round up)
+print(math.trunc(-4.7))       # -4    (cut off the fraction)
+print(math.pow(2, 10))        # 1024.0
+print(math.factorial(5))      # 120
+print(math.gcd(12, 18))       # 6
+print(math.isclose(0.1 + 0.2, 0.3))   # True  (the safe way to compare floats)
+
+print(abs(-250))              # 250   built in, no import needed
+print(pow(2, 10))             # 1024
+print(min(3, 9, 1), max(3, 9, 1))     # 1 9
+print(sum([100, 200, 300]))   # 600
+        </script>
+      </section>
+
+      <section class="chapter part" id="decisions">
+        <h2>Decisions</h2>
+        <p class="kind">Group 4 of 4 &middot; running code only when a condition holds</p>
+        <p>A program becomes useful when it can choose what to do. These chapters follow the 2017 If else lesson and then add the pieces it left out.</p>
+        <ul>
+          <li><a href="#if-else">if and else</a>: one of two paths</li>
+          <li><a href="#elif">elif</a>: one of several paths</li>
+          <li><a href="#operators">Comparison and logical operators</a>: building conditions</li>
+          <li><a href="#truthiness">Truthiness</a>: values that count as true or false</li>
+          <li><a href="#conditional-expression">The conditional expression</a>: a choice on one line</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="if-else">
+        <h2>if and else</h2>
+        <p><code>if</code> checks a condition. When it is true the indented block under it runs. When it is false the block under <code>else</code> runs instead. The <code>else</code> part is optional.</p>
+        <script type="text/plain" data-lang="py" data-file="if_else.py">
+a = 10
+b = 5
+c = 2
+d = 10 // 2
+print(a, b, c, d)                     # 10 5 2 5
+
+if a == 10:                           # True
+    print("a is equal to 10")         # this line runs
+else:
+    print("a is not equal to 10")
+
+if b != 5:                            # False
+    print("b is not equal to 5")
+else:
+    print("b is equal to 5")          # this line runs
+
+if d == 5 and c == 2:                 # True, both sides are true
+    print("d is equal to 5 and c equals 2")
+else:
+    print("d is not 5 or c is not 2")
+
+if 19 ** 2 >= 100 * 4:                # 361 >= 400 is False
+    print("19 ** 2 is at least 100 * 4")
+else:
+    print("19 ** 2 is less than 100 * 4")
+        </script>
+        <script type="text/plain" data-lang="text" data-file="Output">
+10 5 2 5
+a is equal to 10
+b is equal to 5
+d is equal to 5 and c equals 2
+19 ** 2 is less than 100 * 4
+        </script>
+        <p class="note"><b>Careful:</b> <code>=</code> stores a value, <code>==</code> compares two values. Writing <code>if a = 10:</code> is a syntax error.</p>
+      </section>
+
+      <section class="chapter" id="elif">
+        <h2>elif</h2>
+        <p><code>elif</code> is short for "else if". Python checks the conditions from the top and runs the block of the first one that is true. The rest are skipped, even if they are true as well.</p>
+        <script type="text/plain" data-lang="py" data-file="withdraw.py">
+balance = 5000
+amount = 7000
+
+if amount <= 0:
+    print("Enter an amount above zero")
+elif amount > balance:
+    print("Not enough money")         # this line runs
+elif amount > 20000:
+    print("Above the daily limit")
+else:
+    balance -= amount
+    print("Please take your cash")
+
+print(balance)                        # 5000
+        </script>
+        <p>An <code>if</code> can sit inside another <code>if</code>. Each level is indented by 4 more spaces.</p>
+        <script type="text/plain" data-lang="py" data-file="nested_if.py">
+balance = 5000
+is_active = True
+
+if is_active:
+    if balance >= 1000:
+        print("Account in good standing")     # this line runs
+    else:
+        print("Balance below the minimum")
+else:
+    print("Account is closed")
+        </script>
+        <p class="note"><b>Order matters:</b> put the most specific condition first. If <code>amount &gt; balance</code> came after a wider check that is also true, it would never be reached.</p>
+      </section>
+
+      <section class="chapter" id="operators">
+        <h2>Comparison and logical operators</h2>
+        <p>A comparison gives <code>True</code> or <code>False</code>, the two values of the <code>bool</code> type. Logical operators join comparisons into larger conditions.</p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Operator</th><th>Meaning</th><th>Example</th><th>Result</th></tr></thead>
+            <tbody>
+              <tr><td><code>==</code></td><td>equal to</td><td><code>5 == 5.0</code></td><td><code>True</code></td></tr>
+              <tr><td><code>!=</code></td><td>not equal to</td><td><code>5 != 3</code></td><td><code>True</code></td></tr>
+              <tr><td><code>&lt;</code> <code>&gt;</code></td><td>less than, greater than</td><td><code>3 &gt; 10</code></td><td><code>False</code></td></tr>
+              <tr><td><code>&lt;=</code> <code>&gt;=</code></td><td>less or equal, greater or equal</td><td><code>5 &lt;= 5</code></td><td><code>True</code></td></tr>
+              <tr><td><code>and</code></td><td>true when both sides are true</td><td><code>5 &gt; 3 and 5 &gt; 9</code></td><td><code>False</code></td></tr>
+              <tr><td><code>or</code></td><td>true when at least one side is true</td><td><code>5 &gt; 3 or 5 &gt; 9</code></td><td><code>True</code></td></tr>
+              <tr><td><code>not</code></td><td>turns true into false and back</td><td><code>not 5 &gt; 3</code></td><td><code>False</code></td></tr>
+              <tr><td><code>in</code></td><td>is inside a collection or string</td><td><code>"kesh" in "Rishikesh"</code></td><td><code>True</code></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <script type="text/plain" data-lang="py" data-file="operators.py">
+balance = 5000
+amount = 1200
+is_active = True
+
+print(amount <= balance)                      # True
+print(3 > 10)                                 # False
+print("apple" < "banana")                     # True  (text compares in dictionary order)
+
+print(is_active and amount <= balance)        # True
+print(amount > balance or not is_active)      # False
+print(0 < amount <= 20000)                    # True  (comparisons can be chained)
+
+if is_active and 0 < amount <= balance:
+    print("Withdrawal allowed")               # Withdrawal allowed
+        </script>
+        <p><code>and</code> and <code>or</code> stop as soon as the answer is known. This is called short circuiting, and it lets the first check protect the second one.</p>
+        <script type="text/plain" data-lang="py" data-file="short_circuit.py">
+deposits = 0
+total = 0
+
+# total / deposits would fail with a division by zero.
+# It is never reached, because the first check is already False.
+if deposits > 0 and total / deposits > 100:
+    print("Large average deposit")
+else:
+    print("Nothing to report")                # Nothing to report
+        </script>
+        <p class="note"><b>Precedence:</b> <code>not</code> is applied first, then <code>and</code>, then <code>or</code>. When a condition mixes them, add brackets so nobody has to remember that.</p>
+      </section>
+
+      <section class="chapter" id="truthiness">
+        <h2>Truthiness</h2>
+        <p>The condition after <code>if</code> does not have to be a comparison. Any value can be used, and Python treats it as true or false. Zero, empty collections, the empty string and <code>None</code> count as false. Everything else counts as true.</p>
+        <script type="text/plain" data-lang="py" data-file="truthiness.py">
+print(bool(0), bool(0.0))             # False False
+print(bool(""), bool([]), bool({}))   # False False False
+print(bool(None))                     # False
+
+print(bool(-5), bool(0.01))           # True True
+print(bool("0"), bool(" "))           # True True  (not empty, so true)
+print(bool([0]))                      # True       (a list holding one item)
+
+transactions = []
+if transactions:
+    print("You have transactions")
+else:
+    print("No transactions yet")      # No transactions yet
+
+nickname = ""
+print(nickname or "Guest")            # Guest  (or gives the first true value)
+        </script>
+        <p class="note"><b>Concept:</b> <code>None</code> is Python's value for "nothing here". Test for it with <code>is None</code> or <code>is not None</code>, not with <code>==</code>.</p>
+      </section>
+
+      <section class="chapter" id="conditional-expression">
+        <h2>The conditional expression</h2>
+        <p>When an <code>if</code> and <code>else</code> only choose between two values, the choice fits on one line: <code>value_if_true if condition else value_if_false</code>.</p>
+        <script type="text/plain" data-lang="py" data-file="conditional.py">
+balance = 800
+
+if balance < 1000:                # the long way
+    status = "low"
+else:
+    status = "ok"
+print(status)                     # low
+
+status = "low" if balance < 1000 else "ok"    # the same choice in one line
+print(status)                     # low
+
+fee = 0 if balance >= 1000 else 50
+print(f"Fee: {fee}")              # Fee: 50
+
+number = 7
+print("even" if number % 2 == 0 else "odd")   # odd
+        </script>
+        <p class="note"><b>Advice:</b> use this form for a short choice between two values. If either side needs more than a simple expression, the normal <code>if</code> block is easier to read.</p>
+      </section>
+
+      <section class="chapter" id="quick-reference">
+        <h2>Quick reference</h2>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>You want to</th><th>Write</th></tr></thead>
+            <tbody>
+              <tr><td>Check the version</td><td><code>python3 --version</code></td></tr>
+              <tr><td>Run a file</td><td><code>python3 hello.py</code></td></tr>
+              <tr><td>Show values</td><td><code>print("Balance:", balance)</code></td></tr>
+              <tr><td>Put values into text</td><td><code>f"{owner} has {balance:.2f}"</code></td></tr>
+              <tr><td>Write a comment</td><td><code># why this line exists</code></td></tr>
+              <tr><td>Store a value</td><td><code>balance = 5000</code></td></tr>
+              <tr><td>Read from the keyboard</td><td><code>amount = int(input("Amount: "))</code></td></tr>
+              <tr><td>Convert a type</td><td><code>int("42")</code>, <code>float("9.5")</code>, <code>str(42)</code></td></tr>
+              <tr><td>Divide</td><td><code>7 / 2</code> is <code>3.5</code>, <code>7 // 2</code> is <code>3</code>, <code>7 % 2</code> is <code>1</code></td></tr>
+              <tr><td>Raise to a power</td><td><code>2 ** 10</code></td></tr>
+              <tr><td>Round</td><td><code>round(3.14159, 2)</code>, <code>math.floor(x)</code>, <code>math.ceil(x)</code></td></tr>
+              <tr><td>Choose one of several paths</td><td><code>if ...:</code> <code>elif ...:</code> <code>else:</code></td></tr>
+              <tr><td>Join conditions</td><td><code>and</code>, <code>or</code>, <code>not</code></td></tr>
+              <tr><td>Choose between two values</td><td><code>"low" if balance &lt; 1000 else "ok"</code></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <h3>What changed since Python 2</h3>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Python 2.7 (2017 lessons)</th><th>Python 3 (this page)</th></tr></thead>
+            <tbody>
+              <tr><td><code>print a, b</code></td><td><code>print(a, b)</code></td></tr>
+              <tr><td><code>4 / 5</code> is <code>0</code></td><td><code>4 / 5</code> is <code>0.8</code>, <code>4 // 5</code> is <code>0</code></td></tr>
+              <tr><td><code>256L</code> is a <code>long</code></td><td>only <code>int</code>, of any size</td></tr>
+              <tr><td><code>raw_input()</code> returns text</td><td><code>input()</code> returns text</td></tr>
+              <tr><td><code>&lt;type 'int'&gt;</code></td><td><code>&lt;class 'int'&gt;</code></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>The 2017 originals are still online: <a href="../../../pages/numbers.html">Numbers</a> and <a href="../../../pages/if-else.html">If else</a>.</p>
+        <p>Next, learn how Python stores text and collections of values in <a href="python-data-types.html">Python Data Types</a>.</p>
+      </section>
+
+    </div>
+  </main>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script src="../../assets/tutorial.js"></script>
+</body>
+</html>

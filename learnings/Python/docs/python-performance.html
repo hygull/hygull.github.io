@@ -1,0 +1,920 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Python Performance and Memory</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@500;700&display=swap">
+<link rel="stylesheet" href="../../assets/tutorial.css">
+</head>
+<body data-track="python">
+
+<header class="topbar">
+  <div class="topbar-in">
+    <a class="brand" href="../../../index.html">Learnings</a>
+    <nav class="tracks" aria-label="Python paths">
+      <a href="../../../index.html#python-basics">Python Basics</a>
+      <a href="../../../index.html#python-advanced">Python Advanced</a>
+      <a href="../../../index.html#python-practice" aria-current="true">Python in Practice</a>
+      <a href="../../../index.html#python-design">Python Design</a>
+      <a href="../../../archive.html">Archive</a>
+    </nav>
+    <div class="tools">
+      <button class="btn" id="menu" type="button" aria-expanded="false">Chapters</button>
+      <input id="q" type="search" placeholder="Search chapters" aria-label="Search chapters">
+      <button class="btn" id="theme" type="button">Dark mode</button>
+    </div>
+  </div>
+</header>
+
+<div class="shell">
+  <aside class="side">
+    <p class="side-label">Performance</p>
+    <nav id="toc" aria-label="Chapters"></nav>
+  </aside>
+
+  <main>
+    <div class="page-head">
+      <p class="eyebrow">Python in practice, part 7 of 9</p>
+      <h1>Python Performance and Memory</h1>
+      <p class="lead">This page is about making Python code faster and lighter, and about knowing when not to bother. It shows how to measure, which changes usually pay off, how Python stores and frees objects, and what the interpreter does with your code. The running example is a small bank. Every example runs on the standard library alone, so nothing needs <code>pip install</code>. Timings differ between machines and runs, so the examples print comparisons such as "was the first way slower?" and never raw times.</p>
+    </div>
+
+    <div class="chapters">
+
+      <section class="chapter part" id="part-measure">
+        <h2>Measure first</h2>
+        <p class="kind">Part 1 of 5 &middot; find the slow part before changing anything</p>
+        <p>Guesses about speed are wrong surprisingly often. These chapters cover the tools that replace guessing with numbers.</p>
+        <ul>
+          <li><a href="#the-rule">The rule</a>: do not guess</li>
+          <li><a href="#timeit">Timing a small piece with timeit</a>: compare two ways of doing one thing</li>
+          <li><a href="#perf-counter">Timing a block with perf_counter</a>: a stopwatch inside your program</li>
+          <li><a href="#cprofile">Profiling with cProfile</a>: where a whole program spends its time</li>
+          <li><a href="#other-profilers">Other profilers</a>: names worth knowing</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="the-rule">
+        <h2>The rule</h2>
+        <p>Most code is fast enough. A script that runs in half a second does not need to run in a quarter of a second. Making code faster usually makes it longer and harder to read, so only pay that price where it buys something.</p>
+        <p>When a program really is too slow, the time is almost never spread evenly. A few lines, often inside a loop, take most of it. The rule has three steps:</p>
+        <ol>
+          <li><b>Make it work and make it clear.</b> Correct code comes first.</li>
+          <li><b>Measure.</b> Find the few lines where the time goes. Do not guess.</li>
+          <li><b>Fix that part only, then measure again.</b> If the number did not improve, undo the change.</li>
+        </ol>
+        <p class="note"><b>Term:</b> the slowest part of a program is called its <b>bottleneck</b> or hot spot. Speeding up anything else changes almost nothing.</p>
+      </section>
+
+      <section class="chapter" id="timeit">
+        <h2>Timing a small piece with timeit</h2>
+        <p>The <code>timeit</code> module runs a small piece of code many times and reports how long it took. Running it many times evens out the random noise of a busy computer. From the command line, <code>-s</code> gives setup code that runs once and is not timed.</p>
+        <script type="text/plain" data-lang="bash" data-file="Terminal">
+python3 -m timeit -s "numbers = list(range(1000))" "999 in numbers"
+python3 -m timeit -s "numbers = set(range(1000))" "999 in numbers"
+        </script>
+        <script type="text/plain" data-lang="text" data-file="Output">
+50000 loops, best of 5: 4.74 usec per loop
+20000000 loops, best of 5: 13.2 nsec per loop
+        </script>
+        <p>Your numbers will differ. What matters is the gap: a usec is a millionth of a second and a nsec is a thousandth of that, so the set was a few hundred times faster here.</p>
+        <p>The same tool works from code. <code>timeit.repeat</code> returns several totals, and the smallest is the one to use, because the larger ones only show that the computer was busy with something else.</p>
+        <script type="text/plain" data-lang="py" data-file="timeit_compare.py">
+import timeit
+
+setup = "numbers = list(range(10_000)); number_set = set(numbers)"
+
+list_time = min(timeit.repeat("9_999 in numbers", setup, number=200, repeat=5))
+set_time = min(timeit.repeat("9_999 in number_set", setup, number=200, repeat=5))
+
+print(list_time > 10 * set_time)      # True
+        </script>
+        <p>The example asks "was the list at least 10 times slower?". The real gap is in the thousands, so the answer is <code>True</code> on every run.</p>
+        <p class="note"><b>Habit:</b> compare two versions on the same machine in the same session. A time taken yesterday, or on another computer, tells you little.</p>
+      </section>
+
+      <section class="chapter" id="perf-counter">
+        <h2>Timing a block with perf_counter</h2>
+        <p>To time one part of a running program, read a clock before and after. <code>time.perf_counter()</code> is the clock made for this. It has the best precision available and never jumps backwards, which <code>time.time()</code> can do when the system clock is adjusted.</p>
+        <script type="text/plain" data-lang="py" data-file="stopwatch.py">
+import time
+from contextlib import contextmanager
+
+timings = {}
+
+@contextmanager
+def stopwatch(label):
+    start = time.perf_counter()
+    try:
+        yield
+    finally:
+        timings[label] = time.perf_counter() - start    # seconds, as a float
+
+with stopwatch("total balances"):
+    total = sum(range(1_000_000))
+
+with stopwatch("short pause"):
+    time.sleep(0.05)
+
+print(total)                                 # 499999500000
+print(sorted(timings))                       # ['short pause', 'total balances']
+print(timings["short pause"] >= 0.04)        # True
+        </script>
+        <p>In your own code you would print or log the times, for example with <code>print(f"{label}: {seconds:.3f} s")</code>. The value returned by <code>perf_counter()</code> means nothing alone. Only the difference between two readings is useful.</p>
+      </section>
+
+      <section class="chapter" id="cprofile">
+        <h2>Profiling with cProfile</h2>
+        <p>A <b>profiler</b> watches a whole program and records how much time each function took. <code>cProfile</code> comes with Python. The program below checks 20,000 transactions against a list of flagged amounts, and is slower than it should be.</p>
+        <script type="text/plain" data-lang="py" data-file="report.py">
+import cProfile
+import pstats
+
+def is_suspicious(amount, flagged):
+    return amount in flagged
+
+def load_transactions(count):
+    return [(i * 37) % 5000 for i in range(count)]
+
+def count_suspicious(transactions, flagged):
+    total = 0
+    for amount in transactions:
+        if is_suspicious(amount, flagged):
+            total += 1
+    return total
+
+def main():
+    flagged = list(range(0, 5000, 7))        # 715 flagged amounts, in a list
+    transactions = load_transactions(20_000)
+    return count_suspicious(transactions, flagged)
+
+profiler = cProfile.Profile()
+profiler.enable()                            # start recording
+result = main()
+profiler.disable()                           # stop recording
+
+stats = pstats.Stats(profiler)
+functions = stats.get_stats_profile().func_profiles
+slowest = max(functions, key=lambda name: functions[name].tottime)
+
+print(result)                                # 2860
+print(slowest, functions[slowest].ncalls)    # is_suspicious 20000
+        </script>
+        <p>The program found the function with the most time spent inside it: <code>is_suspicious</code>, called 20,000 times. To see the full table, sort the statistics and print the top rows. This block is not run by the page's checker, because every time in its output changes from run to run.</p>
+        <script type="text/plain" data-lang="py" data-file="add to report.py" data-norun>
+stats.strip_dirs().sort_stats("cumulative").print_stats(5)
+        </script>
+        <script type="text/plain" data-lang="text" data-file="Output">
+         20005 function calls in 0.066 seconds
+
+   Ordered by: cumulative time
+   List reduced from 6 to 5 due to restriction <5>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+        1    0.000    0.000    0.066    0.066 report.py:17(main)
+        1    0.001    0.001    0.065    0.065 report.py:10(count_suspicious)
+    20000    0.065    0.000    0.065    0.000 report.py:4(is_suspicious)
+        1    0.000    0.000    0.001    0.001 report.py:7(load_transactions)
+        1    0.001    0.001    0.001    0.001 report.py:8(<listcomp>)
+        </script>
+        <p>That is a real table from one run on Python 3.9. Your times will differ, but the shape will be the same. Read it like this:</p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Column</th><th>Meaning</th></tr></thead>
+            <tbody>
+              <tr><td><code>ncalls</code></td><td>How many times the function was called.</td></tr>
+              <tr><td><code>tottime</code></td><td>Seconds spent inside the function itself, not counting the functions it called.</td></tr>
+              <tr><td><code>cumtime</code></td><td>Cumulative seconds: the function plus everything it called.</td></tr>
+              <tr><td><code>percall</code></td><td>The column to its left divided by the number of calls.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p><code>main</code> and <code>count_suspicious</code> have a high <code>cumtime</code> but almost no <code>tottime</code>. They are slow only because of what they call. <code>is_suspicious</code> has nearly all the <code>tottime</code>, so it is the bottleneck. Its one line is <code>amount in flagged</code> on a list. Changing <code>flagged</code> to a set, <code>set(range(0, 5000, 7))</code>, fixes the program without touching anything else.</p>
+        <p>You can also profile a script without editing it:</p>
+        <script type="text/plain" data-lang="bash" data-file="Terminal">
+python3 -m cProfile -s cumulative my_script.py
+        </script>
+        <p class="note"><b>Detail:</b> the profiler slows the program down, and it slows code with many small function calls the most. Use it to find where the time goes, and use <code>timeit</code> to compare the old and new version of the part you change.</p>
+      </section>
+
+      <section class="chapter" id="other-profilers">
+        <h2>Other profilers</h2>
+        <p><code>cProfile</code> reports whole functions. Other tools answer other questions. These are third-party packages, installed with <code>pip</code>, and are listed here as names to look up when you need them.</p>
+        <ul>
+          <li><b>line_profiler</b> reports time line by line inside the functions you mark.</li>
+          <li><b>py-spy</b> attaches to a Python program that is already running, without changing or restarting it, and shows where it spends its time.</li>
+          <li><b>memory_profiler</b> and <b>memray</b> do for memory what the tools above do for time.</li>
+        </ul>
+      </section>
+
+      <section class="chapter part" id="part-faster">
+        <h2>Faster Python</h2>
+        <p class="kind">Part 2 of 5 &middot; the changes that usually pay off</p>
+        <p>Once you know where the time goes, these are the fixes to try, roughly from the largest gain to the smallest.</p>
+        <ul>
+          <li><a href="#right-structure">Pick the right data structure</a>: the biggest win</li>
+          <li><a href="#repeated-work">Avoid repeated work</a>: cache it or move it out of the loop</li>
+          <li><a href="#builtins">Let built-ins do the looping</a>: C speed for free</li>
+          <li><a href="#string-building">Building strings</a>: <code>join</code> and <code>+=</code></li>
+          <li><a href="#local-names">Local names are quicker</a>: a small gain for hot loops</li>
+          <li><a href="#streaming">Stream large data with generators</a>: one item at a time</li>
+          <li><a href="#copies">Avoid needless copies</a>: slices and <code>sorted</code> build new lists</li>
+          <li><a href="#different-tool">When the answer is a different tool</a>: NumPy, processes, async</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="right-structure">
+        <h2>Pick the right data structure</h2>
+        <p>No small trick beats choosing a structure whose operations are cheap. <code>x in a_list</code> compares <code>x</code> with every item. <code>x in a_set</code> uses hashing and goes almost straight to the answer. Inside a loop, that difference is the gap between a program that finishes at once and one that does not finish.</p>
+        <script type="text/plain" data-lang="py" data-file="blocked_accounts.py">
+blocked_list = list(range(0, 100_000, 3))      # 33,334 blocked account numbers
+blocked_set = set(blocked_list)                # built once: one pass
+
+incoming = [99_999, 12, 50_000, 7]
+
+print([n in blocked_list for n in incoming])   # [True, True, False, False]
+print([n in blocked_set for n in incoming])    # [True, True, False, False]
+print(blocked_list.index(99_999) + 1)          # 33334 comparisons to find it
+        </script>
+        <p>Both give the same answers. The list needed 33,334 comparisons for the first lookup alone. The set needs about one for each. The same thinking applies to looking records up by id (use a dict), taking items from the front of a queue (use <code>collections.deque</code>) and keeping the top few items (use <code>heapq</code>). The page <a href="python-data-structures.html">Python Data Structures and Algorithms</a> covers each of them with its costs.</p>
+      </section>
+
+      <section class="chapter" id="repeated-work">
+        <h2>Avoid repeated work</h2>
+        <p>The fastest code is code that does not run. Look for work that gives the same answer every time and is still done again and again. There are two standard fixes. If the work sits inside a loop but does not depend on the loop, move it out. If a function is called many times with the same arguments, cache its results with <code>functools.lru_cache</code>.</p>
+        <script type="text/plain" data-lang="py" data-file="repeated_work.py">
+from functools import lru_cache
+
+calls = 0
+
+def tax_rate():                      # pretend this reads a file or a database
+    global calls
+    calls += 1
+    return 0.10
+
+interest = [1200, 300, 4500, 250] * 250          # 1,000 amounts
+
+tax = sum(amount * tax_rate() for amount in interest)
+print(calls)                         # 1000   asked the same question 1,000 times
+
+calls = 0
+rate = tax_rate()                    # moved out of the loop
+tax = sum(amount * rate for amount in interest)
+print(calls)                         # 1
+
+lookups = 0
+
+@lru_cache(maxsize=None)
+def branch_city(code):               # same code in, same city out
+    global lookups
+    lookups += 1
+    return {"RPR": "Raipur", "BSP": "Bilaspur"}[code]
+
+cities = [branch_city(code) for code in ["RPR", "BSP", "RPR", "RPR", "BSP"]]
+print(cities[-1], lookups)           # Bilaspur 2
+        </script>
+        <p class="note"><b>Careful:</b> only cache a function whose result depends on its arguments and nothing else. A cached "current balance" would keep returning the old balance.</p>
+      </section>
+
+      <section class="chapter" id="builtins">
+        <h2>Let built-ins do the looping</h2>
+        <p>Built-in functions such as <code>sum</code>, <code>min</code>, <code>max</code>, <code>sorted</code>, <code>any</code>, <code>all</code> and <code>str.join</code> are written in C inside the interpreter. When you call <code>sum(amounts)</code>, the loop over the items runs in C. When you write the loop yourself, the interpreter must carry out every step of it as separate Python instructions, which is several times slower.</p>
+        <script type="text/plain" data-lang="py" data-file="builtin_sum.py">
+import timeit
+
+amounts = list(range(100_000))
+
+def total_by_hand(values):
+    total = 0
+    for value in values:
+        total += value
+    return total
+
+by_hand = min(timeit.repeat(lambda: total_by_hand(amounts), number=20, repeat=5))
+built_in = min(timeit.repeat(lambda: sum(amounts), number=20, repeat=5))
+
+print(total_by_hand(amounts) == sum(amounts))    # True
+print(by_hand > 1.5 * built_in)                  # True
+        </script>
+        <p>A list comprehension sits in between. <code>[a * 2 for a in amounts]</code> is still a Python loop, but it is usually somewhat faster than a <code>for</code> loop that calls <code>append</code>, because it skips looking up and calling the <code>append</code> method on every round. It is also shorter and clearer, which is the better reason to use it.</p>
+        <script type="text/plain" data-lang="py" data-file="comprehension.py">
+amounts = [1200, 300, 4500, 250]
+
+doubled = []
+for amount in amounts:               # works, but more to read
+    doubled.append(amount * 2)
+
+doubled_again = [amount * 2 for amount in amounts]
+
+print(doubled == doubled_again)                     # True
+print(max(amounts), any(a > 4000 for a in amounts)) # 4500 True
+        </script>
+      </section>
+
+      <section class="chapter" id="string-building">
+        <h2>Building strings</h2>
+        <p>Strings are immutable, so <code>text += piece</code> cannot change <code>text</code>. In principle it builds a new string and copies everything written so far, which makes a long loop of <code>+=</code> quadratic. <code>"".join(pieces)</code> works out the final size first and copies each piece once.</p>
+        <script type="text/plain" data-lang="py" data-file="join_strings.py">
+names = ["Rishikesh", "Sandhya", "Subhash", "Malinikesh", "Hemkesh"]
+
+line = ""
+for name in names:
+    line += name + ","               # a new string on each round
+line = line.rstrip(",")
+
+joined = ",".join(names)             # one pass, one result
+
+print(line == joined)                # True
+print(joined)        # Rishikesh,Sandhya,Subhash,Malinikesh,Hemkesh
+
+rows = [f"{name}: {len(name)}" for name in names]
+print("; ".join(rows[:2]))           # Rishikesh: 9; Sandhya: 7
+        </script>
+        <p class="note"><b>Honest note:</b> CPython can often extend the string in place when nothing else refers to it, so <code>+=</code> in a simple loop is frequently not as slow as the theory says. That is an implementation detail, not a promise. <code>join</code> is fast everywhere, so collect the pieces in a list and join them once.</p>
+      </section>
+
+      <section class="chapter" id="local-names">
+        <h2>Local names are quicker</h2>
+        <p>Python finds a local variable, one assigned inside the function, faster than a global name or an attribute such as <code>math.sqrt</code>. A global is looked up in a dict by name, and <code>math.sqrt</code> needs two lookups. A local is read from a fixed slot.</p>
+        <script type="text/plain" data-lang="py" data-file="local_names.py">
+import math
+
+def total_roots(values):
+    total = 0.0
+    for value in values:
+        total += math.sqrt(value)    # looks up math, then sqrt, on every round
+    return total
+
+def total_roots_local(values):
+    sqrt = math.sqrt                 # look it up once, keep it in a local name
+    total = 0.0
+    for value in values:
+        total += sqrt(value)
+    return total
+
+print(total_roots([4, 9, 16]), total_roots_local([4, 9, 16]))    # 9.0 9.0
+        </script>
+        <p>The gain is small. On the Python 3.9 used to test this page the second version was roughly one and a half times as fast in a tight loop, and Python 3.11 and later made global and attribute lookups cheaper, so expect less there. Use the trick only in a loop that a profiler showed to be hot. The more useful lesson is that code at the top level of a script uses global names throughout, so putting it inside a <code>main()</code> function makes it a little faster for free.</p>
+      </section>
+
+      <section class="chapter" id="streaming">
+        <h2>Stream large data with generators</h2>
+        <p>A list holds all of its items in memory at once. A generator produces one item, hands it over, and forgets it. For a large file or a long calculation that means the memory used stays small however much data flows through. Generators are explained in full on <a href="python-iterators-generators.html">Python Iterators and Generators</a>.</p>
+        <script type="text/plain" data-lang="py" data-file="streaming.py">
+import sys
+
+as_list = [n * n for n in range(1_000_000)]       # a million results stored
+as_generator = (n * n for n in range(1_000_000))  # nothing computed yet
+
+print(sys.getsizeof(as_list) > 1000 * sys.getsizeof(as_generator))   # True
+print(sum(as_generator) == sum(as_list))                             # True
+
+with open("transactions.txt", "w") as file:       # a small sample file
+    for amount in [1200, 300, 4500, 250]:
+        file.write(f"{amount}\n")
+
+def amounts(path):
+    with open(path) as file:
+        for line in file:                         # one line in memory at a time
+            yield int(line)
+
+print(sum(amounts("transactions.txt")))           # 6250
+        </script>
+        <p class="note"><b>Limit:</b> a generator can be read once, from start to finish. If you need the data twice, or need <code>len()</code> or indexing, you need a list.</p>
+      </section>
+
+      <section class="chapter" id="copies">
+        <h2>Avoid needless copies</h2>
+        <p>Some innocent-looking operations build a whole new container. A slice such as <code>items[1:]</code> copies every item it covers. <code>sorted(items)</code> builds a new list, and <code>a + b</code> builds a third list from two. On small data none of this matters. On a list of a million items inside a loop it does.</p>
+        <script type="text/plain" data-lang="py" data-file="copies.py">
+from itertools import islice
+
+amounts = [1200, 300, 4500, 250, 5000]
+
+rest = amounts[1:]                         # a new list with 4 items
+print(rest is amounts, len(rest))          # False 4
+
+print(sum(amounts[1:]))                    # 10050   copies, then adds
+print(sum(islice(amounts, 1, None)))       # 10050   skips one item, no copy
+
+ordered = sorted(amounts)                  # new list, original untouched
+print(ordered is amounts)                  # False
+amounts.sort()                             # sorts in place, no second list
+print(amounts == ordered)                  # True
+
+more = [800, 60]
+amounts.extend(more)                       # grows in place
+print(len(amounts))                        # 7
+        </script>
+        <p class="note"><b>Balance:</b> a copy is sometimes exactly what you want, because it protects the caller's data from being changed. Remove a copy for speed only when a measurement says it matters.</p>
+      </section>
+
+      <section class="chapter" id="different-tool">
+        <h2>When the answer is a different tool</h2>
+        <p>Some jobs cannot be made fast with plain Python loops, and the right move is to change tools.</p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>The work is</th><th>Reach for</th><th>Why</th></tr></thead>
+            <tbody>
+              <tr><td>Arithmetic on large arrays or tables of numbers</td><td>NumPy, pandas (third-party)</td><td>They store numbers compactly and run the loop in compiled code. This is called vectorisation.</td></tr>
+              <tr><td>Heavy calculation that keeps a CPU core busy</td><td><code>multiprocessing</code> or <code>concurrent.futures.ProcessPoolExecutor</code></td><td>Several processes use several cores at once.</td></tr>
+              <tr><td>Waiting for many network calls, files or databases</td><td><code>asyncio</code> or threads</td><td>The program does other work while it waits.</td></tr>
+              <tr><td>A query over stored data</td><td>The database itself</td><td>Filtering and summing in SQL beats fetching every row into Python.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>An honest sentence about NumPy and pandas: they can be tens of times faster than a Python loop when you work on whole columns at once, and no faster at all if you loop over their items one by one in Python.</p>
+        <p>Processes and threads are covered on <a href="python-concurrency.html">Python Threads and Processes</a>, and <code>asyncio</code> on <a href="python-asyncio.html">Python Async IO</a>.</p>
+      </section>
+
+      <section class="chapter part" id="part-memory">
+        <h2>How memory works</h2>
+        <p class="kind">Part 3 of 5 &middot; names, objects and when they are freed</p>
+        <p>Python manages memory for you. You never free an object by hand. Knowing how it decides to free one explains several surprises, and tells you what to do when a program's memory keeps growing.</p>
+        <ul>
+          <li><a href="#names-objects">Names refer to objects</a>: <code>id()</code>, <code>is</code> and <code>==</code></li>
+          <li><a href="#mutable-arguments">Mutable and immutable arguments</a>: what a function can change</li>
+          <li><a href="#interning">Shared small values</a>: a detail not to rely on</li>
+          <li><a href="#reference-counting">Reference counting</a>: how most objects are freed</li>
+          <li><a href="#garbage-collector">The cycle garbage collector</a>: objects that refer to each other</li>
+          <li><a href="#weak-references">Weak references</a>: refer to an object without keeping it alive</li>
+          <li><a href="#del">What del does</a>: it removes a name</li>
+          <li><a href="#slots">Smaller objects with __slots__</a>: for millions of small records</li>
+          <li><a href="#getsizeof">Measuring one object with getsizeof</a>: shallow sizes</li>
+          <li><a href="#tracemalloc">Measuring a program with tracemalloc</a>: which lines allocate memory</li>
+          <li><a href="#leaks">Memory leaks in practice</a>: things that only ever grow</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="names-objects">
+        <h2>Names refer to objects</h2>
+        <p>A variable in Python is not a box that holds a value. It is a name attached to an object that lives somewhere in memory. Assignment attaches a name. It never copies. Two names can be attached to the same object, which is called <b>aliasing</b>.</p>
+        <p><code>==</code> asks "do these have equal values?". <code>is</code> asks "are these the very same object?". <code>id()</code> returns a number that identifies an object for as long as it lives.</p>
+        <script type="text/plain" data-lang="py" data-file="names.py">
+balances = [52000, 91000]
+alias = balances                 # a second name for the same list
+copy = list(balances)            # a new list with equal contents
+
+print(alias is balances, alias == balances)     # True True
+print(copy is balances, copy == balances)       # False True
+print(id(alias) == id(balances))                # True
+
+alias.append(7000)               # change the list through one name
+print(balances)                  # [52000, 91000, 7000]   the other name sees it
+print(copy)                      # [52000, 91000]         the copy does not
+        </script>
+        <p class="note"><b>Rule:</b> use <code>==</code> to compare values. Use <code>is</code> only for <code>None</code>, <code>True</code> and <code>False</code>, as in <code>if result is None</code>.</p>
+      </section>
+
+      <section class="chapter" id="mutable-arguments">
+        <h2>Mutable and immutable arguments</h2>
+        <p>A <b>mutable</b> object can be changed after it is made: lists, dicts, sets and most objects of your own classes. An <b>immutable</b> object cannot: numbers, strings, tuples, <code>frozenset</code>.</p>
+        <p>Calling a function attaches the parameter name to the same object the caller passed. Nothing is copied. So a function can change a mutable argument and the caller will see it. With an immutable argument there is nothing to change. An operation such as <code>+=</code> makes a new object and attaches the local name to that.</p>
+        <script type="text/plain" data-lang="py" data-file="arguments.py">
+def add_bonus(balance):
+    balance += 500               # a new int; only the local name moves
+    return balance
+
+def record(history, amount):
+    history.append(amount)       # changes the caller's list
+
+def record_safely(history, amount):
+    return history + [amount]    # builds a new list, leaves the old one alone
+
+savings = 10000
+print(add_bonus(savings), savings)       # 10500 10000
+
+history = [1200]
+record(history, 300)
+print(history)                           # [1200, 300]
+
+updated = record_safely(history, 4500)
+print(history, updated)                  # [1200, 300] [1200, 300, 4500]
+        </script>
+        <p class="note"><b>Habit:</b> decide for each function whether it changes its argument or returns a new value, and say so in its name or docstring. Doing both is a common source of bugs.</p>
+      </section>
+
+      <section class="chapter" id="interning">
+        <h2>Shared small values</h2>
+        <p>To save memory and time, CPython reuses one object for some values that occur very often, such as small whole numbers and short strings that look like names. This is called <b>interning</b>. It means <code>is</code> sometimes returns <code>True</code> for two equal numbers or strings.</p>
+        <p>Which values are shared depends on the Python version, on how the value was produced, and even on whether the code is in a file or typed at the prompt. This block is marked as not run for that reason: the lines with <code>is</code> have no single correct output.</p>
+        <script type="text/plain" data-lang="py" data-file="interning.py" data-norun>
+a = 1000
+b = int("1000")
+
+print(a == b)       # True, always: the values are equal
+print(a is b)       # True or False: depends on the interpreter. Do not rely on it.
+
+s = "savings"
+t = "".join(["sav", "ings"])
+print(s == t)       # True, always
+print(s is t)       # True or False, for the same reason
+        </script>
+        <p class="note"><b>Rule:</b> interning is an implementation detail. It can never change what <code>==</code> returns, so code that compares values with <code>==</code> is always right. Python 3.8 and later print a <code>SyntaxWarning</code> for code such as <code>x is 1000</code>.</p>
+      </section>
+
+      <section class="chapter" id="reference-counting">
+        <h2>Reference counting</h2>
+        <p>CPython keeps a counter on every object: the number of references to it. A name, a list slot, a dict value and an attribute each count as one reference. When the counter falls to zero, nothing can reach the object any more, and CPython frees its memory at once.</p>
+        <p><code>sys.getrefcount()</code> shows the counter. The exact number is not meaningful: the call itself adds a temporary reference, and the interpreter holds references of its own. The example therefore prints how much the count <em>changes</em>.</p>
+        <script type="text/plain" data-lang="py" data-file="refcount.py">
+import sys
+
+balances = [52000, 91000]
+start = sys.getrefcount(balances)
+
+alias = balances                             # +1: another name
+holder = {"family": balances}                # +1: a dict value
+print(sys.getrefcount(balances) - start)     # 2
+
+del alias                                    # -1
+holder.clear()                               # -1
+print(sys.getrefcount(balances) - start)     # 0
+        </script>
+        <p class="note"><b>Detail:</b> reference counting is how CPython works. Other Python implementations, such as PyPy, manage memory differently and may free an object some time after its last reference is gone. That is one reason to close files with a <code>with</code> block and not wait for the object to be freed.</p>
+      </section>
+
+      <section class="chapter" id="garbage-collector">
+        <h2>The cycle garbage collector</h2>
+        <p>Reference counting has one blind spot. If two objects refer to each other, each keeps the other's counter above zero, even when nothing else in the program can reach them. This is a <b>reference cycle</b>.</p>
+        <p>Python has a second mechanism for this, the cycle garbage collector in the <code>gc</code> module. From time to time it searches for groups of objects that refer only to each other and frees them. <code>gc.collect()</code> runs it immediately. The example watches the objects with a weak reference, explained in the next chapter, which reports whether an object is still alive.</p>
+        <script type="text/plain" data-lang="py" data-file="cycle.py">
+import gc
+import weakref
+
+class Account:
+    def __init__(self, owner):
+        self.owner = owner
+        self.joint_with = None
+
+gc.disable()                               # so that we choose when it runs
+
+single = Account("Hemkesh")
+watch_single = weakref.ref(single)
+del single                                 # count reaches zero: freed at once
+print(watch_single() is None)              # True
+
+mother = Account("Sandhya")
+father = Account("Subhash")
+mother.joint_with = father                 # each refers to the other:
+father.joint_with = mother                 # a reference cycle
+watch_mother = weakref.ref(mother)
+
+del mother, father                         # the names are gone
+print(watch_mother() is None)              # False   still in memory
+
+found = gc.collect()                       # run the cycle collector now
+print(watch_mother() is None)              # True    freed
+print(found >= 2)                          # True    it found the cycle
+
+gc.enable()
+        </script>
+        <p>You rarely need to call <code>gc.collect()</code> yourself, and you should not normally disable the collector. The example does both only to make the order of events visible. Cycles are common and harmless: a parent that knows its children, each of which knows its parent, is one.</p>
+      </section>
+
+      <section class="chapter" id="weak-references">
+        <h2>Weak references</h2>
+        <p>A <b>weak reference</b> refers to an object without adding to its reference count. It does not keep the object alive. When the object is freed, the weak reference simply reports that it is gone.</p>
+        <p>The main use is a cache. A normal dict used as a cache keeps every object in it alive for ever. A <code>weakref.WeakValueDictionary</code> drops an entry by itself when nothing else uses the object any more.</p>
+        <script type="text/plain" data-lang="py" data-file="weak_cache.py">
+import weakref
+
+class Statement:                     # imagine this is large and slow to build
+    def __init__(self, owner):
+        self.owner = owner
+
+cache = weakref.WeakValueDictionary()
+
+def get_statement(owner):
+    statement = cache.get(owner)
+    if statement is None:
+        statement = Statement(owner)
+        cache[owner] = statement
+    return statement
+
+first = get_statement("Rishikesh")
+second = get_statement("Rishikesh")
+print(first is second, len(cache))   # True 1    built once, shared
+
+del first, second                    # nobody uses the statement any more
+print(len(cache))                    # 0         the cache let it go
+        </script>
+        <p class="note"><b>Detail:</b> not every object can be weakly referenced. Objects of your own classes can. Plain <code>int</code>, <code>str</code>, <code>list</code>, <code>dict</code> and <code>tuple</code> objects cannot. The entry disappears straight away here because CPython frees the object as soon as its count reaches zero. On other implementations it may take a little longer.</p>
+      </section>
+
+      <section class="chapter" id="del">
+        <h2>What del does</h2>
+        <p><code>del name</code> removes a name. It does not destroy an object. The object is freed only if that name was its last reference.</p>
+        <script type="text/plain" data-lang="py" data-file="del_name.py">
+history = [1200, 300, 4500]
+backup = history                 # two names, one list
+
+del history                      # removes the name "history" only
+print(backup)                    # [1200, 300, 4500]   the list is still here
+
+try:
+    print(history)
+except NameError as error:
+    print(error)                 # name 'history' is not defined
+
+del backup[0]                    # del can also remove an item from a container
+print(backup)                    # [300, 4500]
+        </script>
+        <p>You seldom need <code>del</code> on a name. A local variable disappears when its function returns. <code>del</code> is occasionally useful in a long function or at the top level of a script, to let go of a very large object before the next large one is built.</p>
+      </section>
+
+      <section class="chapter" id="slots">
+        <h2>Smaller objects with __slots__</h2>
+        <p>A normal object stores its attributes in a dict of its own, called <code>__dict__</code>. That is flexible, because you can add any attribute at any time, but a dict for each object costs memory. Listing the attribute names in <code>__slots__</code> tells Python to reserve fixed places for exactly those attributes and to create no <code>__dict__</code>.</p>
+        <script type="text/plain" data-lang="py" data-file="slots.py">
+import tracemalloc
+
+class Account:
+    def __init__(self, owner, balance):
+        self.owner = owner
+        self.balance = balance
+
+class SlimAccount:
+    __slots__ = ("owner", "balance")
+
+    def __init__(self, owner, balance):
+        self.owner = owner
+        self.balance = balance
+
+def memory_for(cls, count=10_000):
+    tracemalloc.start()
+    accounts = [cls("Rishikesh", number) for number in range(count)]
+    used, peak = tracemalloc.get_traced_memory()
+    tracemalloc.stop()
+    return used
+
+print(hasattr(Account("Sandhya", 1), "__dict__"))       # True
+print(hasattr(SlimAccount("Sandhya", 1), "__dict__"))   # False
+print(memory_for(SlimAccount) < memory_for(Account))    # True
+
+slim = SlimAccount("Subhash", 78000)
+try:
+    slim.branch = "Raipur"           # not listed in __slots__
+except AttributeError:
+    print("AttributeError")          # AttributeError
+        </script>
+        <p>How much is saved depends on the Python version, so the example prints only that the slotted class used less. The saving matters when a program holds hundreds of thousands of small objects. For a few hundred it is not worth losing the flexibility. <code>__slots__</code> is covered further on <a href="python-power-features.html">Python Power Features</a>.</p>
+      </section>
+
+      <section class="chapter" id="getsizeof">
+        <h2>Measuring one object with getsizeof</h2>
+        <p><code>sys.getsizeof(obj)</code> returns the size of one object in bytes. It is <b>shallow</b>: for a container it counts the container's own table of references and not the objects those references lead to. A list holding one enormous string looks tiny.</p>
+        <p>The exact byte counts differ between Python versions and between 32-bit and 64-bit builds, so the example prints comparisons.</p>
+        <script type="text/plain" data-lang="py" data-file="sizes.py">
+import sys
+
+statement = "x" * 1_000_000              # a string of a million characters
+holder = [statement]                     # a list with one reference in it
+
+print(sys.getsizeof(statement) > 1_000_000)     # True
+print(sys.getsizeof(holder) < 200)              # True   shallow: the list only
+
+def total_size(items):                   # the list plus each item, one level deep
+    return sys.getsizeof(items) + sum(sys.getsizeof(item) for item in items)
+
+print(total_size(holder) > 1_000_000)           # True
+
+numbers = list(range(1000))
+print(sys.getsizeof(numbers) > sys.getsizeof(numbers[:10]))    # True
+print(sys.getsizeof(set(numbers)) > sys.getsizeof(numbers))    # True
+        </script>
+        <p>The last line shows the trade-off from the data structures page: a set of the same thousand numbers takes more room than the list, because a hash table keeps spare slots.</p>
+        <p class="note"><b>Careful:</b> adding up sizes by hand counts an object twice if two containers share it, and misses objects nested more deeply. For a whole program, use <code>tracemalloc</code>.</p>
+      </section>
+
+      <section class="chapter" id="tracemalloc">
+        <h2>Measuring a program with tracemalloc</h2>
+        <p><code>tracemalloc</code> records every block of memory Python allocates after you start it. <code>get_traced_memory()</code> returns two numbers in bytes: what is in use now, and the peak, the highest point reached so far.</p>
+        <script type="text/plain" data-lang="py" data-file="traced.py">
+import tracemalloc
+
+tracemalloc.start()
+before, _ = tracemalloc.get_traced_memory()
+
+history = [("Rishikesh", number) for number in range(100_000)]
+during, peak = tracemalloc.get_traced_memory()
+
+del history                                    # last reference: freed at once
+after, peak = tracemalloc.get_traced_memory()
+tracemalloc.stop()
+
+print(during - before > 1_000_000)             # True   the list cost megabytes
+print(after < during)                          # True   and it was given back
+print(peak >= during)                          # True
+        </script>
+        <p>A snapshot goes further and tells you which lines of code allocated the memory. The output holds exact sizes that change between Python versions, so this block is marked as not run. The output below it is from a real run on Python 3.9, with the folder part of the file path removed.</p>
+        <script type="text/plain" data-lang="py" data-file="snapshot.py" data-norun>
+import tracemalloc
+
+tracemalloc.start()
+history = [("Rishikesh", number) for number in range(100_000)]
+names = [f"customer {number}" for number in range(50_000)]
+
+snapshot = tracemalloc.take_snapshot()
+for stat in snapshot.statistics("lineno")[:2]:     # the two biggest lines
+    print(stat)
+        </script>
+        <script type="text/plain" data-lang="text" data-file="Output">
+snapshot.py:4: size=8978 KiB, count=199729, average=46 B
+snapshot.py:5: size=3500 KiB, count=50003, average=72 B
+        </script>
+        <p>Each row gives the file and line, the total size allocated there and still in use, and the number of memory blocks. Line 4, the list of tuples, holds about 9 MB. To find a leak, take one snapshot early and one later, then call <code>later.compare_to(earlier, "lineno")</code>. The lines at the top of that list are the ones whose memory grew.</p>
+        <p class="note"><b>Detail:</b> tracing makes the program slower and uses memory itself. Turn it on while you investigate, not all the time.</p>
+      </section>
+
+      <section class="chapter" id="leaks">
+        <h2>Memory leaks in practice</h2>
+        <p>Python frees what nothing refers to, so a classic leak, memory that was simply lost, is rare in pure Python. What does happen is that a program keeps references it no longer needs. The memory is still reachable, so Python must keep it. In a long-running program such as a web server it grows until the machine runs out. There are three usual causes.</p>
+        <h3>A cache with no limit</h3>
+        <p>A dict used as a cache gains an entry for every new key and never loses one. Give a cache a maximum size. <code>lru_cache(maxsize=...)</code> throws out the least recently used entry when it is full.</p>
+        <script type="text/plain" data-lang="py" data-file="bounded_cache.py">
+from functools import lru_cache
+
+statements = {}                              # grows for ever
+
+def statement(owner, month):
+    key = (owner, month)
+    if key not in statements:
+        statements[key] = f"Statement for {owner}, month {month}"
+    return statements[key]
+
+@lru_cache(maxsize=128)                      # never holds more than 128
+def bounded_statement(owner, month):
+    return f"Statement for {owner}, month {month}"
+
+for month in range(10_000):
+    statement("Rishikesh", month)
+    bounded_statement("Rishikesh", month)
+
+print(len(statements))                             # 10000
+print(bounded_statement.cache_info().currsize)     # 128
+        </script>
+        <h3>A global list that is only appended to</h3>
+        <p>A module-level list such as <code>all_requests = []</code> that every call appends to, "for debugging", lives as long as the program does. Use a <code>collections.deque(maxlen=1000)</code> to keep only the most recent items, or write them to a log file.</p>
+        <h3>A reference that lingers in a closure</h3>
+        <p>A closure is an inner function that remembers variables of the function that made it. It keeps those variables alive for as long as the inner function itself exists, even if it only needed one small fact about them.</p>
+        <script type="text/plain" data-lang="py" data-file="closure_leak.py">
+def make_reporter():
+    transactions = list(range(1_000_000))        # a large list
+    def report():
+        return f"{len(transactions)} transactions"
+    return report                                # report keeps the whole list
+
+def make_light_reporter():
+    transactions = list(range(1_000_000))
+    count = len(transactions)                    # keep only what is needed
+    def report():
+        return f"{count} transactions"
+    return report                                # the list is freed on return
+
+heavy = make_reporter()
+light = make_light_reporter()
+
+print(heavy(), "|", light())     # 1000000 transactions | 1000000 transactions
+print(len(heavy.__closure__[0].cell_contents))   # 1000000   still held
+print(light.__closure__[0].cell_contents)        # 1000000   one number
+        </script>
+        <p class="note"><b>Also check:</b> callbacks registered with a long-lived object and never removed, and exceptions stored in a variable. A stored exception holds its traceback, which holds every local variable of every function that was running when it was raised.</p>
+      </section>
+
+      <section class="chapter part" id="part-interpreter">
+        <h2>The interpreter</h2>
+        <p class="kind">Part 4 of 5 &middot; what runs your code</p>
+        <p>"Python" is a language. The program that runs it is an interpreter. The one you download from python.org is called CPython, because it is written in C. A little knowledge of how it works explains most of the advice in this page.</p>
+        <ul>
+          <li><a href="#bytecode">Bytecode</a>: what your code is turned into</li>
+          <li><a href="#gil">The GIL and performance</a>: one thread at a time</li>
+          <li><a href="#other-interpreters">Faster interpreters</a>: newer CPython releases and PyPy</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="bytecode">
+        <h2>Bytecode</h2>
+        <p>CPython does not run your source text directly. It first compiles each function into <b>bytecode</b>, a list of small instructions for an imaginary machine. Then a loop written in C carries those instructions out one by one. Each instruction is cheap, but there are many of them, and that is the main reason a Python loop is slower than the same loop in C.</p>
+        <p>The <code>dis</code> module shows the bytecode of a function. The instruction names and their number change between Python versions, so this block is marked as not run. The output is from Python 3.9.</p>
+        <script type="text/plain" data-lang="py" data-file="show_bytecode.py" data-norun>
+import dis
+
+def add_interest(balance, rate):
+    return balance + balance * rate / 100
+
+dis.dis(add_interest)
+        </script>
+        <script type="text/plain" data-lang="text" data-file="Output">
+  4           0 LOAD_FAST                0 (balance)
+              2 LOAD_FAST                0 (balance)
+              4 LOAD_FAST                1 (rate)
+              6 BINARY_MULTIPLY
+              8 LOAD_CONST               1 (100)
+             10 BINARY_TRUE_DIVIDE
+             12 BINARY_ADD
+             14 RETURN_VALUE
+        </script>
+        <p>Read it from the top. The instructions push the values of <code>balance</code>, <code>balance</code> and <code>rate</code>, multiply the top two, push <code>100</code>, divide, add, and return the result. <code>LOAD_FAST</code> is the instruction for reading a local variable from its fixed slot, which is why local names are quick. Python 3.11 and later show different names, such as a single <code>BINARY_OP</code> for all three calculations.</p>
+        <p>The parts that do not change between versions can be read from the function's code object.</p>
+        <script type="text/plain" data-lang="py" data-file="code_object.py">
+def add_interest(balance, rate):
+    return balance + balance * rate / 100
+
+code = add_interest.__code__
+print(code.co_varnames)                # ('balance', 'rate')   the local names
+print(100 in code.co_consts)           # True   constants used by the function
+print(type(code.co_code).__name__)     # bytes  the bytecode itself
+print(add_interest(52000, 3))          # 53560.0
+        </script>
+        <p class="note"><b>Detail:</b> when a module is imported, CPython saves its bytecode in a <code>__pycache__</code> folder as a <code>.pyc</code> file. The next start can skip the compile step if the source has not changed. This makes programs start faster. It does not make them run faster.</p>
+      </section>
+
+      <section class="chapter" id="gil">
+        <h2>The GIL and performance</h2>
+        <p>The standard CPython has a global interpreter lock, the GIL, which lets only one thread run Python bytecode at any moment. So threads do not make calculation-heavy Python code faster, although they still help with work that mostly waits, such as network calls, because a waiting thread lets go of the lock.</p>
+        <p>For calculation-heavy work, use several processes. The full story, with examples, is on <a href="python-concurrency.html">Python Threads and Processes</a>.</p>
+        <p class="note"><b>Changing:</b> Python 3.13 added an optional, experimental build of CPython that runs without the GIL. It is a separate download or build option, not the default, and not every third-party package supports it yet.</p>
+      </section>
+
+      <section class="chapter" id="other-interpreters">
+        <h2>Faster interpreters</h2>
+        <p>Sometimes the cheapest speed-up is to run the same code on a faster interpreter.</p>
+        <ul>
+          <li><b>A newer CPython.</b> Python 3.11 was a large step. Its developers measured it as about 1.25 times as fast as 3.10 on average over their standard set of benchmarks, with some programs gaining much more and some little. Later releases have continued that work in smaller steps. Upgrading costs nothing in code changes, so try it before rewriting anything.</li>
+          <li><b>The experimental JIT.</b> A JIT, or just-in-time compiler, turns code that runs often into machine code while the program runs. Python 3.13 includes an experimental one. It is switched off by default and must be chosen when Python is built, and its developers describe the gains so far as modest. Treat it as something to watch, not something to depend on.</li>
+          <li><b>PyPy.</b> PyPy is a separate implementation of Python with a mature JIT. Long-running programs made of plain Python loops often run several times faster on it. The costs are that it supports a somewhat older version of the language than the newest CPython, and that packages built on C extensions may run slower or not be available.</li>
+        </ul>
+        <script type="text/plain" data-lang="py" data-file="which_python.py">
+import platform
+import sys
+
+print(platform.python_implementation() in ("CPython", "PyPy"))    # True
+print(sys.version_info >= (3, 9))                                 # True
+        </script>
+        <p class="note"><b>Check:</b> <code>python3 --version</code> shows the version you are running, and <code>platform.python_implementation()</code> returns the name of the interpreter. Whatever you switch to, measure your own program before and after. Benchmark averages do not tell you how your code will behave.</p>
+      </section>
+
+      <section class="chapter part" id="part-reference">
+        <h2>Checklist and reference</h2>
+        <p class="kind">Part 5 of 5 &middot; the page in two tables</p>
+        <ul>
+          <li><a href="#before-you-optimise">Before you optimise</a>: questions to ask first</li>
+          <li><a href="#quick-reference">Quick reference</a>: symptom to tool or fix</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="before-you-optimise">
+        <h2>Before you optimise</h2>
+        <p>Go through this list in order. Stop at the first point that solves the problem.</p>
+        <ol>
+          <li><b>Is it really too slow?</b> Decide what "fast enough" means in numbers, for example "the report must finish in under two seconds". If the code already meets that, leave it alone.</li>
+          <li><b>Is it correct, and do you have tests?</b> You will be changing working code. Tests tell you when a faster version gives a different answer.</li>
+          <li><b>Have you measured?</b> Profile with realistic data, not a ten-line sample. Find the function with the highest <code>tottime</code>.</li>
+          <li><b>Is the algorithm the problem?</b> Look for a loop inside a loop, or <code>in</code> on a list. Fixing the Big-O beats every small trick.</li>
+          <li><b>Is work being repeated?</b> Cache it or move it out of the loop.</li>
+          <li><b>Can a built-in or the library do it?</b> <code>sum</code>, <code>sorted</code>, <code>join</code>, <code>Counter</code> and <code>bisect</code> run at C speed.</li>
+          <li><b>Is the program waiting or calculating?</b> Waiting calls for threads or <code>asyncio</code>. Calculating calls for processes or NumPy.</li>
+          <li><b>Did the change help?</b> Measure again with the same data. Keep the change only if the gain is real and the code is still readable.</li>
+        </ol>
+      </section>
+
+      <section class="chapter" id="quick-reference">
+        <h2>Quick reference</h2>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Symptom or question</th><th>Tool or fix</th></tr></thead>
+            <tbody>
+              <tr><td>Which of two small snippets is faster?</td><td><code>python3 -m timeit</code>, or <code>timeit.repeat</code> and take the <code>min</code></td></tr>
+              <tr><td>How long does this part of my program take?</td><td><code>time.perf_counter()</code> before and after</td></tr>
+              <tr><td>The whole program is slow and I do not know where</td><td><code>python3 -m cProfile -s cumulative script.py</code>, then read <code>tottime</code></td></tr>
+              <tr><td>One function is slow and I do not know which line</td><td>A line profiler such as line_profiler</td></tr>
+              <tr><td>A running server is slow and cannot be restarted</td><td>py-spy</td></tr>
+              <tr><td>Membership tests or lookups inside a loop</td><td>A <code>set</code> or <code>dict</code> in place of a list</td></tr>
+              <tr><td>The same function is called with the same arguments</td><td><code>functools.lru_cache</code>, with a <code>maxsize</code></td></tr>
+              <tr><td>The same value is worked out on every round of a loop</td><td>Work it out once, before the loop</td></tr>
+              <tr><td>A hand-written loop that sums, counts, sorts or joins</td><td><code>sum</code>, <code>Counter</code>, <code>sorted</code>, <code>str.join</code></td></tr>
+              <tr><td>Removing from the front of a list</td><td><code>collections.deque</code> and <code>popleft()</code></td></tr>
+              <tr><td>Memory jumps when a large file is read</td><td>Loop over the file, or use a generator, so one line is held at a time</td></tr>
+              <tr><td>Millions of small objects use too much memory</td><td><code>__slots__</code>, tuples, or NumPy arrays for numbers</td></tr>
+              <tr><td>How big is this one object?</td><td><code>sys.getsizeof</code>, remembering that it is shallow</td></tr>
+              <tr><td>Memory keeps growing over hours</td><td><code>tracemalloc</code> snapshots and <code>compare_to</code>. Look for unlimited caches and global lists</td></tr>
+              <tr><td>A cache keeps objects alive that nothing else uses</td><td><code>weakref.WeakValueDictionary</code></td></tr>
+              <tr><td>Heavy calculation uses one core only</td><td><code>multiprocessing</code>, or NumPy for arrays of numbers</td></tr>
+              <tr><td>The program spends its time waiting for the network or disk</td><td>Threads or <code>asyncio</code></td></tr>
+              <tr><td>Everything is a bit slow and the Python version is old</td><td>Upgrade to a newer CPython, or try PyPy</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>Slow programs are very often slow because of how they talk to stored data, which is the subject of the next page: <a href="python-databases.html">Python Databases</a>.</p>
+      </section>
+
+    </div>
+  </main>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script src="../../assets/tutorial.js"></script>
+</body>
+</html>

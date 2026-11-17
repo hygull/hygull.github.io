@@ -1,0 +1,1771 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Python Standard Library Tour</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@500;700&display=swap">
+<link rel="stylesheet" href="../../assets/tutorial.css">
+</head>
+<body data-track="python">
+
+<header class="topbar">
+  <div class="topbar-in">
+    <a class="brand" href="../../../index.html">Learnings</a>
+    <nav class="tracks" aria-label="Python paths">
+      <a href="../../../index.html#python-basics">Python Basics</a>
+      <a href="../../../index.html#python-advanced">Python Advanced</a>
+      <a href="../../../index.html#python-practice" aria-current="true">Python in Practice</a>
+      <a href="../../../index.html#python-design">Python Design</a>
+      <a href="../../../archive.html">Archive</a>
+    </nav>
+    <div class="tools">
+      <button class="btn" id="menu" type="button" aria-expanded="false">Chapters</button>
+      <input id="q" type="search" placeholder="Search chapters" aria-label="Search chapters">
+      <button class="btn" id="theme" type="button">Dark mode</button>
+    </div>
+  </div>
+</header>
+
+<div class="shell">
+  <aside class="side">
+    <p class="side-label">Standard Library</p>
+    <nav id="toc" aria-label="Chapters"></nav>
+  </aside>
+
+  <main>
+    <div class="page-head">
+      <p class="eyebrow">Python in practice, part 5 of 9</p>
+      <h1>Python Standard Library Tour</h1>
+      <p class="lead">The standard library is the set of modules that is installed together with Python. You only have to <code>import</code> them. This page is a guided tour of the ones worth knowing, each with a small example from a bank and a line that says when to reach for it. Nothing on this page needs <code>pip install</code>, and every example runs on Python 3.9 or later.</p>
+    </div>
+
+    <div class="chapters">
+
+      <section class="chapter part" id="text">
+        <h2>Text</h2>
+        <p class="kind">Part 1 of 7 &middot; finding, checking and shaping text</p>
+        <p>Programs spend a lot of time reading text that people wrote: account numbers, bank codes, SMS alerts. String methods such as <code>split()</code> and <code>startswith()</code> handle the simple cases. When the text follows a <b>pattern</b>, the <code>re</code> module is the tool.</p>
+        <ul>
+          <li><a href="#re-search">re: finding a pattern</a></li>
+          <li><a href="#re-classes">re: character classes and quantifiers</a></li>
+          <li><a href="#re-groups">re: groups and named groups</a></li>
+          <li><a href="#re-functions">re: the functions</a></li>
+          <li><a href="#re-greedy">re: greedy, lazy and flags</a></li>
+          <li><a href="#re-cheatsheet">re: cheat sheet</a></li>
+          <li><a href="#string-textwrap">string and textwrap</a></li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="re-search">
+        <h2>re: finding a pattern</h2>
+        <p>A <b>regular expression</b> (regex for short) is a small pattern that describes what a piece of text should look like. <code>re.search(pattern, text)</code> looks for the first place in the text where the pattern fits. It returns a <b>match object</b>, or <code>None</code> when nothing fits.</p>
+        <p>The simplest pattern is plain text. It matches itself.</p>
+        <script type="text/plain" data-lang="py" data-file="re_search.py">
+import re
+
+sms = "Rs.2,500.00 debited from A/c XX4821 on 17-Nov-26"
+
+found = re.search(r"debited", sms)
+print(found.group())               # debited
+print(found.start(), found.end())  # 12 19
+print(re.search(r"credited", sms)) # None
+
+if re.search(r"debited", sms):     # a match counts as true, None as false
+    print("Money went out")        # Money went out
+        </script>
+        <p>Most characters match themselves, but some have a special meaning. A dot means "any one character". To match a real dot, put a backslash before it: <code>\.</code></p>
+        <script type="text/plain" data-lang="py" data-file="re_escape.py">
+import re
+
+# a plain dot matches any character, here the "x"
+print(re.search(r"Rs.", "Rsx 500").group())    # Rsx
+
+# \. matches only a real dot
+print(re.search(r"Rs\.", "Rsx 500"))           # None
+print(re.search(r"Rs\.", "Rs.500").group())    # Rs.
+print(re.escape("A/c (savings)"))              # A/c\ \(savings\)
+        </script>
+        <h3>Why the r before the quotes</h3>
+        <p>Patterns use many backslashes, and Python strings use backslashes too (<code>"\n"</code> is a new line). The <code>r</code> prefix makes a <b>raw string</b>, in which a backslash is just a backslash. Always write patterns as raw strings.</p>
+        <script type="text/plain" data-lang="py" data-file="re_raw.py">
+print(len("\n"), len(r"\n"))       # 1 2
+print(r"\d+\.\d\d")                # \d+\.\d\d
+        </script>
+        <p class="note"><b>Reach for it when:</b> you need to check or pull out text by its shape. If <code>in</code>, <code>split()</code> or <code>startswith()</code> can do the job, use them. They are easier to read.</p>
+      </section>
+
+      <section class="chapter" id="re-classes">
+        <h2>re: character classes and quantifiers</h2>
+        <p>A <b>character class</b> matches one character out of a set. Square brackets list the set: <code>[A-Z]</code> is any capital letter, <code>[0-9]</code> any digit. Common sets have short names: <code>\d</code> is a digit, <code>\w</code> a letter, digit or underscore, <code>\s</code> a space, tab or new line.</p>
+        <p>A <b>quantifier</b> says how many times the thing before it may repeat: <code>{4}</code> exactly four, <code>{9,18}</code> nine to eighteen, <code>+</code> one or more, <code>*</code> zero or more, <code>?</code> zero or one.</p>
+        <script type="text/plain" data-lang="py" data-file="re_classes.py">
+import re
+
+sms = "Rs.2,500.00 debited from A/c XX4821 on 17-Nov-26"
+
+print(re.search(r"\d\d\d\d", sms).group())         # 4821
+print(re.search(r"\d{4}", sms).group())            # 4821
+print(re.search(r"[A-Z][a-z]+", sms).group())      # Rs
+print(re.search(r"\d+-[A-Za-z]{3}-\d+", sms).group())   # 17-Nov-26
+print(re.search(r"[\d,]+\.\d{2}", sms).group())    # 2,500.00
+        </script>
+        <p>Put the pieces together to check a whole value. An Indian bank branch code (IFSC) is four capital letters, then a zero, then six letters or digits. <code>re.fullmatch</code> succeeds only if the <b>whole</b> string fits the pattern.</p>
+        <script type="text/plain" data-lang="py" data-file="ifsc.py">
+import re
+
+IFSC = r"[A-Z]{4}0[A-Z0-9]{6}"
+
+for code in ["HDFC0001234", "hdfc0001234", "HDFC1001234", "HDFC00012345"]:
+    ok = re.fullmatch(IFSC, code) is not None
+    print(f"{code:13} {ok}")
+        </script>
+        <script type="text/plain" data-lang="text" data-file="Output">
+HDFC0001234   True
+hdfc0001234   False
+HDFC1001234   False
+HDFC00012345  False
+        </script>
+        <p>The same idea checks an account number: digits only, between 9 and 18 of them.</p>
+        <script type="text/plain" data-lang="py" data-file="account_number.py">
+import re
+
+
+def valid_account_number(text):
+    return re.fullmatch(r"\d{9,18}", text) is not None
+
+
+print(valid_account_number("50100234564821"))      # True
+print(valid_account_number("5010 0234 564821"))    # False
+print(valid_account_number("12345"))               # False
+        </script>
+        <p class="note"><b>Concept:</b> Inside square brackets, <code>^</code> at the start means "not". <code>[^0-9]</code> is any character that is not a digit. Outside brackets, <code>^</code> means the start of the text and <code>$</code> the end.</p>
+      </section>
+
+      <section class="chapter" id="re-groups">
+        <h2>re: groups and named groups</h2>
+        <p>Round brackets make a <b>group</b>: a part of the match that you can ask for separately. Groups are numbered from 1, left to right. <code>group(0)</code>, or just <code>group()</code>, is the whole match.</p>
+        <script type="text/plain" data-lang="py" data-file="re_groups.py">
+import re
+
+sms = "Rs.2,500.00 debited from A/c XX4821 on 17-Nov-26"
+
+found = re.search(r"Rs\.([\d,]+\.\d{2}) (debited|credited)", sms)
+print(found.group())               # Rs.2,500.00 debited
+print(found.group(1))              # 2,500.00
+print(found.group(2))              # debited
+print(found.groups())              # ('2,500.00', 'debited')
+
+amount = float(found.group(1).replace(",", ""))
+print(amount)                      # 2500.0
+        </script>
+        <p>Numbers are easy to mix up. A <b>named group</b>, written <code>(?P&lt;name&gt;...)</code>, lets you ask by name, and <code>groupdict()</code> returns them all as a dictionary.</p>
+        <script type="text/plain" data-lang="py" data-file="re_named.py">
+import re
+
+sms = "Rs.2,500.00 debited from A/c XX4821 on 17-Nov-26"
+
+pattern = (r"Rs\.(?P<amount>[\d,]+\.\d{2}) (?P<kind>debited|credited)"
+           r" (?:from|to) A/c XX(?P<last4>\d{4})")
+found = re.search(pattern, sms)
+
+print(found.group("kind"))         # debited
+print(found["last4"])              # 4821
+print(found.groupdict())
+# {'amount': '2,500.00', 'kind': 'debited', 'last4': '4821'}
+        </script>
+        <p>Two more things appear in that pattern. The bar <code>|</code> means "or". And <code>(?:...)</code> is a group that only holds things together and is <b>not</b> captured, so <code>(?:from|to)</code> does not get a number.</p>
+        <p class="note"><b>Tip:</b> Python joins string literals that sit next to each other, which is how the long pattern above is split over two lines.</p>
+      </section>
+
+      <section class="chapter" id="re-functions">
+        <h2>re: the functions</h2>
+        <p>The pattern language is the same everywhere. What differs is where the function looks and what it gives back.</p>
+        <div class="scroll">
+          <table>
+            <thead>
+              <tr><th>Function</th><th>Where it looks</th><th>Returns</th></tr>
+            </thead>
+            <tbody>
+              <tr><td><code>re.search(p, text)</code></td><td>Anywhere in the text</td><td>The first match, or <code>None</code></td></tr>
+              <tr><td><code>re.match(p, text)</code></td><td>Only at the start</td><td>A match, or <code>None</code></td></tr>
+              <tr><td><code>re.fullmatch(p, text)</code></td><td>The whole text must fit</td><td>A match, or <code>None</code></td></tr>
+              <tr><td><code>re.findall(p, text)</code></td><td>Everywhere</td><td>A list of strings (or of tuples, if the pattern has several groups)</td></tr>
+              <tr><td><code>re.finditer(p, text)</code></td><td>Everywhere</td><td>Match objects, one at a time</td></tr>
+              <tr><td><code>re.sub(p, new, text)</code></td><td>Everywhere</td><td>A new string with each match replaced</td></tr>
+              <tr><td><code>re.split(p, text)</code></td><td>Everywhere</td><td>A list of the pieces between matches</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <script type="text/plain" data-lang="py" data-file="re_three.py">
+import re
+
+text = "A/c 50100234564821"
+
+print(re.search(r"\d+", text).group())     # 50100234564821
+print(re.match(r"\d+", text))              # None
+print(re.match(r"A/c", text).group())      # A/c
+print(re.fullmatch(r"\d+", text))          # None
+        </script>
+        <p><code>match</code> found nothing for <code>\d+</code> because the text does not start with a digit. <code>fullmatch</code> found nothing because the text holds more than digits.</p>
+        <p><code>findall</code> collects every match. With one group in the pattern it returns just that group, which is ideal for pulling the amounts out of an alert.</p>
+        <script type="text/plain" data-lang="py" data-file="re_findall.py">
+import re
+
+sms = "Rs.2,500.00 debited from A/c XX4821 on 17-Nov-26. Avl Bal Rs.12,340.50"
+
+print(re.findall(r"Rs\.([\d,]+\.\d{2})", sms))     # ['2,500.00', '12,340.50']
+
+amounts = [float(a.replace(",", "")) for a in re.findall(r"Rs\.([\d,]+\.\d{2})", sms)]
+print(amounts)                                     # [2500.0, 12340.5]
+
+print(re.split(r"[,;]\s*", "Rishikesh, Sandhya;Subhash,  Hemkesh"))
+# ['Rishikesh', 'Sandhya', 'Subhash', 'Hemkesh']
+        </script>
+        <p><code>sub</code> replaces. The replacement can use <code>\1</code>, <code>\2</code> to put groups back, or it can be a function that receives each match.</p>
+        <script type="text/plain" data-lang="py" data-file="re_sub.py">
+import re
+
+print(re.sub(r"\d", "X", "Card 4111 1111 1111 1111"))
+# Card XXXX XXXX XXXX XXXX
+
+print(re.sub(r"(\d{2})-(\d{2})-(\d{4})", r"\3-\2-\1", "Paid on 17-11-2026"))
+# Paid on 2026-11-17
+
+
+def mask(match):
+    digits = match.group()
+    return "X" * (len(digits) - 4) + digits[-4:]
+
+
+print(re.sub(r"\d{9,18}", mask, "From 50100234564821 to 50100998877310"))
+# From XXXXXXXXXX4821 to XXXXXXXXXX7310
+        </script>
+        <h3>compile</h3>
+        <p><code>re.compile(pattern)</code> turns a pattern into an object with the same functions as methods. Give it a name once and reuse it. The code reads better, and the pattern is prepared only one time.</p>
+        <script type="text/plain" data-lang="py" data-file="re_compile.py">
+import re
+
+IFSC = re.compile(r"[A-Z]{4}0[A-Z0-9]{6}")
+
+print(bool(IFSC.fullmatch("SBIN0004567")))                     # True
+print(IFSC.findall("Send to HDFC0001234 or ICIC0000789"))      # ['HDFC0001234', 'ICIC0000789']
+        </script>
+      </section>
+
+      <section class="chapter" id="re-greedy">
+        <h2>re: greedy, lazy and flags</h2>
+        <p>Quantifiers are <b>greedy</b>: they take as much text as they can. That often swallows more than you meant. Adding <code>?</code> after a quantifier makes it <b>lazy</b>: it takes as little as it can.</p>
+        <script type="text/plain" data-lang="py" data-file="re_greedy.py">
+import re
+
+line = 'name="Rishikesh" city="Raipur"'
+
+print(re.findall(r'".*"', line))       # ['"Rishikesh" city="Raipur"']
+print(re.findall(r'".*?"', line))      # ['"Rishikesh"', '"Raipur"']
+print(re.findall(r'"[^"]*"', line))    # ['"Rishikesh"', '"Raipur"']
+        </script>
+        <p>The greedy <code>.*</code> ran from the first quote to the very last one. The lazy <code>.*?</code> stopped at the nearest closing quote. The third form says exactly what is wanted, "anything that is not a quote", and is the clearest.</p>
+        <h3>Flags</h3>
+        <p>A <b>flag</b> is an extra argument that changes how the pattern is read.</p>
+        <script type="text/plain" data-lang="py" data-file="re_flags.py">
+import re
+
+print(re.findall(r"hdfc\d+", "HDFC0001234 hdfc0005678", re.IGNORECASE))
+# ['HDFC0001234', 'hdfc0005678']
+
+statement = "DEBIT 500\nCREDIT 1200\nDEBIT 75"
+print(re.findall(r"^DEBIT (\d+)$", statement))                 # []
+print(re.findall(r"^DEBIT (\d+)$", statement, re.MULTILINE))   # ['500', '75']
+
+amount = re.compile(r"""
+    Rs\.            # the currency marker
+    ([\d,]+)        # rupees, with commas
+    \.(\d{2})       # a dot and two digits of paise
+""", re.VERBOSE)
+print(amount.search("Avl Bal Rs.12,340.50").groups())          # ('12,340', '50')
+        </script>
+        <div class="scroll">
+          <table>
+            <thead>
+              <tr><th>Flag</th><th>Short</th><th>Effect</th></tr>
+            </thead>
+            <tbody>
+              <tr><td><code>re.IGNORECASE</code></td><td><code>re.I</code></td><td>Capital and small letters count as the same</td></tr>
+              <tr><td><code>re.MULTILINE</code></td><td><code>re.M</code></td><td><code>^</code> and <code>$</code> match at the start and end of every line, not only of the whole text</td></tr>
+              <tr><td><code>re.DOTALL</code></td><td><code>re.S</code></td><td>The dot also matches a new line</td></tr>
+              <tr><td><code>re.VERBOSE</code></td><td><code>re.X</code></td><td>Spaces and <code># comments</code> inside the pattern are ignored, so it can be laid out and explained</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>Combine flags with a bar: <code>re.IGNORECASE | re.MULTILINE</code>.</p>
+      </section>
+
+      <section class="chapter" id="re-cheatsheet">
+        <h2>re: cheat sheet</h2>
+        <div class="scroll">
+          <table>
+            <thead>
+              <tr><th>Pattern</th><th>Matches</th><th>Example</th></tr>
+            </thead>
+            <tbody>
+              <tr><td><code>abc</code></td><td>Exactly that text</td><td><code>debited</code></td></tr>
+              <tr><td><code>.</code></td><td>Any one character except a new line</td><td><code>A.c</code> fits <code>A/c</code></td></tr>
+              <tr><td><code>\d</code> <code>\w</code> <code>\s</code></td><td>A digit, a word character, a space character</td><td><code>\d\d</code> fits <code>26</code></td></tr>
+              <tr><td><code>\D</code> <code>\W</code> <code>\S</code></td><td>The opposite of each</td><td><code>\D</code> fits <code>x</code></td></tr>
+              <tr><td><code>[abc]</code> <code>[A-Z]</code></td><td>One character from the set or range</td><td><code>[A-Z]{4}</code> fits <code>HDFC</code></td></tr>
+              <tr><td><code>[^abc]</code></td><td>One character <b>not</b> in the set</td><td><code>[^"]*</code></td></tr>
+              <tr><td><code>*</code> <code>+</code> <code>?</code></td><td>Zero or more, one or more, zero or one of the thing before</td><td><code>\d+</code> fits <code>4821</code></td></tr>
+              <tr><td><code>{4}</code> <code>{9,18}</code> <code>{2,}</code></td><td>Exactly 4, from 9 to 18, 2 or more</td><td><code>\d{9,18}</code></td></tr>
+              <tr><td><code>*?</code> <code>+?</code></td><td>The lazy forms: as few as possible</td><td><code>".*?"</code></td></tr>
+              <tr><td><code>^</code> <code>$</code></td><td>Start and end of the text (or of a line with <code>re.M</code>)</td><td><code>^DEBIT</code></td></tr>
+              <tr><td><code>\b</code></td><td>A word boundary: the edge between a word and what is next to it</td><td><code>\bRs\b</code></td></tr>
+              <tr><td><code>a|b</code></td><td>Either one</td><td><code>debited|credited</code></td></tr>
+              <tr><td><code>(...)</code></td><td>A group that is captured</td><td><code>(\d{4})</code></td></tr>
+              <tr><td><code>(?P&lt;name&gt;...)</code></td><td>A captured group with a name</td><td><code>(?P&lt;last4&gt;\d{4})</code></td></tr>
+              <tr><td><code>(?:...)</code></td><td>A group that is not captured</td><td><code>(?:from|to)</code></td></tr>
+              <tr><td><code>\.</code> <code>\(</code> <code>\+</code></td><td>The real character, with its special meaning switched off</td><td><code>Rs\.</code></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><b>Watch out:</b> A regex can check the shape of a value, not whether it is real. <code>HDFC0999999</code> has the right shape for a branch code and may still not exist. Keep patterns short. A pattern nobody can read is a bug waiting to happen.</p>
+      </section>
+
+      <section class="chapter" id="string-textwrap">
+        <h2>string and textwrap</h2>
+        <p>The <code>string</code> module holds ready-made sets of characters and a simple template class. <code>Template</code> fills <code>$name</code> placeholders. It is safer than f-strings when the template text comes from a file or a user, because it cannot run code.</p>
+        <script type="text/plain" data-lang="py" data-file="string_module.py">
+import string
+
+print(string.ascii_uppercase)      # ABCDEFGHIJKLMNOPQRSTUVWXYZ
+print(string.digits)               # 0123456789
+
+letter = string.Template("Dear $name, your balance is Rs. $balance.")
+print(letter.substitute(name="Sandhya", balance=12000))
+# Dear Sandhya, your balance is Rs. 12000.
+        </script>
+        <p><code>textwrap</code> fits long text into a fixed width, which is useful for letters, emails and terminal output.</p>
+        <script type="text/plain" data-lang="py" data-file="textwrap_module.py">
+import textwrap
+
+notice = ("Dear Subhash Agrawani, your fixed deposit matures next month. "
+          "Please visit the branch or reply to this message to renew it.")
+
+print(textwrap.fill(notice, width=40))
+print(textwrap.shorten(notice, width=45, placeholder="..."))
+        </script>
+        <script type="text/plain" data-lang="text" data-file="Output">
+Dear Subhash Agrawani, your fixed
+deposit matures next month. Please visit
+the branch or reply to this message to
+renew it.
+Dear Subhash Agrawani, your fixed deposit...
+        </script>
+        <p class="note"><b>Reach for it when:</b> you need the alphabet or digits as a string (<code>string</code>), a template that other people may edit (<code>string.Template</code>), or text wrapped to a width (<code>textwrap</code>). <code>textwrap.dedent()</code> removes the common indentation from a triple-quoted string.</p>
+      </section>
+
+      <section class="chapter part" id="files-system">
+        <h2>Files and system</h2>
+        <p class="kind">Part 2 of 7 &middot; paths, folders and the world around the program</p>
+        <p>These modules let a program find its files, tidy up after itself, and learn how it was started. Reading and writing files with <code>open()</code> is covered in <a href="python-errors-and-files.html">Python Errors and Files</a>.</p>
+        <ul>
+          <li><a href="#pathlib">pathlib</a>: paths as objects</li>
+          <li><a href="#os-shutil">os and shutil</a>: rename, copy, move, delete</li>
+          <li><a href="#tempfile">tempfile</a>: files that clean themselves up</li>
+          <li><a href="#sys">sys</a>: arguments, exit codes and the three streams</li>
+          <li><a href="#environ">Environment variables</a>: settings from outside the code</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="pathlib">
+        <h2>pathlib</h2>
+        <p>A <b>path</b> is the address of a file or folder. <code>pathlib.Path</code> turns that address into an object. The <code>/</code> operator joins parts, and it uses the right separator on every operating system.</p>
+        <script type="text/plain" data-lang="py" data-file="path_parts.py">
+from pathlib import Path
+
+folder = Path("statements")
+path = folder / "2026" / "rishikesh-november.csv"
+
+print(path.as_posix())             # statements/2026/rishikesh-november.csv
+print(path.name)                   # rishikesh-november.csv
+print(path.stem)                   # rishikesh-november
+print(path.suffix)                 # .csv
+print(path.parent.as_posix())      # statements/2026
+print(path.with_suffix(".pdf").name)   # rishikesh-november.pdf
+print(path.exists())               # False
+        </script>
+        <p>A <code>Path</code> can also do the work: make folders, write and read a whole file in one call, and check what is there.</p>
+        <script type="text/plain" data-lang="py" data-file="path_files.py">
+from pathlib import Path
+
+folder = Path("statements")
+folder.mkdir(exist_ok=True)                    # no error if it is already there
+
+for name, balance in [("rishikesh", 5000), ("sandhya", 12000), ("hemkesh", 800)]:
+    (folder / f"{name}.txt").write_text(f"Balance: {balance}\n", encoding="utf-8")
+(folder / "notes.md").write_text("Checked on 17 November\n", encoding="utf-8")
+
+path = folder / "sandhya.txt"
+print(path.read_text(encoding="utf-8").strip())    # Balance: 12000
+print(path.exists(), path.is_file(), folder.is_dir())   # True True True
+print(path.stat().st_size, "bytes")                # 15 bytes
+        </script>
+        <p><code>glob()</code> finds files by a wildcard pattern. <code>*</code> stands for any run of characters, and <code>**</code> for any depth of folders. The order is not guaranteed, so sort the result.</p>
+        <script type="text/plain" data-lang="py" data-file="path_glob.py">
+from pathlib import Path
+
+folder = Path("statements")
+(folder / "2026").mkdir(parents=True, exist_ok=True)
+for name in ["rishikesh.txt", "sandhya.txt", "notes.md", "2026/subhash.txt"]:
+    (folder / name).write_text("...", encoding="utf-8")
+
+print(sorted(p.name for p in folder.glob("*.txt")))
+# ['rishikesh.txt', 'sandhya.txt']
+
+print(sorted(p.as_posix() for p in folder.glob("**/*.txt")))
+# ['statements/2026/subhash.txt', 'statements/rishikesh.txt', 'statements/sandhya.txt']
+
+print(sorted(p.name for p in folder.iterdir() if p.is_dir()))   # ['2026']
+        </script>
+        <p class="note"><b>Reach for it when:</b> you touch a file path at all. Prefer it to joining strings with <code>"/"</code> and to the older <code>os.path</code> functions. Useful extras: <code>Path.cwd()</code> is the current folder, <code>Path.home()</code> the user's home folder, and <code>path.resolve()</code> the full absolute path.</p>
+      </section>
+
+      <section class="chapter" id="os-shutil">
+        <h2>os and shutil</h2>
+        <p><code>os</code> talks to the operating system: list a folder, rename or delete one file. <code>shutil</code> ("shell utilities") does the bigger jobs: copy files, move them, delete or archive a whole folder tree.</p>
+        <script type="text/plain" data-lang="py" data-file="os_shutil.py">
+import os
+import shutil
+
+os.makedirs("bank/statements", exist_ok=True)
+with open("bank/statements/rishikesh.txt", "w") as f:
+    f.write("Balance: 5000\n")
+
+shutil.copy("bank/statements/rishikesh.txt", "bank/statements/backup.txt")
+os.rename("bank/statements/backup.txt", "bank/statements/rishikesh-old.txt")
+print(sorted(os.listdir("bank/statements")))   # ['rishikesh-old.txt', 'rishikesh.txt']
+
+os.remove("bank/statements/rishikesh-old.txt")         # delete one file
+shutil.move("bank/statements", "bank/archive")         # move a whole folder
+print(sorted(os.listdir("bank")))                      # ['archive']
+
+shutil.rmtree("bank")                                  # delete a folder and everything in it
+print(os.path.exists("bank"))                          # False
+        </script>
+        <div class="scroll">
+          <table>
+            <thead>
+              <tr><th>Job</th><th>Call</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>Current folder</td><td><code>os.getcwd()</code></td></tr>
+              <tr><td>Walk a folder tree</td><td><code>os.walk("bank")</code>, or <code>Path("bank").rglob("*")</code></td></tr>
+              <tr><td>Copy a file</td><td><code>shutil.copy(src, dst)</code>. <code>copy2</code> also keeps the file times</td></tr>
+              <tr><td>Copy a folder tree</td><td><code>shutil.copytree(src, dst)</code></td></tr>
+              <tr><td>Make a zip of a folder</td><td><code>shutil.make_archive("backup", "zip", "bank")</code></td></tr>
+              <tr><td>Find a program</td><td><code>shutil.which("git")</code> gives its path, or <code>None</code></td></tr>
+              <tr><td>Free disk space</td><td><code>shutil.disk_usage(".")</code></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><b>Watch out:</b> <code>shutil.rmtree()</code> and <code>os.remove()</code> delete for good. Nothing goes to a recycle bin. Print the path and check it before you run such a line on real data.</p>
+      </section>
+
+      <section class="chapter" id="tempfile">
+        <h2>tempfile</h2>
+        <p>A temporary file is one you need only for a moment: a download being checked, a report being built, a file for a test. <code>tempfile</code> creates it in a safe place with a name that cannot clash, and deletes it for you when the <code>with</code> block ends.</p>
+        <script type="text/plain" data-lang="py" data-file="temp_folder.py">
+import tempfile
+from pathlib import Path
+
+with tempfile.TemporaryDirectory() as name:
+    folder = Path(name)
+    report = folder / "report.txt"
+    report.write_text("Rishikesh 5000\nSandhya 12000\n", encoding="utf-8")
+    print(report.exists(), len(report.read_text().splitlines()))   # True 2
+
+print(folder.exists())             # False
+        </script>
+        <p>The folder name is different on every run, so it is not printed here. There is a single-file form too.</p>
+        <script type="text/plain" data-lang="py" data-file="temp_file.py">
+import tempfile
+
+with tempfile.TemporaryFile("w+", encoding="utf-8") as f:
+    f.write("Deposit 500\nWithdraw 200\n")
+    f.seek(0)                      # go back to the start to read what was written
+    print(f.read().splitlines())   # ['Deposit 500', 'Withdraw 200']
+
+print(f.closed)                    # True
+        </script>
+        <p class="note"><b>Reach for it when:</b> a file is needed for a short time and must not be left behind, above all in tests. Use <code>tempfile.NamedTemporaryFile()</code> when another program has to open the file by its name.</p>
+      </section>
+
+      <section class="chapter" id="sys">
+        <h2>sys</h2>
+        <p><code>sys</code> holds information about the running Python and the way the program was started.</p>
+        <script type="text/plain" data-lang="py" data-file="sys_basics.py">
+import sys
+
+print(type(sys.argv).__name__, len(sys.argv))  # list 1
+print(sys.version_info >= (3, 9))              # True
+print(sys.platform in ("darwin", "linux", "win32"))    # True
+
+sys.stdout.write("to the normal output\n")     # what print() uses
+
+# the error stream is for messages about problems
+print("to the error stream", file=sys.stderr)
+        </script>
+        <ul>
+          <li><code>sys.argv</code> is the list of words typed on the command line. <code>sys.argv[0]</code> is the script name. Running <code>python3 pay.py Rishikesh 500</code> gives <code>['pay.py', 'Rishikesh', '500']</code>. Every item is a string.</li>
+          <li><code>sys.stdout</code> and <code>sys.stderr</code> are two separate output streams. Results go to the first and problems to the second, so that a user can save the results to a file and still see the errors.</li>
+          <li><code>sys.executable</code> is the full path of the Python that is running. It is used later on this page to start another Python.</li>
+        </ul>
+        <h3>Exit codes</h3>
+        <p>Every program hands a number back when it ends, called the <b>exit code</b>. Zero means success. Anything else means failure. <code>sys.exit(n)</code> ends the program with that code. It works by raising <code>SystemExit</code>, which the block below catches so that it can keep running.</p>
+        <script type="text/plain" data-lang="py" data-file="sys_exit.py">
+import sys
+
+
+def main(argv):
+    if len(argv) != 3:
+        print("usage: pay.py NAME AMOUNT", file=sys.stderr)
+        sys.exit(2)
+    print(f"Paying {argv[2]} to {argv[1]}")
+
+
+main(["pay.py", "Rishikesh", "500"])           # Paying 500 to Rishikesh
+
+try:
+    main(["pay.py"])
+except SystemExit as stop:
+    print("exit code:", stop.code)             # exit code: 2
+        </script>
+        <h3>Reading standard input</h3>
+        <p><code>sys.stdin</code> is the input stream. Another program can be connected to it with a pipe (<code>|</code>), so your script can be one step in a chain. This script is not runnable here because it waits for input.</p>
+        <script type="text/plain" data-lang="py" data-file="total.py" data-norun>
+import sys
+
+total = 0
+for line in sys.stdin:             # one line at a time, until the input ends
+    total += float(line)
+print(f"Total: {total:.2f}")
+        </script>
+        <script type="text/plain" data-lang="bash" data-file="Terminal">
+printf "500\n1200.50\n" | python3 total.py
+# Total: 1700.50
+        </script>
+        <p class="note"><b>Reach for it when:</b> you need the raw command line, an exit code, or the input and output streams. For anything more than one or two arguments, use <code>argparse</code>, shown <a href="#argparse-basics">below</a>.</p>
+      </section>
+
+      <section class="chapter" id="environ">
+        <h2>Environment variables</h2>
+        <p>An <b>environment variable</b> is a named setting that lives outside the program and is handed to it when it starts. It is the usual place for things that differ between your laptop and the server: database addresses, modes, secret keys. <code>os.environ</code> is a dictionary of them.</p>
+        <script type="text/plain" data-lang="py" data-file="environ.py">
+import os
+
+os.environ["BANK_RATE"] = "4.5"                # set here so the example can run
+
+rate = float(os.environ["BANK_RATE"])          # values are always strings
+mode = os.environ.get("BANK_MODE", "development")      # a default if it is not set
+debug = os.environ.get("BANK_DEBUG", "0") == "1"
+
+print(rate, mode, debug)                       # 4.5 development False
+print("BANK_API_KEY" in os.environ)            # False
+
+try:
+    os.environ["BANK_API_KEY"]
+except KeyError as error:
+    print("Missing setting:", error)           # Missing setting: 'BANK_API_KEY'
+        </script>
+        <p>In a terminal you set one for a single run by writing it before the command:</p>
+        <script type="text/plain" data-lang="bash" data-file="Terminal">
+BANK_MODE=production BANK_RATE=4.5 python3 bank.py
+        </script>
+        <p class="note"><b>Reach for it when:</b> a value must not be written in the code, either because it is a secret or because it changes from machine to machine. Read all settings in one place at the start of the program, and fail early with a clear message if a required one is missing.</p>
+      </section>
+
+      <section class="chapter part" id="command-line">
+        <h2>Command-line programs</h2>
+        <p class="kind">Part 3 of 7 &middot; scripts that take arguments</p>
+        <p>A command-line program is one you run from a terminal with words after its name, such as <code>bank deposit Rishikesh 500</code>. <code>argparse</code> reads those words, checks them, converts them and writes the help text for you.</p>
+        <ul>
+          <li><a href="#argparse-basics">argparse: positional and optional arguments</a></li>
+          <li><a href="#argparse-options">argparse: types, choices, defaults and flags</a></li>
+          <li><a href="#argparse-help">argparse: help and errors for free</a></li>
+          <li><a href="#argparse-subcommands">argparse: subcommands</a>, and <code>getpass</code></li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="argparse-basics">
+        <h2>argparse: positional and optional arguments</h2>
+        <p>You describe the arguments, and <code>parse_args()</code> returns an object with one attribute for each. There are two kinds:</p>
+        <ul>
+          <li>A <b>positional</b> argument is known by its place. It has no dashes and is required.</li>
+          <li>An <b>optional</b> argument starts with <code>--</code> and may be left out. Its value comes after it.</li>
+        </ul>
+        <p>Called with no argument, <code>parse_args()</code> reads the real command line from <code>sys.argv</code>. The examples below pass a list instead, so that each block runs as it stands. The list holds exactly what you would type after the script name.</p>
+        <script type="text/plain" data-lang="py" data-file="args_first.py">
+import argparse
+
+parser = argparse.ArgumentParser(description="Work out one year of interest.")
+parser.add_argument("balance")                 # positional: required
+parser.add_argument("--rate")                  # optional: may be left out
+
+args = parser.parse_args(["5000", "--rate", "6.5"])
+print(args)                        # Namespace(balance='5000', rate='6.5')
+print(args.balance, args.rate)     # 5000 6.5
+
+args = parser.parse_args(["5000"])
+print(args.rate)                   # None
+        </script>
+        <p>Two things to notice. Every value arrives as a <b>string</b>, and an optional argument that was not given is <code>None</code>. The next chapter fixes both.</p>
+        <p class="note"><b>Concept:</b> The attribute name comes from the argument name with the dashes removed. <code>--rate</code> becomes <code>args.rate</code>, and <code>--min-balance</code> becomes <code>args.min_balance</code>.</p>
+      </section>
+
+      <section class="chapter" id="argparse-options">
+        <h2>argparse: types, choices, defaults and flags</h2>
+        <p>Extra settings on <code>add_argument()</code> do the checking and converting that you would otherwise write by hand.</p>
+        <div class="scroll">
+          <table>
+            <thead>
+              <tr><th>Setting</th><th>Effect</th></tr>
+            </thead>
+            <tbody>
+              <tr><td><code>type=float</code></td><td>Convert the text with this function. Bad text becomes a clear error</td></tr>
+              <tr><td><code>default=4.0</code></td><td>The value when the argument is not given</td></tr>
+              <tr><td><code>choices=[...]</code></td><td>Only these values are allowed</td></tr>
+              <tr><td><code>action="store_true"</code></td><td>A <b>flag</b>: it takes no value. <code>True</code> if present, <code>False</code> if not</td></tr>
+              <tr><td><code>"-v", "--verbose"</code></td><td>A short and a long name for the same option</td></tr>
+              <tr><td><code>required=True</code></td><td>Make an option compulsory</td></tr>
+              <tr><td><code>nargs="+"</code></td><td>Accept one or more values and collect them in a list</td></tr>
+              <tr><td><code>help="..."</code></td><td>The text shown for this argument by <code>--help</code></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <script type="text/plain" data-lang="py" data-file="args_options.py">
+import argparse
+
+parser = argparse.ArgumentParser(description="Work out one year of interest.")
+parser.add_argument("balance", type=float, help="money in the account")
+parser.add_argument("--rate", type=float, default=4.0, help="yearly rate in percent")
+parser.add_argument("--kind", choices=["savings", "fixed"], default="savings")
+parser.add_argument("-v", "--verbose", action="store_true", help="show the working")
+
+args = parser.parse_args(["5000"])
+print(args)
+# Namespace(balance=5000.0, rate=4.0, kind='savings', verbose=False)
+
+args = parser.parse_args(["12000", "--rate", "6.5", "--kind", "fixed", "-v"])
+print(args.balance * args.rate / 100, args.kind, args.verbose)     # 780.0 fixed True
+        </script>
+        <p><code>nargs="+"</code> collects several values, for example a list of account holders.</p>
+        <script type="text/plain" data-lang="py" data-file="args_nargs.py">
+import argparse
+
+parser = argparse.ArgumentParser()
+parser.add_argument("names", nargs="+", help="one or more account holders")
+parser.add_argument("--min-balance", type=int, default=1000)
+
+args = parser.parse_args(["Rishikesh", "Sandhya", "Hemkesh", "--min-balance", "500"])
+print(args.names)                  # ['Rishikesh', 'Sandhya', 'Hemkesh']
+print(args.min_balance)            # 500
+        </script>
+      </section>
+
+      <section class="chapter" id="argparse-help">
+        <h2>argparse: help and errors for free</h2>
+        <p>Here is the same parser as a real script that reads the command line. It is not runnable in the page because it needs arguments typed after its name.</p>
+        <script type="text/plain" data-lang="py" data-file="interest.py" data-norun>
+import argparse
+
+parser = argparse.ArgumentParser(description="Work out one year of interest.")
+parser.add_argument("balance", type=float, help="money in the account")
+parser.add_argument("--rate", type=float, default=4.0,
+                    help="yearly rate in percent (default: 4.0)")
+parser.add_argument("--kind", choices=["savings", "fixed"], default="savings",
+                    help="type of account")
+parser.add_argument("-v", "--verbose", action="store_true",
+                    help="show the working")
+args = parser.parse_args()
+
+interest = args.balance * args.rate / 100
+if args.verbose:
+    print(f"{args.balance} at {args.rate}% on a {args.kind} account")
+print(f"Interest: {interest:.2f}")
+        </script>
+        <p>Nobody wrote a help screen, yet <code>-h</code> and <code>--help</code> work. This is the real output of <code>python3 interest.py --help</code>:</p>
+        <script type="text/plain" data-lang="text" data-file="Output">
+usage: interest.py [-h] [--rate RATE] [--kind {savings,fixed}] [-v] balance
+
+Work out one year of interest.
+
+positional arguments:
+  balance               money in the account
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --rate RATE           yearly rate in percent (default: 4.0)
+  --kind {savings,fixed}
+                        type of account
+  -v, --verbose         show the working
+        </script>
+        <p>Square brackets in the <code>usage</code> line mark what may be left out. Normal use, and then three mistakes:</p>
+        <script type="text/plain" data-lang="text" data-file="Output">
+$ python3 interest.py 5000 --rate 6.5 -v
+5000.0 at 6.5% on a savings account
+Interest: 325.00
+
+$ python3 interest.py
+usage: interest.py [-h] [--rate RATE] [--kind {savings,fixed}] [-v] balance
+interest.py: error: the following arguments are required: balance
+
+$ python3 interest.py abc
+usage: interest.py [-h] [--rate RATE] [--kind {savings,fixed}] [-v] balance
+interest.py: error: argument balance: invalid float value: 'abc'
+
+$ python3 interest.py 5000 --kind gold
+usage: interest.py [-h] [--rate RATE] [--kind {savings,fixed}] [-v] balance
+interest.py: error: argument --kind: invalid choice: 'gold' (choose from 'savings', 'fixed')
+        </script>
+        <p>On an error, argparse prints the message to the error stream and ends the program with exit code 2. Your own code never sees the bad value.</p>
+        <p class="note"><b>Version note:</b> This output is from Python 3.9. From Python 3.10 the heading <code>optional arguments:</code> is printed as <code>options:</code>. Everything else is the same.</p>
+      </section>
+
+      <section class="chapter" id="argparse-subcommands">
+        <h2>argparse: subcommands</h2>
+        <p>Larger tools group their work into <b>subcommands</b>, the way <code>git</code> has <code>git commit</code> and <code>git push</code>. Each subcommand is a small parser of its own with its own arguments. Here is a bank with <code>deposit</code> and <code>withdraw</code>. It is not runnable in the page because it reads the command line.</p>
+        <script type="text/plain" data-lang="py" data-file="bank_cli.py" data-norun>
+import argparse
+
+
+def build_parser():
+    parser = argparse.ArgumentParser(
+        prog="bank", description="A tiny bank on the command line."
+    )
+    parser.add_argument("-v", "--verbose", action="store_true",
+                        help="print extra detail")
+    commands = parser.add_subparsers(dest="command", required=True)
+
+    deposit = commands.add_parser("deposit", help="put money in")
+    deposit.add_argument("name", help="account holder")
+    deposit.add_argument("amount", type=float, help="amount in rupees")
+
+    withdraw = commands.add_parser("withdraw", help="take money out")
+    withdraw.add_argument("name", help="account holder")
+    withdraw.add_argument("amount", type=float, help="amount in rupees")
+    withdraw.add_argument("--mode", choices=["cash", "upi"], default="cash",
+                          help="how to pay out (default: cash)")
+    return parser
+
+
+def main(argv=None):
+    args = build_parser().parse_args(argv)
+    if args.command == "deposit":
+        print(f"Deposited {args.amount:.2f} for {args.name}")
+    else:
+        print(f"Withdrew {args.amount:.2f} for {args.name} by {args.mode}")
+    if args.verbose:
+        print(args)
+
+
+if __name__ == "__main__":
+    main()
+        </script>
+        <p><code>dest="command"</code> stores the chosen subcommand in <code>args.command</code>. <code>prog="bank"</code> sets the name shown in the help. The real output:</p>
+        <script type="text/plain" data-lang="text" data-file="Output">
+$ python3 bank_cli.py --help
+usage: bank [-h] [-v] {deposit,withdraw} ...
+
+A tiny bank on the command line.
+
+positional arguments:
+  {deposit,withdraw}
+    deposit           put money in
+    withdraw          take money out
+
+optional arguments:
+  -h, --help          show this help message and exit
+  -v, --verbose       print extra detail
+
+$ python3 bank_cli.py withdraw --help
+usage: bank withdraw [-h] [--mode {cash,upi}] name amount
+
+positional arguments:
+  name               account holder
+  amount             amount in rupees
+
+optional arguments:
+  -h, --help         show this help message and exit
+  --mode {cash,upi}  how to pay out (default: cash)
+        </script>
+        <script type="text/plain" data-lang="text" data-file="Output">
+$ python3 bank_cli.py deposit Rishikesh 500
+Deposited 500.00 for Rishikesh
+
+$ python3 bank_cli.py -v withdraw Sandhya 1200 --mode upi
+Withdrew 1200.00 for Sandhya by upi
+Namespace(verbose=True, command='withdraw', name='Sandhya', amount=1200.0, mode='upi')
+
+$ python3 bank_cli.py withdraw Sandhya 100 --mode cheque
+usage: bank withdraw [-h] [--mode {cash,upi}] name amount
+bank withdraw: error: argument --mode: invalid choice: 'cheque' (choose from 'cash', 'upi')
+
+$ python3 bank_cli.py
+usage: bank [-h] [-v] {deposit,withdraw} ...
+bank: error: the following arguments are required: command
+        </script>
+        <p>Options of the main parser, such as <code>-v</code>, go <b>before</b> the subcommand. Options of a subcommand go after it. Because <code>main()</code> accepts a list, a test can call <code>main(["deposit", "Rishikesh", "500"])</code> without a terminal. <a href="python-project-setup.html">Python Project Setup</a> shows how to install a script so that it runs as plain <code>bank</code>.</p>
+        <h3>getpass</h3>
+        <p>Never take a password as a command-line argument. It would be saved in the shell history and shown in the list of running programs. <code>getpass.getpass()</code> asks for it and hides what is typed. Not runnable here because it waits for the keyboard.</p>
+        <script type="text/plain" data-lang="py" data-file="ask_pin.py" data-norun>
+import getpass
+
+pin = getpass.getpass("PIN: ")     # nothing is shown while typing
+print("PIN received,", len(pin), "digits")
+        </script>
+        <p class="note"><b>Reach for it when:</b> a script takes more than one or two arguments, or other people will run it. The help text alone is worth it.</p>
+      </section>
+
+      <section class="chapter part" id="other-programs">
+        <h2>Running other programs</h2>
+        <p class="kind">Part 4 of 7 &middot; starting a command and reading its result</p>
+        <p>Sometimes the job is already done by another program: <code>git</code>, a PDF tool, a backup command. The <code>subprocess</code> module starts it, waits for it and gives you what it printed.</p>
+        <ul>
+          <li><a href="#subprocess-run">subprocess.run</a>: run a command and capture its output</li>
+          <li><a href="#subprocess-errors">Failures and timeouts</a>: <code>check</code> and <code>timeout</code></li>
+          <li><a href="#subprocess-shell">Pass a list, avoid shell=True</a></li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="subprocess-run">
+        <h2>subprocess.run</h2>
+        <p><code>subprocess.run()</code> takes the command as a <b>list</b>: the program first, then each argument as its own item. It waits until the program ends and returns a result object.</p>
+        <p>The examples run a second Python, because that exists on every machine that can run this page. <code>sys.executable</code> is the path of the Python that is running now, and <code>-c</code> runs the code given in the next item.</p>
+        <script type="text/plain" data-lang="py" data-file="run_capture.py">
+import subprocess
+import sys
+
+result = subprocess.run(
+    [sys.executable, "-c", "print('Balance: 5000')"],
+    capture_output=True,           # collect what the program prints
+    text=True,                     # give it back as str, not bytes
+)
+
+print(result.returncode)           # 0
+print(repr(result.stdout))         # 'Balance: 5000\n'
+print(repr(result.stderr))         # ''
+        </script>
+        <div class="scroll">
+          <table>
+            <thead>
+              <tr><th>Argument</th><th>Meaning</th></tr>
+            </thead>
+            <tbody>
+              <tr><td><code>capture_output=True</code></td><td>Collect the output in <code>result.stdout</code> and <code>result.stderr</code>. Without it, the output goes straight to the screen</td></tr>
+              <tr><td><code>text=True</code></td><td>Decode the output to strings. Without it you get bytes</td></tr>
+              <tr><td><code>check=True</code></td><td>Raise an exception if the exit code is not zero</td></tr>
+              <tr><td><code>timeout=10</code></td><td>Stop waiting, and stop the program, after this many seconds</td></tr>
+              <tr><td><code>input="text"</code></td><td>Send this text to the program's standard input</td></tr>
+              <tr><td><code>cwd="folder"</code></td><td>Run the program in that folder</td></tr>
+              <tr><td><code>env={...}</code></td><td>Give the program these environment variables</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p><code>input</code> feeds the other program. Here the second Python adds up the lines it receives, like <code>total.py</code> in the <a href="#sys">sys chapter</a>.</p>
+        <script type="text/plain" data-lang="py" data-file="run_input.py">
+import subprocess
+import sys
+
+adder = "import sys; print(sum(float(line) for line in sys.stdin))"
+
+result = subprocess.run([sys.executable, "-c", adder],
+                        input="500\n1200.50\n", capture_output=True, text=True)
+print(result.stdout.strip())       # 1700.5
+        </script>
+        <p class="note"><b>Reach for it when:</b> a command-line tool already does what you need. If a Python module can do the same job, prefer the module: <code>shutil.copy()</code> instead of running <code>cp</code>.</p>
+      </section>
+
+      <section class="chapter" id="subprocess-errors">
+        <h2>Failures and timeouts</h2>
+        <p>By default <code>run()</code> does not complain when the other program fails. It only reports the exit code, and it is easy to forget to look. <code>check=True</code> turns a non-zero exit code into a <code>CalledProcessError</code>, so a failure cannot pass unnoticed.</p>
+        <script type="text/plain" data-lang="py" data-file="run_check.py">
+import subprocess
+import sys
+
+failing = "import sys; print('account not found', file=sys.stderr); sys.exit(3)"
+
+result = subprocess.run([sys.executable, "-c", failing], capture_output=True, text=True)
+print(result.returncode)           # 3   (no exception: you must look yourself)
+
+try:
+    subprocess.run([sys.executable, "-c", failing],
+                   capture_output=True, text=True, check=True)
+except subprocess.CalledProcessError as error:
+    print("exit code:", error.returncode)      # exit code: 3
+    print("message:", error.stderr.strip())    # message: account not found
+        </script>
+        <p>A program that never ends would make yours wait for ever. <code>timeout</code> sets a limit in seconds. When it is passed, the other program is stopped and <code>TimeoutExpired</code> is raised.</p>
+        <script type="text/plain" data-lang="py" data-file="run_timeout.py">
+import subprocess
+import sys
+
+slow = "import time; time.sleep(30)"
+
+try:
+    subprocess.run([sys.executable, "-c", slow], timeout=0.5)
+except subprocess.TimeoutExpired:
+    print("Gave up: no answer within half a second")
+# Gave up: no answer within half a second
+        </script>
+        <p>If the program itself cannot be found, Python raises <code>FileNotFoundError</code> before anything runs.</p>
+        <script type="text/plain" data-lang="py" data-file="run_missing.py">
+import subprocess
+
+try:
+    subprocess.run(["no-such-bank-tool", "--version"])
+except FileNotFoundError as error:
+    print(type(error).__name__)    # FileNotFoundError
+        </script>
+        <p class="note"><b>Habit:</b> For commands whose success matters, always write <code>check=True</code> and a <code>timeout</code>.</p>
+      </section>
+
+      <section class="chapter" id="subprocess-shell">
+        <h2>Pass a list, avoid shell=True</h2>
+        <p>There is a second way to give the command: one string with <code>shell=True</code>. The string is handed to the system shell, the program that reads the commands you type in a terminal. The shell gives special meaning to characters such as <code>;</code>, <code>|</code>, <code>&amp;</code> and <code>$</code>. If any part of that string comes from a user, they can add a command of their own. This is called <b>shell injection</b>.</p>
+        <p>Below, a "name" typed by a user contains <code>;</code>, which means "and then run this" to the shell. The example uses <code>echo</code>, which only prints its arguments, so nothing harmful happens. It needs macOS or Linux.</p>
+        <script type="text/plain" data-lang="py" data-file="shell_injection.py">
+import subprocess
+
+name = "Hemkesh; echo ALL ACCOUNTS DELETED"    # typed by a user
+
+unsafe = subprocess.run("echo Hello " + name, shell=True, capture_output=True, text=True)
+print(unsafe.stdout.splitlines())
+# ['Hello Hemkesh', 'ALL ACCOUNTS DELETED']
+
+safe = subprocess.run(["echo", "Hello", name], capture_output=True, text=True)
+print(safe.stdout.splitlines())
+# ['Hello Hemkesh; echo ALL ACCOUNTS DELETED']
+        </script>
+        <p>With the string, the shell ran <b>two</b> commands, and the second one was written by the user. With the list there is no shell at all. Each item goes to the program exactly as it is, so the whole name is just text.</p>
+        <ul>
+          <li>Pass a list. It is safe, and names with spaces need no quoting.</li>
+          <li>If you have a command as one string, <code>shlex.split("git log -n 5")</code> turns it into a list.</li>
+          <li>If you really need a shell feature such as a pipe, build the string only from values you wrote yourself, or wrap each outside value in <code>shlex.quote()</code>.</li>
+        </ul>
+        <script type="text/plain" data-lang="py" data-file="shlex_split.py">
+import shlex
+
+print(shlex.split("bank deposit 'Rishikesh Agrawani' 500"))
+# ['bank', 'deposit', 'Rishikesh Agrawani', '500']
+
+print(shlex.quote("Hemkesh; echo ALL ACCOUNTS DELETED"))
+# 'Hemkesh; echo ALL ACCOUNTS DELETED'
+        </script>
+      </section>
+
+      <section class="chapter part" id="data-formats">
+        <h2>Data formats</h2>
+        <p class="kind">Part 5 of 7 &middot; saving, sending, hiding and counting data</p>
+        <p>Data has to leave the program sooner or later: into a file, to another system, into a password table. And money has to be counted exactly. These modules cover the common formats and the common traps.</p>
+        <ul>
+          <li><a href="#json">json</a>, <a href="#csv">csv</a> and <a href="#configparser">configparser</a>: text formats</li>
+          <li><a href="#pickle">pickle</a>: Python objects as bytes, with a warning</li>
+          <li><a href="#base64-hashlib">base64 and hashlib</a>: encoding and fingerprints</li>
+          <li><a href="#passwords">Storing passwords</a>: never as plain text</li>
+          <li><a href="#secrets-uuid">secrets and uuid</a>: tokens and identifiers</li>
+          <li><a href="#decimal">decimal</a> and <a href="#decimal-rounding">rounding</a>: exact money</li>
+          <li><a href="#fractions-statistics">fractions and statistics</a></li>
+          <li><a href="#random">random</a>: chance you can repeat</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="json">
+        <h2>json</h2>
+        <p>JSON is a text format for data that almost every language and web service understands. <code>json.dumps()</code> turns Python data into a JSON string, and <code>json.loads()</code> turns it back. The versions without the <code>s</code>, <code>dump()</code> and <code>load()</code>, work with an open file.</p>
+        <script type="text/plain" data-lang="py" data-file="json_basics.py">
+import json
+
+account = {"owner": "Rishikesh Agrawani", "balance": 5000.5, "active": True,
+           "nominee": None, "cards": ["debit", "credit"]}
+
+text = json.dumps(account)
+print(text)
+back = json.loads(text)
+print(back == account, type(back["cards"]).__name__)
+
+with open("account.json", "w", encoding="utf-8") as f:
+    json.dump(account, f, indent=2)            # indent makes the file easy to read
+
+with open("account.json", encoding="utf-8") as f:
+    print(json.load(f)["owner"])
+        </script>
+        <script type="text/plain" data-lang="text" data-file="Output">
+{"owner": "Rishikesh Agrawani", "balance": 5000.5, "active": true, "nominee": null, "cards": ["debit", "credit"]}
+True list
+Rishikesh Agrawani
+        </script>
+        <p>Python's <code>True</code> and <code>None</code> became JSON's <code>true</code> and <code>null</code>. JSON knows only strings, numbers, true, false, null, lists and objects. Other types need help: <code>default=str</code> tells <code>dumps</code> to turn anything it does not know into a string.</p>
+        <script type="text/plain" data-lang="py" data-file="json_default.py">
+import json
+from datetime import date
+from decimal import Decimal
+
+payment = {"to": "Sandhya", "amount": Decimal("1200.50"), "on": date(2026, 11, 17)}
+
+try:
+    json.dumps(payment)
+except TypeError as error:
+    print(error)                   # Object of type Decimal is not JSON serializable
+
+print(json.dumps(payment, default=str))
+# {"to": "Sandhya", "amount": "1200.50", "on": "2026-11-17"}
+        </script>
+        <p class="note"><b>Reach for it when:</b> data goes to or comes from a web API, a config file or another language. Two details: dictionary keys always become strings, and tuples come back as lists.</p>
+      </section>
+
+      <section class="chapter" id="csv">
+        <h2>csv</h2>
+        <p>CSV (comma-separated values) is the format spreadsheets import and export: one row per line, columns separated by commas. Do not split the lines yourself. A value may contain a comma inside quotes, and the <code>csv</code> module handles that.</p>
+        <script type="text/plain" data-lang="py" data-file="csv_basics.py">
+import csv
+
+rows = [
+    {"name": "Agrawani, Rishikesh", "balance": 5000},
+    {"name": "Agrawani, Sandhya", "balance": 12000},
+]
+
+with open("accounts.csv", "w", newline="", encoding="utf-8") as f:
+    writer = csv.DictWriter(f, fieldnames=["name", "balance"])
+    writer.writeheader()
+    writer.writerows(rows)
+
+print(open("accounts.csv", encoding="utf-8").read(), end="")
+
+with open("accounts.csv", newline="", encoding="utf-8") as f:
+    for row in csv.DictReader(f):
+        print(row["name"], "|", int(row["balance"]) + 1)
+        </script>
+        <script type="text/plain" data-lang="text" data-file="Output">
+name,balance
+"Agrawani, Rishikesh",5000
+"Agrawani, Sandhya",12000
+Agrawani, Rishikesh | 5001
+Agrawani, Sandhya | 12001
+        </script>
+        <p>The writer added quotes around the names because they contain a comma, and the reader took them off again. Every value read from a CSV file is a <b>string</b>, so the balance had to go through <code>int()</code>.</p>
+        <p class="note"><b>Reach for it when:</b> data moves to or from a spreadsheet or a bank export. Always open the file with <code>newline=""</code>, as the module asks, or blank lines can appear on Windows.</p>
+      </section>
+
+      <section class="chapter" id="configparser">
+        <h2>configparser</h2>
+        <p>Settings files often use the INI format: section names in square brackets and <code>key = value</code> lines below them. <code>configparser</code> reads and writes it. Values are strings, and helper methods convert them.</p>
+        <script type="text/plain" data-lang="py" data-file="config.py">
+import configparser
+
+text = """
+[bank]
+name = Agrawani Family Bank
+interest_rate = 4.5
+allow_overdraft = no
+
+[limits]
+daily_withdrawal = 25000
+"""
+
+config = configparser.ConfigParser()
+config.read_string(text)                       # config.read("bank.ini") reads a file
+
+print(config.sections())                               # ['bank', 'limits']
+print(config["bank"]["name"])                          # Agrawani Family Bank
+print(config.getfloat("bank", "interest_rate"))        # 4.5
+print(config.getboolean("bank", "allow_overdraft"))    # False
+print(config.getint("limits", "daily_withdrawal"))     # 25000
+print(config.get("limits", "monthly", fallback="not set"))   # not set
+        </script>
+        <p class="note"><b>Reach for it when:</b> people need to edit simple settings by hand. Newer projects often use TOML, the format of <code>pyproject.toml</code>. The module that reads it, <code>tomllib</code>, is in the standard library only from Python 3.11, so it is not shown here.</p>
+      </section>
+
+      <section class="chapter" id="pickle">
+        <h2>pickle</h2>
+        <p><code>pickle</code> turns almost any Python object, including objects of your own classes, into bytes and back again. JSON cannot do that. The price is that only Python can read the result.</p>
+        <script type="text/plain" data-lang="py" data-file="pickle_basics.py">
+import pickle
+
+
+class Account:
+    def __init__(self, owner, balance):
+        self.owner = owner
+        self.balance = balance
+
+
+account = Account("Malinikesh Agrawani", 8000)
+
+data = pickle.dumps(account)
+print(type(data).__name__)         # bytes
+
+copy = pickle.loads(data)
+print(copy.owner, copy.balance)    # Malinikesh Agrawani 8000
+print(copy is account)             # False
+
+with open("account.pickle", "wb") as f:        # "wb": pickle files are binary
+    pickle.dump(account, f)
+with open("account.pickle", "rb") as f:
+    print(pickle.load(f).owner)    # Malinikesh Agrawani
+        </script>
+        <p class="note"><b>Security warning:</b> Loading a pickle can run any code that the file's author put into it. Never call <code>pickle.load()</code> or <code>pickle.loads()</code> on data from the internet, from a user, or from anywhere you do not fully control. For data that crosses a boundary, use JSON.</p>
+        <p><b>Reach for it when:</b> your own program saves its own Python objects for a short time, for example a cache on the same machine. Not for files you send to others, and not for long-term storage.</p>
+      </section>
+
+      <section class="chapter" id="base64-hashlib">
+        <h2>base64 and hashlib</h2>
+        <p><code>base64</code> rewrites any bytes using only letters, digits and a few signs, so that they can travel through places that accept only text, such as JSON or email. It is an <b>encoding</b>, not a lock. Anyone can turn it back.</p>
+        <script type="text/plain" data-lang="py" data-file="base64_basics.py">
+import base64
+
+encoded = base64.b64encode(b"Rishikesh:kesh@2026")
+print(encoded)                         # b'UmlzaGlrZXNoOmtlc2hAMjAyNg=='
+print(base64.b64decode(encoded))       # b'Rishikesh:kesh@2026'
+        </script>
+        <p>A <b>hash</b> is a short fixed-length fingerprint of some data. The same input always gives the same hash, a tiny change gives a completely different one, and there is no way back from the hash to the data. <code>hashlib</code> provides the common hash functions.</p>
+        <script type="text/plain" data-lang="py" data-file="hash_basics.py">
+import hashlib
+
+one = hashlib.sha256(b"Pay Sandhya 500").hexdigest()
+two = hashlib.sha256(b"Pay Sandhya 900").hexdigest()
+
+print(len(one))                    # 64
+print(one[:16])                    # 834c274a8d504cad
+print(two[:16])                    # fb25797957c417c4
+print(one == hashlib.sha256(b"Pay Sandhya 500").hexdigest())   # True
+        </script>
+        <p>One common use is a <b>checksum</b>: hash a file before sending it and again after receiving it. If the two values match, the file arrived unchanged.</p>
+        <script type="text/plain" data-lang="py" data-file="checksum.py">
+import hashlib
+from pathlib import Path
+
+Path("statement.csv").write_text("Rishikesh,5000\nSandhya,12000\n", encoding="utf-8")
+
+
+def checksum(path):
+    return hashlib.sha256(Path(path).read_bytes()).hexdigest()
+
+
+before = checksum("statement.csv")
+Path("statement.csv").write_text("Rishikesh,5000\nSandhya,92000\n", encoding="utf-8")
+after = checksum("statement.csv")
+
+print(before == after)             # False
+        </script>
+        <p class="note"><b>Reach for it when:</b> bytes must pass through a text-only channel (<code>base64</code>), or you need to know whether data has changed (<code>hashlib</code>). Use <code>sha256</code>. The older <code>md5</code> and <code>sha1</code> are not safe for security work.</p>
+      </section>
+
+      <section class="chapter" id="passwords">
+        <h2>Storing passwords</h2>
+        <p>Never store a password as plain text. If the table is ever copied, every account is open. Store a hash instead, and when someone logs in, hash what they typed and compare.</p>
+        <p>A plain <code>sha256</code> is not enough, for two reasons. It is very fast, so an attacker can try billions of guesses. And two people with the same password get the same hash. The fix has two parts:</p>
+        <ul>
+          <li>A <b>salt</b>: random bytes, different for every user, mixed into the hash. It is stored next to the hash and is not secret.</li>
+          <li>A <b>slow</b> hash made for passwords. <code>hashlib.pbkdf2_hmac()</code> repeats the hashing many thousands of times.</li>
+        </ul>
+        <script type="text/plain" data-lang="py" data-file="password_hash.py">
+import hashlib
+import hmac
+import secrets
+
+ROUNDS = 200_000
+
+
+def hash_password(password, salt=None):
+    if salt is None:
+        salt = secrets.token_bytes(16)         # new random salt for a new password
+    digest = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt, ROUNDS)
+    return salt, digest
+
+
+def check_password(password, salt, digest):
+    attempt = hash_password(password, salt)[1]
+    return hmac.compare_digest(attempt, digest)
+
+
+salt, digest = hash_password("kesh@2026")              # store these two, not the password
+print(len(salt), len(digest))                          # 16 32
+print(check_password("kesh@2026", salt, digest))       # True
+print(check_password("kesh@2025", salt, digest))       # False
+
+other_salt, other_digest = hash_password("kesh@2026")
+print(digest == other_digest)                          # False
+        </script>
+        <p>The salt and the hash are different on every run, so only their lengths are printed. The last line shows the salt at work: the same password hashed twice gives two different results. <code>hmac.compare_digest()</code> compares in a way that does not leak, through timing, how many bytes were right.</p>
+        <p class="note"><b>In real projects:</b> Use a library made for this job, such as <code>argon2-cffi</code> or <code>bcrypt</code> (both need <code>pip install</code>), or the login system of your web framework. The example shows the idea with the standard library alone.</p>
+      </section>
+
+      <section class="chapter" id="secrets-uuid">
+        <h2>secrets and uuid</h2>
+        <p><code>secrets</code> makes random values that are safe for security: reset links, API keys, one-time codes. The values are different on every run, so the examples print their length or type instead.</p>
+        <script type="text/plain" data-lang="py" data-file="secrets_basics.py">
+import secrets
+
+token = secrets.token_hex(16)                  # 16 random bytes as 32 hex characters
+link = secrets.token_urlsafe(16)               # safe to put in a web address
+otp = f"{secrets.randbelow(10**6):06d}"        # a six-digit one-time code
+
+print(len(token), type(link).__name__)         # 32 str
+print(len(otp), otp.isdigit())                 # 6 True
+print(secrets.choice(["Rishikesh", "Sandhya"]) in ["Rishikesh", "Sandhya"])   # True
+        </script>
+        <p>A <b>UUID</b> (universally unique identifier) is a 128-bit number written as 36 characters. <code>uuid.uuid4()</code> makes a random one. The chance of two being equal is so small that separate machines can create ids without asking each other.</p>
+        <script type="text/plain" data-lang="py" data-file="uuid_basics.py">
+import uuid
+
+transaction_id = uuid.uuid4()
+print(len(str(transaction_id)), transaction_id.version)    # 36 4
+print(uuid.uuid4() == uuid.uuid4())                        # False
+
+# uuid5 is worked out from a name, so it is the same every time
+print(uuid.uuid5(uuid.NAMESPACE_DNS, "hygull.github.io"))
+# bc3305ff-b8a9-5872-bea5-10203e6874d0
+        </script>
+        <p class="note"><b>Reach for it when:</b> you need a token nobody can guess (<code>secrets</code>) or an id that is unique without a central counter (<code>uuid</code>). Do not use the <code>random</code> module for either. Its numbers can be predicted.</p>
+      </section>
+
+      <section class="chapter" id="decimal">
+        <h2>decimal for money</h2>
+        <p>Python's <code>float</code> stores numbers in binary. Most decimal fractions, such as 0.1, have no exact binary form, just as one third has no exact decimal form. The stored value is a tiny bit off, and the errors show up in sums.</p>
+        <script type="text/plain" data-lang="py" data-file="float_problem.py">
+print(0.1 + 0.2)                   # 0.30000000000000004
+print(0.1 + 0.2 == 0.3)            # False
+print(sum([0.1] * 10))             # 0.9999999999999999
+print(round(2.675, 2))             # 2.67
+        </script>
+        <p>For a bank that is not acceptable. <code>decimal.Decimal</code> stores numbers in base ten, exactly as written, the way people do sums on paper.</p>
+        <script type="text/plain" data-lang="py" data-file="decimal_basics.py">
+from decimal import Decimal
+
+print(Decimal("0.1") + Decimal("0.2"))                     # 0.3
+print(Decimal("0.1") + Decimal("0.2") == Decimal("0.3"))   # True
+print(sum([Decimal("0.1")] * 10))                          # 1.0
+
+balance = Decimal("5000.00")
+balance += Decimal("250.75")
+balance -= Decimal("0.80")
+print(balance)                                             # 5249.95
+print(balance * 2, balance > 5000)                         # 10499.90 True
+        </script>
+        <p>Always build a <code>Decimal</code> from a <b>string</b> or an <code>int</code>. Building it from a float copies the float's error.</p>
+        <script type="text/plain" data-lang="py" data-file="decimal_trap.py">
+from decimal import Decimal
+
+print(Decimal("0.1"))              # 0.1
+print(Decimal(0.1))                # 0.1000000000000000055511151231257827021181583404541015625
+print(Decimal(5000))               # 5000
+
+try:
+    Decimal("0.1") + 0.2           # mixing with a float is refused
+except TypeError as error:
+    print("TypeError:", error)
+# TypeError: unsupported operand type(s) for +: 'decimal.Decimal' and 'float'
+        </script>
+        <p class="note"><b>Reach for it when:</b> the numbers are money, or any quantity where every digit must be right. Keep <code>float</code> for measurements and science, where a tiny error does not matter and speed does.</p>
+      </section>
+
+      <section class="chapter" id="decimal-rounding">
+        <h2>decimal: quantize and rounding</h2>
+        <p>Interest and tax produce more digits than a currency has. <code>quantize()</code> rounds a <code>Decimal</code> to the same number of places as the pattern you give it: <code>Decimal("0.01")</code> means two places. You also choose <b>how</b> to round.</p>
+        <script type="text/plain" data-lang="py" data-file="quantize.py">
+from decimal import Decimal, ROUND_HALF_UP
+
+PAISE = Decimal("0.01")
+
+interest = Decimal("12345.67") * Decimal("4.25") / 100
+print(interest)                                            # 524.690975
+print(interest.quantize(PAISE, rounding=ROUND_HALF_UP))    # 524.69
+
+print(Decimal("2.675").quantize(PAISE, rounding=ROUND_HALF_UP))    # 2.68
+print(round(2.675, 2))                                             # 2.67
+print(Decimal("1200").quantize(PAISE))                             # 1200.00
+        </script>
+        <p>The float version rounds 2.675 down, because the float is really 2.67499999... The decimal version rounds it the way you learned at school.</p>
+        <p>The rounding mode decides what happens to a value exactly half-way between two results.</p>
+        <script type="text/plain" data-lang="py" data-file="rounding_modes.py">
+from decimal import Decimal, ROUND_HALF_UP, ROUND_HALF_EVEN, ROUND_DOWN, ROUND_UP
+
+PAISE = Decimal("0.01")
+
+for text in ["0.125", "0.135", "0.129"]:
+    value = Decimal(text)
+    print(text,
+          value.quantize(PAISE, rounding=ROUND_HALF_UP),
+          value.quantize(PAISE, rounding=ROUND_HALF_EVEN),
+          value.quantize(PAISE, rounding=ROUND_DOWN),
+          value.quantize(PAISE, rounding=ROUND_UP))
+        </script>
+        <script type="text/plain" data-lang="text" data-file="Output">
+0.125 0.13 0.12 0.12 0.13
+0.135 0.14 0.14 0.13 0.14
+0.129 0.13 0.13 0.12 0.13
+        </script>
+        <div class="scroll">
+          <table>
+            <thead>
+              <tr><th>Mode</th><th>Rule</th><th>Typical use</th></tr>
+            </thead>
+            <tbody>
+              <tr><td><code>ROUND_HALF_UP</code></td><td>A half goes away from zero</td><td>What most people and most invoices expect</td></tr>
+              <tr><td><code>ROUND_HALF_EVEN</code></td><td>A half goes to the nearest even digit</td><td>"Banker's rounding". The default. Over many values, the ups and downs cancel out</td></tr>
+              <tr><td><code>ROUND_DOWN</code></td><td>Cut the extra digits off</td><td>Never pay out more than was earned</td></tr>
+              <tr><td><code>ROUND_UP</code></td><td>Any extra digit pushes away from zero</td><td>Fees that are always rounded up</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>A classic problem: split 100 rupees between three people without losing a paisa. Round each share down, then give the remainder to one of them.</p>
+        <script type="text/plain" data-lang="py" data-file="split_money.py">
+from decimal import Decimal, ROUND_DOWN
+
+total = Decimal("100.00")
+people = ["Malinikesh", "Hemkesh", "Rishikesh"]
+
+share = (total / len(people)).quantize(Decimal("0.01"), rounding=ROUND_DOWN)
+remainder = total - share * len(people)
+
+shares = {name: share for name in people}
+shares[people[0]] += remainder
+
+print(share, remainder)            # 33.33 0.01
+print(shares["Malinikesh"], sum(shares.values()))      # 33.34 100.00
+        </script>
+        <p class="note"><b>Tip:</b> Another common approach is to store money as a whole number of the smallest unit, paise or cents, in an <code>int</code>. Integers are always exact.</p>
+      </section>
+
+      <section class="chapter" id="fractions-statistics">
+        <h2>fractions and statistics</h2>
+        <p><code>fractions.Fraction</code> keeps a number as an exact numerator and denominator. Shares of ownership are a natural fit.</p>
+        <script type="text/plain" data-lang="py" data-file="fraction_basics.py">
+from fractions import Fraction
+
+sandhya = Fraction(1, 2)           # owns half of a joint account
+subhash = Fraction(1, 3)
+rest = 1 - sandhya - subhash
+
+print(rest)                        # 1/6
+print(sandhya + subhash)           # 5/6
+print(Fraction("0.75"))            # 3/4
+print(float(rest * 12000))         # 2000.0
+        </script>
+        <p><code>statistics</code> has the everyday summary numbers, so you do not have to write them yourself.</p>
+        <script type="text/plain" data-lang="py" data-file="statistics_basics.py">
+import statistics
+
+balances = [5000, 12000, 30000, 8000, 800]     # the five family accounts
+
+print(statistics.mean(balances))               # 11160
+print(statistics.median(balances))             # 8000
+print(round(statistics.stdev(balances), 2))    # 11301.68
+print(statistics.mode(["debit", "credit", "debit", "debit"]))      # debit
+        </script>
+        <p>The <b>mean</b> is the average. The <b>median</b> is the middle value when the list is sorted, and one very large balance does not pull it up. <code>stdev</code> (standard deviation) says how spread out the values are. The <b>mode</b> is the most common value.</p>
+        <p class="note"><b>Reach for it when:</b> you need exact ratios (<code>fractions</code>) or a quick summary of a list of numbers (<code>statistics</code>). For large tables of data, people use the third-party package <code>pandas</code>.</p>
+      </section>
+
+      <section class="chapter" id="random">
+        <h2>random</h2>
+        <p><code>random</code> makes random choices for games, test data and simulations. The numbers come from a formula, so they only look random. Giving the formula a starting value, called a <b>seed</b>, makes it produce the same sequence every time. That is how a test or a demo can be repeated exactly.</p>
+        <script type="text/plain" data-lang="py" data-file="random_seeded.py">
+import random
+
+random.seed(42)                    # same seed, same "random" results
+
+family = ["Rishikesh", "Sandhya", "Subhash", "Malinikesh", "Hemkesh"]
+
+print(random.randint(100, 999))    # 754
+print(random.choice(family))       # Rishikesh
+print(random.sample(family, 2))    # ['Rishikesh', 'Subhash']
+print(round(random.uniform(1000, 5000), 2))    # 1979.57
+
+random.shuffle(family)             # shuffles the list itself
+print(family)
+# ['Hemkesh', 'Malinikesh', 'Subhash', 'Rishikesh', 'Sandhya']
+        </script>
+        <p>For test data it is tidier to keep a generator of your own, so that seeding it does not affect other code.</p>
+        <script type="text/plain" data-lang="py" data-file="random_generator.py">
+import random
+
+rng = random.Random(2026)
+deposits = [rng.randrange(100, 2000, 100) for _ in range(5)]
+print(deposits)                    # [400, 1100, 1700, 1700, 400]
+
+again = random.Random(2026)
+print([again.randrange(100, 2000, 100) for _ in range(5)] == deposits)     # True
+        </script>
+        <p class="note"><b>Reach for it when:</b> you need sample data, a shuffle or a simulation. Never for passwords, tokens or one-time codes. Use <code>secrets</code> for those.</p>
+      </section>
+
+      <section class="chapter part" id="time">
+        <h2>Time</h2>
+        <p class="kind">Part 6 of 7 &middot; dates, time zones and stopwatches</p>
+        <p>Dates look simple and are full of traps: months of different lengths, leap years, time zones, clocks that change in summer. Let the library do the arithmetic.</p>
+        <ul>
+          <li><a href="#datetime">datetime</a>: a recap in one example</li>
+          <li><a href="#zoneinfo">zoneinfo</a>: real time zones</li>
+          <li><a href="#perf-counter">time.perf_counter</a>: measuring how long code takes</li>
+          <li><a href="#calendar">calendar</a>: months and weekdays</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="datetime">
+        <h2>datetime</h2>
+        <p><code>datetime</code> has a type for a day (<code>date</code>), for a moment (<code>datetime</code>) and for a length of time (<code>timedelta</code>). They are introduced in <a href="python-errors-and-files.html">Python Errors and Files</a>. Here is the whole set in one example: a fixed deposit opened on one day that matures 90 days later.</p>
+        <script type="text/plain" data-lang="py" data-file="datetime_recap.py">
+from datetime import date, datetime, timedelta
+
+opened = date(2026, 11, 17)
+matures = opened + timedelta(days=90)
+
+print(matures)                                 # 2027-02-15
+print(matures.strftime("%d %B %Y, %A"))        # 15 February 2027, Monday
+print((matures - opened).days)                 # 90
+print(opened.isoformat(), opened.weekday())    # 2026-11-17 1
+
+paid = datetime.strptime("17-11-2026 10:30", "%d-%m-%Y %H:%M")    # text to datetime
+print(paid)                                    # 2026-11-17 10:30:00
+print(paid.date() == opened, paid.hour)        # True 10
+print(date.fromisoformat("2026-11-17") < matures)      # True
+        </script>
+        <p><code>strftime</code> turns a date into text ("f" for format) and <code>strptime</code> reads text into a date ("p" for parse). <code>date.today()</code> and <code>datetime.now()</code> give the current day and moment. They are not used here because their output changes.</p>
+        <p class="note"><b>Reach for it when:</b> anything involves a date. Never do date arithmetic on strings or by counting days yourself.</p>
+      </section>
+
+      <section class="chapter" id="zoneinfo">
+        <h2>zoneinfo</h2>
+        <p>A <code>datetime</code> without a time zone is called <b>naive</b>: "10:30" with no idea where. Attach a zone and it becomes <b>aware</b>, and can be converted to any other zone. <code>zoneinfo</code>, new in Python 3.9, knows the world's time zones by name, including their summer-time rules.</p>
+        <script type="text/plain" data-lang="py" data-file="zones.py">
+from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
+
+india = ZoneInfo("Asia/Kolkata")
+paid = datetime(2026, 11, 17, 10, 30, tzinfo=india)    # 10:30 in Raipur
+
+print(paid)                                            # 2026-11-17 10:30:00+05:30
+print(paid.astimezone(ZoneInfo("Europe/London")))      # 2026-11-17 05:00:00+00:00
+print(paid.astimezone(ZoneInfo("America/New_York")))   # 2026-11-17 00:00:00-05:00
+print(paid.astimezone(timezone.utc).isoformat())       # 2026-11-17T05:00:00+00:00
+
+summer = datetime(2026, 7, 1, 10, 30, tzinfo=india)
+print(summer.astimezone(ZoneInfo("Europe/London")).strftime("%H:%M %Z"))   # 06:00 BST
+        </script>
+        <p>All four printed values of <code>paid</code> are the same moment, written for different places. In July, London is on summer time, so the gap to India is one hour smaller. The library knows that. You do not have to.</p>
+        <p class="note"><b>Watch out:</b> <code>zoneinfo</code> reads the time zone database of the operating system. macOS and Linux have one. Windows does not, so there you need <code>pip install tzdata</code>, the one exception to "no installs" on this page. A good rule for programs: store and compare times in UTC, and convert to a local zone only when showing them to a person.</p>
+      </section>
+
+      <section class="chapter" id="perf-counter">
+        <h2>time.perf_counter</h2>
+        <p>To measure how long a piece of code takes, read a clock before and after. <code>time.perf_counter()</code> is the clock made for this: very fine-grained, and it never jumps backwards. Its value means nothing alone. Only the difference between two readings matters.</p>
+        <script type="text/plain" data-lang="py" data-file="stopwatch.py">
+import time
+
+start = time.perf_counter()
+total = sum(paise * 4 for paise in range(200_000))
+elapsed = time.perf_counter() - start
+
+print(total)                                   # 79999600000
+print(type(elapsed).__name__, 0 < elapsed < 2) # float True
+# print(f"took {elapsed:.4f} seconds")         # for example: took 0.0187 seconds
+        </script>
+        <p>The time taken differs from run to run, so the line that prints it is left as a comment.</p>
+        <div class="scroll">
+          <table>
+            <thead>
+              <tr><th>Function</th><th>Use</th></tr>
+            </thead>
+            <tbody>
+              <tr><td><code>time.perf_counter()</code></td><td>Timing code</td></tr>
+              <tr><td><code>time.time()</code></td><td>Seconds since 1 January 1970, as a float. A timestamp to store or send</td></tr>
+              <tr><td><code>time.sleep(0.5)</code></td><td>Pause the program for half a second</td></tr>
+              <tr><td><code>time.monotonic()</code></td><td>A clock that never goes backwards, for timeouts</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><b>Reach for it when:</b> you want a quick "how long did that take". Careful measuring, with the <code>timeit</code> module, is in <a href="python-performance.html">Python Performance and Memory</a>.</p>
+      </section>
+
+      <section class="chapter" id="calendar">
+        <h2>calendar</h2>
+        <p><code>calendar</code> answers questions about months and weekdays, and can print a month as text.</p>
+        <script type="text/plain" data-lang="py" data-file="calendar_basics.py">
+import calendar
+
+print(calendar.isleap(2026), calendar.isleap(2028))    # False True
+print(calendar.monthrange(2027, 2))    # (0, 28)   starts on a Monday, has 28 days
+print(calendar.day_name[calendar.weekday(2026, 11, 17)])   # Tuesday
+print(calendar.month(2026, 11))
+        </script>
+        <script type="text/plain" data-lang="text" data-file="Output">
+False True
+(0, 28)
+Tuesday
+   November 2026
+Mo Tu We Th Fr Sa Su
+                   1
+ 2  3  4  5  6  7  8
+ 9 10 11 12 13 14 15
+16 17 18 19 20 21 22
+23 24 25 26 27 28 29
+30
+        </script>
+        <p class="note"><b>Reach for it when:</b> you need the last day of a month (for interest that is paid monthly), the weekday of a date, or a month laid out as text.</p>
+      </section>
+
+      <section class="chapter part" id="helpers">
+        <h2>Handy helpers</h2>
+        <p class="kind">Part 7 of 7 &middot; small modules that save a lot of code</p>
+        <p>The last group is a mix. Some of these modules have a full chapter on another page, so they get only a pointer here. The rest are shown briefly.</p>
+        <ul>
+          <li><a href="#pointers">Covered on other pages</a>: collections, itertools, functools and more</li>
+          <li><a href="#enum">enum</a>: a fixed set of named values</li>
+          <li><a href="#copy">copy</a>: shallow and deep copies</li>
+          <li><a href="#pprint-operator">pprint and operator</a></li>
+          <li><a href="#zipfile-gzip">zipfile and gzip</a>: compressed files</li>
+          <li><a href="#quick-reference">Quick reference</a>: "I need to ..."</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="pointers">
+        <h2>Covered on other pages</h2>
+        <p>These modules are just as much part of the standard library. Each has a proper treatment elsewhere on this site.</p>
+        <div class="scroll">
+          <table>
+            <thead>
+              <tr><th>Module</th><th>In one line</th><th>Read more</th></tr>
+            </thead>
+            <tbody>
+              <tr><td><code>collections</code></td><td><code>Counter</code> counts things, <code>defaultdict</code> fills in missing keys, <code>deque</code> is a fast queue, <code>namedtuple</code> is a tuple with field names</td><td><a href="python-power-features.html">Python Power Features</a></td></tr>
+              <tr><td><code>itertools</code></td><td>Building blocks for loops: <code>chain</code>, <code>islice</code>, <code>groupby</code>, <code>combinations</code>, <code>accumulate</code></td><td><a href="python-iterators-generators.html">Python Iterators and Generators</a></td></tr>
+              <tr><td><code>functools</code></td><td><code>lru_cache</code> remembers results, <code>partial</code> fixes some arguments, <code>wraps</code> keeps a decorated function's name</td><td><a href="python-power-features.html">Python Power Features</a> and <a href="python-decorators.html">Python Decorators</a></td></tr>
+              <tr><td><code>dataclasses</code></td><td><code>@dataclass</code> writes <code>__init__</code>, <code>__repr__</code> and <code>__eq__</code> for a class that mostly holds data</td><td><a href="python-classes.html">Python Classes</a></td></tr>
+              <tr><td><code>contextlib</code></td><td><code>@contextmanager</code> turns a small function into something usable with <code>with</code></td><td><a href="python-power-features.html">Python Power Features</a></td></tr>
+              <tr><td><code>heapq</code>, <code>bisect</code></td><td>Always get the smallest item quickly, and search or insert in a sorted list</td><td><a href="python-data-structures.html">Python Data Structures and Algorithms</a></td></tr>
+              <tr><td><code>sqlite3</code>, <code>shelve</code></td><td>A real SQL database in one file, and a dictionary that is saved to disk</td><td><a href="python-databases.html">Python Databases</a></td></tr>
+              <tr><td><code>urllib</code>, <code>http.server</code></td><td>Fetch a web address, and serve a folder over HTTP for local testing</td><td><a href="python-web-apis.html">Python Web APIs</a></td></tr>
+              <tr><td><code>logging</code>, <code>pdb</code>, <code>traceback</code>, <code>warnings</code></td><td>Recording what a program does and finding out why it went wrong</td><td><a href="python-debugging-logging.html">Python Debugging and Logging</a></td></tr>
+              <tr><td><code>unittest</code></td><td>The built-in test framework</td><td><a href="python-testing.html">Python Testing</a></td></tr>
+              <tr><td><code>threading</code>, <code>multiprocessing</code>, <code>asyncio</code></td><td>Doing several things at once</td><td><a href="python-concurrency.html">Python Threads and Processes</a> and <a href="python-asyncio.html">Python Async IO</a></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>A one-block taste of the first three, so the names mean something:</p>
+        <script type="text/plain" data-lang="py" data-file="taste.py">
+from collections import Counter
+from functools import lru_cache
+from itertools import accumulate
+
+kinds = ["debit", "credit", "debit", "debit", "credit"]
+print(Counter(kinds).most_common(1))           # [('debit', 3)]
+
+deposits = [500, 200, 1000]
+print(list(accumulate(deposits)))              # [500, 700, 1700]
+
+
+@lru_cache(maxsize=None)
+def yearly_interest(balance, rate):
+    return balance * rate / 100
+
+
+yearly_interest(5000, 4)
+yearly_interest(5000, 4)                       # answered from the cache
+print(yearly_interest.cache_info().hits)       # 1
+        </script>
+      </section>
+
+      <section class="chapter" id="enum">
+        <h2>enum</h2>
+        <p>An <b>enumeration</b> is a fixed set of named values. Without it, code passes strings such as <code>"savings"</code> around, and a typing mistake like <code>"saving"</code> goes unnoticed. With an <code>Enum</code>, a wrong name is an error at once.</p>
+        <script type="text/plain" data-lang="py" data-file="enum_basics.py">
+from enum import Enum
+
+
+class AccountType(Enum):
+    SAVINGS = "savings"
+    CURRENT = "current"
+    FIXED = "fixed"
+
+
+kind = AccountType.SAVINGS
+print(kind)                                    # AccountType.SAVINGS
+print(kind.name, kind.value)                   # SAVINGS savings
+print(kind is AccountType.SAVINGS)             # True
+print(AccountType("fixed"))                    # AccountType.FIXED
+print([member.value for member in AccountType])    # ['savings', 'current', 'fixed']
+
+try:
+    AccountType("saving")
+except ValueError as error:
+    print(error)                               # 'saving' is not a valid AccountType
+        </script>
+        <p><code>AccountType("fixed")</code> looks a member up by its value, which is how text from a file or a form becomes an enum member.</p>
+        <p class="note"><b>Reach for it when:</b> a value can only be one of a short, known list: account types, transaction states, days of the week. Compare members with <code>is</code>.</p>
+      </section>
+
+      <section class="chapter" id="copy">
+        <h2>copy</h2>
+        <p>Assigning with <code>=</code> does not copy anything. It gives the same object a second name. <code>copy.copy()</code> makes a <b>shallow</b> copy: a new outer object that still shares the inner ones. <code>copy.deepcopy()</code> copies everything, all the way down.</p>
+        <script type="text/plain" data-lang="py" data-file="copy_basics.py">
+import copy
+
+account = {"owner": "Subhash", "history": [500, 200]}
+
+same = account                     # no copy at all
+shallow = copy.copy(account)       # new dictionary, same inner list
+deep = copy.deepcopy(account)      # new dictionary, new inner list
+
+account["owner"] = "Subhash Agrawani"
+account["history"].append(999)
+
+print(same["owner"], same["history"])          # Subhash Agrawani [500, 200, 999]
+print(shallow["owner"], shallow["history"])    # Subhash [500, 200, 999]
+print(deep["owner"], deep["history"])          # Subhash [500, 200]
+        </script>
+        <p>The shallow copy kept its own <code>owner</code>, but its <code>history</code> is the very same list as the original's, so the new entry shows up in both.</p>
+        <p class="note"><b>Reach for it when:</b> you need to change a nested structure and keep the original as it was, for example to try a transfer and throw the result away if it fails. Use <code>deepcopy</code> for anything nested.</p>
+      </section>
+
+      <section class="chapter" id="pprint-operator">
+        <h2>pprint and operator</h2>
+        <p><code>pprint</code> ("pretty print") lays out nested data over several lines so that it can be read. It is a good partner for debugging.</p>
+        <script type="text/plain" data-lang="py" data-file="pprint_basics.py">
+from pprint import pprint
+
+bank = {
+    "Rishikesh": {"balance": 5000, "cards": ["debit", "credit"], "city": "Raipur"},
+    "Sandhya": {"balance": 12000, "cards": ["debit"], "city": "Raipur"},
+}
+
+print(bank)
+pprint(bank, width=60)
+        </script>
+        <script type="text/plain" data-lang="text" data-file="Output">
+{'Rishikesh': {'balance': 5000, 'cards': ['debit', 'credit'], 'city': 'Raipur'}, 'Sandhya': {'balance': 12000, 'cards': ['debit'], 'city': 'Raipur'}}
+{'Rishikesh': {'balance': 5000,
+               'cards': ['debit', 'credit'],
+               'city': 'Raipur'},
+ 'Sandhya': {'balance': 12000,
+             'cards': ['debit'],
+             'city': 'Raipur'}}
+        </script>
+        <p><code>operator</code> offers small ready-made functions for use as the <code>key</code> of <code>sorted()</code>, <code>max()</code> and <code>min()</code>. <code>itemgetter("balance")</code> does the same as <code>lambda a: a["balance"]</code>, and <code>attrgetter</code> does it for attributes of objects.</p>
+        <script type="text/plain" data-lang="py" data-file="operator_basics.py">
+from operator import itemgetter
+
+accounts = [
+    {"name": "Rishikesh", "balance": 5000},
+    {"name": "Hemkesh", "balance": 800},
+    {"name": "Sandhya", "balance": 12000},
+]
+
+by_balance = sorted(accounts, key=itemgetter("balance"), reverse=True)
+print([a["name"] for a in by_balance])         # ['Sandhya', 'Rishikesh', 'Hemkesh']
+print(min(accounts, key=itemgetter("balance"))["name"])    # Hemkesh
+print(itemgetter("name", "balance")(accounts[0]))          # ('Rishikesh', 5000)
+        </script>
+        <p class="note"><b>Reach for it when:</b> a printed dictionary runs off the screen (<code>pprint</code>), or you sort by a field and want something shorter than a lambda (<code>operator</code>).</p>
+      </section>
+
+      <section class="chapter" id="zipfile-gzip">
+        <h2>zipfile and gzip</h2>
+        <p><code>zipfile</code> reads and writes <code>.zip</code> archives, which pack many files into one. <code>gzip</code> compresses a single file, and is common for log files and data downloads.</p>
+        <script type="text/plain" data-lang="py" data-file="zip_basics.py">
+import zipfile
+from pathlib import Path
+
+for name in ["rishikesh", "sandhya"]:
+    Path(f"{name}.txt").write_text(f"Statement for {name}\n" * 50, encoding="utf-8")
+
+with zipfile.ZipFile("statements.zip", "w", compression=zipfile.ZIP_DEFLATED) as archive:
+    archive.write("rishikesh.txt")
+    archive.write("sandhya.txt")
+
+with zipfile.ZipFile("statements.zip") as archive:
+    print(archive.namelist())                  # ['rishikesh.txt', 'sandhya.txt']
+    text = archive.read("sandhya.txt").decode("utf-8")
+    print(text.splitlines()[0])                # Statement for sandhya
+    archive.extractall("unpacked")
+
+print(sorted(p.name for p in Path("unpacked").iterdir()))  # ['rishikesh.txt', 'sandhya.txt']
+        </script>
+        <p><code>gzip.open()</code> works like <code>open()</code>. Use mode <code>"wt"</code> and <code>"rt"</code> for text.</p>
+        <script type="text/plain" data-lang="py" data-file="gzip_basics.py">
+import gzip
+from pathlib import Path
+
+lines = "INFO Deposited 500 for Rishikesh\n" * 1000
+
+with gzip.open("bank.log.gz", "wt", encoding="utf-8") as f:
+    f.write(lines)
+
+with gzip.open("bank.log.gz", "rt", encoding="utf-8") as f:
+    print(len(f.read().splitlines()))          # 1000
+
+print(len(lines), Path("bank.log.gz").stat().st_size < 500)    # 33000 True
+        </script>
+        <p>33,000 characters of repeated text shrank to a few hundred bytes. Real data compresses less than this, but log files often shrink to a tenth of their size.</p>
+        <p class="note"><b>Reach for it when:</b> you send or store many files as one (<code>zipfile</code>), or want a big text file to take less room (<code>gzip</code>). <code>shutil.make_archive()</code> zips a whole folder in one call.</p>
+      </section>
+
+      <section class="chapter" id="quick-reference">
+        <h2>Quick reference</h2>
+        <div class="scroll">
+          <table>
+            <thead>
+              <tr><th>I need to ...</th><th>Module</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>Check or pull out text by its pattern</td><td><code>re</code></td></tr>
+              <tr><td>Wrap long text to a width</td><td><code>textwrap</code></td></tr>
+              <tr><td>Fill a simple template from a file</td><td><code>string.Template</code></td></tr>
+              <tr><td>Build, inspect or search file paths</td><td><code>pathlib</code></td></tr>
+              <tr><td>Copy, move or delete files and folders</td><td><code>shutil</code>, <code>os</code></td></tr>
+              <tr><td>Use a file for a moment and have it cleaned up</td><td><code>tempfile</code></td></tr>
+              <tr><td>End the program with an exit code, or read piped input</td><td><code>sys</code></td></tr>
+              <tr><td>Read a setting from outside the code</td><td><code>os.environ</code></td></tr>
+              <tr><td>Take arguments on the command line</td><td><code>argparse</code></td></tr>
+              <tr><td>Ask for a password without showing it</td><td><code>getpass</code></td></tr>
+              <tr><td>Run another program</td><td><code>subprocess</code></td></tr>
+              <tr><td>Exchange data with a web service or another language</td><td><code>json</code></td></tr>
+              <tr><td>Read or write spreadsheet data</td><td><code>csv</code></td></tr>
+              <tr><td>Read a settings file</td><td><code>configparser</code> (or <code>tomllib</code> from Python 3.11)</td></tr>
+              <tr><td>Save my own Python objects for my own program</td><td><code>pickle</code>, never on untrusted data</td></tr>
+              <tr><td>Send bytes through a text-only channel</td><td><code>base64</code></td></tr>
+              <tr><td>Fingerprint data or check a download</td><td><code>hashlib</code></td></tr>
+              <tr><td>Store a password</td><td><code>hashlib.pbkdf2_hmac</code> with a salt, or a dedicated library</td></tr>
+              <tr><td>Make a token, key or one-time code</td><td><code>secrets</code></td></tr>
+              <tr><td>Make a unique id</td><td><code>uuid</code></td></tr>
+              <tr><td>Do sums with money</td><td><code>decimal</code></td></tr>
+              <tr><td>Keep exact ratios</td><td><code>fractions</code></td></tr>
+              <tr><td>Get the mean, median or spread of some numbers</td><td><code>statistics</code></td></tr>
+              <tr><td>Make sample data or shuffle a list</td><td><code>random</code></td></tr>
+              <tr><td>Work with dates and lengths of time</td><td><code>datetime</code></td></tr>
+              <tr><td>Convert between time zones</td><td><code>zoneinfo</code></td></tr>
+              <tr><td>Time a piece of code</td><td><code>time.perf_counter</code></td></tr>
+              <tr><td>Find the last day of a month or print a month</td><td><code>calendar</code></td></tr>
+              <tr><td>Name a fixed set of choices</td><td><code>enum</code></td></tr>
+              <tr><td>Copy a nested structure</td><td><code>copy.deepcopy</code></td></tr>
+              <tr><td>Print nested data readably</td><td><code>pprint</code></td></tr>
+              <tr><td>Sort by a field without a lambda</td><td><code>operator.itemgetter</code></td></tr>
+              <tr><td>Count things, or use a queue</td><td><code>collections</code></td></tr>
+              <tr><td>Combine or slice loops</td><td><code>itertools</code></td></tr>
+              <tr><td>Cache the results of a function</td><td><code>functools.lru_cache</code></td></tr>
+              <tr><td>Pack or compress files</td><td><code>zipfile</code>, <code>gzip</code></td></tr>
+              <tr><td>Keep data in a small database</td><td><code>sqlite3</code></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>Before you write a helper of your own or install a package, search the library index in the official Python documentation. There is a good chance the module already exists.</p>
+        <p>Next in the practice path: <a href="python-data-structures.html">Python Data Structures and Algorithms</a>.</p>
+      </section>
+
+    </div>
+  </main>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script src="../../assets/tutorial.js"></script>
+</body>
+</html>

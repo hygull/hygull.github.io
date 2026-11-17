@@ -1,0 +1,872 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Python Code Quality</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@500;700&display=swap">
+<link rel="stylesheet" href="../../assets/tutorial.css">
+</head>
+<body data-track="python">
+
+<header class="topbar">
+  <div class="topbar-in">
+    <a class="brand" href="../../../index.html">Learnings</a>
+    <nav class="tracks" aria-label="Python paths">
+      <a href="../../../index.html#python-basics">Python Basics</a>
+      <a href="../../../index.html#python-advanced">Python Advanced</a>
+      <a href="../../../index.html#python-practice" aria-current="true">Python in Practice</a>
+      <a href="../../../index.html#python-design">Python Design</a>
+      <a href="../../../archive.html">Archive</a>
+    </nav>
+    <div class="tools">
+      <button class="btn" id="menu" type="button" aria-expanded="false">Chapters</button>
+      <input id="q" type="search" placeholder="Search chapters" aria-label="Search chapters">
+      <button class="btn" id="theme" type="button">Dark mode</button>
+    </div>
+  </div>
+</header>
+
+<div class="shell">
+  <aside class="side">
+    <p class="side-label">Code Quality</p>
+    <nav id="toc" aria-label="Chapters"></nav>
+  </aside>
+
+  <main>
+    <div class="page-head">
+      <p class="eyebrow">Python in practice, part 4 of 9</p>
+      <h1>Python Code Quality</h1>
+      <p class="lead">Code that works is the start. Code that the next person can read, and that a machine has checked for common mistakes, is the goal. This page covers the Python style guide, then three kinds of tool: a formatter that fixes layout, a linter that finds likely bugs, and a type checker that finds calls that do not fit. The examples keep using the <code>bank</code> project from <a href="python-project-setup.html">Python Project Setup</a>. Every tool output shown was captured from a real run of black 25.11.0, ruff 0.17.5 and mypy 1.19.1 on Python 3.9, unless the text says it is illustrative.</p>
+    </div>
+
+    <div class="chapters">
+
+      <section class="chapter part" id="part-style">
+        <h2>Style</h2>
+        <p class="kind">Group 1 of 3 &middot; what readable Python looks like</p>
+        <ul>
+          <li><a href="#why">Why style and checks matter</a>: code is read far more than it is written</li>
+          <li><a href="#pep8">PEP 8 in ten rules</a>: with a before and after</li>
+          <li><a href="#naming">Naming conventions</a>: one table</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="why">
+        <h2>Why style and checks matter</h2>
+        <p>You write a line once. After that it is read many times: by reviewers, by teammates fixing a bug near it, and by you six months later. Most of a programmer's day is reading code, so anything that makes reading faster pays for itself.</p>
+        <p>Two things help:</p>
+        <ul>
+          <li><b>One shared style.</b> When every file is laid out the same way, your eyes skip the layout and see the logic. Reviews stop being about spaces and quotes.</li>
+          <li><b>Automated checks.</b> A program that reads your code and reports problems never gets tired and never forgets. It finds an unused variable or a wrong argument type in a second, before the code runs at all.</li>
+        </ul>
+        <p>None of these tools run your program. They only read the source text. That is called <b>static analysis</b>, and it is why they are fast and safe to run on every save.</p>
+        <div class="scroll">
+          <table>
+            <thead>
+              <tr><th>Kind of tool</th><th>Question it answers</th><th>Changes your files?</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>Formatter</td><td>Is the layout consistent?</td><td>Yes, it rewrites them</td></tr>
+              <tr><td>Linter</td><td>Does this look like a mistake?</td><td>Only if you ask it to fix</td></tr>
+              <tr><td>Type checker</td><td>Do the values fit where they are used?</td><td>No</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="chapter" id="pep8">
+        <h2>PEP 8 in ten rules</h2>
+        <p>PEP 8 is the official style guide for Python code. A PEP is a "Python Enhancement Proposal", a numbered design document. These ten rules cover most of what it asks for.</p>
+        <ol>
+          <li>Indent with 4 spaces per level. Never mix tabs and spaces.</li>
+          <li>Keep lines short. PEP 8 says 79 characters. Many teams, and the tools below, use 88.</li>
+          <li>Put two blank lines around top-level functions and classes, and one between methods.</li>
+          <li>Put imports at the top, one module per line, in three groups: standard library, third-party, your own.</li>
+          <li>Put one space around operators such as <code>=</code>, <code>+</code> and <code>&gt;=</code>, and one after each comma. Put none just inside brackets, and none around <code>=</code> in a keyword argument: <code>Account(owner, balance=0)</code>.</li>
+          <li>Name functions and variables in <code>snake_case</code>, classes in <code>CapWords</code>, constants in <code>UPPER_CASE</code>.</li>
+          <li>Write one statement per line. No semicolons.</li>
+          <li>Compare with <code>None</code> using <code>is</code> and <code>is not</code>. Do not compare with <code>True</code> or <code>False</code> using <code>==</code>.</li>
+          <li>Test for an empty list or string with <code>if items:</code>, not <code>if len(items) &gt; 0:</code>.</li>
+          <li>Catch a named exception. Never write a bare <code>except:</code>.</li>
+        </ol>
+        <p>Here is a small transfer written with none of that. It runs and gives the right answer.</p>
+        <script type="text/plain" data-lang="py" data-file="before.py">
+import sys,os
+def Transfer( Src,Dst,amt ):
+  if Src['balance']>=amt :
+      Src['balance']-=amt;Dst['balance']+=amt
+      return True
+  else:
+      return False
+ACCOUNTS=[{'owner':'Sandhya Agrawani','balance':12000},{'owner':'Rishikesh Agrawani','balance':5000}]
+l=Transfer(ACCOUNTS[0],ACCOUNTS[1],2000)
+print(l,ACCOUNTS[0]['balance'],ACCOUNTS[1]['balance'])
+# True 10000 7000
+        </script>
+        <p>The same program following the rules. The behaviour is identical.</p>
+        <script type="text/plain" data-lang="py" data-file="after.py">
+ACCOUNTS = [
+    {"owner": "Sandhya Agrawani", "balance": 12000},
+    {"owner": "Rishikesh Agrawani", "balance": 5000},
+]
+
+
+def transfer(source, target, amount):
+    if source["balance"] < amount:
+        return False
+    source["balance"] -= amount
+    target["balance"] += amount
+    return True
+
+
+moved = transfer(ACCOUNTS[0], ACCOUNTS[1], 2000)
+print(moved, ACCOUNTS[0]["balance"], ACCOUNTS[1]["balance"])
+# True 10000 7000
+        </script>
+        <p>What changed: the two unused imports are gone, names are lower case and say what they hold, there is one statement per line, the long list is split, and <code>l</code>, which looks like the digit 1, became <code>moved</code>.</p>
+        <p class="note"><b>Note:</b> PEP 8 itself says consistency within a project matters more than any single rule. If a project already has a style, follow it.</p>
+      </section>
+
+      <section class="chapter" id="naming">
+        <h2>Naming conventions</h2>
+        <p>The shape of a name tells the reader what kind of thing it is before they look it up.</p>
+        <div class="scroll">
+          <table>
+            <thead>
+              <tr><th>Thing</th><th>Style</th><th>Example</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>Package (folder)</td><td>short, all lower case, no underscores if possible</td><td><code>bank</code></td></tr>
+              <tr><td>Module (file)</td><td><code>lower_snake_case</code></td><td><code>transfers.py</code></td></tr>
+              <tr><td>Class</td><td><code>CapWords</code></td><td><code>SavingsAccount</code></td></tr>
+              <tr><td>Exception class</td><td><code>CapWords</code>, usually ending in <code>Error</code></td><td><code>InsufficientFundsError</code></td></tr>
+              <tr><td>Function, method</td><td><code>lower_snake_case</code>, usually a verb</td><td><code>find_account</code></td></tr>
+              <tr><td>Variable, parameter</td><td><code>lower_snake_case</code>, usually a noun</td><td><code>opening_balance</code></td></tr>
+              <tr><td>Constant</td><td><code>UPPER_SNAKE_CASE</code>, defined at module level</td><td><code>TRANSFER_FEE</code></td></tr>
+              <tr><td>Internal name, not for outside use</td><td>one leading underscore</td><td><code>_validate</code></td></tr>
+              <tr><td>Name that clashes with a keyword</td><td>one trailing underscore</td><td><code>class_</code></td></tr>
+              <tr><td>Names Python itself defines</td><td>two underscores on each side. Do not invent your own</td><td><code>__init__</code></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>Python does not enforce any of this. A constant in upper case can still be reassigned, and <code>_validate</code> can still be called from outside. The styles are a message to the reader.</p>
+        <p class="note"><b>Tip:</b> avoid the single letters <code>l</code>, <code>O</code> and <code>I</code> as names. In many fonts they cannot be told apart from 1 and 0.</p>
+      </section>
+
+      <section class="chapter part" id="part-tools">
+        <h2>Tools</h2>
+        <p class="kind">Group 2 of 3 &middot; a formatter, a linter and a type checker</p>
+        <ul>
+          <li><a href="#install">Installing the tools</a>: what needs <code>pip install</code></li>
+          <li><a href="#black">Formatting with black</a>: a real before and after</li>
+          <li><a href="#ruff-format">ruff format</a>: the same job, faster</li>
+          <li><a href="#ruff">Linting with ruff</a>: four real problems in one file</li>
+          <li><a href="#ruff-fix">Fixing what ruff finds</a>: <code>--fix</code>, by hand, and <code>noqa</code></li>
+          <li><a href="#ruff-config">Choosing rules</a>: configuration in <code>pyproject.toml</code></li>
+          <li><a href="#mypy">Type checking with mypy</a>: a wrong call caught before it runs</li>
+          <li><a href="#optional">The None mistake</a>: what <code>Optional</code> catches</li>
+          <li><a href="#gradual">Gradual typing</a>: add hints a little at a time</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="install">
+        <h2>Installing the tools</h2>
+        <p>The tools are ordinary packages. Install them into the project's virtual environment, never globally.</p>
+        <script type="text/plain" data-lang="bash">
+source .venv/bin/activate
+pip install ruff black mypy
+        </script>
+        <p>Every Python block on this page runs on the standard library alone. Only the terminal commands <code>black</code>, <code>ruff</code> and <code>mypy</code> need the install above. The last group also uses <code>pytest</code> and the <code>bank</code> project, which lists these tools as its <code>dev</code> dependencies so that <code>pip install -e ".[dev]"</code> brings them all.</p>
+        <p class="note"><b>Versions:</b> these tools change their output and their default rules between releases. The outputs below come from black 25.11.0, ruff 0.17.5 and mypy 1.19.1. With other versions the wording and the set of reported problems can differ.</p>
+      </section>
+
+      <section class="chapter" id="black">
+        <h2>Formatting with black</h2>
+        <p>A <b>formatter</b> rewrites your file so the layout follows one fixed style. <code>black</code> is the best known one for Python. It has almost no options on purpose, so there is nothing to argue about.</p>
+        <p>Here is a statement printer written in a hurry. It runs correctly.</p>
+        <script type="text/plain" data-lang="py" data-file="statement.py (before)">
+def statement(owner,balance,history,currency = 'INR',
+        show_header=True):
+    lines=[ ]
+    if show_header: lines.append('Statement for '+owner)
+    for kind,amount in history:
+        lines.append( kind+' '+str(amount) )
+    lines.append('Balance: '+str(balance)+' '+currency)
+    return lines
+
+family = {'Sandhya Agrawani':12000,'Subhash Agrawani':9000,'Rishikesh Agrawani':5000,'Malinikesh Agrawani':3000,'Hemkesh Agrawani':1500}
+for line in statement('Hemkesh Agrawani',family['Hemkesh Agrawani'],[('deposit',500),('withdraw',200)]): print(line)
+        </script>
+        <script type="text/plain" data-lang="text" data-file="Output">
+Statement for Hemkesh Agrawani
+deposit 500
+withdraw 200
+Balance: 1500 INR
+        </script>
+        <p>Run black on it. black also prints a decorative line of symbols before the summary. It is left out here.</p>
+        <script type="text/plain" data-lang="bash">
+black statement.py
+        </script>
+        <script type="text/plain" data-lang="text" data-file="Output">
+reformatted statement.py
+1 file reformatted.
+        </script>
+        <p>This is the file exactly as black left it:</p>
+        <script type="text/plain" data-lang="py" data-file="statement.py (after black)">
+def statement(owner, balance, history, currency="INR", show_header=True):
+    lines = []
+    if show_header:
+        lines.append("Statement for " + owner)
+    for kind, amount in history:
+        lines.append(kind + " " + str(amount))
+    lines.append("Balance: " + str(balance) + " " + currency)
+    return lines
+
+
+family = {
+    "Sandhya Agrawani": 12000,
+    "Subhash Agrawani": 9000,
+    "Rishikesh Agrawani": 5000,
+    "Malinikesh Agrawani": 3000,
+    "Hemkesh Agrawani": 1500,
+}
+for line in statement(
+    "Hemkesh Agrawani",
+    family["Hemkesh Agrawani"],
+    [("deposit", 500), ("withdraw", 200)],
+):
+    print(line)
+        </script>
+        <p>The output of the program is the same four lines. What black changed:</p>
+        <ul>
+          <li>Spaces after commas and around operators, none around <code>=</code> in defaults.</li>
+          <li>Single quotes became double quotes.</li>
+          <li>The two-line <code>def</code> was joined, because it fits in 88 characters.</li>
+          <li>Lines longer than 88 characters were split, one item per line, with a trailing comma.</li>
+          <li><code>if ...: statement</code> on one line became two lines.</li>
+          <li>Two blank lines after the function.</li>
+        </ul>
+        <p>What black does <b>not</b> change: names, logic, or the order of anything. It only moves white space, quotes, commas and brackets.</p>
+        <div class="scroll">
+          <table>
+            <thead>
+              <tr><th>Command</th><th>What it does</th></tr>
+            </thead>
+            <tbody>
+              <tr><td><code>black statement.py</code></td><td>Rewrite one file</td></tr>
+              <tr><td><code>black .</code></td><td>Rewrite every Python file under the current folder</td></tr>
+              <tr><td><code>black --check .</code></td><td>Change nothing. Print <code>would reformat statement.py</code> and exit with code 1 if any file needs formatting</td></tr>
+              <tr><td><code>black --diff statement.py</code></td><td>Change nothing. Show what would change</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><b>Habit:</b> set your editor to format on save. Then you never think about layout again, and every commit is already formatted.</p>
+      </section>
+
+      <section class="chapter" id="ruff-format">
+        <h2>ruff format</h2>
+        <p><code>ruff</code> is a newer tool that is both a linter and a formatter, and is very fast. Its formatter is designed to produce the same style as black. Running it on the same messy <code>statement.py</code> gave a file identical to the black result above, character for character.</p>
+        <script type="text/plain" data-lang="bash">
+ruff format statement.py
+ruff format statement.py
+        </script>
+        <script type="text/plain" data-lang="text" data-file="Output">
+1 file reformatted
+1 file left unchanged
+        </script>
+        <p>The second run changes nothing, because the file is already in the target style. <code>ruff format --check .</code> is the report-only form. It exits with code 1 if a file would change.</p>
+        <p class="note"><b>Which one:</b> use one formatter per project, not both. If you already use ruff for linting, <code>ruff format</code> saves you a tool. If the project already uses black, keep black.</p>
+      </section>
+
+      <section class="chapter" id="ruff">
+        <h2>Linting with ruff</h2>
+        <p>A <b>linter</b> reads code and reports patterns that are legal Python but are probably mistakes. This file runs without any error. It has four problems.</p>
+        <script type="text/plain" data-lang="py" data-file="history.py">
+import os
+
+
+def parse_amount(text):
+    try:
+        return int(text)
+    except:
+        return 0
+
+
+def add_entry(entry, history=[]):
+    history.append(entry)
+    return history
+
+
+def total(amounts):
+    count = len(amounts)
+    return sum(amounts)
+
+
+print(parse_amount("500"), parse_amount("five hundred"))
+print(add_entry("Sandhya: deposit 500"))
+print(add_entry("Hemkesh: withdraw 200"))
+print(total([500, 200]))
+        </script>
+        <script type="text/plain" data-lang="text" data-file="Output">
+500 0
+['Sandhya: deposit 500']
+['Sandhya: deposit 500', 'Hemkesh: withdraw 200']
+700
+        </script>
+        <p>Look at the third line of output. Hemkesh's list contains Sandhya's entry. That is a real bug, and nothing crashed. Now ask ruff:</p>
+        <script type="text/plain" data-lang="bash">
+ruff check history.py
+        </script>
+        <script type="text/plain" data-lang="text" data-file="Output">
+F401 [*] `os` imported but unused
+ --> history.py:1:8
+  |
+1 | import os
+  |        ^^
+help: Remove unused import: `os`
+  |
+  - import os
+1 |
+  |
+
+E722 Do not use bare `except`
+ --> history.py:7:5
+  |
+5 |     try:
+6 |         return int(text)
+7 |     except:
+  |     ^^^^^^
+8 |         return 0
+  |
+
+B006 Do not use mutable data structures for argument defaults
+  --> history.py:11:30
+   |
+11 | def add_entry(entry, history=[]):
+   |                              ^^
+12 |     history.append(entry)
+13 |     return history
+   |
+help: Replace with `None`; initialize within function
+   |
+10 |
+   - def add_entry(entry, history=[]):
+11 + def add_entry(entry, history=None):
+12 +     if history is None:
+13 +         history = []
+14 |     history.append(entry)
+   |
+note: This is an unsafe fix and may change runtime behavior
+
+F841 Local variable `count` is assigned to but never used
+  --> history.py:17:5
+   |
+16 | def total(amounts):
+17 |     count = len(amounts)
+   |     ^^^^^
+18 |     return sum(amounts)
+   |
+help: Remove assignment to unused variable `count`
+   |
+16 | def total(amounts):
+   -     count = len(amounts)
+17 +     len(amounts)
+18 |     return sum(amounts)
+   |
+note: This is an unsafe fix and may change runtime behavior
+
+Found 4 errors.
+[*] 1 fixable with `--fix` (2 unsafe fixes available with `--fix --unsafe-fixes`).
+        </script>
+        <p>Each report has a rule code, a message, the file with line and column, and the lines around the problem.</p>
+        <div class="scroll">
+          <table>
+            <thead>
+              <tr><th>Code</th><th>Problem</th><th>Why it matters</th></tr>
+            </thead>
+            <tbody>
+              <tr><td><code>F401</code></td><td>Unused import</td><td>Dead code. The reader looks for where <code>os</code> is used and finds nothing</td></tr>
+              <tr><td><code>E722</code></td><td>Bare <code>except:</code></td><td>It catches everything, even Ctrl+C and typos in your own code, and hides them</td></tr>
+              <tr><td><code>B006</code></td><td>Mutable default argument</td><td>The <code>[]</code> is created once, when the function is defined, and shared by every call. That is the bug in the output above</td></tr>
+              <tr><td><code>F841</code></td><td>Unused variable</td><td>Often the sign of an unfinished thought or a wrong name further down</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>A shorter report with one line per problem is available with <code>--output-format concise</code>:</p>
+        <script type="text/plain" data-lang="text" data-file="Output of: ruff check --output-format concise history.py">
+history.py:1:8: F401 [*] `os` imported but unused
+history.py:7:5: E722 Do not use bare `except`
+history.py:11:30: B006 Do not use mutable data structures for argument defaults
+history.py:17:5: F841 Local variable `count` is assigned to but never used
+Found 4 errors.
+[*] 1 fixable with `--fix` (2 unsafe fixes available with `--fix --unsafe-fixes`).
+        </script>
+        <p class="note"><b>Tip:</b> <code>ruff rule B006</code> prints a full explanation of one rule in the terminal, with an example of the problem and the fix.</p>
+      </section>
+
+      <section class="chapter" id="ruff-fix">
+        <h2>Fixing what ruff finds</h2>
+        <p>The <code>[*]</code> mark means ruff can repair the problem itself. <code>--fix</code> applies those repairs and reports what is left. The output below is the last lines of the real run.</p>
+        <script type="text/plain" data-lang="bash">
+ruff check --fix history.py
+        </script>
+        <script type="text/plain" data-lang="text" data-file="Output (last lines)">
+Found 4 errors (1 fixed, 3 remaining).
+2 unsafe fixes available with `--fix --unsafe-fixes`.
+        </script>
+        <p>It removed <code>import os</code> and nothing else. The two "unsafe" fixes are ones that could change what the program does, so ruff only applies them if you add <code>--unsafe-fixes</code>. Its suggestion for the unused variable shows why: it would leave a pointless <code>len(amounts)</code> line behind. Fix the rest by hand.</p>
+        <script type="text/plain" data-lang="py" data-file="history.py (fixed)">
+def parse_amount(text):
+    try:
+        return int(text)
+    except ValueError:
+        return 0
+
+
+def add_entry(entry, history=None):
+    if history is None:
+        history = []
+    history.append(entry)
+    return history
+
+
+def total(amounts):
+    return sum(amounts)
+
+
+print(parse_amount("500"), parse_amount("five hundred"))
+print(add_entry("Sandhya: deposit 500"))
+print(add_entry("Hemkesh: withdraw 200"))
+print(total([500, 200]))
+        </script>
+        <script type="text/plain" data-lang="text" data-file="Output">
+500 0
+['Sandhya: deposit 500']
+['Hemkesh: withdraw 200']
+700
+        </script>
+        <p>Hemkesh's list is now his own. ruff agrees:</p>
+        <script type="text/plain" data-lang="text" data-file="Output of: ruff check history.py">
+All checks passed!
+        </script>
+        <h3>Silencing one line</h3>
+        <p>Sometimes the linter is wrong for your case. A <code># noqa</code> comment with the rule code turns off that rule for that line only. Always give the code, so other rules still apply, and say why.</p>
+        <script type="text/plain" data-lang="py" data-file="noqa.py">
+import os  # noqa: F401  (imported so that plugins can use bank.os)
+
+print("no report for this file")     # no report for this file
+        </script>
+      </section>
+
+      <section class="chapter" id="ruff-config">
+        <h2>Choosing rules</h2>
+        <p>ruff has hundreds of rules, grouped by a letter prefix. With no configuration it uses a default selection. That selection has grown over time: ruff 0.17.5, used here, reports <code>B006</code> by default, while older releases only did so if you turned the <code>B</code> group on. So do not rely on the default. Write down the groups you want in <code>pyproject.toml</code>.</p>
+        <script type="text/plain" data-lang="text" data-file="pyproject.toml">
+[tool.ruff]
+line-length = 88
+target-version = "py39"
+
+[tool.ruff.lint]
+select = ["E", "F", "B", "I", "UP", "SIM", "N"]
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["F401"]
+        </script>
+        <div class="scroll">
+          <table>
+            <thead>
+              <tr><th>Prefix</th><th>Group</th><th>Example of what it reports</th></tr>
+            </thead>
+            <tbody>
+              <tr><td><code>E</code>, <code>W</code></td><td>pycodestyle: PEP 8 layout</td><td>Several statements on one line, line too long</td></tr>
+              <tr><td><code>F</code></td><td>Pyflakes: likely errors</td><td>Unused import, unused variable, undefined name</td></tr>
+              <tr><td><code>B</code></td><td>flake8-bugbear: bug-prone patterns</td><td>Mutable default argument</td></tr>
+              <tr><td><code>I</code></td><td>isort: import order</td><td>Imports not sorted or not grouped</td></tr>
+              <tr><td><code>UP</code></td><td>pyupgrade: old syntax</td><td>Code that has a newer, simpler form in your Python version</td></tr>
+              <tr><td><code>SIM</code></td><td>flake8-simplify</td><td>An <code>if</code> that can be written more simply</td></tr>
+              <tr><td><code>N</code></td><td>pep8-naming</td><td>A function named <code>Transfer</code></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p><code>target-version</code> tells ruff the oldest Python you support, so it does not suggest syntax that version lacks. <code>per-file-ignores</code> turns rules off for matching files. Here it allows <code>__init__.py</code> files to import names only to pass them on.</p>
+        <p>You can also choose groups for one run with <code>--select</code>. This is the PEP 8 "before" file from the <a href="#pep8">earlier chapter</a>, saved as <code>messy.py</code>, checked for layout and naming only:</p>
+        <script type="text/plain" data-lang="bash">
+ruff check --select E,W,N --output-format concise messy.py
+        </script>
+        <script type="text/plain" data-lang="text" data-file="Output">
+messy.py:1:1: E401 [*] Multiple imports on one line
+messy.py:2:5: N802 Function name `Transfer` should be lowercase
+messy.py:2:15: N803 Argument name `Src` should be lowercase
+messy.py:2:19: N803 Argument name `Dst` should be lowercase
+messy.py:4:26: E702 Multiple statements on one line (semicolon)
+messy.py:8:89: E501 Line too long (101 > 88)
+messy.py:9:1: E741 Ambiguous variable name: `l`
+Found 7 errors.
+[*] 1 fixable with `--fix`.
+        </script>
+        <p class="note"><b>Advice:</b> start with a small set such as <code>E</code>, <code>F</code> and <code>B</code>, fix everything, then add one group at a time. Turning on every rule at once on an existing project gives hundreds of reports and nobody reads them.</p>
+      </section>
+
+      <section class="chapter" id="mypy">
+        <h2>Type checking with mypy</h2>
+        <p>A <b>type hint</b> is a note in the code that says what kind of value a parameter takes and what a function returns. <code>deposit: int</code> means "an integer", and <code>-&gt; int</code> means "returns an integer". Python does not check hints when the program runs. It ignores them.</p>
+        <script type="text/plain" data-lang="py" data-file="bonus.py">
+def add_bonus(deposit: int) -> int:
+    """Double a first deposit as a welcome bonus."""
+    return deposit * 2
+
+
+print(add_bonus(500))      # 1000
+print(add_bonus("500"))    # 500500
+        </script>
+        <p>The second call passes text instead of a number. Python does not complain, because <code>"500" * 2</code> is legal: it repeats the string. The customer would be credited 500500. <code>mypy</code> is a <b>type checker</b>: it reads the hints and reports every place where the code does not fit them.</p>
+        <script type="text/plain" data-lang="bash">
+mypy bonus.py
+        </script>
+        <script type="text/plain" data-lang="text" data-file="Output">
+bonus.py:7: error: Argument 1 to "add_bonus" has incompatible type "str"; expected "int"  [arg-type]
+Found 1 error in 1 file (checked 1 source file)
+        </script>
+        <p>Read it as: file, line 7, what is wrong, and in square brackets the name of the check. The mistake was found without running the program and without writing a test.</p>
+        <p class="note"><b>Concept:</b> hints are also documentation that cannot go out of date without someone noticing. The signature <code>transfer(source: Account, target: Account, amount: int) -&gt; None</code> tells you how to call the function before you read its body.</p>
+      </section>
+
+      <section class="chapter" id="optional">
+        <h2>The None mistake</h2>
+        <p>The most common runtime error in Python is <code>AttributeError: 'NoneType' object has no attribute ...</code>. It happens when a function sometimes returns <code>None</code> and the caller forgets that. The hint <code>Optional[Account]</code> means "an <code>Account</code> or <code>None</code>", and mypy then makes every caller deal with both.</p>
+        <script type="text/plain" data-lang="py" data-file="lookup.py">
+from typing import Optional
+
+
+class Account:
+    def __init__(self, owner: str, balance: int = 0) -> None:
+        self.owner = owner
+        self.balance = balance
+
+
+ACCOUNTS = {
+    "Hemkesh": Account("Hemkesh Agrawani", 1500),
+    "Malinikesh": Account("Malinikesh Agrawani", 3000),
+}
+
+
+def find_account(name: str) -> Optional[Account]:
+    return ACCOUNTS.get(name)
+
+
+account = find_account("Hemkesh")
+print(account.balance)             # 1500
+        </script>
+        <p>It runs and prints 1500, because Hemkesh has an account. With the name <code>"Subhash"</code> it would crash. mypy sees the risk without trying any name:</p>
+        <script type="text/plain" data-lang="text" data-file="Output of: mypy lookup.py">
+lookup.py:21: error: Item "None" of "Optional[Account]" has no attribute "balance"  [union-attr]
+Found 1 error in 1 file (checked 1 source file)
+        </script>
+        <p>The fix is to check for <code>None</code> first. Inside the <code>else</code> branch mypy knows the value can only be an <code>Account</code>.</p>
+        <script type="text/plain" data-lang="py" data-file="lookup_fixed.py">
+from typing import Optional
+
+
+class Account:
+    def __init__(self, owner: str, balance: int = 0) -> None:
+        self.owner = owner
+        self.balance = balance
+
+
+ACCOUNTS = {"Hemkesh": Account("Hemkesh Agrawani", 1500)}
+
+
+def find_account(name: str) -> Optional[Account]:
+    return ACCOUNTS.get(name)
+
+
+for name in ["Hemkesh", "Subhash"]:
+    account = find_account(name)
+    if account is None:
+        print(name, "has no account")
+    else:
+        print(name, account.balance)
+        </script>
+        <script type="text/plain" data-lang="text" data-file="Output">
+Hemkesh 1500
+Subhash has no account
+        </script>
+        <script type="text/plain" data-lang="text" data-file="Output of: mypy lookup_fixed.py">
+Success: no issues found in 1 source file
+        </script>
+        <p class="note"><b>Note:</b> from Python 3.10 you can write <code>Account | None</code> instead of <code>Optional[Account]</code>. This page uses <code>Optional</code> because it also works on Python 3.9.</p>
+      </section>
+
+      <section class="chapter" id="gradual">
+        <h2>Gradual typing</h2>
+        <p>You do not have to add hints everywhere at once. By default mypy checks only the functions that have hints and skips the body of any function without them. That is called <b>gradual typing</b>. All three functions below contain a mistake. The file runs, because it only defines functions and never calls them.</p>
+        <script type="text/plain" data-lang="py" data-file="gradual.py">
+def fee_for(balance):
+    return balance * "2%"
+
+
+def fee_checked(balance: int) -> int:
+    return balance * "2%"
+
+
+def describe(owner: str, balance: int) -> str:
+    return owner + ": " + balance
+        </script>
+        <script type="text/plain" data-lang="text" data-file="Output of: mypy gradual.py">
+gradual.py:6: error: Incompatible return value type (got "str", expected "int")  [return-value]
+gradual.py:10: error: Unsupported operand types for + ("str" and "int")  [operator]
+Found 2 errors in 1 file (checked 1 source file)
+        </script>
+        <p>Lines 6 and 10 are reported. Line 2, in the function without hints, is not. The <code>--strict</code> flag turns on every optional check, including one that demands hints on every function:</p>
+        <script type="text/plain" data-lang="text" data-file="Output of: mypy --strict gradual.py">
+gradual.py:1: error: Function is missing a type annotation  [no-untyped-def]
+gradual.py:6: error: Incompatible return value type (got "str", expected "int")  [return-value]
+gradual.py:10: error: Returning Any from function declared to return "str"  [no-any-return]
+gradual.py:10: error: Unsupported operand types for + ("str" and "int")  [operator]
+Found 4 errors in 1 file (checked 1 source file)
+        </script>
+        <p>A sensible path for an existing project: add hints to new code and to the functions other code calls most, run plain <code>mypy</code>, and move towards <code>--strict</code> one module at a time.</p>
+        <p class="note"><b>Limits:</b> mypy only knows what the hints tell it. It cannot check values that arrive while the program runs, such as user input or the contents of a file. Those still need validation code and tests.</p>
+      </section>
+
+      <section class="chapter part" id="part-habits">
+        <h2>Habits and automation</h2>
+        <p class="kind">Group 3 of 3 &middot; words for people, checks that run by themselves</p>
+        <ul>
+          <li><a href="#docstrings">Docstrings</a>: one consistent style</li>
+          <li><a href="#comments">Comments that explain why</a></li>
+          <li><a href="#one-config">One configuration file</a>: ruff, black and mypy in <code>pyproject.toml</code></li>
+          <li><a href="#check-sequence">The check sequence</a>: four commands before every push</li>
+          <li><a href="#pre-commit">Pre-commit hooks</a>: run the checks on every commit</li>
+          <li><a href="#ci">Checks in CI</a>: run them again on a server</li>
+          <li><a href="#quick-reference">Quick reference</a></li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="docstrings">
+        <h2>Docstrings</h2>
+        <p>A <b>docstring</b> is a string placed as the first statement of a module, class or function. Python stores it in <code>__doc__</code>, and <code>help()</code> and editors show it. It tells the caller what the thing does and how to use it, not how it works inside.</p>
+        <p>Pick one layout and use it everywhere. The one below is called Google style: a one-line summary, a blank line, then sections named <code>Args</code>, <code>Returns</code> and <code>Raises</code>.</p>
+        <script type="text/plain" data-lang="py" data-file="docstring.py">
+def transfer(source, target, amount):
+    """Move money from one account to another.
+
+    Args:
+        source: The account that pays. Must hold at least ``amount``.
+        target: The account that receives.
+        amount: A positive number of rupees.
+
+    Returns:
+        The new balance of ``source``.
+
+    Raises:
+        ValueError: If ``source`` does not hold enough money.
+    """
+    if amount > source["balance"]:
+        raise ValueError("insufficient funds")
+    source["balance"] -= amount
+    target["balance"] += amount
+    return source["balance"]
+
+
+sandhya = {"owner": "Sandhya Agrawani", "balance": 12000}
+malinikesh = {"owner": "Malinikesh Agrawani", "balance": 3000}
+print(transfer(sandhya, malinikesh, 1000))     # 11000
+print(transfer.__doc__.splitlines()[0])        # Move money from one account to another.
+        </script>
+        <ul>
+          <li>Start with one short line in the imperative: "Move money", not "This function moves money".</li>
+          <li>Use triple double quotes, even for a one-line docstring.</li>
+          <li>Describe what the caller must pass and what comes back, including the unit (rupees, seconds).</li>
+          <li>List the exceptions the caller should expect.</li>
+          <li>A small private helper with a clear name does not need more than one line, or any docstring at all.</li>
+        </ul>
+        <p class="note"><b>Note:</b> other common layouts are NumPy style and reStructuredText style. They carry the same information. ruff can check docstrings with its <code>D</code> rule group once you tell it which style you use.</p>
+      </section>
+
+      <section class="chapter" id="comments">
+        <h2>Comments that explain why</h2>
+        <p>The code already says <i>what</i> happens. A comment is for what the code cannot say: the reason, the business rule, the trap someone fell into. A comment that only repeats the line below it is noise, and it becomes wrong the day the line changes.</p>
+        <script type="text/plain" data-lang="py" data-file="comments.py">
+balance = 5000
+
+# Weak: repeats the code.
+# Subtract 25 from balance.
+balance = balance - 25
+
+# Useful: gives the reason, which the code cannot show.
+# Transfers to another bank cost a flat 25 rupees. Take the fee
+# first, so the transfer is refused if the fee cannot be paid.
+balance = balance - 25
+
+print(balance)        # 4950
+        </script>
+        <ul>
+          <li>If a comment explains <i>what</i> a block does, try a better name or a small function first. <code>charge_transfer_fee(account)</code> needs no comment.</li>
+          <li>Write comments as full sentences, above the line they describe.</li>
+          <li>Update the comment in the same change as the code.</li>
+          <li>Delete commented-out code. Version control keeps the old version.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="one-config">
+        <h2>One configuration file</h2>
+        <p>All three tools read their settings from <code>pyproject.toml</code>, each from its own <code>[tool.name]</code> section. Add this below the <code>[project]</code> sections of the bank project.</p>
+        <script type="text/plain" data-lang="text" data-file="pyproject.toml">
+[tool.ruff]
+line-length = 88
+target-version = "py39"
+
+[tool.ruff.lint]
+select = ["E", "F", "B", "I", "UP", "SIM", "N"]
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["F401"]
+
+[tool.black]
+line-length = 88
+target-version = ["py39"]
+
+[tool.mypy]
+python_version = "3.9"
+files = ["src"]
+check_untyped_defs = true
+warn_unused_ignores = true
+
+[[tool.mypy.overrides]]
+module = ["tabulate"]
+ignore_missing_imports = true
+        </script>
+        <div class="scroll">
+          <table>
+            <thead>
+              <tr><th>Setting</th><th>Meaning</th></tr>
+            </thead>
+            <tbody>
+              <tr><td><code>line-length</code></td><td>Keep ruff and black on the same number, or they will disagree</td></tr>
+              <tr><td><code>[tool.black]</code></td><td>Only needed if you format with black. With <code>ruff format</code>, leave it out</td></tr>
+              <tr><td><code>files = ["src"]</code></td><td>What to check when you type <code>mypy</code> with no arguments</td></tr>
+              <tr><td><code>check_untyped_defs</code></td><td>Also look inside functions that have no hints</td></tr>
+              <tr><td><code>warn_unused_ignores</code></td><td>Report <code># type: ignore</code> comments that are no longer needed</td></tr>
+              <tr><td><code>[[tool.mypy.overrides]]</code></td><td>Different settings for the listed modules</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>The last section is there for a real reason. The bank's <code>cli.py</code> imports <code>tabulate</code>, which ships without type hints. Without the override, mypy stops with this:</p>
+        <script type="text/plain" data-lang="text" data-file="Output of: mypy (without the override)">
+src/bank/cli.py:5: error: Library stubs not installed for "tabulate"  [import-untyped]
+src/bank/cli.py:5: note: Hint: "python3 -m pip install types-tabulate"
+src/bank/cli.py:5: note: (or run "mypy --install-types" to install all missing stub packages)
+src/bank/cli.py:5: note: See https://mypy.readthedocs.io/en/stable/running_mypy.html#missing-imports
+Found 1 error in 1 file (checked 5 source files)
+        </script>
+        <p>There are two honest answers. Install the hints as a separate package, as the message suggests, and add it to the <code>dev</code> dependencies. Or tell mypy to treat that one library as unknown, which is what the override does. Do not switch <code>ignore_missing_imports</code> on for the whole project, because that also hides typos in import names.</p>
+        <p class="note"><b>Concept:</b> a <b>stub</b> package such as <code>types-tabulate</code> contains only type hints for a library that has none of its own.</p>
+      </section>
+
+      <section class="chapter" id="check-sequence">
+        <h2>The check sequence</h2>
+        <p>Run the checks in the same order every time, fastest first. This was run in the bank project with the configuration above and the tools installed in its virtual environment.</p>
+        <script type="text/plain" data-lang="bash">
+ruff check .
+ruff format --check .
+mypy
+pytest -q
+        </script>
+        <script type="text/plain" data-lang="text" data-file="Output">
+All checks passed!
+7 files already formatted
+Success: no issues found in 5 source files
+.                                                                        [100%]
+1 passed in 0.00s
+        </script>
+        <p>ruff counts 7 files because this version also formats the code samples inside <code>README.md</code>. If you format with black, replace the second line with <code>black --check .</code>.</p>
+        <p>Joined with <code>&amp;&amp;</code>, the commands become one line that stops at the first failure. It gave the same output.</p>
+        <script type="text/plain" data-lang="bash">
+ruff check . && ruff format --check . && mypy && pytest -q
+        </script>
+        <p class="note"><b>Concept:</b> each tool exits with code 0 when it finds nothing and a non-zero code when it finds a problem. <code>&amp;&amp;</code> runs the next command only if the one before it exited with 0. Scripts, hooks and CI servers all rely on that number.</p>
+      </section>
+
+      <section class="chapter" id="pre-commit">
+        <h2>Pre-commit hooks</h2>
+        <p>A check only helps if it is run. Git can run a program just before it records a commit, called a <b>pre-commit hook</b>. The <code>pre-commit</code> tool manages such hooks from a file named <code>.pre-commit-config.yaml</code> in the project root.</p>
+        <p>This chapter was <b>not run</b> for this page. The file and commands follow the documented usage of the tool. Treat the version numbers after <code>rev</code> as placeholders.</p>
+        <script type="text/plain" data-lang="text" data-file=".pre-commit-config.yaml (not run here)">
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.17.5
+    hooks:
+      - id: ruff-check
+        args: [--fix]
+      - id: ruff-format
+
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.19.1
+    hooks:
+      - id: mypy
+        files: ^src/
+        </script>
+        <script type="text/plain" data-lang="bash">
+pip install pre-commit
+pre-commit install            # once per clone: adds the hook to .git/hooks
+pre-commit run --all-files    # run every hook on the whole project now
+pre-commit autoupdate         # move each rev to the newest release
+        </script>
+        <p>What happens after <code>pre-commit install</code>, each time you type <code>git commit</code>:</p>
+        <ol>
+          <li>Each hook runs on the files that are staged for this commit.</li>
+          <li>If every hook passes, the commit is made as usual.</li>
+          <li>If a hook fails or changes a file, the commit is stopped. A formatter may already have fixed the file. You look at the change, <code>git add</code> it, and commit again.</li>
+        </ol>
+        <p>Two things to know. Each hook runs in its own private environment that <code>pre-commit</code> builds on first use, so the first run is slow. And because of that, the mypy hook does not see the packages your project installed. Libraries it needs for checking are listed under an <code>additional_dependencies</code> key of the hook.</p>
+        <p class="note"><b>Note:</b> a hook can be skipped with <code>git commit --no-verify</code>, so hooks are a convenience for the author, not a guarantee. The guarantee is the next chapter.</p>
+      </section>
+
+      <section class="chapter" id="ci">
+        <h2>Checks in CI</h2>
+        <p><b>CI</b>, continuous integration, is a server that runs your checks on every push or pull request, on a clean machine. It catches what a local run misses: someone skipped the hooks, forgot to commit a file, or has a package installed that the project never declared. The job is always the same four steps: get the code, install the project with its dev tools, run the check sequence, and fail if any command exits with a non-zero code. Every CI service has its own file format for that. The sketch below is <b>illustrative</b>: it is not the syntax of any particular service and was not run.</p>
+        <script type="text/plain" data-lang="text" data-file="ci.yaml (illustrative, not a real service format)">
+on: [push, pull_request]
+python: "3.9"
+steps:
+  - python -m pip install -e ".[dev]"
+  - ruff check .
+  - ruff format --check .
+  - mypy
+  - pytest
+        </script>
+        <p>Use the same commands in CI as on your own machine. If CI runs something different, a failure there is hard to reproduce locally.</p>
+      </section>
+
+      <section class="chapter" id="quick-reference">
+        <h2>Quick reference</h2>
+        <div class="scroll">
+          <table>
+            <thead>
+              <tr><th>Tool</th><th>What it catches</th><th>Command</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>black</td><td>Inconsistent layout: spacing, quotes, line breaks. Rewrites the file</td><td><code>black .</code> to fix, <code>black --check .</code> to report</td></tr>
+              <tr><td>ruff format</td><td>The same as black, in the same style</td><td><code>ruff format .</code> to fix, <code>ruff format --check .</code> to report</td></tr>
+              <tr><td>ruff check</td><td>Unused imports and variables, bare <code>except</code>, mutable defaults, naming, import order</td><td><code>ruff check .</code>, add <code>--fix</code> for safe repairs</td></tr>
+              <tr><td>mypy</td><td>Wrong argument and return types, forgotten <code>None</code> checks</td><td><code>mypy</code> or <code>mypy file.py</code>, <code>--strict</code> for everything</td></tr>
+              <tr><td>pytest</td><td>Wrong behaviour. See <a href="python-testing.html">Python Testing</a></td><td><code>pytest</code></td></tr>
+              <tr><td>pre-commit</td><td>Commits made without running the checks</td><td><code>pre-commit install</code> once, then automatic</td></tr>
+              <tr><td>CI</td><td>Everything above, on a clean machine, for every push</td><td>The same commands, in the service's own file</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>Formatters, linters and type checkers find different problems, so a project normally uses one of each. None of them replaces tests: they check how the code is written, not whether a transfer moves the right amount.</p>
+        <p>Next in the practice path: <a href="python-standard-library.html">Python Standard Library Tour</a>.</p>
+      </section>
+
+    </div>
+  </main>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script src="../../assets/tutorial.js"></script>
+</body>
+</html>
