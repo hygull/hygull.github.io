@@ -1,0 +1,272 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Python Loops</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@500;700&display=swap">
+<link rel="stylesheet" href="../../assets/tutorial.css">
+</head>
+<body data-track="python">
+
+<header class="topbar">
+  <div class="topbar-in">
+    <a class="brand" href="../../../index.html">Learnings</a>
+    <nav class="tracks" aria-label="Tutorials">
+      <a href="python-loops.html" aria-current="page">Loops</a>
+      <a href="design-principles.html">Design Principles</a>
+      <a href="design-patterns.html">Design Patterns</a>
+      <a href="../../../archive.html">Archive</a>
+    </nav>
+    <div class="tools">
+      <button class="btn" id="menu" type="button" aria-expanded="false">Chapters</button>
+      <input id="q" type="search" placeholder="Search chapters" aria-label="Search chapters">
+      <button class="btn" id="theme" type="button">Dark mode</button>
+    </div>
+  </div>
+</header>
+
+<div class="shell">
+  <aside class="side">
+    <p class="side-label">Loops</p>
+    <nav id="toc" aria-label="Chapters"></nav>
+  </aside>
+
+  <main>
+    <div class="page-head">
+      <p class="eyebrow">Python basics</p>
+      <h1>Python Loops</h1>
+      <p class="lead">A loop runs the same statements again and again, either once for each item in a collection or for as long as a condition stays true. This page is a rewrite of the first Pythofrank lesson from February 2017. The original examples are kept, updated from Python 2.7 to Python 3 and split into short chapters, with a few new ones added.</p>
+    </div>
+
+    <div class="chapters">
+
+      <section class="chapter" id="range">
+        <h2>Counting with range</h2>
+        <p>A <code>for</code> loop takes items one at a time from whatever follows <code>in</code>. <code>range(start, stop)</code> supplies whole numbers from <code>start</code> up to, but not including, <code>stop</code>.</p>
+        <script type="text/plain" data-lang="py" data-file="range.py">
+for i in range(1, 11):        # natural numbers from 1 to 10
+    print(i, end=" ")
+print()                       # 1 2 3 4 5 6 7 8 9 10
+
+for j in range(5, 21):        # numbers from 5 to 20
+    print(j, end=" ")
+print()                       # 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20
+
+for k in range(2, 21, 2):     # even numbers; the third value is the step
+    print(k, end=" ")
+print()                       # 2 4 6 8 10 12 14 16 18 20
+
+for n in range(10, 0, -3):    # a negative step counts down
+    print(n, end=" ")
+print()                       # 10 7 4 1
+        </script>
+        <p class="note"><b>Concept:</b> <code>print()</code> ends with a new line by default. <code>end=" "</code> replaces that new line with a space, so the numbers stay on one row.</p>
+      </section>
+
+      <section class="chapter" id="nested">
+        <h2>A loop inside a loop</h2>
+        <p>The inner loop runs completely for every single step of the outer loop. That is exactly the shape of a multiplication table: one row per number, ten columns in each row.</p>
+        <script type="text/plain" data-lang="py" data-file="tables.py">
+for i in range(1, 6):             # one row for each number 1 to 5
+    for j in range(1, 11):        # ten columns
+        print(f"{i * j:4}", end="")
+    print()                       # finish the row
+        </script>
+        <script type="text/plain" data-lang="text" data-file="Output">
+   1   2   3   4   5   6   7   8   9  10
+   2   4   6   8  10  12  14  16  18  20
+   3   6   9  12  15  18  21  24  27  30
+   4   8  12  16  20  24  28  32  36  40
+   5  10  15  20  25  30  35  40  45  50
+        </script>
+        <p class="note"><b>Concept:</b> <code>{i * j:4}</code> inside an f-string pads the number to 4 characters, which keeps the columns straight.</p>
+      </section>
+
+      <section class="chapter" id="string">
+        <h2>Looping over a string</h2>
+        <p>A string is a sequence of characters, so a <code>for</code> loop hands them over one by one.</p>
+        <script type="text/plain" data-lang="py" data-file="characters.py">
+for c in "Rishikesh":
+    print(c, end=" ")
+print()                           # R i s h i k e s h
+
+vowels = 0
+for c in "Rishikesh":
+    if c in "aeiou":
+        vowels += 1
+print(vowels)                     # 3
+        </script>
+      </section>
+
+      <section class="chapter" id="list">
+        <h2>Looping over a list</h2>
+        <p>Name the loop variable after one item of the list. <code>for city in cities</code> reads like a sentence.</p>
+        <script type="text/plain" data-lang="py" data-file="lists.py">
+total = 0
+for num in [1, 3, 7, 9, 11]:
+    total += num
+print(total)                      # 31
+
+cities = ["Bangalore", "Raipur", "Dhamtari", "London"]
+for city in cities:
+    print(city)
+# Bangalore
+# Raipur
+# Dhamtari
+# London
+        </script>
+      </section>
+
+      <section class="chapter" id="enumerate">
+        <h2>Position and item with enumerate</h2>
+        <p>When you also need to know which item you are on, do not keep a counter by hand. <code>enumerate()</code> gives the position and the item together.</p>
+        <script type="text/plain" data-lang="py" data-file="enumerate.py">
+cities = ["Bangalore", "Raipur", "Dhamtari", "London"]
+
+for position, city in enumerate(cities, start=1):
+    print(position, city)
+# 1 Bangalore
+# 2 Raipur
+# 3 Dhamtari
+# 4 London
+        </script>
+      </section>
+
+      <section class="chapter" id="dictionary">
+        <h2>Looping over a dictionary</h2>
+        <p>A dictionary stores key and value pairs. Looping over it directly gives the keys. <code>.items()</code> gives each key with its value.</p>
+        <script type="text/plain" data-lang="py" data-file="details.py">
+details = {
+    "name": "Grimmy Heldon",
+    "age": 45,
+    "languages": ["C", "C++", "Python", "Golang", "PHP", "Core Java"],
+    "profession": "Backend Developer",
+    "is_active": True,
+}
+
+for key in details:
+    print(key, end=" ")
+print()                           # name age languages profession is_active
+
+for key, value in details.items():
+    print(key, "=>", value)
+# name => Grimmy Heldon
+# age => 45
+# languages => ['C', 'C++', 'Python', 'Golang', 'PHP', 'Core Java']
+# profession => Backend Developer
+# is_active => True
+        </script>
+        <p class="note"><b>Concept:</b> inside brackets or braces a statement can run over several lines, so no <code>\</code> is needed at the end of each line.</p>
+      </section>
+
+      <section class="chapter" id="zip">
+        <h2>Two lists at once with zip</h2>
+        <p><code>zip()</code> pairs the first items of both lists, then the second items, and so on. It stops when the shorter list runs out.</p>
+        <script type="text/plain" data-lang="py" data-file="digits.py">
+digits = [0, 1, 2, 3, 4]
+spellings = ["Zero", "One", "Two", "Three", "Four"]
+
+for digit, spelling in zip(digits, spellings):
+    print(digit, ":", spelling)
+# 0 : Zero
+# 1 : One
+# 2 : Two
+# 3 : Three
+# 4 : Four
+        </script>
+      </section>
+
+      <section class="chapter" id="while">
+        <h2>while: loop until a condition changes</h2>
+        <p>Use <code>for</code> when you know what you are looping over. Use <code>while</code> when you only know when to stop. Something inside the loop must eventually make the condition false, or it never ends.</p>
+        <script type="text/plain" data-lang="py" data-file="while.py">
+count = 5
+while count > 0:
+    print(count, end=" ")
+    count -= 1                    # without this line the loop runs forever
+print("Go!")                      # 5 4 3 2 1 Go!
+
+balance, years = 1000, 0
+while balance < 2000:             # how long until the money doubles at 8%?
+    balance *= 1.08
+    years += 1
+print(years)                      # 10
+        </script>
+      </section>
+
+      <section class="chapter" id="break-continue">
+        <h2>break and continue</h2>
+        <p><code>continue</code> skips the rest of this round and moves on to the next item. <code>break</code> leaves the loop completely.</p>
+        <script type="text/plain" data-lang="py" data-file="control.py">
+for num in [1, 3, 7, 9, 11]:
+    if num == 3:
+        continue                  # skip 3
+    if num == 9:
+        break                     # stop before 9
+    print(num, end=" ")
+print()                           # 1 7
+
+cities = ["Bangalore", "Raipur", "Dhamtari", "London"]
+for city in cities:
+    if city.startswith("D"):
+        print("Found", city)      # Found Dhamtari
+        break
+        </script>
+      </section>
+
+      <section class="chapter" id="comprehension">
+        <h2>A loop that builds a list</h2>
+        <p>Building a new list from an old one is so common that Python has a one-line form for it, called a list comprehension.</p>
+        <script type="text/plain" data-lang="py" data-file="comprehension.py">
+squares = []
+for n in range(1, 6):             # the long way
+    squares.append(n * n)
+print(squares)                    # [1, 4, 9, 16, 25]
+
+squares = [n * n for n in range(1, 6)]            # the same thing in one line
+print(squares)                    # [1, 4, 9, 16, 25]
+
+evens = [n for n in range(1, 11) if n % 2 == 0]   # with a condition
+print(evens)                      # [2, 4, 6, 8, 10]
+        </script>
+      </section>
+
+      <section class="chapter" id="python2">
+        <h2>What changed since Python 2</h2>
+        <p>The original lesson was written for Python 2.7, which reached its end of life in 2020. If you meet old code, these are the differences that matter for loops.</p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Python 2.7 (2017 lesson)</th><th>Python 3 (this page)</th></tr></thead>
+            <tbody>
+              <tr><td><code>print i</code></td><td><code>print(i)</code></td></tr>
+              <tr><td><code>print c, "\t",</code> to stay on the same line</td><td><code>print(c, end="\t")</code></td></tr>
+              <tr><td><code>details.iteritems()</code></td><td><code>details.items()</code></td></tr>
+              <tr><td><code>range()</code> builds the whole list in memory</td><td><code>range()</code> produces numbers one at a time</td></tr>
+              <tr><td><code>"%d : %s" % (digit, word)</code></td><td><code>f"{digit} : {word}"</code></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="chapter" id="pythofrank">
+        <h2>The original Pythofrank pages</h2>
+        <p>Pythofrank was the first version of this site. The 2017 pages are still online exactly as they were written, with their original Python 2.7 code.</p>
+        <ul>
+          <li><a href="../../../index2.html">Pythofrank home</a>, the page this lesson was rewritten from</li>
+          <li><a href="../../../pages/loops.html">Loops</a>, the longer original with more <code>for</code> and <code>while</code> examples</li>
+          <li>Basics: <a href="../../../pages/what-is-python.html">What is Python</a>, <a href="../../../pages/install-setup-and-code.html">Install and setup</a>, <a href="../../../pages/variables.html">Variables</a>, <a href="../../../pages/indentation.html">Indentation</a></li>
+          <li>Data types: <a href="../../../pages/numbers.html">Numbers</a>, <a href="../../../pages/string.html">Strings</a>, <a href="../../../pages/list.html">Lists</a>, <a href="../../../pages/tuple.html">Tuples</a>, <a href="../../../pages/dictionary.html">Dictionaries</a>, <a href="../../../pages/sets.html">Sets</a></li>
+          <li>Control and structure: <a href="../../../pages/if-else.html">If else</a>, <a href="../../../pages/functions.html">Functions</a>, <a href="../../../pages/classes.html">Classes</a>, <a href="../../../pages/exception-handling.html">Exception handling</a>, <a href="../../../pages/file-handling.html">File handling</a></li>
+        </ul>
+        <p>Ready for more? Continue with <a href="design-principles.html">Python Design Principles</a>.</p>
+      </section>
+
+    </div>
+  </main>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script src="../../assets/tutorial.js"></script>
+</body>
+</html>
