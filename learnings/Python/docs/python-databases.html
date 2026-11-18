@@ -129,6 +129,7 @@
           <li><a href="#join">A second table and a JOIN</a></li>
           <li><a href="#group-by">Totals with GROUP BY</a></li>
           <li><a href="#indexes">Indexes</a></li>
+          <li><a href="#sql-n-plus-one">The N+1 query problem</a>, and <a href="#sql-n-plus-one-many">the same with one-to-many</a></li>
         </ul>
       </section>
 
@@ -487,6 +488,210 @@ conn.close()
         </script>
         <p><code>SCAN</code> means "read every row". <code>SEARCH ... USING INDEX</code> means "look it up". On ten rows you will not notice. On ten million you will. The exact wording of the plan differs a little between SQLite versions.</p>
         <p class="note"><b>Trade-off:</b> an index makes reads faster and writes a little slower, because every insert must update it too. Index the columns you filter or join on often. The primary key is indexed already.</p>
+      </section>
+
+      <section class="chapter" id="sql-n-plus-one">
+        <h2>The N+1 query problem</h2>
+        <p>The <b>N+1 query problem</b> is a performance mistake: the program runs <b>1</b> query to fetch a list of N rows, then runs <b>N</b> more queries inside a loop, one per row, to fetch something related to each. The database answers N + 1 questions where 1 or 2 would do.</p>
+        <p class="note"><b>Picture it:</b> you need 50 items from the shop. N+1 is driving to the shop 50 times and buying one item per trip. The fix is one trip with a list. Each query is cheap; the trips are what cost.</p>
+        <p>Example: an order history page shows 50 recent orders with each customer's name. The slow version fetches the orders, then looks up each customer separately.</p>
+        <script type="text/plain" data-lang="text" data-file="SQL: 51 queries">
+-- 1 query for the list
+SELECT id, total_amount, customer_id FROM orders LIMIT 50;
+
+-- then 1 query per order, 50 times
+SELECT name FROM customers WHERE id = 101;
+SELECT name FROM customers WHERE id = 102;
+SELECT name FROM customers WHERE id = 103;
+-- ... 47 more
+        </script>
+        <p><b>Fix 1: a JOIN.</b> Ask for both tables in one statement and let the database match the rows. Use <code>LEFT JOIN</code> if an order might have no customer.</p>
+        <script type="text/plain" data-lang="text" data-file="SQL: 1 query">
+SELECT orders.id, orders.total_amount, customers.name AS customer_name
+FROM orders
+JOIN customers ON customers.id = orders.customer_id
+LIMIT 50;
+        </script>
+        <p><b>Fix 2: batch with IN.</b> Fetch the list, collect the ids, and fetch all the related rows in one second query. Two queries, however long the list is.</p>
+        <script type="text/plain" data-lang="text" data-file="SQL: 2 queries">
+SELECT id, total_amount, customer_id FROM orders LIMIT 50;
+
+SELECT id, name FROM customers WHERE id IN (101, 102, 103, 104, 105);
+        </script>
+        <p>The program below builds the same page all three ways and counts the statements that really reach the database. <code>set_trace_callback</code> makes SQLite report each one.</p>
+        <script type="text/plain" data-lang="py" data-file="orders_n_plus_one.py">
+import sqlite3
+
+conn = sqlite3.connect(":memory:")
+conn.execute("CREATE TABLE customers (id INTEGER PRIMARY KEY, name TEXT NOT NULL)")
+conn.execute("""
+    CREATE TABLE orders (
+        id           INTEGER PRIMARY KEY,
+        customer_id  INTEGER NOT NULL REFERENCES customers (id),
+        total_amount INTEGER NOT NULL
+    )
+""")
+conn.executemany("INSERT INTO customers (id, name) VALUES (?, ?)", [
+    (101, "Rishikesh Agrawani"), (102, "Sandhya Agrawani"), (103, "Subhash Agrawani"),
+    (104, "Malinikesh Agrawani"), (105, "Hemkesh Agrawani"),
+])
+conn.executemany("INSERT INTO orders (customer_id, total_amount) VALUES (?, ?)",
+                 [(101 + n % 5, 500 + 10 * n) for n in range(50)])    # 50 orders
+
+queries = []
+conn.set_trace_callback(queries.append)     # SQLite calls this for every statement it runs
+
+def slow_page():                            # 1 query for the orders + 1 per order
+    page = []
+    orders = conn.execute("SELECT id, total_amount, customer_id FROM orders LIMIT 50").fetchall()
+    for order_id, total, customer_id in orders:
+        name = conn.execute("SELECT name FROM customers WHERE id = ?", (customer_id,)).fetchone()[0]
+        page.append((order_id, total, name))
+    return page
+
+def join_page():                            # 1 query, the database matches the rows
+    return conn.execute("""
+        SELECT orders.id, orders.total_amount, customers.name
+        FROM orders
+        JOIN customers ON customers.id = orders.customer_id
+        ORDER BY orders.id
+        LIMIT 50
+    """).fetchall()
+
+def batch_page():                           # 2 queries, Python matches the rows
+    orders = conn.execute("SELECT id, total_amount, customer_id FROM orders LIMIT 50").fetchall()
+    ids = sorted({customer_id for _, _, customer_id in orders})
+    marks = ", ".join("?" * len(ids))       # "?, ?, ?, ?, ?"
+    names = dict(conn.execute(f"SELECT id, name FROM customers WHERE id IN ({marks})", ids))
+    return [(order_id, total, names[customer_id]) for order_id, total, customer_id in orders]
+
+pages = []
+for build in (slow_page, join_page, batch_page):
+    queries.clear()
+    pages.append(build())
+    print(f"{build.__name__:10} {len(queries):2} queries, first row: {pages[-1][0]}")
+
+print("same page every time:", pages[0] == pages[1] == pages[2])
+conn.close()
+        </script>
+        <script type="text/plain" data-lang="text" data-file="Output">
+slow_page  51 queries, first row: (1, 500, 'Rishikesh Agrawani')
+join_page   1 queries, first row: (1, 500, 'Rishikesh Agrawani')
+batch_page  2 queries, first row: (1, 500, 'Rishikesh Agrawani')
+same page every time: True
+        </script>
+        <p>Same page, 51 queries against 1 or 2. On an in-memory database you will not feel it. On a real server every query is a network round trip of roughly a millisecond or more, so 51 trips can cost 50 ms where one costs 1 ms, and a page of 500 orders makes it 501.</p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Sign you have it</th><th>Why it hides</th></tr></thead>
+            <tbody>
+              <tr><td>A query inside a <code>for</code> loop over query results</td><td>Each line looks innocent on its own</td></tr>
+              <tr><td>The log shows the same statement many times with a different id</td><td>Nobody reads the log until the page is slow</td></tr>
+              <tr><td>Fast with test data, slow in production</td><td>N is 5 on your laptop and 5000 in production</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="chapter" id="sql-n-plus-one-many">
+        <h2>N+1 again: customers and their accounts</h2>
+        <p>The orders example was many-to-one: each order has one customer. The other direction is one-to-many: each customer has several accounts, or none. The mistake is the same, a query per customer inside the loop. The fixes are the same two, with one detail each.</p>
+        <script type="text/plain" data-lang="py" data-file="accounts_n_plus_one.py">
+import sqlite3
+from collections import defaultdict
+
+conn = sqlite3.connect(":memory:")
+conn.execute("CREATE TABLE customers (id INTEGER PRIMARY KEY, name TEXT NOT NULL)")
+conn.execute("""
+    CREATE TABLE accounts (
+        id          INTEGER PRIMARY KEY,
+        customer_id INTEGER NOT NULL REFERENCES customers (id),
+        kind        TEXT NOT NULL,
+        balance     INTEGER NOT NULL DEFAULT 0
+    )
+""")
+conn.executemany("INSERT INTO customers (name) VALUES (?)", [
+    ("Rishikesh Agrawani",), ("Sandhya Agrawani",), ("Subhash Agrawani",),
+    ("Malinikesh Agrawani",), ("Hemkesh Agrawani",),
+])
+conn.executemany("INSERT INTO accounts (customer_id, kind, balance) VALUES (?, ?, ?)", [
+    (1, "savings", 5000), (1, "current", 2500), (2, "savings", 12000),
+    (3, "savings", 8000), (4, "savings", 3000),
+])
+
+queries = []
+conn.set_trace_callback(queries.append)
+
+def slow():                                 # 1 + 5 queries
+    report = {}
+    for customer_id, name in conn.execute("SELECT id, name FROM customers").fetchall():
+        rows = conn.execute("SELECT kind, balance FROM accounts WHERE customer_id = ? ORDER BY id",
+                            (customer_id,))
+        report[name] = rows.fetchall()
+    return report
+
+def left_join():                            # 1 query, one row per account
+    report = {}
+    rows = conn.execute("""
+        SELECT customers.name, accounts.kind, accounts.balance
+        FROM customers
+        LEFT JOIN accounts ON accounts.customer_id = customers.id
+        ORDER BY customers.id, accounts.id
+    """)
+    for name, kind, balance in rows:
+        report.setdefault(name, [])
+        if kind is not None:                # a customer with no account has NULLs here
+            report[name].append((kind, balance))
+    return report
+
+def batch():                                # 2 queries
+    customers = conn.execute("SELECT id, name FROM customers").fetchall()
+    marks = ", ".join("?" * len(customers))
+    by_owner = defaultdict(list)
+    rows = conn.execute(f"SELECT customer_id, kind, balance FROM accounts "
+                        f"WHERE customer_id IN ({marks}) ORDER BY id", [c[0] for c in customers])
+    for customer_id, kind, balance in rows:
+        by_owner[customer_id].append((kind, balance))
+    return {name: by_owner[customer_id] for customer_id, name in customers}
+
+reports = []
+for build in (slow, left_join, batch):
+    queries.clear()
+    reports.append(build())
+    print(f"{build.__name__:9} {len(queries)} queries")
+
+print("same report every time:", reports[0] == reports[1] == reports[2])
+for name, accounts in reports[1].items():
+    print(f"{name:20} {accounts}")
+conn.close()
+        </script>
+        <script type="text/plain" data-lang="text" data-file="Output">
+slow      6 queries
+left_join 1 queries
+batch     2 queries
+same report every time: True
+Rishikesh Agrawani   [('savings', 5000), ('current', 2500)]
+Sandhya Agrawani     [('savings', 12000)]
+Subhash Agrawani     [('savings', 8000)]
+Malinikesh Agrawani  [('savings', 3000)]
+Hemkesh Agrawani     []
+        </script>
+        <ul>
+          <li><b>JOIN detail:</b> use <code>LEFT JOIN</code>, or Hemkesh, who has no account, drops out of the report. The join also returns one row per account, so Rishikesh's name comes back twice and Python has to group the rows.</li>
+          <li><b>Batch detail:</b> the customer columns arrive once, and the grouping is a dictionary keyed by <code>customer_id</code>. This is exactly what an ORM does when you ask it to load a relationship up front.</li>
+          <li><b>If you only need a number</b> per customer, such as the total balance, do not load the rows at all: one <a href="#group-by"><code>GROUP BY</code></a> query returns it.</li>
+        </ul>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Fix</th><th>Queries</th><th>Pick it when</th><th>Watch out for</th></tr></thead>
+            <tbody>
+              <tr><td><code>JOIN</code></td><td>1</td><td>Each row has one related row (order and its customer)</td><td>One-to-many repeats the parent columns on every child row, and <code>LIMIT</code> then counts child rows, not parents</td></tr>
+              <tr><td>Batch with <code>IN</code></td><td>2</td><td>Each row has many related rows (customer and accounts), or you page through parents with <code>LIMIT</code></td><td>Very long id lists: databases cap the number of placeholders, so send them in chunks of a few hundred</td></tr>
+              <tr><td><code>GROUP BY</code></td><td>1</td><td>You need a count or a total, not the rows</td><td>Nothing: it is the cheapest of the three</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><b>Interview line:</b> N+1 is one query for a list plus one query per item for related data. Fix it with a join, with one batched <code>IN</code> query, or with eager loading in an ORM. Find it by counting queries per request, not by timing single queries. The ORM version of this is in <a href="#n-plus-one">Relationships and the N+1 problem</a>.</p>
       </section>
 
       <section class="chapter part" id="transactions-part">
@@ -958,7 +1163,7 @@ with Session(engine) as session:         # a fresh session reads from the databa
       <section class="chapter" id="n-plus-one">
         <h2>Relationships and the N+1 problem</h2>
         <p>With a relationship you move between tables by attribute: <code>customer.accounts</code> is the list of that customer's accounts. By default the ORM loads that list only when you first touch it, with one extra query. This is called <b>lazy loading</b>.</p>
-        <p>Lazy loading is fine for one customer. In a loop over N customers it means 1 query for the customers plus N queries for their accounts. That is the <b>N+1 query problem</b>. The example counts the queries that really reach the database.</p>
+        <p>Lazy loading is fine for one customer. In a loop over N customers it means 1 query for the customers plus N queries for their accounts. That is the <b>N+1 query problem</b>, the same one <a href="#sql-n-plus-one">shown earlier in plain SQL</a>. The example counts the queries that really reach the database.</p>
         <script type="text/plain" data-lang="py" data-file="n_plus_one.py">
 from typing import List
 
