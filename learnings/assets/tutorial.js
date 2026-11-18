@@ -145,6 +145,29 @@
   }
   drawDiagrams();
 
+  /* Back to top: a floating button that appears once the reader has scrolled about a screen down */
+  var topBtn = document.createElement("button");
+  topBtn.type = "button";
+  topBtn.className = "to-top";
+  topBtn.setAttribute("aria-label", "Back to top");
+  topBtn.textContent = "\u2191 Top";
+  topBtn.hidden = true;
+  document.body.appendChild(topBtn);
+  topBtn.addEventListener("click", function () {
+    window.scrollTo(0, 0);
+    var first = document.querySelector(".brand");
+    if (first) first.focus({ preventScroll: true });   // keyboard users continue from the top of the page
+  });
+  var topTicking = false;
+  function syncTopBtn() {
+    topTicking = false;
+    topBtn.hidden = (window.pageYOffset || root.scrollTop) < 700;
+  }
+  window.addEventListener("scroll", function () {
+    if (!topTicking) { topTicking = true; (window.requestAnimationFrame || setTimeout)(syncTopBtn); }
+  }, { passive: true });
+  syncTopBtn();
+
   /* Hub layout switch: list, grid or cards, remembered per browser */
   var hub = document.getElementById("hub");
   var viewBtns = Array.prototype.slice.call(document.querySelectorAll("[data-set-view]"));
