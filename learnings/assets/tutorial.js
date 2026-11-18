@@ -3,8 +3,8 @@
 
   var root = document.documentElement;
   var THEME_KEY = "learnings-theme";
-  var LANGS = { py: "python", tsx: "typescript", ts: "typescript", js: "javascript", bash: "bash", css: "css", json: "json", html: "xml", text: null };
-  var LABELS = { bash: "Terminal", text: "Files", py: "Python" };
+  var LANGS = { py: "python", tsx: "typescript", ts: "typescript", js: "javascript", bash: "bash", go: "go", css: "css", json: "json", html: "xml", text: null };
+  var LABELS = { bash: "Terminal", text: "Files", py: "Python", go: "Go" };
 
   function readStore(key) {
     try { return localStorage.getItem(key); } catch (e) { return null; }

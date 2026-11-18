@@ -11,6 +11,7 @@
   --design: #b0256e;
   --python: #1c64a0;
   --bash: #2a7a3c;
+  --go: #00758f;
   --system: #b4541a;
   --accent: var(--react);
   --note-bg: #ecf2fb;
@@ -43,6 +44,7 @@
     --design: #ff8fc4;
     --python: #7db7f5;
     --bash: #7fd392;
+    --go: #5fd0ea;
     --system: #f2a36b;
     --note-bg: #172134;
     --code-bg: #090d15;
@@ -61,6 +63,7 @@
   --design: #ff8fc4;
   --python: #7db7f5;
   --bash: #7fd392;
+  --go: #5fd0ea;
   --system: #f2a36b;
   --note-bg: #172134;
   --code-bg: #090d15;
@@ -83,6 +86,7 @@ body[data-track="next"] { --accent: var(--next); }
 body[data-track="design"] { --accent: var(--design); }
 body[data-track="python"] { --accent: var(--python); }
 body[data-track="bash"] { --accent: var(--bash); }
+body[data-track="go"] { --accent: var(--go); }
 body[data-track="system"] { --accent: var(--system); }
 body[data-track="system"] main { max-width: 900px; }
 [data-track="hub"] { --accent: var(--fg); }
@@ -305,7 +309,7 @@ figure.code .copy {
   cursor: pointer;
 }
 figure.code .copy:hover { color: var(--code-fg); border-color: var(--code-muted); }
-figure.code pre { margin: 0; padding: 14px; overflow-x: auto; }
+figure.code pre { margin: 0; padding: 14px; overflow-x: auto; tab-size: 4; }
 figure.code code {
   background: none;
   padding: 0;
@@ -496,6 +500,7 @@ th { font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; color: 
 .track.design { --accent: var(--design); }
 .track.python { --accent: var(--python); }
 .track.bash { --accent: var(--bash); }
+.track.go { --accent: var(--go); }
 .track.system { --accent: var(--system); }
 
 /* Hub layouts: list is the default; grid and card are chosen with the view switch */
