@@ -1,0 +1,1148 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Reliability and Operations</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@500;700&display=swap">
+<link rel="stylesheet" href="../../assets/tutorial.css?v=8">
+</head>
+<body data-track="system">
+
+<header class="topbar">
+  <div class="topbar-in">
+    <a class="brand" href="../../../index.html">Learnings</a>
+    <nav class="tracks" aria-label="Paths">
+      <a href="../../../index.html#system-design" aria-current="true">System Design</a>
+      <a href="../../../archive.html">Archive</a>
+    </nav>
+    <div class="tools">
+      <button class="btn" id="menu" type="button" aria-expanded="false">Chapters</button>
+      <input id="q" type="search" placeholder="Search chapters" aria-label="Search chapters">
+      <button class="btn" id="theme" type="button">Dark mode</button>
+    </div>
+  </div>
+</header>
+
+<div class="shell">
+  <aside class="side">
+    <p class="side-label">Reliability</p>
+    <nav id="toc" aria-label="Chapters"></nav>
+  </aside>
+
+  <main>
+    <div class="page-head">
+      <p class="eyebrow">System design, part 7 of 12</p>
+      <h1>Reliability and Operations</h1>
+      <p class="lead">A design that works on a whiteboard is not yet a design that runs. This page covers what separates the two: how reliability is defined and measured, how a system is built to survive failures, how it is observed, shipped, sized and operated, and how to weave all of it into an interview answer. Interviewers at senior level listen for this explicitly.</p>
+    </div>
+
+    <div class="chapters">
+
+      <!-- ============ PART 1 ============ -->
+      <section class="chapter part" id="defining">
+        <h2>Defining reliable</h2>
+        <p class="kind">Part 1 of 7 &middot; targets you can measure</p>
+        <p>"Highly available" means nothing until it has a number, a measurement and a consequence. Start every reliability discussion here.</p>
+        <ul>
+          <li><a href="#sli-slo-sla">SLI, SLO, SLA</a>: indicator, objective, contract</li>
+          <li><a href="#choosing-slis">Choosing good SLIs</a>: availability, latency, freshness, correctness</li>
+          <li><a href="#error-budgets">Error budgets</a>: how they drive release decisions</li>
+          <li><a href="#availability-math">Availability arithmetic</a>: nines, series, parallel</li>
+          <li><a href="#rto-rpo">RTO and RPO</a>: how long down, how much lost</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="sli-slo-sla">
+        <h2>SLI, SLO, SLA</h2>
+        <p class="kind"><a href="#defining">Defining reliable</a></p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th></th><th>What it is</th><th>Example</th><th>Owned by</th></tr></thead>
+            <tbody>
+              <tr><td><b>SLI</b> (indicator)</td><td>A measured ratio: good events / valid events</td><td>Share of checkout requests that return non-5xx in under 300 ms</td><td>Engineering</td></tr>
+              <tr><td><b>SLO</b> (objective)</td><td>Target for an SLI over a window</td><td>99.9% of checkout requests good, over a rolling 28 days</td><td>Engineering plus product</td></tr>
+              <tr><td><b>SLA</b> (agreement)</td><td>Contract with a penalty if missed</td><td>99.5% monthly uptime or 10% service credit</td><td>Business and legal</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  M[Raw metrics] --> SLI["SLI<br/>good / valid"]
+  SLI --> SLO["SLO<br/>internal target"]
+  SLO --> EB[Error budget]
+  SLO -.->|looser| SLA["SLA<br/>external promise"]
+          </script>
+          <figcaption>The SLA is always looser than the SLO, so you get warned internally long before you owe anyone money.</figcaption>
+        </figure>
+        <ul>
+          <li>Measure the SLI as close to the user as you can: load balancer logs beat server metrics, client telemetry beats both.</li>
+          <li>Never promise 100%. Every dependency, network and client you do not control is below 100%, and the last nine costs the most.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="choosing-slis">
+        <h2>Choosing good SLIs</h2>
+        <p class="kind"><a href="#defining">Defining reliable</a></p>
+        <p>Pick 2 to 4 SLIs per user journey, chosen by what the user would complain about, not by what is easy to scrape.</p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>SLI type</th><th>Good event</th><th>Fits</th><th>Pitfall</th></tr></thead>
+            <tbody>
+              <tr><td><b>Availability</b></td><td>Request served without a server error</td><td>Request/response APIs</td><td>Counting 4xx as bad (client bugs) or ignoring requests that never reached you</td></tr>
+              <tr><td><b>Latency</b></td><td>Served faster than a threshold, at a percentile (p50, p99)</td><td>Interactive paths</td><td>Using the mean, which hides the tail; averaging percentiles across hosts</td></tr>
+              <tr><td><b>Freshness</b></td><td>Data age below a bound (feed updated within 60 s)</td><td>Pipelines, caches, replicas, search indexes</td><td>Measuring job success instead of data age</td></tr>
+              <tr><td><b>Correctness</b></td><td>Output matches a known answer (probes, reconciliation)</td><td>Billing, ledgers, ML outputs</td><td>Only checked by users, months later</td></tr>
+              <tr><td><b>Durability</b></td><td>Written data still readable</td><td>Storage systems</td><td>Never tested until a restore is needed</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><b>Senior signal:</b> express latency SLOs as "99% of requests under 300 ms", not "average 100 ms". A p99 target on a page that fans out to 20 backends means each backend needs a much tighter tail.</p>
+      </section>
+
+      <section class="chapter" id="error-budgets">
+        <h2>Error budgets</h2>
+        <p class="kind"><a href="#defining">Defining reliable</a></p>
+        <p>Error budget = 1 - SLO. A 99.9% SLO over 30 days allows 0.1% bad requests, about 43 minutes of full outage. It turns "reliability vs velocity" into a shared, numeric rule.</p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  B{{Budget left?}} -->|plenty| F[Ship fast, run experiments]
+  B -->|low| S[Slow down, smaller changes]
+  B -->|exhausted| Z["Freeze features<br/>fix reliability"]
+  Z -.->|budget recovers| B
+          </script>
+          <figcaption>The policy is agreed in advance with product, so a freeze is a rule being followed, not an argument.</figcaption>
+        </figure>
+        <ul>
+          <li>Unspent budget is a signal too: the SLO may be too loose, or the team too cautious. Spend it on risky migrations and chaos tests.</li>
+          <li>Budget consumed by a dependency still counts for the user; it is an input to the dependency's own SLO discussion.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="availability-math">
+        <h2>Availability arithmetic</h2>
+        <p class="kind"><a href="#defining">Defining reliable</a></p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Availability</th><th>Downtime / year</th><th>/ 30-day month</th><th>/ day</th><th>Realistic for</th></tr></thead>
+            <tbody>
+              <tr><td>99% (two nines)</td><td>3.65 days</td><td>7.2 h</td><td>14.4 min</td><td>Internal batch tools</td></tr>
+              <tr><td>99.9%</td><td>8.76 h</td><td>43.2 min</td><td>1.44 min</td><td>Most product services in one region</td></tr>
+              <tr><td>99.95%</td><td>4.38 h</td><td>21.6 min</td><td>43 s</td><td>Typical managed cloud service SLA</td></tr>
+              <tr><td>99.99%</td><td>52.6 min</td><td>4.3 min</td><td>8.6 s</td><td>Payments, auth; needs multi-zone and automated failover</td></tr>
+              <tr><td>99.999%</td><td>5.3 min</td><td>26 s</td><td>0.86 s</td><td>Multi-region, no human in the recovery loop</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <h3>Series: every hop must work</h3>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  LB["LB 99.99%"] --> APP["App 99.95%"] --> DB["DB 99.9%"]
+  DB --> R(["Total about 99.84%"])
+          </script>
+          <figcaption>Availabilities multiply in series: the chain is worse than its weakest part.</figcaption>
+        </figure>
+        <h3>Parallel: any one copy is enough</h3>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  LB["LB 99.99%"] --> A1["App copy 99.5%"]
+  LB --> A2["App copy 99.5%"]
+  A1 --> DB["DB 99.9%"]
+  A2 --> DB
+  DB --> R(["Total about 99.89%"])
+          </script>
+          <figcaption>Two 99.5% copies give 1 - 0.005 squared = 99.9975%. The single database now dominates the total.</figcaption>
+        </figure>
+        <ul>
+          <li><b>Series:</b> A = A1 &times; A2 &times; ... A chain of ten 99.9% dependencies is about 99.0%: three nines decay to two.</li>
+          <li><b>Parallel:</b> A = 1 - (1 - a)<sup>n</sup>, but only for <b>independent</b> failures with working failover. Shared config, a shared deploy or one zone breaks independence.</li>
+        </ul>
+        <script type="text/plain" data-lang="py" data-file="availability.py">
+def series(*parts):
+    total = 1.0
+    for a in parts:
+        total *= a
+    return total
+
+
+def parallel(a, n):
+    return 1 - (1 - a) ** n
+
+
+app_tier = parallel(0.995, 2)
+total = series(0.9999, app_tier, 0.999)
+print(f"{app_tier:.6f}")                   # 0.999975
+print(f"{total:.4%}")                      # 99.8875%
+print(f"{(1 - total) * 8760:.1f} h/year")  # 9.9 h/year
+print(f"{series(*[0.999] * 10):.3%}")      # 99.004%
+        </script>
+        <p class="note"><b>Interview tip:</b> do this multiplication out loud once. It justifies why you add replicas, why you remove synchronous hops, and why a 99.99% target needs the database tier to be redundant too.</p>
+      </section>
+
+      <section class="chapter" id="rto-rpo">
+        <h2>RTO and RPO</h2>
+        <p class="kind"><a href="#defining">Defining reliable</a></p>
+        <p><b>RPO</b> (recovery point objective): how much recent data you can afford to lose. <b>RTO</b> (recovery time objective): how long you can be down. Both are business inputs; they pick the replication and DR strategy.</p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  P["Last copy<br/>backup or replica"] -->|"RPO: writes lost"| D{{Disaster}}
+  D -->|"RTO: downtime"| R(["Service restored"])
+          </script>
+          <figcaption>RPO looks backwards from the disaster to the last safe copy; RTO looks forward to recovery.</figcaption>
+        </figure>
+        <ul>
+          <li>RPO near zero needs synchronous replication (pay write latency) or a replicated log; RPO of minutes allows async replication or continuous log shipping.</li>
+          <li>RTO under minutes needs automated detection and failover; anything with "a human runs the runbook" is 15+ minutes in practice.</li>
+        </ul>
+      </section>
+
+      <!-- ============ PART 2 ============ -->
+      <section class="chapter part" id="designing-failure">
+        <h2>Designing for failure</h2>
+        <p class="kind">Part 2 of 7 &middot; assume every box dies</p>
+        <p>Every component fails; the design decides whether users notice. Remove single points of failure, decide how failover works, and decide what to switch off when things go wrong.</p>
+        <ul>
+          <li><a href="#redundancy">Redundancy levels</a>: instance, zone, region</li>
+          <li><a href="#spof">Single points of failure</a>: how to find them</li>
+          <li><a href="#failover">Failover</a>: active-passive and active-active</li>
+          <li><a href="#multi-region">Multi-region designs</a>: and the replication behind each</li>
+          <li><a href="#disaster-recovery">Disaster recovery strategies</a>: cost vs RTO and RPO</li>
+          <li><a href="#tested-backups">Backups that are tested</a></li>
+          <li><a href="#degradation">Graceful degradation and load shedding</a></li>
+          <li><a href="#dependencies">Critical vs optional dependencies</a></li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="redundancy">
+        <h2>Redundancy levels</h2>
+        <p class="kind"><a href="#designing-failure">Designing for failure</a></p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  subgraph region1["Region A"]
+    subgraph za["Zone 1"]
+      I1[App] --- I2[App]
+    end
+    subgraph zb["Zone 2"]
+      I3[App] --- I4[App]
+    end
+  end
+  subgraph region2["Region B"]
+    S[Standby or active copy]
+  end
+  region1 -.->|replication| region2
+          </script>
+          <figcaption>Each ring survives a bigger failure and costs more: a dead host, a dead data centre, a dead region.</figcaption>
+        </figure>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Level</th><th>Survives</th><th>Cost</th><th>Latency impact</th></tr></thead>
+            <tbody>
+              <tr><td>Instance (N+1, N+2)</td><td>Host crash, bad deploy on one node</td><td>Low: one or two spare instances</td><td>None</td></tr>
+              <tr><td>Zone (multi-AZ)</td><td>Power, network or cooling loss in one data centre</td><td>Moderate: cross-zone traffic is billed; capacity for N-1 zones</td><td>About 1 to 2 ms between zones; sync replication is affordable</td></tr>
+              <tr><td>Region</td><td>Regional outage, control-plane failure, disaster</td><td>High: duplicate stack, egress, operational complexity</td><td>Tens to 100+ ms between regions; sync replication hurts</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><b>Failure mode:</b> three zones, but peak needs all three of them busy. Losing one zone then overloads the other two and the outage spreads. Provision so N-1 zones can carry peak.</p>
+      </section>
+
+      <section class="chapter" id="spof">
+        <h2>Single points of failure</h2>
+        <p class="kind"><a href="#designing-failure">Designing for failure</a></p>
+        <p>Walk the request path on your diagram and ask, for every box and arrow: "if exactly this dies, does the request fail?" Any yes without a mitigation is a SPOF.</p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  C([Client]) --> DNS["DNS<br/>one provider"]
+  DNS --> LB["LB<br/>single node"]
+  LB --> A1[App]
+  LB --> A2[App]
+  A1 --> DB[("Primary DB<br/>no replica")]
+  A2 --> DB
+  A1 --> K["Config service"]
+  A2 --> K
+          </script>
+          <figcaption>The app tier is redundant, but the single LB, the replica-less database and the config service each take everything down.</figcaption>
+        </figure>
+        <ul>
+          <li>Easy to miss: DNS, certificates (expiry), the secrets store, the auth service, the CI system you need to deploy a fix, a single NAT gateway, one on-call person.</li>
+          <li>Also a SPOF: a <b>shared</b> thing replicated everywhere, such as one global config push or one bad deploy to all regions at once.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="failover">
+        <h2>Failover: active-passive and active-active</h2>
+        <p class="kind"><a href="#designing-failure">Designing for failure</a></p>
+        <h3>Active-passive</h3>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  C([Clients]) --> R[Router or DNS]
+  R -->|all traffic| P[Active]
+  R -.->|on failover| S[Passive standby]
+  P -.->|replication| S
+  H[Health checker] -.-> P
+  H -.->|promote| S
+          </script>
+          <figcaption>One side serves; the other waits. Recovery time is detection plus promotion plus warm-up.</figcaption>
+        </figure>
+        <h3>Active-active</h3>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  C([Clients]) --> R[Router or DNS]
+  R -->|50%| A[Site A]
+  R -->|50%| B[Site B]
+  A <-.->|replication| B
+          </script>
+          <figcaption>Both sides serve. Losing one means the survivor must absorb all traffic, and concurrent writes must be reconciled.</figcaption>
+        </figure>
+        <div class="scroll">
+          <table>
+            <thead><tr><th></th><th>Active-passive</th><th>Active-active</th></tr></thead>
+            <tbody>
+              <tr><td><b>Failover time</b></td><td>Seconds to minutes (detect, promote, DNS TTL, cold caches)</td><td>Near zero; route around the dead site</td></tr>
+              <tr><td><b>Cost</b></td><td>Standby capacity sits idle (can be smaller if warm)</td><td>Each side needs headroom to carry 100% alone</td></tr>
+              <tr><td><b>Data</b></td><td>One writer; simple</td><td>Multiple writers need conflict handling or partitioned ownership</td></tr>
+              <tr><td><b>Risk</b></td><td>Standby rots untested; split brain if both think they are primary</td><td>Hidden cross-site dependencies; capacity mistakes cause cascades</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><b>Failure mode:</b> split brain. Use fencing (a lease or epoch number the old primary must hold to write) so a partitioned old primary cannot keep accepting writes. Consensus and leases are covered in <a href="sd-distributed-systems.html">Distributed Systems Patterns</a>.</p>
+      </section>
+
+      <section class="chapter" id="multi-region">
+        <h2>Multi-region designs</h2>
+        <p class="kind"><a href="#designing-failure">Designing for failure</a></p>
+        <p>Go multi-region for latency to global users, for regional disaster survival, or for data residency. Each shape is decided by where writes go.</p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  subgraph us["Region US: home"]
+    WU[App] --> PDB[(Primary)]
+  end
+  subgraph eu["Region EU"]
+    WE[App] --> RDB[(Read replica)]
+  end
+  UE([EU user]) -->|reads| WE
+  UE -->|writes| WU
+  PDB -.->|async| RDB
+          </script>
+          <figcaption>Read-local, write-global: reads are fast everywhere, writes pay one cross-region round trip, and EU readers may see slightly stale data.</figcaption>
+        </figure>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Shape</th><th>Writes go to</th><th>Replication choice</th><th>Gain</th><th>Pay</th></tr></thead>
+            <tbody>
+              <tr><td><b>Active-passive region</b></td><td>Primary region only</td><td>Async to standby region</td><td>Simple; DR</td><td>RPO = replication lag; RTO = failover drill</td></tr>
+              <tr><td><b>Read-local, write-global</b></td><td>One home region</td><td>Single leader, async read replicas per region</td><td>Fast reads everywhere</td><td>Slow writes for remote users; stale reads; use read-your-writes routing</td></tr>
+              <tr><td><b>Partitioned by user (geo-homing)</b></td><td>The user's home region</td><td>Each partition has a leader in its home region</td><td>Fast local writes; residency</td><td>Cross-region users and global queries are hard; re-homing</td></tr>
+              <tr><td><b>Active-active multi-writer</b></td><td>Any region</td><td>Multi-leader or leaderless, conflict resolution (LWW, CRDTs, app merge)</td><td>Local writes, survive region loss</td><td>Conflicts, anomalies; only for data that merges well</td></tr>
+              <tr><td><b>Global consensus</b></td><td>Any region, committed by quorum</td><td>Synchronous quorum across 3+ regions (Spanner-style)</td><td>Strong consistency, RPO 0</td><td>Write latency of a cross-region quorum, 50 to 200 ms</td></tr>
+              <tr><td><b>Follow-the-sun</b></td><td>Region that owns the current time window</td><td>Ownership moves on a schedule; async catch-up</td><td>Writes local to the active workforce</td><td>Handover windows; mostly for internal tools and ops</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><b>Senior signal:</b> split the data. Keep money and inventory single-writer or consensus-backed, and let carts, likes and presence be active-active with merges. One replication model for the whole system is rarely right. Replication and conflict mechanics are in <a href="sd-data-systems.html">Data Systems</a>.</p>
+      </section>
+
+      <section class="chapter" id="disaster-recovery">
+        <h2>Disaster recovery strategies</h2>
+        <p class="kind"><a href="#designing-failure">Designing for failure</a></p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Strategy</th><th>What runs in the DR region</th><th>RTO (approx.)</th><th>RPO (approx.)</th><th>Cost</th></tr></thead>
+            <tbody>
+              <tr><td><b>Backup and restore</b></td><td>Nothing; backups copied there</td><td>Hours to a day</td><td>Hours (last backup); minutes with continuous log backup</td><td>$</td></tr>
+              <tr><td><b>Pilot light</b></td><td>Data replicated; compute off or minimal</td><td>Tens of minutes to hours</td><td>Seconds to minutes</td><td>$$</td></tr>
+              <tr><td><b>Warm standby</b></td><td>Full stack, scaled down, serving no users</td><td>Minutes</td><td>Seconds</td><td>$$$</td></tr>
+              <tr><td><b>Multi-site active-active</b></td><td>Full stack, serving users</td><td>Near zero</td><td>Near zero to seconds</td><td>$$$$</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <ul>
+          <li>Pick per data set and per service, from the business RTO / RPO, not one strategy for the whole company.</li>
+          <li>Infrastructure as code is what makes pilot light and warm standby realistic: the DR stack is the same templates with different sizes.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="tested-backups">
+        <h2>Backups that are actually tested</h2>
+        <p class="kind"><a href="#designing-failure">Designing for failure</a></p>
+        <p>A backup you have never restored is a hope. Replication is not a backup: it copies a bad <code>DELETE</code> to every replica in milliseconds.</p>
+        <ul>
+          <li><b>3-2-1:</b> three copies, two media or services, one off-site (another region or account).</li>
+          <li><b>Immutable / separate account:</b> object lock or a separate account so a compromised credential or ransomware cannot delete them.</li>
+          <li><b>Point-in-time recovery:</b> snapshot plus write-ahead log lets you restore to just before the bad change.</li>
+          <li><b>Restore drills on a schedule:</b> automated restore into a scratch environment, row-count and checksum checks, and the measured duration recorded as your real RTO.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="degradation">
+        <h2>Graceful degradation and load shedding</h2>
+        <p class="kind"><a href="#designing-failure">Designing for failure</a></p>
+        <p>When capacity or a dependency is lost, serve a smaller product instead of no product, and reject excess work early and cheaply instead of slowing down for everyone.</p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  R([Request]) --> P{{Priority and load}}
+  P -->|critical| F[Full path]
+  P -->|"overloaded, low priority"| X["429 or 503<br/>with Retry-After"]
+  F --> O{{Optional dep healthy?}}
+  O -->|yes| FULL[Full response]
+  O -->|no| D["Degraded:<br/>cached or default"]
+          </script>
+          <figcaption>Shed at the edge by priority, and fall back per optional feature, so the core action keeps working.</figcaption>
+        </figure>
+        <ul>
+          <li>Degradation examples: show cached prices with a "may be out of date" note, hide recommendations, disable search filters, switch to read-only mode.</li>
+          <li>Shedding: bound queues and concurrency; drop work whose client has already timed out; prefer checkout traffic over crawlers and batch jobs.</li>
+          <li>Pre-build the switches (feature flags, kill switches) and test them; you will not write them safely during an incident.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="dependencies">
+        <h2>Critical vs optional dependencies</h2>
+        <p class="kind"><a href="#designing-failure">Designing for failure</a></p>
+        <p>Classify every dependency of every request. The answer decides timeouts, fallbacks and whether its outage is your outage.</p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  CO[Checkout] -->|critical| PAY[Payments]
+  CO -->|critical| INV[Inventory]
+  CO -.->|optional| REC[Recommendations]
+  CO -.->|optional| LOY[Loyalty points]
+  CO -.->|"async, later"| EM[[Email queue]]
+          </script>
+          <figcaption>Only solid edges can fail the request. Dashed edges get short timeouts and a fallback, or move off the request path entirely.</figcaption>
+        </figure>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Class</th><th>If it fails</th><th>Treatment</th></tr></thead>
+            <tbody>
+              <tr><td>Critical</td><td>The request fails</td><td>Redundant, SLO at least as tight as yours, retries with budget, circuit breaker that fails fast</td></tr>
+              <tr><td>Optional (soft)</td><td>Feature hidden or defaulted</td><td>Tight timeout, fallback value, never retried at length</td></tr>
+              <tr><td>Asynchronous</td><td>Work delayed</td><td>Queue with retries and a dead-letter queue</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>Circuit breakers, retries with backoff and jitter, timeouts, bulkheads and backpressure are covered in <a href="sd-distributed-systems.html">Distributed Systems Patterns</a>.</p>
+      </section>
+
+      <!-- ============ PART 3 ============ -->
+      <section class="chapter part" id="observability">
+        <h2>Observability</h2>
+        <p class="kind">Part 3 of 7 &middot; knowing what it is doing</p>
+        <p>Monitoring tells you that something is wrong; observability lets you ask why, including questions you did not plan for. Both are built from three signals.</p>
+        <ul>
+          <li><a href="#three-signals">Metrics, logs, traces</a>: what each answers</li>
+          <li><a href="#metric-types">Metric types</a>: and why percentiles need histograms</li>
+          <li><a href="#red-use">RED, USE and the golden signals</a></li>
+          <li><a href="#tracing">Distributed tracing</a>: trace, span, propagation</li>
+          <li><a href="#structured-logs">Structured logs and correlation ids</a></li>
+          <li><a href="#alerting">Alerting</a>: symptoms, fatigue, burn rate</li>
+          <li><a href="#dashboards">Dashboards worth having</a></li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="three-signals">
+        <h2>Metrics, logs, traces</h2>
+        <p class="kind"><a href="#observability">Observability</a></p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Signal</th><th>Answers</th><th>Shape</th><th>Cost driver</th><th>Weak at</th></tr></thead>
+            <tbody>
+              <tr><td><b>Metrics</b></td><td>Is something wrong, and how much? Trends, alerts</td><td>Numeric time series with a few labels</td><td>Label cardinality (never label by user id)</td><td>Explaining one specific request</td></tr>
+              <tr><td><b>Logs</b></td><td>What exactly happened in this component?</td><td>Timestamped events, ideally structured</td><td>Volume: bytes ingested and retained</td><td>Cross-service flow; aggregation is expensive</td></tr>
+              <tr><td><b>Traces</b></td><td>Where did the time go across services for this request?</td><td>Tree of timed spans per request</td><td>Span volume; usually sampled</td><td>Rare events if sampled away</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>The workflow: an alert fires on a <b>metric</b>, an exemplar or filter leads to a slow <b>trace</b>, the trace id leads to the <b>logs</b> of the failing span. Link them with shared ids.</p>
+      </section>
+
+      <section class="chapter" id="metric-types">
+        <h2>Metric types</h2>
+        <p class="kind"><a href="#observability">Observability</a></p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Type</th><th>Behaviour</th><th>Example</th><th>Query as</th></tr></thead>
+            <tbody>
+              <tr><td><b>Counter</b></td><td>Only goes up (resets on restart)</td><td><code>http_requests_total{status="500"}</code></td><td>Rate per second</td></tr>
+              <tr><td><b>Gauge</b></td><td>Goes up and down; a current value</td><td>Queue depth, memory in use, connections</td><td>Current value, max, min</td></tr>
+              <tr><td><b>Histogram</b></td><td>Counts observations into buckets</td><td>Request duration buckets 10, 50, 100, 300, 1000 ms</td><td>Percentiles estimated from bucket rates</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <ul>
+          <li>You cannot average percentiles: the mean of 20 hosts' p99 is not the fleet p99. Histograms can be <b>summed</b> across hosts, then the percentile computed, which is why latency SLOs need them.</li>
+          <li>Choose bucket edges around your SLO threshold (for example one at exactly 300 ms) so "share under 300 ms" is exact.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="red-use">
+        <h2>RED, USE and the four golden signals</h2>
+        <p class="kind"><a href="#observability">Observability</a></p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Method</th><th>For</th><th>Measure</th></tr></thead>
+            <tbody>
+              <tr><td><b>RED</b></td><td>Request-driven services</td><td>Rate, Errors, Duration</td></tr>
+              <tr><td><b>USE</b></td><td>Resources: CPU, memory, disk, network, pools, queues</td><td>Utilisation, Saturation (queued work), Errors</td></tr>
+              <tr><td><b>Four golden signals</b> (Google SRE book)</td><td>Any user-facing system</td><td>Latency, Traffic, Errors, Saturation</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>RED tells you users are hurting; USE tells you which resource is why. Separate the latency of successful and failed requests: fast errors make a broken service look quick.</p>
+      </section>
+
+      <section class="chapter" id="tracing">
+        <h2>Distributed tracing</h2>
+        <p class="kind"><a href="#observability">Observability</a></p>
+        <p>A <b>trace</b> is one request's journey; a <b>span</b> is one timed operation in it with a parent span. <b>Context propagation</b> passes trace id and parent span id across process boundaries, usually in the W3C <code>traceparent</code> header or in message headers for queues.</p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+sequenceDiagram
+  participant G as Gateway
+  participant O as Orders
+  participant P as Payments
+  participant D as DB
+  G->>O: traceparent: trace T, parent S1
+  activate O
+  Note over O: server span S2, child of S1
+  O->>D: span S3 under S2, SELECT order
+  D-->>O: 4 ms
+  O->>P: traceparent: trace T, parent S2
+  activate P
+  P-->>O: span S4: 180 ms
+  deactivate P
+  O-->>G: 200 OK, total 195 ms
+  deactivate O
+          </script>
+          <figcaption>Every hop forwards the same trace id. The trace view shows Payments spent 180 of the 195 ms.</figcaption>
+        </figure>
+        <ul>
+          <li><b>Sampling:</b> head sampling (decide at the start, for example 1%) is cheap but misses rare errors; tail sampling (decide after the trace ends) keeps all slow and failed traces at the cost of buffering.</li>
+          <li>Propagation breaks silently at thread pools, queues and third-party SDKs; check that async consumers continue the trace.</li>
+          <li>OpenTelemetry is the common vendor-neutral standard for emitting all three signals.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="structured-logs">
+        <h2>Structured logs and correlation ids</h2>
+        <p class="kind"><a href="#observability">Observability</a></p>
+        <p>Log events as key-value records, not sentences, so they can be filtered and aggregated. Every line carries the request's correlation id (often the trace id).</p>
+        <script type="text/plain" data-lang="json" data-file="log line">
+{"ts": "2026-11-18T09:12:03.114Z", "level": "error", "service": "orders",
+ "trace_id": "4bf92f3577b34da6", "user_id_hash": "a91c", "order_id": "o-8812",
+ "event": "payment_failed", "provider": "card", "latency_ms": 2012, "error": "timeout"}
+        </script>
+        <ul>
+          <li>Generate the id at the edge, return it to the client (support tickets can quote it), propagate it everywhere including queue messages.</li>
+          <li>Levels with meaning: error = someone should look; warn = degraded but handled; info = business events; debug off in production or sampled.</li>
+          <li>No secrets or raw personal data in logs; hash or omit. Logs are often kept longer and seen by more people than the database.</li>
+        </ul>
+        <p>Python specifics (the <code>logging</code> module, structured output, debugging) are in <a href="../../Python/docs/python-debugging-logging.html">Debugging and Logging</a>.</p>
+      </section>
+
+      <section class="chapter" id="alerting">
+        <h2>Alerting</h2>
+        <p class="kind"><a href="#observability">Observability</a></p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Do</th><th>Avoid</th></tr></thead>
+            <tbody>
+              <tr><td>Page on <b>symptoms</b> users feel: SLO burn, error rate, latency</td><td>Paging on <b>causes</b>: CPU 80%, one pod restarted, disk 70%</td></tr>
+              <tr><td>Every page is urgent, actionable and has a runbook link</td><td>Alerts nobody acts on (they train people to ignore pages)</td></tr>
+              <tr><td>Causes go to tickets or dashboards</td><td>Duplicate alerts for one incident from every layer</td></tr>
+              <tr><td>Review alert volume weekly; delete or fix noisy ones</td><td>Static thresholds tuned once and forgotten</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p><b>Burn-rate alerts:</b> burn rate is how fast you are spending the error budget relative to plan (1 = exactly used up at the end of the window). A common setup pages when the 1-hour burn rate exceeds about 14 (2% of a 30-day budget gone in an hour, confirmed over a short window too) and opens a ticket at a slower burn over 6 hours or more.</p>
+        <p class="note"><b>Failure mode:</b> alert fatigue. A team paged ten times a night stops reading pages, and the real one is missed. Fewer, symptom-based pages are a reliability feature.</p>
+      </section>
+
+      <section class="chapter" id="dashboards">
+        <h2>Dashboards worth having</h2>
+        <p class="kind"><a href="#observability">Observability</a></p>
+        <ul>
+          <li><b>Service overview:</b> RED per endpoint, SLO and remaining error budget, deploy markers on every graph.</li>
+          <li><b>Dependencies:</b> latency and error rate of each downstream call, circuit breaker state.</li>
+          <li><b>Resources:</b> USE for CPU, memory, connection pools, thread pools, queue depth and consumer lag.</li>
+          <li><b>Business:</b> orders per minute, sign-ups, payments succeeded. Often the first to show a silent failure.</li>
+        </ul>
+        <p>A dashboard should answer one question in ten seconds at 3 a.m. Dozens of unlabelled graphs are not observability.</p>
+      </section>
+
+      <!-- ============ PART 4 ============ -->
+      <section class="chapter part" id="shipping">
+        <h2>Shipping safely</h2>
+        <p class="kind">Part 4 of 7 &middot; change without outages</p>
+        <p>Most outages start with a change. Safe delivery limits how many users a bad change reaches and how quickly it can be undone.</p>
+        <ul>
+          <li><a href="#deploy-strategies">Deployment strategies</a>: recreate to shadow</li>
+          <li><a href="#feature-flags">Feature flags and progressive delivery</a></li>
+          <li><a href="#schema-migrations">Zero-downtime schema migrations</a>: expand, migrate, contract</li>
+          <li><a href="#compat-changes">Backward-compatible changes</a></li>
+          <li><a href="#rollback">Rollback vs roll-forward</a></li>
+          <li><a href="#cicd">CI/CD pipeline</a>: and infrastructure as code</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="deploy-strategies">
+        <h2>Deployment strategies</h2>
+        <p class="kind"><a href="#shipping">Shipping safely</a></p>
+        <h3>Rolling</h3>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  LB[Load balancer] --> A["v2"]
+  LB --> B["v2"]
+  LB --> C["v1 draining"]
+  LB --> D["v1"]
+          </script>
+          <figcaption>Instances are replaced a batch at a time; v1 and v2 serve side by side during the rollout.</figcaption>
+        </figure>
+        <h3>Blue-green</h3>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  LB[Router] -->|100%| G["Green: v2"]
+  LB -.->|"0%, kept for rollback"| B["Blue: v1"]
+  G --> DB[(Shared DB)]
+  B --> DB
+          </script>
+          <figcaption>A full second environment; switching the router is the deploy, switching back is the rollback. The database is shared, so the schema must suit both.</figcaption>
+        </figure>
+        <h3>Canary</h3>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  LB[Router] -->|"95%"| S["Stable v1"]
+  LB -->|"5%"| C["Canary v2"]
+  C --> M{{"Canary metrics<br/>vs baseline"}}
+  M -->|healthy| P[Promote in steps]
+  M -->|worse| R[Abort and roll back]
+          </script>
+          <figcaption>A small slice of real traffic judges the release automatically before everyone gets it.</figcaption>
+        </figure>
+        <h3>Shadow (dark launch)</h3>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  U([User]) --> LB[Router]
+  LB -->|response used| V1["v1"]
+  LB -.->|mirrored copy| V2["v2 shadow"]
+  V2 -.-> CMP[Compare outputs]
+  V1 -.-> CMP
+          </script>
+          <figcaption>v2 sees real traffic but its responses are discarded. Writes and side effects such as emails or charges must be disabled in the shadow.</figcaption>
+        </figure>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Strategy</th><th>User risk</th><th>Extra cost</th><th>Rollback speed</th><th>Watch out for</th></tr></thead>
+            <tbody>
+              <tr><td><b>Recreate</b></td><td>Downtime for all</td><td>None</td><td>Slow: redeploy old version</td><td>Only for dev or tolerated maintenance windows</td></tr>
+              <tr><td><b>Rolling</b></td><td>Grows with each batch</td><td>Little (surge capacity)</td><td>Medium: roll back batch by batch</td><td>Mixed versions; must be compatible</td></tr>
+              <tr><td><b>Blue-green</b></td><td>All at once on switch</td><td>Up to 2x during release</td><td>Seconds: flip the router</td><td>Shared DB and caches; sessions on switch</td></tr>
+              <tr><td><b>Canary</b></td><td>Small slice first</td><td>Small</td><td>Fast: drain the canary</td><td>Needs good metrics and enough canary traffic to be significant</td></tr>
+              <tr><td><b>Shadow</b></td><td>None (responses discarded)</td><td>Up to 2x for mirrored paths</td><td>Nothing to roll back</td><td>Side effects; only validates, never releases</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="chapter" id="feature-flags">
+        <h2>Feature flags and progressive delivery</h2>
+        <p class="kind"><a href="#shipping">Shipping safely</a></p>
+        <p>Flags separate <b>deploy</b> (code is on servers) from <b>release</b> (users see it). Progressive delivery widens the audience in steps, gated by metrics.</p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  D[Deployed, flag off] --> I[Internal users]
+  I --> P1["1% of users"]
+  P1 --> P10["10%"]
+  P10 --> P100["100%"]
+  P100 --> CL[Remove flag]
+  P1 -.->|metrics bad| OFF[Flag off]
+  P10 -.->|metrics bad| OFF
+          </script>
+          <figcaption>Turning a flag off is a rollback that takes seconds and needs no deploy.</figcaption>
+        </figure>
+        <ul>
+          <li>Kinds: release flags (short-lived), ops kill switches (permanent), experiment flags (A/B), permission flags (plans, tenants).</li>
+          <li><b>Trade-off:</b> every flag doubles a code path. Give release flags an owner and an expiry date, and delete them.</li>
+          <li>Flag evaluation must not be a critical dependency: cache flags locally, with safe defaults if the flag service is down.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="schema-migrations">
+        <h2>Zero-downtime schema migrations</h2>
+        <p class="kind"><a href="#shipping">Shipping safely</a></p>
+        <p>Old and new code run together during any rolling deploy, so every schema state must work with both. Example: rename <code>name</code> to <code>full_name</code>.</p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart TB
+  subgraph ex["Expand and migrate"]
+    direction LR
+    E["1 Expand<br/>add full_name, nullable"] --> W["2 Dual write<br/>code writes both"]
+    W --> B["3 Backfill<br/>old rows, in batches"]
+  end
+  subgraph co["Switch and contract"]
+    direction LR
+    R["4 Switch reads<br/>read full_name"] --> S["5 Stop writing<br/>name"]
+    S --> C["6 Contract<br/>drop name"]
+  end
+  ex --> co
+          </script>
+          <figcaption>Each step is its own deploy and each is reversible until the final drop.</figcaption>
+        </figure>
+        <ul>
+          <li>Backfill in small batches with throttling; one giant <code>UPDATE</code> locks rows and floods replication.</li>
+          <li>Watch for locking DDL: adding a column with a default, adding an index or a NOT NULL constraint can lock a big table on some engines and versions; use online schema change tools or concurrent index builds.</li>
+          <li>Contract only after every service, job and old mobile client has stopped reading the old column.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="compat-changes">
+        <h2>Backward-compatible changes</h2>
+        <p class="kind"><a href="#shipping">Shipping safely</a></p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Safe</th><th>Breaking</th></tr></thead>
+            <tbody>
+              <tr><td>Add an optional field or endpoint</td><td>Remove or rename a field</td></tr>
+              <tr><td>Accept a new enum value on read (ignore unknowns)</td><td>Send a new enum value to old readers that reject it</td></tr>
+              <tr><td>Widen what you accept</td><td>Narrow validation, change a type or units</td></tr>
+              <tr><td>New message version alongside the old</td><td>Change the meaning of an existing field</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>Rule: deploy readers before writers. Consumers must tolerate the new shape before any producer emits it. For events, a schema registry with compatibility checks enforces this. API versioning is in <a href="sd-api-design.html">API and Communication Design</a>.</p>
+      </section>
+
+      <section class="chapter" id="rollback">
+        <h2>Rollback vs roll-forward</h2>
+        <p class="kind"><a href="#shipping">Shipping safely</a></p>
+        <ul>
+          <li><b>Roll back first</b> when the last change is the likely cause. Mitigate, then investigate. Rollback must be one command or one flag flip and rehearsed.</li>
+          <li><b>Roll forward</b> when rollback is unsafe: a data migration already ran, a new format was written that old code cannot read, or the fix is tiny and well understood.</li>
+          <li>Design so rollback is always possible: expand-contract migrations, readers before writers, flags around risky paths.</li>
+        </ul>
+        <p class="note"><b>Senior signal:</b> "every deploy must be reversible for at least one release" is a design constraint, not an ops detail. It shapes migrations and message formats.</p>
+      </section>
+
+      <section class="chapter" id="cicd">
+        <h2>CI/CD pipeline</h2>
+        <p class="kind"><a href="#shipping">Shipping safely</a></p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart TB
+  subgraph ci["Integrate"]
+    direction LR
+    PR[Pull request] --> CI["Build, tests,<br/>lint, scan"]
+    CI --> ART[[Versioned artifact]]
+  end
+  subgraph cd["Deliver"]
+    direction LR
+    STG["Staging:<br/>integration tests"] --> CAN["Canary in prod"]
+    CAN --> W1["Region 1"]
+    W1 --> W2["Other regions"]
+  end
+  ci --> cd
+  cd -.->|bad metrics| RB[Auto rollback]
+          </script>
+          <figcaption>Build once, promote the same artifact, and widen the blast radius in waves with automatic stops.</figcaption>
+        </figure>
+        <ul>
+          <li>Deploy regions or cells one wave at a time with bake time between, so a bad release never reaches everyone at once.</li>
+          <li><b>Infrastructure as code</b> (Terraform, CloudFormation and similar): servers, networks and config are versioned, reviewed and reproducible, which is what makes DR stacks and identical environments possible.</li>
+        </ul>
+      </section>
+
+      <!-- ============ PART 5 ============ -->
+      <section class="chapter part" id="capacity">
+        <h2>Capacity and performance</h2>
+        <p class="kind">Part 5 of 7 &middot; enough, but not too much</p>
+        <p>Turn traffic estimates into machines, keep headroom for peaks and failures, and know where the system will break first.</p>
+        <ul>
+          <li><a href="#capacity-planning">Capacity planning</a>: QPS to instance counts</li>
+          <li><a href="#autoscaling">Autoscaling</a>: reactive, predictive, stateful</li>
+          <li><a href="#load-testing">Load testing types</a></li>
+          <li><a href="#bottlenecks">Finding bottlenecks</a></li>
+          <li><a href="#queueing">Queueing intuition</a>: why 100% is a failure</li>
+          <li><a href="#cost">Cost as a design constraint</a></li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="capacity-planning">
+        <h2>Capacity planning</h2>
+        <p class="kind"><a href="#capacity">Capacity and performance</a></p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  U["Users and actions"] --> AVG[Average QPS]
+  AVG -->|peak factor| PK[Peak QPS]
+  T["Load test:<br/>QPS per instance at SLO"] --> H["Target utilisation<br/>about 60%"]
+  PK --> N[Instances needed]
+  H --> N
+  N -->|"survive a zone loss"| Z[Final count]
+          </script>
+          <figcaption>Measure per-instance capacity, do not guess it, then add headroom for spikes and for losing a zone.</figcaption>
+        </figure>
+        <p>Worked example: 10 M daily users, 20 requests each, peak 3x average; one instance handles 800 QPS within the latency SLO in a load test and runs at 60% of that; 3 zones, must survive losing one.</p>
+        <script type="text/plain" data-lang="py" data-file="capacity.py">
+from math import ceil
+
+dau, req_per_user, peak_factor = 10_000_000, 20, 3
+avg_qps = dau * req_per_user / 86_400
+peak_qps = avg_qps * peak_factor
+per_instance = 800 * 0.6        # tested max at SLO, run at 60%
+needed = ceil(peak_qps / per_instance)
+zones = 3
+per_zone = ceil(needed / (zones - 1))   # two zones must carry peak
+print(round(avg_qps), round(peak_qps))  # 2315 6944
+print(needed, per_zone, per_zone * zones)  # 15 8 24
+        </script>
+        <ul>
+          <li>15 instances carry peak; 24 are deployed so any two zones can carry it. Zone redundancy costs 60% more here, and that is the price of the SLO.</li>
+          <li>Repeat for each tier: the database, cache memory and queue throughput usually run out before stateless compute.</li>
+          <li>Plan for growth: forecast 6 to 12 months ahead for anything with a long lead time (database shards, reserved capacity).</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="autoscaling">
+        <h2>Autoscaling</h2>
+        <p class="kind"><a href="#capacity">Capacity and performance</a></p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  M["Metric: CPU, RPS,<br/>queue lag"] --> P{{Above or below target?}}
+  P -->|above| OUT[Add instances]
+  P -->|below for a while| IN[Remove instances]
+  OUT --> CD[Cooldown]
+  IN --> CD
+  CD --> M
+          </script>
+          <figcaption>A control loop with a lag: new instances take time to boot and warm up, so scale out early and scale in slowly.</figcaption>
+        </figure>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Kind</th><th>How</th><th>Good for</th><th>Weak at</th></tr></thead>
+            <tbody>
+              <tr><td>Reactive (target tracking)</td><td>Keep a metric near a target, for example 60% CPU or 400 RPS per instance</td><td>Gradual changes</td><td>Sudden spikes faster than boot time</td></tr>
+              <tr><td>Scheduled / predictive</td><td>Scale ahead of known patterns (daily peak, a sale, a match)</td><td>Predictable load</td><td>Surprises</td></tr>
+              <tr><td>Queue-based</td><td>Workers sized by backlog / acceptable drain time</td><td>Async consumers</td><td>Partitioned queues cap useful consumers</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <ul>
+          <li>Cooldowns and asymmetric thresholds stop flapping. Keep a minimum that survives a zone loss.</li>
+          <li><b>The stateful tier is the hard part:</b> adding a database node means moving data (resharding, rebalancing) which takes hours and adds load exactly when you are busiest. Plan stateful capacity ahead; autoscale the stateless tiers.</li>
+          <li>Scaling out the app can overload the database (more connections); use pooling and cap the fleet.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="load-testing">
+        <h2>Load testing types</h2>
+        <p class="kind"><a href="#capacity">Capacity and performance</a></p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Type</th><th>Shape of load</th><th>Finds</th></tr></thead>
+            <tbody>
+              <tr><td><b>Load</b></td><td>Expected peak, held</td><td>Whether you meet the SLO at planned capacity</td></tr>
+              <tr><td><b>Stress</b></td><td>Increase until it breaks</td><td>The breaking point and how it fails (gracefully or by collapse)</td></tr>
+              <tr><td><b>Soak</b></td><td>Normal load for hours or days</td><td>Leaks: memory, connections, file handles, growing queues</td></tr>
+              <tr><td><b>Spike</b></td><td>Sudden jump, for example 10x in a minute</td><td>Autoscaling lag, cold caches, thundering herds</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>Use production-like data sizes and realistic request mixes; a test against an empty database or a single hot key measures the wrong thing.</p>
+      </section>
+
+      <section class="chapter" id="bottlenecks">
+        <h2>Finding bottlenecks</h2>
+        <p class="kind"><a href="#capacity">Capacity and performance</a></p>
+        <ul>
+          <li>Start from the slowest span in traces, then apply USE to that component: which resource is saturated?</li>
+          <li>Usual suspects, in rough order: database (slow queries, missing indexes, lock contention, connection pool), hot keys or partitions, synchronous calls to slow dependencies, thread or connection pool limits, GC pauses, network egress.</li>
+          <li>Profile under load (CPU flame graphs, allocation profiles); the code that is slow at 1 QPS is often not the one slow at 5,000.</li>
+          <li>Fix the biggest one, measure again. The bottleneck moves; optimising a non-bottleneck changes nothing.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="queueing">
+        <h2>Queueing intuition</h2>
+        <p class="kind"><a href="#capacity">Capacity and performance</a></p>
+        <p>In a simple queue model (M/M/1), mean response time is service time / (1 - utilisation). Latency stays flat until about 70% and then climbs steeply.</p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Utilisation</th><th>50%</th><th>70%</th><th>80%</th><th>90%</th><th>95%</th><th>99%</th></tr></thead>
+            <tbody>
+              <tr><td><b>Response time vs idle</b></td><td>2x</td><td>3.3x</td><td>5x</td><td>10x</td><td>20x</td><td>100x</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <ul>
+          <li>At 100% utilisation the queue grows without bound: every request times out, clients retry, and load rises further. That is why it is a failure, not efficiency.</li>
+          <li>This is why targets sit at 50 to 70%, why queues need bounds, and why load shedding beats queueing during overload.</li>
+          <li>Little's law: items in system = arrival rate &times; time in system. At 2,000 QPS and 50 ms, about 100 requests are in flight; size pools from that.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="cost">
+        <h2>Cost as a design constraint</h2>
+        <p class="kind"><a href="#capacity">Capacity and performance</a></p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Cost</th><th>Grows with</th><th>Levers</th></tr></thead>
+            <tbody>
+              <tr><td><b>Compute</b></td><td>Peak load, headroom, idle standby</td><td>Right-size instances, autoscale, reserved or committed capacity for the base, spot for batch</td></tr>
+              <tr><td><b>Storage</b></td><td>Data volume times replicas times retention</td><td>Tiered storage (hot SSD, warm, cold object store, archive), TTLs, compression</td></tr>
+              <tr><td><b>Egress</b></td><td>Bytes leaving a region or the cloud; cross-zone traffic</td><td>CDN, compression, keep chatty services in one zone, avoid cross-region fan-out</td></tr>
+              <tr><td><b>Observability</b></td><td>Log volume, metric cardinality, trace volume</td><td>Sampling, retention tiers, drop debug logs</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><b>Senior signal:</b> mention cost when choosing a reliability level. "Active-active in three regions roughly triples the infrastructure bill; for this product a warm standby meets the RTO" is the kind of trade-off interviewers want to hear.</p>
+      </section>
+
+      <!-- ============ PART 6 ============ -->
+      <section class="chapter part" id="operating">
+        <h2>Operating it</h2>
+        <p class="kind">Part 6 of 7 &middot; people and process</p>
+        <p>Reliability is also a practice: how incidents are handled, learned from and prevented.</p>
+        <ul>
+          <li><a href="#incident-response">Incident response</a>: detect to review</li>
+          <li><a href="#on-call">On-call and runbooks</a></li>
+          <li><a href="#postmortems">Blameless postmortems</a></li>
+          <li><a href="#chaos">Chaos engineering and game days</a></li>
+          <li><a href="#change-management">Change management</a>: the top cause of incidents</li>
+          <li><a href="#readiness">Production readiness checklist</a></li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="incident-response">
+        <h2>Incident response</h2>
+        <p class="kind"><a href="#operating">Operating it</a></p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  D[Detect] --> T["Triage<br/>severity, owner"]
+  T --> M["Mitigate<br/>stop the bleeding"]
+  M --> R["Resolve<br/>root fix"]
+  R --> V["Review<br/>postmortem"]
+  V -.->|action items| D
+          </script>
+          <figcaption>Mitigation (roll back, fail over, shed load) comes before diagnosis. Users care that it stopped, not why yet.</figcaption>
+        </figure>
+        <ul>
+          <li><b>Roles:</b> incident commander (coordinates, decides), operations lead (hands on keyboard), communications lead (status page, stakeholders). Small incidents may combine them.</li>
+          <li><b>Severity levels</b> agreed in advance (for example SEV1: major user impact, all hands) decide who is paged and how often to update.</li>
+          <li>Keep a timeline as you go in the incident channel; it becomes the postmortem.</li>
+          <li>Key measures: time to detect, time to mitigate. MTTR matters more than MTBF for most systems.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="on-call">
+        <h2>On-call and runbooks</h2>
+        <p class="kind"><a href="#operating">Operating it</a></p>
+        <ul>
+          <li>Rotation of at least 5 to 8 people per schedule, a primary and a secondary, a clear escalation path, and a handover note each shift.</li>
+          <li>Measure load: pages per shift and night pages. A sustained couple of incidents per shift means the system needs engineering, not more heroes.</li>
+          <li><b>Runbooks:</b> linked from each alert; state what the alert means, how to confirm user impact, safe mitigations (commands, dashboards, flags), and when to escalate. Automate steps that are run often.</li>
+          <li>The team that builds a service is on call for it, or at least owns its alerts; it closes the feedback loop.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="postmortems">
+        <h2>Blameless postmortems</h2>
+        <p class="kind"><a href="#operating">Operating it</a></p>
+        <p>Blameless means asking why the system let a reasonable person make the mistake, not who made it. People hide information when they fear blame, and the real causes stay hidden.</p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Section</th><th>Contains</th></tr></thead>
+            <tbody>
+              <tr><td>Summary and impact</td><td>Who was affected, how much, how long; error budget spent</td></tr>
+              <tr><td>Timeline</td><td>Detection, key decisions, mitigation, resolution, with timestamps</td></tr>
+              <tr><td>Contributing factors</td><td>Usually several: the trigger, the latent bug, the missing guard, why detection was slow</td></tr>
+              <tr><td>What went well, what was lucky</td><td>Luck is a risk to remove</td></tr>
+              <tr><td>Action items</td><td>Specific, owned, dated, prioritised; tracked to done</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><b>Failure mode:</b> action items that say "be more careful". Good actions change the system: a guard rail, an automated check, an alert, a safer default.</p>
+      </section>
+
+      <section class="chapter" id="chaos">
+        <h2>Chaos engineering and game days</h2>
+        <p class="kind"><a href="#operating">Operating it</a></p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  H["Hypothesis:<br/>losing a zone keeps SLO"] --> S[Small blast radius]
+  S --> I["Inject fault"]
+  I --> O{{SLO held?}}
+  O -->|yes| W[Widen scope]
+  O -->|no| F[Fix weakness]
+  F --> H
+  W --> H
+          </script>
+          <figcaption>A chaos experiment is a test of a stated hypothesis, with an abort switch, not random breakage.</figcaption>
+        </figure>
+        <ul>
+          <li>Faults to inject: kill instances, add latency to a dependency, drop a zone, fill a disk, expire a certificate, exhaust a connection pool, fail DNS.</li>
+          <li><b>Game days:</b> scheduled exercises where a team runs a failure scenario (often a DR failover) end to end, including the humans and runbooks.</li>
+          <li>Start in staging, then production during working hours with small scope and error budget to spare.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="change-management">
+        <h2>Change management</h2>
+        <p class="kind"><a href="#operating">Operating it</a></p>
+        <p>Changes (code deploys, config pushes, feature flags, infrastructure, certificate and DNS updates) are widely reported as the largest single trigger of production incidents. Treat every change, not only code, as a deploy.</p>
+        <ul>
+          <li>Config and flags go through review, validation, staged rollout and quick rollback, just like code. A global config push is the classic way to take down every region at once.</li>
+          <li>Every change is recorded with who, what and when, and shown as a marker on dashboards, so "what changed?" is answered in seconds.</li>
+          <li>Freeze or slow changes during peak events and when the error budget is spent.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="readiness">
+        <h2>Production readiness checklist</h2>
+        <p class="kind"><a href="#operating">Operating it</a></p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Area</th><th>Ready means</th></tr></thead>
+            <tbody>
+              <tr><td>SLOs</td><td>SLIs defined and measured; SLO and error budget policy agreed</td></tr>
+              <tr><td>Redundancy</td><td>No SPOF on the critical path; N-1 zone capacity; failover tested</td></tr>
+              <tr><td>Dependencies</td><td>Each classified; timeouts, retries with budget, circuit breakers, fallbacks</td></tr>
+              <tr><td>Observability</td><td>RED dashboards, structured logs with correlation ids, tracing, deploy markers</td></tr>
+              <tr><td>Alerting</td><td>Symptom-based pages with runbooks; owner and on-call rotation</td></tr>
+              <tr><td>Delivery</td><td>Automated pipeline, canary or staged rollout, one-step rollback</td></tr>
+              <tr><td>Data</td><td>Backups with a tested restore; RPO and RTO met in a drill; migrations expand-contract</td></tr>
+              <tr><td>Capacity</td><td>Load tested at expected peak plus headroom; autoscaling limits; quotas raised</td></tr>
+              <tr><td>Overload</td><td>Rate limits, load shedding, bounded queues</td></tr>
+              <tr><td>Security</td><td>Secrets managed, least privilege, certificate expiry monitored</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ============ PART 7 ============ -->
+      <section class="chapter part" id="interview">
+        <h2>In the interview</h2>
+        <p class="kind">Part 7 of 7 &middot; saying it out loud</p>
+        <p>Reliability is not a separate section at the end of an answer; it threads through it. These chapters show how, and summarise the page.</p>
+        <ul>
+          <li><a href="#weaving">Weaving reliability into an HLD answer</a></li>
+          <li><a href="#failure-table">Component fails, then what?</a>: a worked table</li>
+          <li><a href="#cheat-sheet">Cheat sheet</a></li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="weaving">
+        <h2>Weaving reliability into an HLD answer</h2>
+        <p class="kind"><a href="#interview">In the interview</a></p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Phase of the answer</th><th>What to say</th></tr></thead>
+            <tbody>
+              <tr><td>Requirements</td><td>Name SLOs up front: "99.9% for reads, 99.99% for payments, p99 under 200 ms; RPO zero for orders, minutes for analytics."</td></tr>
+              <tr><td>High-level diagram</td><td>Mark the single points of failure yourself before the interviewer does, and say how each is removed.</td></tr>
+              <tr><td>Deep dive</td><td>For each component: what happens when it dies, how it is detected, what the user sees.</td></tr>
+              <tr><td>Scale</td><td>Capacity arithmetic with headroom for a zone loss; where the stateful bottleneck is.</td></tr>
+              <tr><td>Wrap-up</td><td>How you would deploy it (canary, flags, expand-contract), observe it (SLO dashboards, burn-rate alerts) and recover it (DR strategy that matches the RTO).</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><b>Senior signal:</b> mid-level answers say "add replicas for availability". Senior answers say which failure each replica covers, what failover costs in time and data, and what the user sees meanwhile.</p>
+      </section>
+
+      <section class="chapter" id="failure-table">
+        <h2>Component fails, then what?</h2>
+        <p class="kind"><a href="#interview">In the interview</a></p>
+        <p>A sample e-commerce architecture, then the table you should be able to produce for it.</p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  C([Client]) --> CDN[CDN]
+  CDN --> LB[Load balancer]
+  LB --> API["API x6, 3 zones"]
+  API --> RC[(Cache)]
+  API --> DB[(Primary DB)]
+  DB -.->|sync| DR[(Standby)]
+  API --> Q[[Queue]]
+  Q --> W[Workers]
+  API --> PSP[Payment provider]
+          </script>
+          <figcaption>Every box here appears in the table below; the payment provider is a critical dependency you do not control.</figcaption>
+        </figure>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Component fails</th><th>User impact</th><th>Mitigation</th></tr></thead>
+            <tbody>
+              <tr><td>One API instance</td><td>None; a few requests retried</td><td>Health checks remove it; N+2 capacity</td></tr>
+              <tr><td>A whole zone</td><td>Brief errors, then none</td><td>Two zones sized to carry peak; LB stops routing to the dead zone</td></tr>
+              <tr><td>Cache cluster</td><td>Slower pages; risk of DB overload</td><td>Replicated cache; request coalescing; shed low-priority reads; warm on recovery</td></tr>
+              <tr><td>Primary database</td><td>Writes fail for seconds to a minute</td><td>Automated failover to synchronous standby (RPO 0); fencing of the old primary</td></tr>
+              <tr><td>Queue</td><td>Emails and fulfilment delayed</td><td>Replicated queue; outbox table holds events until it returns</td></tr>
+              <tr><td>Workers</td><td>Backlog grows; no immediate user impact</td><td>Autoscale on lag; idempotent consumers; DLQ for poison messages</td></tr>
+              <tr><td>Payment provider</td><td>Cannot pay</td><td>Timeout and circuit breaker; second provider or "order accepted, payment pending" with retry</td></tr>
+              <tr><td>CDN</td><td>Slow or failing static assets</td><td>Origin can serve directly at reduced scale; DNS switch to a second CDN</td></tr>
+              <tr><td>Whole region</td><td>Outage until failover</td><td>Warm standby region; RTO minutes, RPO = async lag; rehearsed by game day</td></tr>
+              <tr><td>Bad deploy</td><td>Errors for the canary slice</td><td>Automatic canary abort and rollback</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="chapter" id="cheat-sheet">
+        <h2>Cheat sheet</h2>
+        <p class="kind"><a href="#interview">In the interview</a></p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Topic</th><th>Remember</th></tr></thead>
+            <tbody>
+              <tr><td>SLI / SLO / SLA</td><td>Measured ratio / internal target / contract with penalty; SLA looser than SLO</td></tr>
+              <tr><td>Error budget</td><td>1 - SLO; 99.9% is about 43 min per 30 days; exhausted means freeze features</td></tr>
+              <tr><td>Nines</td><td>99.9% = 8.8 h/yr; 99.99% = 53 min/yr; 99.999% = 5 min/yr</td></tr>
+              <tr><td>Composition</td><td>Series multiplies (ten 99.9% hops is about 99.0%); parallel 1 - (1 - a)^n if independent</td></tr>
+              <tr><td>RPO / RTO</td><td>Data you can lose / time you can be down; pick replication and DR from them</td></tr>
+              <tr><td>Redundancy</td><td>Instance, zone, region; N-1 zones must carry peak</td></tr>
+              <tr><td>Failover</td><td>Active-passive: cheap, slower, split-brain risk. Active-active: fast, 2x headroom, conflicts</td></tr>
+              <tr><td>DR ladder</td><td>Backup-restore (hours) to pilot light, warm standby (minutes), multi-site (near zero)</td></tr>
+              <tr><td>Backups</td><td>Replication is not a backup; 3-2-1; restore drills give the real RTO</td></tr>
+              <tr><td>Overload</td><td>Degrade optional features; shed low priority early; bound queues</td></tr>
+              <tr><td>Signals</td><td>Metrics: is it broken. Traces: where. Logs: what exactly</td></tr>
+              <tr><td>Percentiles</td><td>Need histograms; never average p99s</td></tr>
+              <tr><td>RED / USE / golden</td><td>Rate, errors, duration / utilisation, saturation, errors / latency, traffic, errors, saturation</td></tr>
+              <tr><td>Alerting</td><td>Page on symptoms and burn rate; causes go to tickets</td></tr>
+              <tr><td>Deploys</td><td>Rolling (cheap), blue-green (instant rollback, 2x), canary (small blast radius), shadow (no user risk)</td></tr>
+              <tr><td>Migrations</td><td>Expand, dual write, backfill, switch reads, contract; readers before writers</td></tr>
+              <tr><td>Capacity</td><td>Peak QPS / (tested QPS per instance &times; 60%), then add zone-loss headroom</td></tr>
+              <tr><td>Queueing</td><td>Latency ~ 1 / (1 - utilisation); 90% busy is 10x slower</td></tr>
+              <tr><td>Incidents</td><td>Detect, triage, mitigate, resolve, review; mitigate before diagnosing</td></tr>
+              <tr><td>Top incident cause</td><td>Change: code, config, flags, infra. Stage and mark all of it</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>Next: putting all of this to work on real systems, in <a href="sd-hld-cases-1.html">HLD Case Studies: Core</a>.</p>
+      </section>
+
+    </div>
+  </main>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script src="../../assets/tutorial.js?v=8"></script>
+</body>
+</html>

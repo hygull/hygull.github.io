@@ -1,0 +1,1931 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Distributed Systems Patterns</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@500;700&display=swap">
+<link rel="stylesheet" href="../../assets/tutorial.css?v=8">
+</head>
+<body data-track="system">
+
+<header class="topbar">
+  <div class="topbar-in">
+    <a class="brand" href="../../../index.html">Learnings</a>
+    <nav class="tracks" aria-label="Paths">
+      <a href="../../../index.html#system-design" aria-current="true">System Design</a>
+      <a href="../../../archive.html">Archive</a>
+    </nav>
+    <div class="tools">
+      <button class="btn" id="menu" type="button" aria-expanded="false">Chapters</button>
+      <input id="q" type="search" placeholder="Search chapters" aria-label="Search chapters">
+      <button class="btn" id="theme" type="button">Dark mode</button>
+    </div>
+  </div>
+</header>
+
+<div class="shell">
+  <aside class="side">
+    <p class="side-label">Distributed systems</p>
+    <nav id="toc" aria-label="Chapters"></nav>
+  </aside>
+
+  <main>
+    <div class="page-head">
+      <p class="eyebrow">System design, part 4 of 12</p>
+      <h1>Distributed Systems Patterns</h1>
+      <p class="lead">The patterns that keep a multi-machine design correct when machines crash, messages are lost and clocks disagree. Each one is given as the problem, a diagram, how it works at interview depth, what it costs, how it fails and where it shows up. This is the area where a senior answer names the guarantee it needs and the price it pays, instead of drawing a box labelled "queue".</p>
+    </div>
+
+    <div class="chapters">
+
+      <section class="chapter" id="map">
+        <h2>Map of the page</h2>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Part</th><th>Question it answers</th><th>Patterns</th></tr></thead>
+            <tbody>
+              <tr><td><a href="#why-hard">1. Why distributed is hard</a></td><td>What can go wrong that cannot on one machine?</td><td>Failure model, fallacies, partial failure, impossibility results</td></tr>
+              <tr><td><a href="#time-order">2. Time and order</a></td><td>Which event happened first?</td><td>Lamport, vector and hybrid clocks, sequence numbers</td></tr>
+              <tr><td><a href="#agreement">3. Agreement</a></td><td>How do nodes agree on one leader or one log?</td><td>Leases, fencing, Raft, quorums, gossip</td></tr>
+              <tr><td><a href="#dist-tx">4. Distributed transactions</a></td><td>How do two systems change together?</td><td>2PC, sagas, outbox, TCC</td></tr>
+              <tr><td><a href="#messaging">5. Messaging correctness</a></td><td>What happens when a message arrives twice, late or never?</td><td>Idempotency, inbox, DLQ, retries, deadlines</td></tr>
+              <tr><td><a href="#staying-up">6. Staying up</a></td><td>How does one slow dependency not take everything down?</td><td>Circuit breaker, bulkhead, shedding, backpressure, hedging</td></tr>
+              <tr><td><a href="#coordination">7. Coordination patterns</a></td><td>How does exactly one worker do a thing?</td><td>Locks, work assignment, singleton jobs, counters, IDs</td></tr>
+              <tr><td><a href="#consistency">8. Consistency in practice</a></td><td>What may a reader see, and when?</td><td>Linearizability, serializability, convergence, read-your-writes</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><b>Senior signal:</b> for every arrow in your design, be able to answer three questions: what if this call times out, what if it runs twice, and what if the two ends disagree about the order. Most of this page is the vocabulary for those answers.</p>
+      </section>
+
+      <!-- ===================== PART 1 ===================== -->
+
+      <section class="chapter part" id="why-hard">
+        <h2>Why distributed is hard</h2>
+        <p class="kind">Part 1 of 8 &middot; the failure model you design against</p>
+        <p>On one machine a call either returns or the whole process dies. Across machines a third outcome appears: you do not know. Everything else on this page is a way of living with that.</p>
+        <ul>
+          <li><a href="#failure-model">The failure model</a>: which failures you design for</li>
+          <li><a href="#fallacies">The fallacies of distributed computing</a>: eight wrong assumptions and their consequences</li>
+          <li><a href="#partial-failure">Partial failure and timeouts</a>: slow and dead look the same</li>
+          <li><a href="#impossibility">Two generals and FLP</a>: what no protocol can give you</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="failure-model">
+        <h2>The failure model</h2>
+        <p class="kind"><a href="#why-hard">Why distributed is hard</a></p>
+        <p>State the failures you tolerate before you pick a protocol. A design is only "correct" relative to a failure model.</p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Failure</th><th>What happens</th><th>Typical cause</th><th>Standard defence</th></tr></thead>
+            <tbody>
+              <tr><td>Crash-stop</td><td>Node halts and never returns</td><td>Hardware loss, terminated instance</td><td>Replication, failover</td></tr>
+              <tr><td>Crash-recovery</td><td>Node halts, later returns with its disk state but not its memory</td><td>Restart, deploy, OOM kill</td><td>Durable log (fsync before ack), rejoin protocol</td></tr>
+              <tr><td>Omission</td><td>A message is never sent or never received</td><td>Full queue, dropped packet, overloaded receiver</td><td>Timeouts, retries, idempotency</td></tr>
+              <tr><td>Network partition</td><td>Two groups of healthy nodes cannot talk to each other</td><td>Switch or link failure, misconfiguration, zone isolation</td><td>Majority quorums, fencing</td></tr>
+              <tr><td>Timing ("slow is the new down")</td><td>Node responds, but far too late; often partially (one disk, one endpoint)</td><td>GC pause, noisy neighbour, degraded disk, overload</td><td>Deadlines, circuit breakers, hedging, outlier ejection</td></tr>
+              <tr><td>Byzantine</td><td>Node sends arbitrary or malicious messages</td><td>Compromise, bugs that corrupt messages</td><td>Out of scope here: needs 3f+1 nodes and signatures (blockchains, some aerospace)</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <ul>
+          <li>Datacentre designs assume <b>crash-recovery plus omission plus partitions</b>, with checksums to turn data corruption into a detectable crash-like fault.</li>
+          <li>Slow nodes are harder than dead ones: a dead node is removed by health checks, a slow one keeps receiving traffic and holds its callers' threads.</li>
+        </ul>
+        <p class="note"><b>Interview tip:</b> say "I am assuming non-Byzantine failures: nodes may crash, pause or be partitioned, but do not lie". It shows you know the assumption exists.</p>
+      </section>
+
+      <section class="chapter" id="fallacies">
+        <h2>The fallacies of distributed computing</h2>
+        <p class="kind"><a href="#why-hard">Why distributed is hard</a></p>
+        <p>Eight assumptions (Deutsch and others at Sun) that are false in production. Each one maps to a design rule.</p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>False assumption</th><th>Design consequence</th></tr></thead>
+            <tbody>
+              <tr><td>The network is reliable</td><td>Every remote call needs a timeout, a retry policy and an idempotent receiver</td></tr>
+              <tr><td>Latency is zero</td><td>Count round trips; batch, cache and co-locate chatty services; no remote calls in loops</td></tr>
+              <tr><td>Bandwidth is infinite</td><td>Paginate, compress, send deltas, keep payloads small</td></tr>
+              <tr><td>The network is secure</td><td>Authenticate and encrypt between services (mTLS), not only at the edge</td></tr>
+              <tr><td>Topology does not change</td><td>Service discovery and health checks, never hard-coded addresses</td></tr>
+              <tr><td>There is one administrator</td><td>Versioned, backward-compatible APIs; other teams deploy on their own schedule</td></tr>
+              <tr><td>Transport cost is zero</td><td>Serialisation costs CPU and cross-zone or cross-region traffic costs money</td></tr>
+              <tr><td>The network is homogeneous</td><td>Standard protocols, explicit schemas, expect mixed versions during rollouts</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="chapter" id="partial-failure">
+        <h2>Partial failure and timeouts</h2>
+        <p class="kind"><a href="#why-hard">Why distributed is hard</a></p>
+        <p>A timeout tells you only that no reply arrived in time. The request may never have arrived, may be still running, or may have completed with the reply lost. The caller cannot tell these apart.</p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+sequenceDiagram
+  participant C as Client
+  participant S as Server
+  Note over C,S: Case 1, request lost
+  C-xS: debit 100
+  Note over C,S: Case 2, server slow or crashed mid-way
+  C->>S: debit 100
+  Note over S: still working, or dead
+  Note over C,S: Case 3, work done but reply lost
+  C->>S: debit 100
+  S--xC: 200 OK
+  Note over C: All three look the same, a timeout
+          </script>
+          <figcaption>Three different server states, one observation at the client. In case 3 a blind retry debits twice.</figcaption>
+        </figure>
+        <ul>
+          <li>A timeout is an <b>unknown outcome</b>, not a failure. The safe reactions are: retry an idempotent operation, or query the outcome, or surface "pending" to the user.</li>
+          <li>A failure detector built on timeouts is necessarily imperfect: short timeouts declare healthy nodes dead (false positives, needless failovers), long ones leave dead nodes in rotation.</li>
+          <li>Hence the two recurring tools: <a href="#idempotency-keys">idempotency</a>, so retrying is safe, and <a href="#fencing-tokens">fencing</a>, so a node wrongly declared dead cannot do damage when it wakes.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="impossibility">
+        <h2>Two generals and FLP</h2>
+        <p class="kind"><a href="#why-hard">Why distributed is hard</a></p>
+        <p><b>Two generals.</b> Two parties that can only talk over a link that may drop messages cannot become certain that they both agreed, however many messages they exchange. Whoever sent the last message does not know whether it arrived, and adding an acknowledgement only moves the doubt to the acknowledgement. This is why a sender can never know for sure that a receiver processed a message, and why "<a href="#delivery-semantics">exactly-once delivery</a>" is not on offer.</p>
+        <p><b>FLP (Fischer, Lynch, Paterson, 1985).</b> In a fully asynchronous system, where there is no bound on message delay or process speed, no deterministic consensus protocol can guarantee that it always terminates if even one process may crash.</p>
+        <ul>
+          <li>FLP is about <b>liveness</b>, not safety. Raft and Paxos never decide two different values; what they cannot promise is to decide within bounded time under arbitrary delays.</li>
+          <li>Real systems step around it by assuming partial synchrony: timeouts (with randomisation) make progress very likely once the network behaves for a while.</li>
+        </ul>
+        <p class="note"><b>Senior signal:</b> phrase guarantees as "always safe, live when a majority can communicate in a timely way". That is exactly what consensus systems provide.</p>
+      </section>
+
+      <!-- ===================== PART 2 ===================== -->
+
+      <section class="chapter part" id="time-order">
+        <h2>Time and order</h2>
+        <p class="kind">Part 2 of 8 &middot; deciding what happened first</p>
+        <p>There is no shared clock. Ordering events across machines needs either logical clocks, which capture causality, or a single sequencer, which imposes an order.</p>
+        <ul>
+          <li><a href="#physical-clocks">Physical clocks</a>: why wall-clock timestamps cannot order events</li>
+          <li><a href="#lamport-clocks">Lamport clocks</a>: one counter, consistent with causality</li>
+          <li><a href="#vector-clocks">Vector clocks</a>: detecting concurrent updates</li>
+          <li><a href="#hlc-truetime">Hybrid clocks and TrueTime</a>: physical time with guarantees</li>
+          <li><a href="#ordering">Total order vs partial order</a></li>
+          <li><a href="#sequence-numbers">Idempotent sequence numbers</a>: order and dedup on one stream</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="physical-clocks">
+        <h2>Physical clocks</h2>
+        <p class="kind"><a href="#time-order">Time and order</a></p>
+        <p>Quartz clocks drift, typically by tens of parts per million (10 ppm is about 0.9 s per day; Google's Spanner design assumes a worst case of 200 ppm). NTP corrects this to within roughly a millisecond inside a well-run datacentre and tens of milliseconds or worse over the internet, and may step the clock backwards while doing so. All figures are order of magnitude.</p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+sequenceDiagram
+  participant C1 as Client 1
+  participant A as Node A, clock 100 ms fast
+  participant B as Node B, clock correct
+  participant C2 as Client 2
+  C1->>A: set x = 1 at real time 0
+  Note over A: stamps ts = 100
+  C2->>B: set x = 2 at real time 50
+  Note over B: stamps ts = 50
+  A->>B: replicate x = 1, ts 100
+  Note over B: last-write-wins keeps ts 100, so x = 1
+          </script>
+          <figcaption>The later write (x = 2) is silently discarded because the earlier one carried a larger timestamp. No error is raised anywhere.</figcaption>
+        </figure>
+        <ul>
+          <li><b>Two clocks per machine:</b> time-of-day (can jump, use only for display and coarse TTLs) and monotonic (never goes back, use for durations and timeouts, meaningless across machines).</li>
+          <li>Wall-clock timestamps are fine for logs, metrics and TTLs measured in seconds. They are unsafe for ordering writes, lock expiry decided by two different machines, and "newest wins" conflict resolution.</li>
+          <li>Process pauses (GC, VM migration) make it worse: a thread can read the clock, pause for seconds, then act on the stale reading.</li>
+        </ul>
+        <p class="note"><b>Failure mode:</b> last-write-wins with client or server timestamps loses acknowledged writes under clock skew. If you propose LWW, say what data you are prepared to lose.</p>
+      </section>
+
+      <section class="chapter" id="lamport-clocks">
+        <h2>Lamport clocks</h2>
+        <p class="kind"><a href="#time-order">Time and order</a></p>
+        <p>One integer per node. Increment it on every local event and send; on receive set it to <code>max(local, received) + 1</code>. Attach it to every message.</p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+sequenceDiagram
+  participant A as Node A
+  participant B as Node B
+  participant C as Node C
+  Note over A: local event, L = 1
+  Note over C: local event, L = 1
+  A->>B: m1 carries L = 2
+  Note over B: max of 0 and 2, plus 1, L = 3
+  B->>C: m2 carries L = 4
+  Note over C: max of 1 and 4, plus 1, L = 5
+          </script>
+          <figcaption>Timestamps rise along every message path. C's first event (L = 1) and A's send (L = 2) are unrelated, yet their numbers still compare.</figcaption>
+        </figure>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Tells you</th><th>Does not tell you</th></tr></thead>
+            <tbody>
+              <tr><td>If a happened before b (causally), then L(a) &lt; L(b)</td><td>L(a) &lt; L(b) does <b>not</b> imply a happened before b: they may be concurrent</td></tr>
+              <tr><td>A total order when ties are broken by node id: (L, node)</td><td>Whether two events are concurrent, or how far apart they were in real time</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>Cost: 8 bytes per message. Use it when you need some deterministic order consistent with causality (ordering log entries, tie-breaking); Raft terms and Paxos ballot numbers are the same idea.</p>
+      </section>
+
+      <section class="chapter" id="vector-clocks">
+        <h2>Vector clocks</h2>
+        <p class="kind"><a href="#time-order">Time and order</a></p>
+        <p>One counter <b>per node</b>, carried as a vector. Increment your own slot on each event; on receive take the element-wise maximum, then increment your own slot.</p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+sequenceDiagram
+  participant A as Node A
+  participant B as Node B
+  participant C as Node C
+  Note over A: event a1, vector 1 0 0
+  Note over C: event c1, vector 0 0 1
+  A->>B: m1 carries 2 0 0
+  Note over B: merge then tick, 2 1 0
+  B->>C: m2 carries 2 2 0
+  Note over C: merge with 0 0 1 then tick, 2 2 2
+          </script>
+          <figcaption>Vectors are written as slots A B C. a1 (1 0 0) and c1 (0 0 1): neither is less than or equal in every slot, so they are concurrent. a1 is below 2 2 2 in every slot, so a1 happened before C's last event.</figcaption>
+        </figure>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Tells you</th><th>Does not tell you / costs</th></tr></thead>
+            <tbody>
+              <tr><td>Exactly whether a happened before b, b before a, or they are concurrent</td><td>Which concurrent write should win: that is an application merge or a sibling returned to the client</td></tr>
+              <tr><td>Enough to detect conflicting updates without losing either</td><td>Size grows with the number of participants; needs pruning, which can produce false conflicts</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <ul>
+          <li>Where it shows up: Dynamo-style stores track <b>version vectors</b> (a close relative, one entry per replica rather than per client) to detect concurrent writes to a key. The original Dynamo paper returns conflicting versions to the application to merge.</li>
+          <li><b>Trade-off:</b> Lamport is small and gives an order but hides concurrency; vectors reveal concurrency but cost O(nodes) per value.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="hlc-truetime">
+        <h2>Hybrid clocks and TrueTime</h2>
+        <p class="kind"><a href="#time-order">Time and order</a></p>
+        <p><b>Hybrid logical clock (HLC).</b> A timestamp of (physical time, logical counter) that advances like a Lamport clock but stays within the clock-skew bound of wall time, so it is fixed size, respects causality across messages, and is still meaningful to a human. Databases such as CockroachDB, YugabyteDB and MongoDB use HLC-style timestamps for versioning and snapshot reads.</p>
+        <p><b>TrueTime (Spanner).</b> The clock API returns an interval [earliest, latest] that is guaranteed to contain the true time, with the width kept to a few milliseconds by GPS and atomic clock references in each datacentre. Spanner waits out that uncertainty before a commit becomes visible ("commit wait"), so if transaction T1 finishes before T2 starts, T1's timestamp is smaller: timestamp order matches real-time order.</p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Clock</th><th>Size</th><th>Respects causality</th><th>Detects concurrency</th><th>Related to real time</th></tr></thead>
+            <tbody>
+              <tr><td>Wall clock (NTP)</td><td>8 bytes</td><td>No</td><td>No</td><td>Approximately, unbounded error in the worst case</td></tr>
+              <tr><td>Lamport</td><td>8 bytes</td><td>Yes</td><td>No</td><td>No</td></tr>
+              <tr><td>Vector</td><td>O(nodes)</td><td>Yes</td><td>Yes</td><td>No</td></tr>
+              <tr><td>HLC</td><td>8 to 12 bytes</td><td>Yes</td><td>No</td><td>Yes, within the assumed skew bound</td></tr>
+              <tr><td>TrueTime-style interval</td><td>2 timestamps</td><td>Yes, by waiting out uncertainty</td><td>No</td><td>Yes, with an explicit error bound</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><b>Trade-off:</b> without bounded-uncertainty clocks, an HLC database must handle the skew window some other way (for example restarting a read that hits an uncertain timestamp, or refusing to run when skew exceeds a configured maximum). Exact behaviour is implementation-dependent.</p>
+      </section>
+
+      <section class="chapter" id="ordering">
+        <h2>Total order vs partial order</h2>
+        <p class="kind"><a href="#time-order">Time and order</a></p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th></th><th>Partial order</th><th>Total order</th></tr></thead>
+            <tbody>
+              <tr><td>Definition</td><td>Some pairs of events are incomparable (concurrent)</td><td>Every pair is ordered, and every node sees the same order</td></tr>
+              <tr><td>Source</td><td>Causality: happens-before, vector clocks</td><td>A single sequencer: one leader's log, one partition, a consensus log</td></tr>
+              <tr><td>Cost</td><td>No coordination; conflicts must be merged</td><td>Every write goes through one place; throughput and availability of that place bound the system</td></tr>
+              <tr><td>Use when</td><td>Operations commute or can be merged (likes, carts, presence)</td><td>Order changes the outcome (ledger entries, uniqueness, state machines)</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <ul>
+          <li>Delivering the same messages in the same order to all nodes (<b>total order broadcast</b>) is equivalent in power to consensus. If a design needs a global order, it needs a consensus-backed log or a single leader somewhere.</li>
+          <li>The practical compromise is <b>total order per key</b>: order within a partition, none across partitions. See <a href="#ordering-keys">ordering guarantees and partition keys</a>.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="sequence-numbers">
+        <h2>Idempotent sequence numbers</h2>
+        <p class="kind"><a href="#time-order">Time and order</a></p>
+        <p>On a single stream you do not need a clock at all. The sender numbers its messages (sender id, sequence number) and the receiver remembers the highest number applied per sender. That gives order, duplicate detection and gap detection with one integer of state per sender.</p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+sequenceDiagram
+  participant P as Producer 7
+  participant B as Receiver
+  P->>B: seq 41, credit 100
+  B-->>P: ack 41
+  P->>B: seq 42, credit 50
+  B--xP: ack 42 is lost
+  P->>B: seq 42, credit 50 again
+  Note over B: 42 already applied, skip
+  B-->>P: ack 42
+  P->>B: seq 44
+  Note over B: gap, 43 missing, reject or buffer
+          </script>
+          <figcaption>A retry is recognised by its number, not by its content. A gap is visible immediately.</figcaption>
+        </figure>
+        <ul>
+          <li>Where it shows up: TCP sequence numbers; Kafka's idempotent producer (producer id, epoch and a per-partition sequence number, with the broker rejecting duplicates and out-of-sequence batches); replication streams keyed by log offset.</li>
+          <li><b>Requirement:</b> the receiver must store "last applied sequence" atomically with the effect, otherwise a crash between the two reintroduces the duplicate.</li>
+          <li>Limit: it covers one sender-receiver stream. For arbitrary clients retrying arbitrary requests, use <a href="#idempotency-keys">idempotency keys</a>.</li>
+        </ul>
+      </section>
+
+      <!-- ===================== PART 3 ===================== -->
+
+      <section class="chapter part" id="agreement">
+        <h2>Agreement</h2>
+        <p class="kind">Part 3 of 8 &middot; one leader, one log, one view of who is alive</p>
+        <p>Many designs reduce to "exactly one node must be in charge of X". Getting that right under partitions is consensus; getting it cheaply and approximately is gossip.</p>
+        <ul>
+          <li><a href="#leader-election">Leader election and leases</a></li>
+          <li><a href="#fencing-tokens">Fencing tokens</a>: making a stale leader harmless</li>
+          <li><a href="#consensus">Consensus in plain terms</a></li>
+          <li><a href="#raft-roles">Raft: roles and terms</a></li>
+          <li><a href="#raft-replication">Raft: log replication and commit</a></li>
+          <li><a href="#raft-election">Raft: leader election</a></li>
+          <li><a href="#raft-partition">Raft under a partition</a></li>
+          <li><a href="#paxos">Paxos in one paragraph</a></li>
+          <li><a href="#quorums">Quorums and why majorities</a></li>
+          <li><a href="#split-brain">Split brain</a></li>
+          <li><a href="#coordination-services">Coordination services</a>: ZooKeeper and etcd</li>
+          <li><a href="#gossip">Gossip protocols</a></li>
+          <li><a href="#failure-detection">Failure detection and membership</a></li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="leader-election">
+        <h2>Leader election and leases</h2>
+        <p class="kind"><a href="#agreement">Agreement</a></p>
+        <p><b>Why a leader:</b> a single writer gives a total order for free, removes write conflicts and makes invariants (uniqueness, balances) easy to check. The cost is that the leader is a throughput ceiling and its failure needs detection and handover.</p>
+        <p><b>Lease-based election:</b> a node becomes leader by writing itself into a strongly consistent store with an expiry ("I am leader until T"). It renews well before T (for example every third of the lease). If it stops renewing, another node may take the lease only after it expires.</p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Choice</th><th>Short lease (1 to 5 s)</th><th>Long lease (30 s or more)</th></tr></thead>
+            <tbody>
+              <tr><td>Failover time</td><td>Fast</td><td>Slow: the system is leaderless until expiry</td></tr>
+              <tr><td>False failovers</td><td>More: a GC pause or a network blip loses the lease</td><td>Fewer</td></tr>
+              <tr><td>Load on the lease store</td><td>Higher renewal rate</td><td>Lower</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <ul>
+          <li>A lease is a <b>timing assumption</b>: it is safe only if clocks advance at roughly the same rate on both sides and the holder notices expiry before acting. Holders should stop work some margin before their local view of the expiry.</li>
+          <li>The lease store itself must be consensus-backed (etcd, ZooKeeper, a database with a compare-and-set on a single row). A lease in an asynchronously replicated store can be granted twice after a failover.</li>
+        </ul>
+        <p class="note"><b>Failure mode:</b> the leader pauses for longer than the lease (stop-the-world GC, VM freeze, swapped-out process), a new leader is elected, then the old one resumes and carries on writing. A lease alone cannot prevent this; the next chapter does.</p>
+      </section>
+
+      <section class="chapter" id="fencing-tokens">
+        <h2>Fencing tokens</h2>
+        <p class="kind"><a href="#agreement">Agreement</a></p>
+        <p>Every time the lease or lock is granted, the lock service also returns a number that only ever increases. The holder sends that number with every write, and the <b>resource</b> rejects any write whose number is lower than the highest it has seen.</p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+sequenceDiagram
+  participant W1 as Worker 1
+  participant L as Lock service
+  participant W2 as Worker 2
+  participant S as Storage
+  W1->>L: acquire
+  L-->>W1: granted, token 33
+  Note over W1: long pause, lease expires
+  W2->>L: acquire
+  L-->>W2: granted, token 34
+  W2->>S: write with token 34
+  S-->>W2: ok, highest seen is 34
+  Note over W1: resumes, still thinks it holds the lease
+  W1->>S: write with token 33
+  S-->>W1: rejected, 33 is below 34
+          </script>
+          <figcaption>The stale leader is stopped by the storage layer, not by its own belief about the lease. Safety no longer depends on clocks or pauses.</figcaption>
+        </figure>
+        <ul>
+          <li><b>Where the token comes from:</b> a Raft term, a ZooKeeper zxid or znode version, an etcd revision, a database sequence, a leader epoch in Kafka.</li>
+          <li><b>What it costs:</b> the protected resource must be able to compare and remember tokens, atomically with the write. A plain file system or a third-party API usually cannot, and then the lock is only best-effort.</li>
+          <li>The same idea under other names: epoch numbers, generation numbers, <code>If-Match</code> version checks, STONITH (which fences by powering the old node off instead).</li>
+        </ul>
+        <p class="note"><b>Senior signal:</b> whenever you say "we take a lock" or "the leader does X", follow it with "and the writes carry the epoch so a stale holder is rejected". Interviewers probe exactly this.</p>
+      </section>
+
+      <section class="chapter" id="consensus">
+        <h2>Consensus in plain terms</h2>
+        <p class="kind"><a href="#agreement">Agreement</a></p>
+        <p>Consensus lets a group of nodes agree on a value so that the decision survives crashes and is never contradicted. Run it repeatedly and you get an agreed, ordered <b>log</b>; feed the same log to the same deterministic state machine on every node and you get a replicated database, lock service or config store.</p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Property</th><th>Meaning</th><th>Kind</th></tr></thead>
+            <tbody>
+              <tr><td>Agreement</td><td>No two nodes decide different values</td><td>Safety: holds always</td></tr>
+              <tr><td>Validity</td><td>The decided value was proposed by some node</td><td>Safety</td></tr>
+              <tr><td>Integrity</td><td>A node decides at most once</td><td>Safety</td></tr>
+              <tr><td>Termination</td><td>Every non-faulty node eventually decides</td><td>Liveness: only when a majority is up and can communicate in a timely way</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <ul>
+          <li><b>Use it for:</b> small, critical, low-churn state: who is leader, shard maps, configuration, locks, the metadata of a larger system.</li>
+          <li><b>What you pay:</b> every write needs a majority round trip and a durable write on each (roughly 1 to 10 ms in one region, an inter-region round trip when the group spans regions), and the group is unavailable for writes without a majority.</li>
+          <li>You almost never implement it. You use etcd, ZooKeeper, a Raft library or a database built on one, and you say so.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="raft-roles">
+        <h2>Raft: roles and terms</h2>
+        <p class="kind"><a href="#agreement">Agreement</a></p>
+        <p>Raft keeps a replicated log through a single strong leader. Every node is in one of three roles, and time is divided into numbered <b>terms</b>, each with at most one leader.</p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+stateDiagram-v2
+  [*] --> Follower
+  Follower --> Candidate: election timeout, no heartbeat
+  Candidate --> Leader: votes from a majority
+  Candidate --> Candidate: split vote, new term
+  Candidate --> Follower: sees a valid leader or higher term
+  Leader --> Follower: sees a higher term
+          </script>
+          <figcaption>Any node that sees a higher term than its own adopts it and becomes a follower. That single rule retires stale leaders.</figcaption>
+        </figure>
+        <ul>
+          <li><b>Term:</b> a monotonically increasing number stored durably on each node and sent in every RPC. It is a logical clock and a fencing token: requests carrying an older term are rejected.</li>
+          <li><b>One vote per term:</b> a node votes for at most one candidate in a given term (the vote is persisted before replying). Since winning needs a majority, two leaders in one term are impossible.</li>
+          <li><b>Followers are passive:</b> they only answer RPCs. Clients talk to the leader; a follower redirects.</li>
+          <li>Two RPCs carry the whole protocol: <code>RequestVote</code> and <code>AppendEntries</code> (which doubles as the heartbeat when empty).</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="raft-replication">
+        <h2>Raft: log replication and commit</h2>
+        <p class="kind"><a href="#agreement">Agreement</a></p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+sequenceDiagram
+  participant C as Client
+  participant L as Leader
+  participant F1 as Follower 1
+  participant F2 as Follower 2
+  C->>L: set x = 5
+  Note over L: append entry at index 7, not yet committed
+  L->>F1: AppendEntries prev 6, entry 7
+  L->>F2: AppendEntries prev 6, entry 7
+  F1-->>L: success
+  Note over L: index 7 on 2 of 3, commit and apply
+  L-->>C: ok
+  F2-->>L: success, late
+  L->>F1: next AppendEntries, commitIndex 7
+  L->>F2: next AppendEntries, commitIndex 7
+  Note over F1,F2: followers apply entry 7
+          </script>
+          <figcaption>The client is answered after a majority (leader included) has the entry on disk. The slowest follower does not delay the write.</figcaption>
+        </figure>
+        <ul>
+          <li><b>Consistency check:</b> each <code>AppendEntries</code> names the index and term of the entry just before the new ones. A follower that has no matching entry refuses; the leader steps back one entry at a time (or faster with an optimisation) until they match, then overwrites the follower's conflicting suffix. The leader never rewrites its own log.</li>
+          <li><b>Commit rule:</b> an entry is committed once it is stored on a majority <b>and</b> it belongs to the leader's current term. Entries from earlier terms are never committed by counting replicas; they become committed indirectly when a current-term entry after them commits.</li>
+          <li><b>Durability:</b> nodes persist term, vote and log entries before replying, so a committed entry survives any minority of crashes.</li>
+          <li><b>Client retries:</b> a leader can crash after committing but before replying, so commands should carry a client id and serial number and the state machine should deduplicate.</li>
+          <li><b>Reads:</b> a leader that has been deposed without knowing it would serve stale data from local state. Linearizable reads therefore go through the log, or confirm leadership with a round of heartbeats to a majority first, or rely on a leader lease (which reintroduces a clock assumption).</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="raft-election">
+        <h2>Raft: leader election</h2>
+        <p class="kind"><a href="#agreement">Agreement</a></p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+sequenceDiagram
+  participant S1 as Node 1, old leader
+  participant S2 as Node 2
+  participant S3 as Node 3
+  Note over S1: leader of term 3 crashes
+  Note over S2: election timeout fires first
+  Note over S2: term becomes 4, votes for itself
+  S2->>S3: RequestVote term 4, last entry index 7 term 3
+  Note over S3: no vote cast in term 4, candidate log is up to date
+  S3-->>S2: vote granted
+  Note over S2: 2 of 3 votes, leader of term 4
+  S2->>S3: AppendEntries heartbeat, term 4
+  S2-xS1: AppendEntries heartbeat, term 4
+          </script>
+          <figcaption>Node 3 resets its election timer when it grants the vote and again on each heartbeat, so it does not start a competing election.</figcaption>
+        </figure>
+        <ul>
+          <li><b>Election timeout:</b> each follower picks a random timeout (the paper suggests 150 to 300 ms; production systems often use around a second) and restarts it on every valid heartbeat. Randomisation makes it likely that one node times out first and wins before the others start.</li>
+          <li><b>Split vote:</b> if no candidate reaches a majority, candidates time out, increment the term and try again with fresh random timeouts.</li>
+          <li><b>Election restriction:</b> a voter refuses a candidate whose log is less up to date than its own (compare the term of the last entry, then the log length). Because a committed entry is on a majority and a winner needs votes from a majority, the new leader always holds every committed entry.</li>
+          <li><b>Timing requirement for liveness:</b> broadcast time must be much smaller than the election timeout, which must be much smaller than the mean time between failures. Safety does not depend on timing.</li>
+          <li>Common extensions, named in one breath: pre-vote (a partitioned node does not disrupt the cluster with an inflated term when it returns) and membership change one server at a time or through joint consensus.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="raft-partition">
+        <h2>Raft under a partition</h2>
+        <p class="kind"><a href="#agreement">Agreement</a></p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  C1([Client 1]) -->|write| A
+  C2([Client 2]) -->|write| C
+  subgraph Minority side
+    A["Node A<br/>old leader, term 3"]
+    B[Node B]
+  end
+  subgraph Majority side
+    C["Node C<br/>new leader, term 4"]
+    D[Node D]
+    E[Node E]
+  end
+  A -->|"1 ack, cannot commit"| B
+  C -->|"commits on 3 of 5"| D
+  C --> E
+          </script>
+          <figcaption>Two nodes claim leadership, but in different terms, and only one side can gather a majority. Client 1's write is never acknowledged.</figcaption>
+        </figure>
+        <ul>
+          <li><b>Majority side:</b> stops hearing heartbeats, elects a leader in a higher term, keeps serving writes.</li>
+          <li><b>Minority side:</b> the old leader still accepts requests but can never commit them, so clients time out. A local read on this side can be stale unless reads are confirmed with a majority.</li>
+          <li><b>On heal:</b> the old leader sees term 4, steps down, and its uncommitted entries are overwritten by the new leader's log. Nothing that was acknowledged to a client is lost, because nothing on the minority side was acknowledged.</li>
+          <li><b>No majority anywhere</b> (for example a 2 / 2 / 1 split of five): no side can elect a leader and the cluster is unavailable for writes until connectivity returns. This is the CP choice.</li>
+        </ul>
+        <p class="note"><b>Interview tip:</b> the two questions asked most are "can there be two leaders?" (yes, briefly, in different terms; only the newer can commit) and "can a committed write be lost?" (no, given durable storage and at most a minority failed).</p>
+      </section>
+
+      <section class="chapter" id="paxos">
+        <h2>Paxos in one paragraph</h2>
+        <p class="kind"><a href="#agreement">Agreement</a></p>
+        <p>Single-decree Paxos agrees on one value in two phases. A proposer picks a unique, increasing proposal number and asks acceptors to <b>prepare</b>; each acceptor promises to ignore lower numbers and reports any value it has already accepted. If a majority promises, the proposer sends <b>accept</b> with the value of the highest-numbered proposal reported, or its own value if none was, and the value is chosen once a majority accepts. Multi-Paxos repeats this per log slot and keeps a stable leader so the prepare phase is skipped in the common case, which makes it behave much like Raft. The honest summary: Paxos and Raft tolerate the same failures at similar cost; the original Paxos description leaves log management, leader election and membership change to the implementer, so real "Paxos" systems differ from each other, while Raft specifies those parts. In an interview, know the two phases and the majority overlap argument, and do not offer to implement either.</p>
+      </section>
+
+      <section class="chapter" id="quorums">
+        <h2>Quorums and why majorities</h2>
+        <p class="kind"><a href="#agreement">Agreement</a></p>
+        <p>Any two majorities of the same group share at least one node. So a new leader's voters always include someone who saw the last committed decision, and two sides of a partition can never both make progress. To survive f crash failures you need <b>2f + 1</b> nodes.</p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Nodes</th><th>Majority</th><th>Failures tolerated</th><th>Comment</th></tr></thead>
+            <tbody>
+              <tr><td>1</td><td>1</td><td>0</td><td>No fault tolerance</td></tr>
+              <tr><td>2</td><td>2</td><td>0</td><td>Worse than 1: either node failing stops writes</td></tr>
+              <tr><td>3</td><td>2</td><td>1</td><td>The usual minimum; one node per zone</td></tr>
+              <tr><td>4</td><td>3</td><td>1</td><td>Same tolerance as 3, slower commits</td></tr>
+              <tr><td>5</td><td>3</td><td>2</td><td>Survives one failure during maintenance of another</td></tr>
+              <tr><td>7</td><td>4</td><td>3</td><td>Rare: more replicas to wait on per write</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <ul>
+          <li>Even sizes add cost without adding tolerance. Use 3 or 5; scale reads with non-voting learners or followers, not with more voters.</li>
+          <li>Losing a majority <b>permanently</b> means manual recovery with possible data loss. Spread voters across at least three failure domains.</li>
+          <li><b>Dynamo-style quorums</b> (N replicas, W write acks, R read replies, R + W &gt; N) guarantee that a read set overlaps the latest successful write set. That is not the same as linearizability: concurrent writes, partially failed writes and sloppy quorums can still produce stale or conflicting reads. Details in <a href="sd-data-systems.html">Data Systems</a>.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="split-brain">
+        <h2>Split brain</h2>
+        <p class="kind"><a href="#agreement">Agreement</a></p>
+        <p>Two nodes each believe they are the leader and both accept writes. The histories diverge, and merging them afterwards is usually manual and lossy (duplicate ids, double spends, overwritten rows).</p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Prevention</th><th>How it works</th><th>Cost / caveat</th></tr></thead>
+            <tbody>
+              <tr><td>Majority quorum for promotion</td><td>A node may lead only with votes from more than half of a fixed membership</td><td>Needs 3 or more voters; a minority side stops serving writes</td></tr>
+              <tr><td>Witness / tiebreaker</td><td>A small third voter (often in a third zone) that holds no data</td><td>One more thing to run; still must be a real voter</td></tr>
+              <tr><td>Fencing token / epoch</td><td>Storage and followers reject the older epoch</td><td>Every write path must check it</td></tr>
+              <tr><td>STONITH</td><td>Power off or isolate the old primary before promoting</td><td>Needs a reliable out-of-band control path</td></tr>
+              <tr><td>Synchronous replication to a quorum</td><td>An isolated primary cannot acknowledge writes</td><td>Write latency and availability depend on replicas</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><b>Failure mode:</b> a two-node primary and standby pair where the standby promotes itself when it "cannot see" the primary. A partition between them (with both still reachable by clients) gives two primaries. A timeout is never proof of death.</p>
+      </section>
+
+      <section class="chapter" id="coordination-services">
+        <h2>Coordination services</h2>
+        <p class="kind"><a href="#agreement">Agreement</a></p>
+        <p>ZooKeeper (Zab protocol), etcd and Consul (both Raft) are small, strongly consistent key-value stores with leases or sessions and watches. They exist so that applications do not implement consensus themselves.</p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Use for</th><th>Mechanism</th></tr></thead>
+            <tbody>
+              <tr><td>Leader election</td><td>Ephemeral sequential znode (lowest wins) or an etcd key bound to a lease; the creation revision or zxid is the fencing token</td></tr>
+              <tr><td>Locks and leases</td><td>Same primitives; holder loses the lock when its session or lease expires</td></tr>
+              <tr><td>Membership and discovery</td><td>Each instance registers an ephemeral key; watchers are notified on change</td></tr>
+              <tr><td>Configuration and metadata</td><td>Small values (shard maps, feature flags, schemas) updated with compare-and-set, pushed by watches</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Do not use for</th><th>Why</th></tr></thead>
+            <tbody>
+              <tr><td>Application data or large values</td><td>Designed for megabytes to a few gigabytes in total; etcd's default request limit is about 1.5 MiB and its default storage quota is 2 GiB</td></tr>
+              <tr><td>High write rates</td><td>Every write is a majority round trip plus fsync through one leader: think thousands of writes per second, not hundreds of thousands (order of magnitude, hardware-dependent)</td></tr>
+              <tr><td>A queue or event bus</td><td>Watches are change notifications, not a durable high-volume stream</td></tr>
+              <tr><td>A lock on the hot path of every request</td><td>Adds a consensus round to each request and makes the service a global bottleneck</td></tr>
+              <tr><td>A hard runtime dependency for serving traffic</td><td>Cache the last known config or membership so an outage of the coordination service degrades control, not the data path</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><b>Senior signal:</b> keep the coordination service on the <b>control plane</b>. Data-plane nodes read from a local cache updated by watches and keep serving if it is unreachable.</p>
+      </section>
+
+      <section class="chapter" id="gossip">
+        <h2>Gossip protocols</h2>
+        <p class="kind"><a href="#agreement">Agreement</a></p>
+        <p>Every node periodically (about once a second) picks a few random peers and exchanges what it knows. Information spreads like an epidemic: with fan-out k, all N nodes hear a rumour in O(log N) rounds, with no coordinator and no single point of failure.</p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  A((A)) -->|round 1| B((B))
+  A -->|round 1| C((C))
+  B -->|round 2| D((D))
+  B -->|round 2| E((E))
+  C -->|round 2| F((F))
+  C -->|round 2| G((G))
+  D -.->|round 3| H((H))
+  F -.->|round 3| B
+          </script>
+          <figcaption>The number of informed nodes roughly doubles or triples each round. Some messages are wasted on nodes that already know (F to B), which is the price of having no coordinator.</figcaption>
+        </figure>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Gain</th><th>Pay</th></tr></thead>
+            <tbody>
+              <tr><td>Scales to thousands of nodes, constant load per node</td><td>Only eventual: for a few rounds nodes disagree about the state</td></tr>
+              <tr><td>Tolerates node loss and message loss without special handling</td><td>Redundant messages; state must be mergeable (versioned per node)</td></tr>
+              <tr><td>No leader, no quorum, works during partitions</td><td>Cannot be used to make a decision that needs agreement (who is leader, who owns a lock)</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>Where it shows up: cluster membership and metadata in Dynamo-style stores and Cassandra, Redis Cluster's cluster bus, Consul's Serf layer (SWIM-based). Each entry carries a version or heartbeat counter so that the newer one wins on merge.</p>
+      </section>
+
+      <section class="chapter" id="failure-detection">
+        <h2>Failure detection and membership</h2>
+        <p class="kind"><a href="#agreement">Agreement</a></p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Detector</th><th>How it decides</th><th>Trade-off</th></tr></thead>
+            <tbody>
+              <tr><td>Heartbeat with fixed timeout</td><td>Dead if no heartbeat for T</td><td>One number trades detection speed against false positives; wrong whenever the network gets slower than usual</td></tr>
+              <tr><td>Phi accrual</td><td>Outputs a suspicion level computed from the observed distribution of heartbeat arrival gaps, and the caller picks a threshold</td><td>Adapts to each link; still a guess</td></tr>
+              <tr><td>SWIM-style probing</td><td>Ping a random member; on no reply ask k others to ping it indirectly; mark "suspect" before "dead"</td><td>Separates "I cannot reach it" from "nobody can"; constant load per node</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p><b>Membership</b> is the list of nodes currently in the cluster. There are two ways to keep it, and choosing wrongly is a classic bug.</p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th></th><th>Gossip-based membership</th><th>Consensus-based membership</th></tr></thead>
+            <tbody>
+              <tr><td>View</td><td>Each node has its own, converging over time</td><td>One agreed, versioned view</td></tr>
+              <tr><td>Available during partition</td><td>Yes, each side keeps its view</td><td>Only the majority side can change it</td></tr>
+              <tr><td>Good for</td><td>Routing hints, load balancing, replica placement in AP stores</td><td>Anything where two owners is a bug: shard ownership, leader identity, lock holders</td></tr>
+              <tr><td>Examples</td><td>Cassandra ring state, Serf</td><td>ZooKeeper ephemeral nodes, etcd leases, Kafka controller metadata</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <ul>
+          <li>Detecting failure and acting on it are separate decisions. Declaring a node dead is cheap to undo for a load balancer and expensive for a database failover; use a longer confirmation for the expensive action.</li>
+          <li>A node can be alive but unreachable from only some peers (asymmetric partition). Majority-confirmed or indirect probing avoids one observer evicting a healthy node.</li>
+        </ul>
+      </section>
+
+      <!-- ===================== PART 4 ===================== -->
+
+      <section class="chapter part" id="dist-tx">
+        <h2>Distributed transactions</h2>
+        <p class="kind">Part 4 of 8 &middot; changing two systems together</p>
+        <p>A local ACID transaction stops at the boundary of one database. As soon as a business operation touches a second database, a broker or another service, atomicity has to be rebuilt, and each way of rebuilding it gives up something.</p>
+        <ul>
+          <li><a href="#dual-write">The dual-write problem</a></li>
+          <li><a href="#two-phase-commit">Two-phase commit</a> (and 3PC in one line)</li>
+          <li><a href="#sagas">Sagas</a>: local transactions plus compensations</li>
+          <li><a href="#saga-choreography">Saga choreography</a></li>
+          <li><a href="#saga-orchestration">Saga orchestration</a></li>
+          <li><a href="#saga-isolation">What isolation a saga loses</a></li>
+          <li><a href="#outbox">Transactional outbox and CDC</a></li>
+          <li><a href="#tcc">Try-confirm-cancel</a></li>
+          <li><a href="#avoid-dist-tx">Avoiding the distributed transaction</a></li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="dual-write">
+        <h2>The dual-write problem</h2>
+        <p class="kind"><a href="#dist-tx">Distributed transactions</a></p>
+        <p>A service writes to its database and then to a second system (broker, cache, search index, another service) as two separate steps. Nothing makes the pair atomic, so any crash or timeout between them leaves the two permanently different.</p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+sequenceDiagram
+  participant S as Order service
+  participant D as Orders DB
+  participant K as Broker
+  participant I as Inventory service
+  S->>D: INSERT order 981, COMMIT
+  D-->>S: ok
+  Note over S: process crashes here, or the publish times out
+  S-xK: publish OrderCreated 981
+  Note over K,I: the event never exists
+  Note over I: stock is never reserved for a committed order
+          </script>
+          <figcaption>The order is durable, the event is not. No retry will fix it, because after the crash nothing remembers that a publish was owed.</figcaption>
+        </figure>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Order of the two writes</th><th>Failure in between gives</th></tr></thead>
+            <tbody>
+              <tr><td>DB commit, then publish</td><td>Lost event: downstream never hears of a real change</td></tr>
+              <tr><td>Publish, then DB commit</td><td>Phantom event: downstream acts on a change that was rolled back</td></tr>
+              <tr><td>Either order, two concurrent requests</td><td>The two systems may apply the updates in different orders and end on different values, with no failure at all</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><b>Senior signal:</b> spot every dual write in your own diagram ("write DB, then update cache", "save, then call the email service") and name the fix: one source of truth plus a derived, replayable stream (<a href="#outbox">outbox / CDC</a>), not "we will wrap it in a try/except".</p>
+      </section>
+
+      <section class="chapter" id="two-phase-commit">
+        <h2>Two-phase commit</h2>
+        <p class="kind"><a href="#dist-tx">Distributed transactions</a></p>
+        <p>A coordinator asks every participant to <b>prepare</b> (do the work, write it durably, hold the locks, promise to commit if told to). If all vote yes it records the decision and tells everyone to <b>commit</b>; any no or timeout means abort.</p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+sequenceDiagram
+  participant Co as Coordinator
+  participant A as Orders DB
+  participant B as Payments DB
+  Co->>A: prepare
+  Co->>B: prepare
+  A-->>Co: yes, locks held
+  B-->>Co: yes, locks held
+  Note over A,B: in doubt, may neither commit nor abort alone
+  Note over Co: write COMMIT decision to durable log
+  Co->>A: commit
+  Co->>B: commit
+  A-->>Co: done
+  B-->>Co: done
+          </script>
+          <figcaption>The point of no return is the coordinator's durable decision record. If the coordinator dies after the yes votes and before the decision reaches a participant, that participant keeps its locks until the coordinator comes back.</figcaption>
+        </figure>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Property</th><th>Detail</th></tr></thead>
+            <tbody>
+              <tr><td>Gives</td><td>Atomic commit across participants: all commit or all abort</td></tr>
+              <tr><td>Blocking</td><td>A prepared participant cannot decide alone; rows stay locked for as long as the coordinator is down</td></tr>
+              <tr><td>Latency</td><td>Two round trips and several forced log writes, with locks held throughout</td></tr>
+              <tr><td>Availability</td><td>Needs every participant and the coordinator up: availability multiplies down</td></tr>
+              <tr><td>Does not give</td><td>Isolation across participants by itself; that comes from each participant's locks or MVCC</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <ul>
+          <li><b>Where it is still used:</b> XA transactions between a database and a broker or between two databases; inside distributed SQL databases, where a transaction spanning shards is committed with 2PC and each participant (and the coordinator state) is itself a consensus group, which removes the single-coordinator blocking problem (Spanner is the documented example); Kafka transactions use a coordinator-driven protocol of the same shape.</li>
+          <li><b>Avoid</b> across independently owned microservices: it couples their availability, needs every party to support the protocol, and holds locks across network calls.</li>
+          <li><b>Three-phase commit</b> adds a pre-commit phase so participants can decide without the coordinator, but it assumes bounded delays and no partitions, so it is rarely deployed.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="sagas">
+        <h2>Sagas</h2>
+        <p class="kind"><a href="#dist-tx">Distributed transactions</a></p>
+        <p>A saga is a sequence of local transactions, one per service, each committed on its own. If a later step fails, the earlier ones are undone by <b>compensating transactions</b>. You get atomicity "eventually" and give up isolation.</p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Step</th><th>Service</th><th>Local transaction</th><th>Compensation</th><th>Kind</th></tr></thead>
+            <tbody>
+              <tr><td>1</td><td>Order</td><td>Create order as PENDING</td><td>Mark order REJECTED</td><td>Compensable</td></tr>
+              <tr><td>2</td><td>Inventory</td><td>Reserve stock</td><td>Release reservation</td><td>Compensable</td></tr>
+              <tr><td>3</td><td>Payment</td><td>Capture payment</td><td>None needed if it fails; refund if a later step could fail</td><td>Pivot: the go / no-go point</td></tr>
+              <tr><td>4</td><td>Order</td><td>Mark order CONFIRMED</td><td>None</td><td>Retriable: must eventually succeed</td></tr>
+              <tr><td>5</td><td>Shipping</td><td>Create shipment</td><td>None</td><td>Retriable</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <ul>
+          <li><b>Compensation is a new business transaction</b>, not a rollback: a refund, a cancellation, a reversing ledger entry. The original remains visible in history.</li>
+          <li>Compensations and retriable steps must be <b>idempotent</b> and must be retried until they succeed; a compensation that can fail permanently needs a human queue.</li>
+          <li>Put steps that cannot be undone (charging a card with fees, sending an email, shipping) at or after the pivot, and make everything after the pivot unable to fail for business reasons.</li>
+          <li>Each step is "commit locally and emit a message", which is itself a dual write: build sagas on the <a href="#outbox">outbox</a>.</li>
+        </ul>
+        <p class="note"><b>Trade-off:</b> use a saga when the steps belong to different services and seconds of visible intermediate state are acceptable. Avoid it when the invariant must hold at every instant (a balance that may never go negative across two accounts): put that data in one database instead.</p>
+      </section>
+
+      <section class="chapter" id="saga-choreography">
+        <h2>Saga choreography</h2>
+        <p class="kind"><a href="#dist-tx">Distributed transactions</a></p>
+        <p>No central controller. Each service subscribes to the others' events and reacts, including to failure events.</p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+sequenceDiagram
+  participant O as Order
+  participant I as Inventory
+  participant P as Payment
+  Note over O: create order, PENDING
+  O-)I: OrderCreated
+  Note over I: reserve stock
+  I-)P: StockReserved
+  Note over P: card declined
+  P-)I: PaymentFailed
+  Note over I: release stock
+  P-)O: PaymentFailed
+  Note over O: order REJECTED
+          </script>
+          <figcaption>Events flow through a broker (not drawn). The failure path is just more subscriptions, and nobody holds the whole picture.</figcaption>
+        </figure>
+        <ul>
+          <li><b>Gain:</b> no extra component, loose coupling, each team owns its reactions.</li>
+          <li><b>Pay:</b> the workflow is implicit, spread over subscriptions; hard to answer "where is order 981 stuck"; easy to create cyclic event dependencies; timeouts have no natural owner.</li>
+          <li>Reasonable for two to four steps with a linear flow. Beyond that, orchestrate.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="saga-orchestration">
+        <h2>Saga orchestration</h2>
+        <p class="kind"><a href="#dist-tx">Distributed transactions</a></p>
+        <p>One orchestrator owns the workflow as a persisted state machine. It sends commands, waits for replies, and on failure issues compensations in reverse order.</p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+sequenceDiagram
+  participant X as Orchestrator
+  participant O as Order
+  participant I as Inventory
+  participant P as Payment
+  X->>O: create order, PENDING
+  O-->>X: created
+  X->>I: reserve stock
+  I-->>X: reserved
+  X->>P: capture payment
+  P-->>X: declined
+  Note over X: persist state COMPENSATING
+  X->>I: release stock
+  I-->>X: released
+  X->>O: reject order
+  O-->>X: rejected
+          </script>
+          <figcaption>The orchestrator's stored state says exactly which step each saga is on, so a restarted orchestrator resumes and an operator can see stuck sagas.</figcaption>
+        </figure>
+        <ul>
+          <li><b>Gain:</b> the flow is explicit and testable, timeouts and retries live in one place, participants stay simple (command in, reply out).</li>
+          <li><b>Pay:</b> one more service to run and scale; risk of business logic drifting into the orchestrator; its state store must be durable and its commands idempotent, since it retries after a crash.</li>
+          <li>Often delegated to a workflow engine (Temporal, AWS Step Functions, Camunda) rather than hand-built.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="saga-isolation">
+        <h2>What isolation a saga loses</h2>
+        <p class="kind"><a href="#dist-tx">Distributed transactions</a></p>
+        <p>Each local transaction commits and is visible immediately, so other requests can observe and act on a saga that is half done or about to be compensated.</p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Anomaly</th><th>Example</th><th>Countermeasure</th></tr></thead>
+            <tbody>
+              <tr><td>Dirty read</td><td>A report counts revenue from a payment that is refunded seconds later</td><td><b>Semantic lock:</b> a PENDING state on the record that readers must respect</td></tr>
+              <tr><td>Lost update</td><td>A user edits the order while the saga is running and the saga overwrites it</td><td><b>Version check:</b> each step updates with a conditional write on the record version</td></tr>
+              <tr><td>Acting on a reservation that disappears</td><td>Stock shown as available, then taken back by a compensation, or the reverse</td><td><b>Reserve, do not decrement:</b> hold quantities in a separate reserved bucket until confirmed</td></tr>
+              <tr><td>Out-of-order effects</td><td>Cancel arrives before the create it cancels</td><td><b>Commutative updates</b> and tombstones, so order of arrival does not change the result</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><b>Interview tip:</b> "a saga is ACD, not ACID" is the one-line answer. The follow-up is always "so what does the user see in between?", and the answer is a named pending state.</p>
+      </section>
+
+      <section class="chapter" id="outbox">
+        <h2>Transactional outbox and CDC</h2>
+        <p class="kind"><a href="#dist-tx">Distributed transactions</a></p>
+        <p>Turn the dual write into a single local transaction: write the business row <b>and</b> a row describing the event into an outbox table in the same database transaction. A separate relay then publishes outbox rows to the broker.</p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  S[Order service] -->|same transaction| T
+  S -->|same transaction| OB
+  subgraph DB [Service database]
+    T[(orders)]
+    OB[(outbox)]
+  end
+  OB -.->|WAL or binlog| R[CDC relay]
+  R -->|at-least-once| K[[Broker]]
+  K --> C1[Consumer with inbox]
+  K --> C2[Search indexer]
+          </script>
+          <figcaption>Either both rows commit or neither does. The relay can crash and resume from its log position, so an event may be published twice but is never lost or invented.</figcaption>
+        </figure>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Relay style</th><th>How</th><th>Trade-off</th></tr></thead>
+            <tbody>
+              <tr><td>Polling publisher</td><td>Query unpublished outbox rows every N ms, publish, mark as sent</td><td>Simple, any database; adds polling load and latency; ordering needs care with concurrent transactions</td></tr>
+              <tr><td>Log-based CDC</td><td>Tail the database's replication log (Debezium-style connectors)</td><td>Low latency, commit order preserved, no polling; more infrastructure and operational knowledge</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <script type="text/plain" data-lang="text" data-file="SQL">
+BEGIN;
+  INSERT INTO orders (id, customer_id, status, total_paise)
+       VALUES (981, 42, 'PENDING', 249900);
+  INSERT INTO outbox (id, aggregate_type, aggregate_id, event_type, payload, created_at)
+       VALUES ('e7b1...', 'order', 981, 'OrderCreated', '{"order_id": 981, ...}', now());
+COMMIT;
+-- relay: publish with key = aggregate_id (per-order ordering), event id = outbox.id (consumer dedup)
+        </script>
+        <ul>
+          <li><b>Guarantee:</b> at-least-once publication, in commit order per aggregate. Consumers must deduplicate on the event id (the <a href="#inbox">inbox pattern</a>).</li>
+          <li><b>Costs:</b> an extra write per transaction, a relay to run and monitor (lag is your new SLI), outbox cleanup, and events arrive milliseconds to seconds after commit.</li>
+          <li>CDC directly on business tables (no outbox) also works, but couples consumers to your schema; the outbox lets you publish a deliberate event contract.</li>
+          <li><b>Failure mode:</b> with log-based CDC on PostgreSQL, a stalled connector holds a replication slot and the WAL grows until the disk fills. Alert on slot lag.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="tcc">
+        <h2>Try-confirm-cancel</h2>
+        <p class="kind"><a href="#dist-tx">Distributed transactions</a></p>
+        <p>A reservation protocol at the business level. <b>Try</b> reserves the resource in each service (hold funds, hold a seat) without making it final; <b>Confirm</b> turns every reservation into the real thing; <b>Cancel</b> releases them.</p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+sequenceDiagram
+  participant X as Coordinator
+  participant A as Wallet
+  participant B as Seat inventory
+  X->>A: try, hold 500
+  A-->>X: held until 12.05
+  X->>B: try, hold seat 14C
+  B-->>X: held until 12.05
+  Note over X: all tries succeeded, record decision
+  X->>A: confirm
+  X->>B: confirm
+  Note over A,B: on any failed try, send cancel to all instead
+          </script>
+          <figcaption>Like 2PC in shape, but the "prepared" state is an ordinary business record (a hold) rather than a database lock, so nothing blocks at the storage level.</figcaption>
+        </figure>
+        <ul>
+          <li><b>Versus a saga:</b> nothing is shown as done until Confirm, so there is less to compensate and better isolation; the price is that every participant must expose three idempotent operations and model holds explicitly.</li>
+          <li>Holds carry an expiry so an abandoned transaction frees itself. Confirm must not fail for business reasons, only be retried.</li>
+          <li><b>Failure modes to handle:</b> a Cancel that arrives before its Try (record it and make the late Try a no-op), and duplicates of any of the three.</li>
+          <li>Where it shows up: payment authorise then capture, ticket and hotel holds, inventory reservations.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="avoid-dist-tx">
+        <h2>Avoiding the distributed transaction</h2>
+        <p class="kind"><a href="#dist-tx">Distributed transactions</a></p>
+        <p>The cheapest distributed transaction is the one you design away. Ask first whether the boundary that forces it is in the right place.</p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Redesign</th><th>How it removes the problem</th><th>Cost</th></tr></thead>
+            <tbody>
+              <tr><td>Co-locate the data</td><td>Put rows that must change together in one database, one shard, one aggregate (same partition key)</td><td>Service boundary moves; cross-shard cases remain</td></tr>
+              <tr><td>One source of truth, the rest derived</td><td>Commit to one store; feed search, cache, analytics and other services from its log</td><td>Derived views lag</td></tr>
+              <tr><td>Single-entry ledger of intents</td><td>Record "transfer T: A to B, 500" once; both balances are computed or updated from that one record</td><td>Readers must understand pending entries</td></tr>
+              <tr><td>Idempotent retry instead of atomicity</td><td>Make each step safe to repeat and drive the operation to completion with retries</td><td>Temporary inconsistency; needs a completion driver</td></tr>
+              <tr><td>Reconciliation</td><td>Accept rare divergence; detect and repair with a periodic compare job</td><td>Detection delay; needs a trustworthy source</td></tr>
+              <tr><td>A database that does it for you</td><td>Use a distributed SQL database with cross-shard transactions</td><td>Higher write latency; vendor and operational weight</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><b>Senior signal:</b> decide by invariant. "Money is neither created nor destroyed" must hold always, so it lives in one transactional store. "The search index reflects the order" may lag, so it is derived asynchronously.</p>
+      </section>
+
+      <!-- ===================== PART 5 ===================== -->
+
+      <section class="chapter part" id="messaging">
+        <h2>Messaging correctness</h2>
+        <p class="kind">Part 5 of 8 &middot; duplicates, order, poison and retries</p>
+        <p>Asynchronous messaging moves failure handling from the caller to the consumer. The consumer must assume every message can arrive more than once, late and out of order unless the design says otherwise.</p>
+        <ul>
+          <li><a href="#delivery-semantics">Delivery semantics</a>: at-most-once, at-least-once, effectively-once</li>
+          <li><a href="#idempotency-keys">Idempotency keys</a>: an idempotent payment endpoint</li>
+          <li><a href="#ordering-keys">Ordering guarantees and partition keys</a></li>
+          <li><a href="#inbox">The inbox pattern</a></li>
+          <li><a href="#dead-letter">Poison messages and dead-letter queues</a></li>
+          <li><a href="#retries">Retries, backoff and jitter</a></li>
+          <li><a href="#deadlines">Timeouts and deadline propagation</a></li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="delivery-semantics">
+        <h2>Delivery semantics</h2>
+        <p class="kind"><a href="#messaging">Messaging correctness</a></p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Semantics</th><th>How you get it</th><th>What can happen</th><th>Fits</th></tr></thead>
+            <tbody>
+              <tr><td>At-most-once</td><td>Send without retry, or acknowledge before processing</td><td>Loss, never duplicates</td><td>Metrics samples, best-effort notifications</td></tr>
+              <tr><td>At-least-once</td><td>Retry until acknowledged; acknowledge after processing</td><td>Duplicates, never loss (while the broker is durable)</td><td>The default for anything that matters</td></tr>
+              <tr><td>Effectively-once (exactly-once <b>processing</b>)</td><td>At-least-once delivery plus an idempotent or deduplicating consumer, or an atomic commit of "result and progress marker" together</td><td>Message may be delivered and even executed twice, but the observable effect happens once</td><td>Payments, ledgers, counters</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+sequenceDiagram
+  participant K as Broker
+  participant W as Consumer
+  participant D as Database
+  K->>W: deliver m1, credit 100
+  W->>D: balance + 100
+  D-->>W: ok
+  Note over W: crash before the ack, or the ack is lost
+  W--xK: ack m1
+  Note over K: no ack within visibility timeout
+  K->>W: deliver m1 again
+  W->>D: balance + 100, applied twice
+          </script>
+          <figcaption>The broker cannot distinguish "not processed" from "processed, ack lost", so it must redeliver. Only the consumer can make the second delivery harmless.</figcaption>
+        </figure>
+        <ul>
+          <li><b>Exactly-once delivery is impossible</b> over an unreliable channel: it is the <a href="#impossibility">two generals</a> problem. The sender either retries (duplicates possible) or does not (loss possible).</li>
+          <li><b>What products mean by "exactly-once":</b> Kafka's exactly-once semantics combine the idempotent producer with transactions that atomically write output records and consumer offsets, which gives effectively-once for read-process-write loops that stay inside Kafka. A side effect outside it (an email, a call to another service, a row in an external database) is not covered and still needs its own idempotency.</li>
+          <li>Acknowledge <b>after</b> the effect is durable. Acknowledging first silently turns at-least-once into at-most-once.</li>
+        </ul>
+        <p class="note"><b>Interview tip:</b> never say "we use exactly-once delivery". Say "at-least-once delivery with idempotent consumers, so processing is effectively-once", then say where the dedup state lives.</p>
+      </section>
+
+      <section class="chapter" id="idempotency-keys">
+        <h2>Idempotency keys</h2>
+        <p class="kind"><a href="#messaging">Messaging correctness</a></p>
+        <p>An operation is idempotent if doing it twice has the same effect as doing it once. Where the operation is not naturally so (charge a card, create an order), the client attaches a unique key per logical operation and the server remembers key to outcome.</p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+sequenceDiagram
+  participant C as Client
+  participant A as Payments API
+  participant D as Database
+  participant P as Card processor
+  C->>A: POST /payments, Idempotency-Key k1
+  A->>D: INSERT key k1 as IN_PROGRESS
+  D-->>A: inserted
+  A->>P: charge, processor key derived from k1
+  P-->>A: approved
+  A->>D: one txn, ledger entry and k1 COMPLETED
+  A--xC: 201 Created, lost on the way
+  Note over C: timeout, retry with the same key
+  C->>A: POST /payments, Idempotency-Key k1
+  A->>D: INSERT key k1
+  D-->>A: unique violation, row is COMPLETED
+  A-->>C: 201 Created, the stored response
+          </script>
+          <figcaption>The unique constraint on the key is the lock. The retry never reaches the card processor, and the client receives the original answer.</figcaption>
+        </figure>
+        <script type="text/plain" data-lang="text" data-file="SQL">
+CREATE TABLE idempotency_keys (
+  tenant_id      BIGINT       NOT NULL,
+  idem_key       VARCHAR(64)  NOT NULL,          -- client-generated UUID
+  request_hash   CHAR(64)     NOT NULL,          -- SHA-256 of method + path + body
+  status         VARCHAR(12)  NOT NULL,          -- IN_PROGRESS | COMPLETED | FAILED
+  response_code  INT,
+  response_body  TEXT,                           -- replayed verbatim on a retry
+  created_at     TIMESTAMP    NOT NULL,
+  locked_until   TIMESTAMP,                      -- lets a crashed attempt be taken over
+  PRIMARY KEY (tenant_id, idem_key)
+);
+        </script>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Retry finds</th><th>Server does</th></tr></thead>
+            <tbody>
+              <tr><td>No row</td><td>Insert IN_PROGRESS and execute</td></tr>
+              <tr><td>COMPLETED, same request hash</td><td>Return the stored response without executing</td></tr>
+              <tr><td>IN_PROGRESS, lock not expired</td><td>Return a conflict (commonly 409) so the client retries later; do not execute concurrently</td></tr>
+              <tr><td>IN_PROGRESS, lock expired</td><td>Take over: ask the downstream for the outcome using the same derived key, then finish</td></tr>
+              <tr><td>Same key, different request hash</td><td>Reject (commonly 422 or 400): the key was reused for another operation</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <ul>
+          <li><b>Atomicity is the whole point:</b> the key row and the business effect commit in the same local transaction. A dedup record in one store and the effect in another is a dual write.</li>
+          <li><b>Propagate:</b> every downstream call uses a key derived from the original, so the chain is idempotent end to end.</li>
+          <li><b>Retention:</b> keep keys longer than the longest client retry window (24 hours is a common public-API choice), then expire. Storage is one small row per write request.</li>
+          <li><b>Scope</b> the key per tenant or user so one client cannot collide with another.</li>
+          <li>Prefer natural idempotency when available: PUT with a full representation, "set status = SHIPPED", an upsert on a business key, a conditional write on a version.</li>
+        </ul>
+        <p class="note"><b>Failure mode:</b> "check if the key exists, then insert" as two statements. Two concurrent retries both pass the check. Use an insert against a unique constraint, or a conditional put, as the single atomic step.</p>
+      </section>
+
+      <section class="chapter" id="ordering-keys">
+        <h2>Ordering guarantees and partition keys</h2>
+        <p class="kind"><a href="#messaging">Messaging correctness</a></p>
+        <p>A partitioned log orders messages within a partition and promises nothing across partitions. You choose what is ordered by choosing the key.</p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  P([Producer]) -->|"key = account 42"| H{{"hash(key) mod 3"}}
+  H --> P0[[Partition 0]]
+  H ==>|all events of account 42| P1[[Partition 1]]
+  H --> P2[[Partition 2]]
+  P0 --> CA[Consumer A]
+  P1 ==> CB[Consumer B]
+  P2 --> CC[Consumer C]
+          </script>
+          <figcaption>All events for one account land on one partition and are read by one consumer of the group at a time, so they are processed in order. Events of different accounts have no defined order.</figcaption>
+        </figure>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>What breaks per-key order</th><th>Guard</th></tr></thead>
+            <tbody>
+              <tr><td>Producer retries with several requests in flight</td><td>Idempotent producer with sequence numbers (Kafka preserves order with idempotence on and at most 5 in-flight requests per connection)</td></tr>
+              <tr><td>Consumer processes a partition with a thread pool</td><td>Serialise per key inside the consumer (hash key to a worker), or process sequentially</td></tr>
+              <tr><td>Changing the partition count</td><td>Key-to-partition mapping changes: old and new events of a key sit on different partitions. Over-provision partitions up front or migrate deliberately</td></tr>
+              <tr><td>Retry topic or dead-letter queue</td><td>The failed message is overtaken by later ones of the same key: block the key, or make handlers tolerate reordering with versions</td></tr>
+              <tr><td>Rebalance during processing</td><td>Two consumers may briefly process the same partition: handlers must be idempotent</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <ul>
+          <li><b>Key choice:</b> the entity whose events must be ordered (account, order, device). Too coarse a key (tenant) creates hot partitions; too fine a key loses the order you needed.</li>
+          <li><b>Global order</b> needs one partition, which caps throughput at one partition's rate and one consumer. Almost always per-entity order is what the business actually requires.</li>
+          <li>Belt and braces: put a per-entity version in each event so a consumer can detect and drop a stale or out-of-order update.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="inbox">
+        <h2>The inbox pattern</h2>
+        <p class="kind"><a href="#messaging">Messaging correctness</a></p>
+        <p>The consumer-side mirror of the outbox. The consumer records each message id in an inbox table <b>in the same transaction</b> as the state change it causes. A redelivered message hits the unique constraint and is skipped.</p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+sequenceDiagram
+  participant K as Broker
+  participant W as Consumer
+  participant D as Consumer DB
+  K->>W: deliver event e77
+  W->>D: BEGIN, INSERT inbox e77, UPDATE stock, COMMIT
+  D-->>W: committed
+  W--xK: ack e77 is lost
+  K->>W: deliver event e77 again
+  W->>D: BEGIN, INSERT inbox e77
+  D-->>W: unique violation, ROLLBACK
+  W-->>K: ack e77
+          </script>
+          <figcaption>Dedup record and effect share one commit, so there is no window in which the effect exists without the record or the record without the effect.</figcaption>
+        </figure>
+        <ul>
+          <li><b>Outbox + at-least-once broker + inbox</b> is the standard recipe for effectively-once processing between two services with their own databases.</li>
+          <li><b>Storage:</b> one row per message for the dedup window. The window must exceed the longest possible redelivery delay (broker retention, DLQ redrive); prune older rows.</li>
+          <li>If the handler's effect is not in a database (calls an API, sends an email), pass the message id on as an idempotency key instead; if the target does not support one, you are back to at-least-once and should say so.</li>
+          <li>Cheaper alternative when it fits: store "last processed offset or sequence per partition" with the state, as in <a href="#sequence-numbers">sequence numbers</a>.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="dead-letter">
+        <h2>Poison messages and dead-letter queues</h2>
+        <p class="kind"><a href="#messaging">Messaging correctness</a></p>
+        <p>A poison message fails every time it is processed (bad schema, a bug, a reference to deleted data). With naive at-least-once it is redelivered forever, and on an ordered partition it blocks everything behind it.</p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  Q[[Main queue]] --> C[Consumer]
+  C -->|success| A([Ack])
+  C -->|transient error| R[[Retry queue with delay]]
+  R --> C
+  C -->|"permanent error or N attempts"| D[[Dead-letter queue]]
+  D --> O[Alert and inspect]
+  O -.->|fix then redrive| Q
+          </script>
+          <figcaption>Transient and permanent failures take different exits. The dead-letter queue is a parking place with an owner, not a bin.</figcaption>
+        </figure>
+        <ul>
+          <li><b>Classify errors:</b> timeouts and 503s are transient (retry with backoff); validation and deserialisation errors are permanent (dead-letter at once, retrying wastes capacity).</li>
+          <li><b>Carry context:</b> original topic, partition and offset, attempt count, error, first-failure time. Without it the message cannot be diagnosed or redriven.</li>
+          <li><b>Operate it:</b> alert on DLQ depth and age, provide a redrive tool, and make redrive safe by keeping consumers idempotent.</li>
+          <li><b>Trade-off:</b> dead-lettering one message lets later messages of the same key overtake it. If per-key order is a correctness requirement, either stop the partition and page someone, or park all later messages of that key too.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="retries">
+        <h2>Retries, backoff and jitter</h2>
+        <p class="kind"><a href="#messaging">Messaging correctness</a></p>
+        <p>Retries turn transient failures into successes and turn overload into an outage. The rules exist to keep the first effect and prevent the second.</p>
+        <script type="text/plain" data-lang="text" data-file="Backoff">
+exponential:   delay = min(cap, base * 2^attempt)          e.g. base 100 ms, cap 10 s
+full jitter:   sleep = random(0, delay)                    spreads retries over the whole window
+attempts:      100 ms, 200 ms, 400 ms, 800 ms ... (upper bounds; actual sleep is random below each)
+stop:          after N attempts or when the caller's deadline is spent, whichever is first
+        </script>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Rule</th><th>Why</th></tr></thead>
+            <tbody>
+              <tr><td>Retry only idempotent operations</td><td>A timeout does not mean the first attempt failed</td></tr>
+              <tr><td>Retry only retryable errors</td><td>Timeouts, connection resets, 503, 429 (after <code>Retry-After</code>). Never 400, 401, 403, 404, 422</td></tr>
+              <tr><td>Exponential backoff</td><td>Give a struggling dependency progressively more room</td></tr>
+              <tr><td>Jitter</td><td>Clients that failed together otherwise retry together, in synchronised waves that re-create the spike at 100 ms, 200 ms, 400 ms</td></tr>
+              <tr><td>Retry at one layer</td><td>Three attempts at each of three layers is up to 27 attempts at the bottom</td></tr>
+              <tr><td>Retry budget</td><td>Cap retries as a fraction of normal traffic (for example 10 percent per client) so retries cannot multiply load during an outage</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <ul>
+          <li><b>Retry storm:</b> a dependency slows, callers time out and retry, offered load rises exactly when capacity is lowest, and the dependency cannot recover even after the original cause is gone. This self-sustaining state is called a metastable failure.</li>
+          <li><b>Retry budget mechanics:</b> a token bucket per client refilled by successful requests; each retry spends a token; with no tokens, fail immediately. gRPC's retry throttling and service-mesh retry budgets work this way.</li>
+          <li>Servers help by answering overload with an explicit "do not retry" or <code>Retry-After</code>, and by rejecting cheaply.</li>
+        </ul>
+        <p class="note"><b>Senior signal:</b> whenever you add "with retries" to an arrow, add in the same sentence: idempotent, capped, jittered, and bounded by a budget and the request deadline.</p>
+      </section>
+
+      <section class="chapter" id="deadlines">
+        <h2>Timeouts and deadline propagation</h2>
+        <p class="kind"><a href="#messaging">Messaging correctness</a></p>
+        <p>Every remote call needs a timeout, and a chain of calls needs a shared one. The edge sets an absolute <b>deadline</b>; every hop forwards the time remaining, checks it before starting work and abandons work once it has passed.</p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+sequenceDiagram
+  participant C as Client
+  participant G as Gateway
+  participant A as Service A
+  participant B as Service B
+  C->>G: request, client timeout 1000 ms
+  G->>A: call, 950 ms left
+  Note over A: own work takes 300 ms
+  A->>B: call, 640 ms left
+  Note over B: slow query, still running at 640 ms
+  B--xA: deadline exceeded, B cancels the query
+  A-->>G: 504, no retry, budget is spent
+  G-->>C: 504 before the client gives up
+          </script>
+          <figcaption>B stops working when nobody is waiting any more. Without propagation, B would finish the query and A might retry it, all for a client that left long ago.</figcaption>
+        </figure>
+        <ul>
+          <li><b>Choosing a timeout:</b> start from the dependency's measured p99 or p99.9 plus headroom, not a round number. Too long and threads pile up behind a slow dependency; too short and healthy requests fail and trigger retries.</li>
+          <li><b>Separate</b> connect timeout (short, tens to hundreds of ms inside a datacentre) from request timeout.</li>
+          <li><b>Inner timeouts must be shorter than outer ones</b>, otherwise the outer caller gives up first and the inner work is wasted. Deadline propagation enforces this automatically.</li>
+          <li>gRPC carries the deadline in request metadata and cancels downstream calls for you; with plain HTTP you pass a header and enforce it yourself.</li>
+          <li>Propagate <b>cancellation</b> as well as the deadline, so that a client disconnect stops downstream work.</li>
+        </ul>
+      </section>
+
+      <!-- ===================== PART 6 ===================== -->
+
+      <section class="chapter part" id="staying-up">
+        <h2>Staying up</h2>
+        <p class="kind">Part 6 of 8 &middot; containing failure instead of spreading it</p>
+        <p>Outages at scale are rarely one component dying. They are one component slowing down and the rest of the system amplifying it. These patterns each cut one link of that chain.</p>
+        <ul>
+          <li><a href="#cascading-failure">Anatomy of a cascading failure</a></li>
+          <li><a href="#circuit-breaker">Circuit breaker</a></li>
+          <li><a href="#bulkhead">Bulkhead</a></li>
+          <li><a href="#load-shedding">Rate limiting and load shedding</a></li>
+          <li><a href="#backpressure">Backpressure</a></li>
+          <li><a href="#degradation">Graceful degradation and fallbacks</a></li>
+          <li><a href="#hedging">Hedged requests and tail latency</a></li>
+          <li><a href="#thundering-herd">Thundering herd</a></li>
+          <li><a href="#health-checks">Health checks</a>: liveness vs readiness</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="cascading-failure">
+        <h2>Anatomy of a cascading failure</h2>
+        <p class="kind"><a href="#staying-up">Staying up</a></p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart TD
+  D[Dependency slows] --> T[Caller threads block]
+  T --> P[Caller pool exhausted]
+  P --> E[Caller times out]
+  E --> R[Upstream retries]
+  R -->|more load| D
+  E --> H[Health checks fail]
+  H --> X[Instances removed]
+  X -->|load on survivors| P
+          </script>
+          <figcaption>Two feedback loops: retries add load to the thing that is already slow, and removing unhealthy instances concentrates load on the rest.</figcaption>
+        </figure>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Link in the chain</th><th>Pattern that breaks it</th></tr></thead>
+            <tbody>
+              <tr><td>Callers wait indefinitely on a slow dependency</td><td><a href="#deadlines">Timeouts and deadlines</a></td></tr>
+              <tr><td>Callers keep sending to a failing dependency</td><td><a href="#circuit-breaker">Circuit breaker</a>: fail fast, let it recover</td></tr>
+              <tr><td>One dependency's slowness consumes all threads</td><td><a href="#bulkhead">Bulkhead</a>: it can exhaust only its own pool</td></tr>
+              <tr><td>Retries multiply load</td><td><a href="#retries">Backoff, jitter, retry budgets</a></td></tr>
+              <tr><td>Server accepts more work than it can finish</td><td><a href="#load-shedding">Load shedding</a> and <a href="#backpressure">backpressure</a></td></tr>
+              <tr><td>The whole request fails because an optional part did</td><td><a href="#degradation">Graceful degradation</a></td></tr>
+              <tr><td>Health checks eject everything at once</td><td><a href="#health-checks">Shallow checks, fail-open load balancing</a></td></tr>
+              <tr><td>Recovery triggers a synchronised stampede</td><td><a href="#thundering-herd">Jitter, coalescing, slow start</a></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><b>Senior signal:</b> describe overload as a feedback loop and say which loop each mechanism opens. "Add a circuit breaker" with no reason is a mid-level answer.</p>
+      </section>
+
+      <section class="chapter" id="circuit-breaker">
+        <h2>Circuit breaker</h2>
+        <p class="kind"><a href="#staying-up">Staying up</a></p>
+        <p>A client-side state machine in front of a dependency. When calls keep failing it stops making them for a while, which protects the caller's resources and gives the dependency room to recover.</p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+stateDiagram-v2
+  [*] --> Closed
+  Closed --> Open: failure rate over threshold
+  Open --> HalfOpen: cool-down elapsed
+  HalfOpen --> Closed: probe calls succeed
+  HalfOpen --> Open: a probe call fails
+          </script>
+          <figcaption>Closed lets calls through and counts outcomes. Open rejects immediately. Half-open lets a few probes through to test recovery.</figcaption>
+        </figure>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Setting</th><th>Typical choice</th><th>Why it matters</th></tr></thead>
+            <tbody>
+              <tr><td>Trip condition</td><td>Error or slow-call rate above about 50 percent over a 10 to 30 s rolling window, with a minimum request count</td><td>A raw count trips on low traffic; no minimum trips on one bad call</td></tr>
+              <tr><td>What counts as failure</td><td>Timeouts, connection errors, 5xx. Not 4xx</td><td>Client errors say nothing about the dependency's health</td></tr>
+              <tr><td>Cool-down</td><td>Seconds, often growing on repeated trips</td><td>Too short keeps hammering; too long delays recovery</td></tr>
+              <tr><td>Scope</td><td>Per dependency, ideally per endpoint or per host</td><td>One bad host or one bad endpoint should not cut off the healthy rest</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <ul>
+          <li><b>When open you still need an answer:</b> a fallback, a cached value, or a fast clear error. See <a href="#degradation">graceful degradation</a>.</li>
+          <li><b>Failure mode:</b> breaker state is local to each client instance, so each one must discover the failure itself; and when all of them go half-open together their probes arrive at the same moment. Add jitter to the cool-down.</li>
+          <li>The numbers above are common starting points, not standards. Tune from measured error rates.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="bulkhead">
+        <h2>Bulkhead</h2>
+        <p class="kind"><a href="#staying-up">Staying up</a></p>
+        <p>Partition resources so that a failure in one compartment cannot sink the others. Give each dependency, tenant or request class its own bounded pool.</p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  In([Requests]) --> PA
+  In --> PB
+  In --> PC
+  subgraph Service
+    PA["Pool A<br/>20 threads"]
+    PB["Pool B<br/>20 of 20 busy"]
+    PC["Pool C<br/>20 threads"]
+  end
+  PA --> A[Catalog]
+  PB -->|waiting| B[Reviews, slow]
+  PC --> C[Payments]
+          </script>
+          <figcaption>Reviews is slow and its pool is full, so calls to it are rejected at once. Catalog and Payments still have their threads.</figcaption>
+        </figure>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Level</th><th>Isolation unit</th></tr></thead>
+            <tbody>
+              <tr><td>In process</td><td>Thread pool, semaphore or connection pool per dependency</td></tr>
+              <tr><td>Per tenant or priority</td><td>Separate queues and concurrency limits, so one tenant's spike or a batch job cannot starve interactive traffic</td></tr>
+              <tr><td>Deployment</td><td>Separate instance groups for critical and non-critical endpoints</td></tr>
+              <tr><td>Infrastructure</td><td>Cells or shards: independent copies of the whole stack, each serving a subset of customers, so the blast radius of a bad deploy or poison request is one cell</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><b>Trade-off:</b> isolation costs utilisation. Twenty threads reserved for Payments sit idle while Catalog is saturated. Size compartments from measured peak concurrency, and reject (not queue) when one is full.</p>
+      </section>
+
+      <section class="chapter" id="load-shedding">
+        <h2>Rate limiting and load shedding</h2>
+        <p class="kind"><a href="#staying-up">Staying up</a></p>
+        <p>Both reject requests. They answer different questions and belong in different places.</p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th></th><th>Rate limiting</th><th>Load shedding</th></tr></thead>
+            <tbody>
+              <tr><td>Question</td><td>Is this client within its allowance?</td><td>Can this server finish more work right now?</td></tr>
+              <tr><td>Decided by</td><td>Policy per client, key or tenant</td><td>The server's own state: concurrency, queue time, CPU</td></tr>
+              <tr><td>Protects</td><td>Fairness, cost, abuse limits</td><td>The server's ability to keep serving what it has accepted</td></tr>
+              <tr><td>Response</td><td>429 with <code>Retry-After</code></td><td>503, quickly, ideally with a hint not to retry at once</td></tr>
+              <tr><td>Where</td><td>Edge or gateway (algorithms in <a href="sd-building-blocks.html">Building Blocks</a>)</td><td>Every service, as early in the request as possible</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <ul>
+          <li><b>Why shed:</b> past saturation, queues grow, latency exceeds client timeouts, and the server spends its capacity on requests whose callers have already left. Goodput falls towards zero while CPU stays at 100 percent. Rejecting the excess keeps goodput at capacity.</li>
+          <li><b>Shed by priority:</b> health checks and payments before search suggestions; requests already in progress before new ones; drop what has exceeded its deadline before doing any work on it.</li>
+          <li><b>Signal:</b> limit concurrent in-flight requests or time spent queued, not CPU percentage, which reacts late. Adaptive concurrency limits adjust the cap from observed latency.</li>
+          <li>Rejection must be much cheaper than service, otherwise shedding does not help.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="backpressure">
+        <h2>Backpressure</h2>
+        <p class="kind"><a href="#staying-up">Staying up</a></p>
+        <p>When a consumer is slower than its producer, the slowness has to go somewhere. Backpressure sends it upstream as a signal to slow down, instead of letting it accumulate in a buffer.</p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  P[Producer] -->|items| Q[[Bounded queue]]
+  Q --> C[Slow consumer]
+  Q -.->|"full: block or reject"| P
+  C -.->|"credit: send n more"| P
+          </script>
+          <figcaption>Two forms of the same signal: a full bounded queue pushes back implicitly, a credit or window says explicitly how much the consumer can take.</figcaption>
+        </figure>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Mechanism</th><th>Example</th></tr></thead>
+            <tbody>
+              <tr><td>Bounded queue, block or reject when full</td><td>Thread pool with a fixed queue and a rejection policy</td></tr>
+              <tr><td>Window or credit based flow control</td><td>TCP receive window, HTTP/2 flow control, Reactive Streams <code>request(n)</code></td></tr>
+              <tr><td>Pull instead of push</td><td>Kafka consumers fetch at their own pace; the durable log is the buffer and consumer lag is the signal</td></tr>
+              <tr><td>Explicit slow-down response</td><td>429 or 503 with <code>Retry-After</code></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <ul>
+          <li><b>An unbounded queue is not a buffer, it is a latency and memory leak:</b> it hides overload until the process runs out of memory, and everything in it is already late.</li>
+          <li>Backpressure only works where the source can slow down (batch jobs, internal producers, streams). A human at a browser cannot, so at the edge backpressure becomes <a href="#load-shedding">load shedding</a>.</li>
+          <li>Queues smooth bursts; they do not fix a sustained rate mismatch. If average arrival exceeds average service rate, the only fixes are more capacity or less work.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="degradation">
+        <h2>Graceful degradation and fallbacks</h2>
+        <p class="kind"><a href="#staying-up">Staying up</a></p>
+        <p>Decide per dependency whether the request can still succeed without it, and what it returns instead.</p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Fallback</th><th>Example</th><th>Watch for</th></tr></thead>
+            <tbody>
+              <tr><td>Stale data</td><td>Serve the last cached price list or profile</td><td>Bound the staleness; never for balances or permissions</td></tr>
+              <tr><td>Default or static response</td><td>Popular items instead of personalised recommendations</td><td>Make it obvious in metrics that defaults are being served</td></tr>
+              <tr><td>Drop the optional feature</td><td>Render the product page without reviews</td><td>Callers must treat the field as optional</td></tr>
+              <tr><td>Reduced mode</td><td>Read-only mode while the primary database fails over</td><td>Needs to be a designed, tested mode</td></tr>
+              <tr><td>Defer</td><td>Accept the order, queue the confirmation email</td><td>Queue must be durable; user must be told it is pending</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <ul>
+          <li><b>Fail open or fail closed</b> is a per-dependency decision: a rate limiter or feature-flag service usually fails open (allow), authentication and payment authorisation fail closed (deny).</li>
+          <li><b>Failure mode:</b> a fallback that runs only during incidents is the least tested code you own, and it may load a different dependency that is not sized for it. Prefer fallbacks that are simpler than the main path and exercised regularly; some teams avoid distinct fallback paths for this reason.</li>
+          <li>Classify dependencies as critical or optional at design time. An "optional" dependency called without a timeout is critical.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="hedging">
+        <h2>Hedged requests and tail latency</h2>
+        <p class="kind"><a href="#staying-up">Staying up</a></p>
+        <p>With fan-out, rare slowness becomes common: if one backend is slow 1 percent of the time, a request that needs 100 backends hits at least one slow response 63 percent of the time (1 - 0.99<sup>100</sup>). The tail of the dependency becomes the median of the caller.</p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+sequenceDiagram
+  participant C as Client
+  participant R1 as Replica 1
+  participant R2 as Replica 2
+  C->>R1: read key k
+  Note over C: no reply after the p95 latency, about 10 ms
+  C->>R2: same read, the hedge
+  R2-->>C: value, use this one
+  C-xR1: cancel
+  Note over R1: was stuck behind a GC pause
+          </script>
+          <figcaption>The second request is sent only for the slowest few percent of calls, so the extra load is a few percent while the tail collapses.</figcaption>
+        </figure>
+        <ul>
+          <li><b>Numbers:</b> in "The Tail at Scale" (Dean and Barroso), hedging a BigTable read after 10 ms cut the 99.9th percentile from about 1800 ms to 74 ms for about 2 percent more requests.</li>
+          <li><b>Safe only for idempotent operations</b>, normally reads. Hedging a non-idempotent write needs an idempotency key.</li>
+          <li><b>Cap it:</b> hedges are extra load, so give them a budget (a few percent of traffic) and disable them when the backend reports overload. Unbounded hedging during an incident is a retry storm.</li>
+        </ul>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Other tail-latency tactics</th><th>Idea</th></tr></thead>
+            <tbody>
+              <tr><td>Tied requests</td><td>Send to two replicas at once, each told of the other; whichever starts first cancels its twin</td></tr>
+              <tr><td>Better load balancing</td><td>Least-loaded or "power of two choices" instead of round robin, with outlier ejection</td></tr>
+              <tr><td>Good-enough results</td><td>Return when most shards have answered rather than waiting for the slowest</td></tr>
+              <tr><td>Reduce fan-out</td><td>Batch, denormalise or cache so fewer calls sit on the critical path</td></tr>
+              <tr><td>Tame background work</td><td>Throttle and stagger compactions, GC and cron jobs so they do not coincide across replicas</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="chapter" id="thundering-herd">
+        <h2>Thundering herd</h2>
+        <p class="kind"><a href="#staying-up">Staying up</a></p>
+        <p>Many clients do the same thing at the same instant because they were synchronised by the same event. The load is not higher on average; it is concentrated.</p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Trigger</th><th>Effect</th><th>Fix</th></tr></thead>
+            <tbody>
+              <tr><td>A hot cache key expires</td><td>Thousands of requests recompute it against the database at once (cache stampede)</td><td>Request coalescing (single flight), stale-while-revalidate, jittered TTLs, early refresh</td></tr>
+              <tr><td>A server restarts or a connection drops</td><td>All clients reconnect and re-authenticate together</td><td>Reconnect with exponential backoff and jitter; connection rate limits</td></tr>
+              <tr><td>A lock is released</td><td>All waiters wake and all but one fail</td><td>Queue waiters and wake only the next (the ZooKeeper lock recipe watches just the predecessor node)</td></tr>
+              <tr><td>Timers on the hour</td><td>Every cron job and every client refresh fires at :00</td><td>Random offset per instance</td></tr>
+              <tr><td>A cold instance joins</td><td>It receives a full share of traffic with empty caches and unwarmed runtime</td><td>Slow start: ramp traffic up over tens of seconds; pre-warm</td></tr>
+              <tr><td>A dependency recovers</td><td>Queued and retried work arrives all at once and knocks it over again</td><td>Retry budgets, gradual breaker close, drain queues at a limited rate</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><b>Interview tip:</b> the general answer is "desynchronise and deduplicate": add randomness to anything periodic, and collapse identical concurrent work into one execution. Cache-specific detail is in <a href="sd-building-blocks.html">Building Blocks</a>.</p>
+      </section>
+
+      <section class="chapter" id="health-checks">
+        <h2>Health checks</h2>
+        <p class="kind"><a href="#staying-up">Staying up</a></p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th></th><th>Liveness</th><th>Readiness</th></tr></thead>
+            <tbody>
+              <tr><td>Question</td><td>Is this process beyond repair without a restart?</td><td>Should this instance receive traffic right now?</td></tr>
+              <tr><td>Action on failure</td><td>Restart the process or container</td><td>Take it out of load balancing; leave it running</td></tr>
+              <tr><td>Should check</td><td>The process itself: event loop responsive, not deadlocked</td><td>Warm-up finished, config loaded, can accept connections, not draining</td></tr>
+              <tr><td>Should not check</td><td>Any dependency. A database outage must not restart every instance</td><td>Shared dependencies deeply, or one outage marks the whole fleet unready</td></tr>
+              <tr><td>Failure when misused</td><td>Restart loops that make an incident worse</td><td>Load balancer with zero targets: total outage from a partial one</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <ul>
+          <li><b>Shallow vs deep:</b> a shallow check (process answers) misses "up but useless"; a deep check (calls dependencies) is correlated across the fleet. A workable middle: readiness reflects only what is local to the instance, and dependency failure is handled by breakers and degradation.</li>
+          <li><b>Fail open at the balancer:</b> if most or all targets look unhealthy, the health check is more likely wrong than the fleet, so keep routing to all. Several load balancers behave this way by design.</li>
+          <li><b>Startup</b> gets its own signal so slow-starting instances are not killed by liveness checks before they finish initialising.</li>
+          <li>Health checks detect dead instances, not slow ones. Pair them with outlier detection on real request latency and error rate.</li>
+        </ul>
+      </section>
+
+      <!-- ===================== PART 7 ===================== -->
+
+      <section class="chapter part" id="coordination">
+        <h2>Coordination patterns</h2>
+        <p class="kind">Part 7 of 8 &middot; exactly one worker, one owner, one number</p>
+        <p>Recurring "only one of us may do this" problems. The senior move in each is to ask whether a duplicate is merely wasteful or actually incorrect, because the two need very different machinery.</p>
+        <ul>
+          <li><a href="#distributed-locks">Distributed locks</a></li>
+          <li><a href="#work-assignment">Leader-follower work assignment</a></li>
+          <li><a href="#sharded-workers">Sharded workers with consistent hashing</a></li>
+          <li><a href="#singleton-cron">Exactly one runner of a cron job</a></li>
+          <li><a href="#distributed-counters">Distributed counters and rate limits</a></li>
+          <li><a href="#sequence-generation">Sequence generation</a></li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="distributed-locks">
+        <h2>Distributed locks</h2>
+        <p class="kind"><a href="#coordination">Coordination patterns</a></p>
+        <p>First ask what the lock is for. <b>Efficiency:</b> avoid doing the same work twice; an occasional double run costs a little money. <b>Correctness:</b> a double run corrupts data. A best-effort lock is fine for the first and wrong for the second.</p>
+        <script type="text/plain" data-lang="text" data-file="Redis">
+SET lock:report:42 <random-token> NX PX 30000      # acquire: only if absent, expires in 30 s
+# ... do the work ...
+# release: delete only if the value is still my token (atomic, as a Lua script)
+if redis.call("GET", KEYS[1]) == ARGV[1] then return redis.call("DEL", KEYS[1]) else return 0 end
+        </script>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Why the single-node Redis lock is unsafe for correctness</th><th>What happens</th></tr></thead>
+            <tbody>
+              <tr><td>Lease expiry while the holder is paused or slow</td><td>The holder passes its expiry without noticing (GC, stalled I/O, slow network), another client acquires, and both act. No TTL value fixes this.</td></tr>
+              <tr><td>Asynchronous replication</td><td>The primary fails before the lock key reaches the replica; after failover a second client acquires the same lock</td></tr>
+              <tr><td>No fencing token</td><td>The random value identifies the holder but is not ordered, so the resource cannot tell old from new</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p><b>The Redlock debate.</b> Redlock acquires the lock on a majority of several independent Redis nodes within a validity window; Martin Kleppmann argued that its safety rests on timing assumptions (bounded clock drift, process pauses and network delay) and that it issues no fencing token, so it should not be used where correctness depends on the lock. Salvatore Sanfilippo (Redis's author) replied that those assumptions are reasonable in practice and that the lock's unique value can be used for compare-and-set on the resource; the disagreement is about system models, and neither side claims it replaces fencing at the resource for strict correctness.</p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Safer alternative</th><th>How</th><th>Cost</th></tr></thead>
+            <tbody>
+              <tr><td>Fencing token checked by the resource</td><td>Lock service issues an increasing token; storage rejects older ones (<a href="#fencing-tokens">fencing tokens</a>)</td><td>Resource must support the check</td></tr>
+              <tr><td>Consensus-backed lock</td><td>ZooKeeper ephemeral sequential node or etcd lease; no lost locks on failover; revision or zxid serves as the token</td><td>A coordination cluster; a few ms per acquire. Still needs fencing against a paused holder</td></tr>
+              <tr><td>No lock: atomic conditional write</td><td>Let the storage decide: "update if version is still 7", insert against a unique constraint, DynamoDB condition expression, HTTP <code>If-Match</code></td><td>Losers must retry or give up; only protects what lives in that store</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+sequenceDiagram
+  participant A as Worker A
+  participant D as Database
+  participant B as Worker B
+  A->>D: read job 9, version 7
+  B->>D: read job 9, version 7
+  A->>D: UPDATE set owner A, version 8 WHERE version = 7
+  D-->>A: 1 row updated, A owns it
+  B->>D: UPDATE set owner B, version 8 WHERE version = 7
+  D-->>B: 0 rows updated, B backs off
+          </script>
+          <figcaption>No lock service and no timing assumption. The database's own atomicity picks one winner, and a paused worker simply loses its conditional write later.</figcaption>
+        </figure>
+        <p class="note"><b>Senior signal:</b> "a lock with a TTL is a lease, a lease can be held by two parties at once from their own points of view, so the protected write must be conditional". If you can make the write conditional, you often do not need the lock.</p>
+      </section>
+
+      <section class="chapter" id="work-assignment">
+        <h2>Leader-follower work assignment</h2>
+        <p class="kind"><a href="#coordination">Coordination patterns</a></p>
+        <p>One elected leader decides which worker owns which shard, partition or task. Workers do not negotiate with each other; they heartbeat and obey.</p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  E[(etcd or ZooKeeper)] ---|"leader lease, epoch 12"| L[Leader]
+  L -->|"shards 0-3, epoch 12"| W1[Worker 1]
+  L -->|"shards 4-7, epoch 12"| W2[Worker 2]
+  L -->|"shards 8-11, epoch 12"| W3[Worker 3]
+  W1 -.->|heartbeat| L
+  W2 -.->|heartbeat| L
+  W3 -.->|heartbeat| L
+  S[Standby leader] -.->|watches lease| E
+          </script>
+          <figcaption>Assignments are stamped with the leader's epoch. A worker ignores instructions from an older epoch, and downstream writes carry the epoch so a worker that missed a reassignment is fenced.</figcaption>
+        </figure>
+        <ul>
+          <li><b>Gain:</b> one place makes placement decisions, so balancing, draining a node and prioritising are simple and globally informed.</li>
+          <li><b>Pay:</b> the leader must be elected and fenced; reassignment after a worker death waits for the failure detector; a rebalance can pause work.</li>
+          <li><b>Handover rule:</b> the new owner of a shard starts only after the old owner's lease on it has expired or been explicitly released, and writes are fenced by epoch in case that rule is violated by a pause.</li>
+          <li>Where it shows up: Kafka's controller and consumer-group coordinator, HDFS NameNode with DataNodes, the GFS and Bigtable masters, most job schedulers.</li>
+          <li>Keep the leader off the data path: it hands out assignments, clients cache them and talk to workers directly.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="sharded-workers">
+        <h2>Sharded workers with consistent hashing</h2>
+        <p class="kind"><a href="#coordination">Coordination patterns</a></p>
+        <p>No per-task assignment at all: every node computes the owner of a key from the membership list. Adding or removing a worker moves only about 1/N of the keys.</p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  K([Job key]) --> H{{"hash(key) on ring"}}
+  H -->|"arc 1"| W1[Worker 1]
+  H -->|"arc 2"| W2[Worker 2]
+  H -->|"arc 3"| W3[Worker 3]
+  M[(Membership view)] -.-> H
+  W2 -.->|"leaves: arc 2 moves"| W3
+          </script>
+          <figcaption>Ownership is a pure function of the key and the membership view. Only the departed worker's arc changes hands.</figcaption>
+        </figure>
+        <ul>
+          <li><b>Use when</b> there are many small, similar units of work (per-user timers, per-device sessions, cache shards) and central assignment would be a bottleneck.</li>
+          <li><b>Virtual nodes</b> (100 or more points per worker) even out the load and spread a departed worker's keys across all survivors. Rendezvous hashing is a simpler alternative with the same minimal-movement property. Ring mechanics are in <a href="sd-building-blocks.html">Building Blocks</a>.</li>
+          <li><b>Failure mode:</b> if membership is gossiped, two workers can hold different views for a few seconds and both believe they own a key. Either make the work idempotent, or take membership from a consensus store and fence by its version.</li>
+          <li>Hashing balances key count, not load: a hot key still overloads its owner.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="singleton-cron">
+        <h2>Exactly one runner of a cron job</h2>
+        <p class="kind"><a href="#coordination">Coordination patterns</a></p>
+        <p>The job is deployed on N instances for availability, but each scheduled tick must run once. Under failures "exactly one" really means "at least one, and duplicates are harmless".</p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Approach</th><th>How</th><th>Caveat</th></tr></thead>
+            <tbody>
+              <tr><td>Claim the tick with a unique insert</td><td>Each instance tries to insert (job name, scheduled time) into a table with a unique constraint; the one that succeeds runs</td><td>Simple and robust; needs a rule for a claimed tick whose runner died</td></tr>
+              <tr><td>Leader runs the scheduler</td><td>Only the lease holder fires jobs</td><td>A paused old leader may still fire: combine with the unique insert or fencing</td></tr>
+              <tr><td>Durable job queue</td><td>One scheduler enqueues a job per tick; workers claim rows (for example <code>SELECT ... FOR UPDATE SKIP LOCKED</code>) with a visibility timeout</td><td>At-least-once: a slow worker's job may be re-claimed</td></tr>
+              <tr><td>Platform scheduler</td><td>Kubernetes CronJob, a cloud scheduler</td><td>Still not exactly-once: Kubernetes documents that a CronJob may occasionally create two jobs or none for a tick</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <script type="text/plain" data-lang="text" data-file="SQL">
+INSERT INTO job_runs (job_name, scheduled_for, runner, status)
+     VALUES ('daily-settlement', '2026-11-17 02:00:00', 'host-7', 'RUNNING')
+ON CONFLICT (job_name, scheduled_for) DO NOTHING;
+-- 1 row inserted: this instance runs the tick.  0 rows: someone else has it.
+        </script>
+        <ul>
+          <li><b>Make the job idempotent</b> regardless: key its effects by the scheduled time (settlement for 2026-11-17), not by "now".</li>
+          <li>Decide the <b>missed-run policy</b> explicitly: after an outage, run every missed tick, only the latest, or none.</li>
+          <li>Decide the <b>overlap policy</b>: if the 02:00 run is still going at 03:00, skip, queue or run concurrently.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="distributed-counters">
+        <h2>Distributed counters and rate limits</h2>
+        <p class="kind"><a href="#coordination">Coordination patterns</a></p>
+        <p>An exact, always-current global count needs every increment to pass through one place. Most designs trade a little accuracy or freshness for a lot of throughput.</p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Counter design</th><th>Accuracy</th><th>Cost / limit</th></tr></thead>
+            <tbody>
+              <tr><td>Single row or key, atomic increment</td><td>Exact</td><td>One hot key: contention, bounded by one node's write rate</td></tr>
+              <tr><td>Sharded counter (N sub-counters, sum on read)</td><td>Exact once all shards are read</td><td>Reads fan out; fine for likes and views</td></tr>
+              <tr><td>Local batch then flush every few seconds</td><td>Eventually exact, lags; loses the unflushed batch on crash</td><td>Cheapest writes</td></tr>
+              <tr><td>Stream aggregation</td><td>Exact per window if the pipeline is effectively-once</td><td>Seconds of delay, a stream processor to run</td></tr>
+              <tr><td>CRDT counter (per-replica slots, merge by maximum)</td><td>Converges across regions without coordination</td><td>Cannot enforce a ceiling or a non-negative floor</td></tr>
+              <tr><td>Sketches (HyperLogLog, Count-Min)</td><td>Approximate with known error (HyperLogLog about 1 to 2 percent in kilobytes of memory)</td><td>Distinct counts and heavy hitters only</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Distributed rate limit</th><th>How</th><th>Trade-off</th></tr></thead>
+            <tbody>
+              <tr><td>Central store</td><td>Atomic increment or token-bucket script in Redis per key</td><td>Accurate; one extra round trip per request; decide whether to fail open when the store is down</td></tr>
+              <tr><td>Static local share</td><td>Each of N instances enforces limit / N</td><td>No coordination; wrong when traffic is uneven or N changes</td></tr>
+              <tr><td>Local bucket with leased quota</td><td>Instances take chunks of the budget from a central store and spend them locally, syncing every few hundred ms</td><td>No per-request round trip; overshoot bounded by the chunk size times instances</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><b>Interview tip:</b> state the error you accept: "the limit may be exceeded by at most one chunk per instance during a sync interval". For limits that are money (quota billing, inventory), use the exact path.</p>
+      </section>
+
+      <section class="chapter" id="sequence-generation">
+        <h2>Sequence generation</h2>
+        <p class="kind"><a href="#coordination">Coordination patterns</a></p>
+        <p>Ask which property is actually needed: unique, roughly time-ordered, or strictly increasing with no gaps. Each step up costs coordination.</p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Scheme</th><th>Ordering</th><th>Coordination</th><th>Notes</th></tr></thead>
+            <tbody>
+              <tr><td>Database sequence / auto-increment</td><td>Increasing; gaps on rollback</td><td>Every id from one primary</td><td>Simple; a bottleneck and a single point for writes; leaks volume</td></tr>
+              <tr><td>Range allocation (hi/lo, segments)</td><td>Increasing per node, interleaved across nodes</td><td>One round trip per block of, say, 1000 ids</td><td>Gaps when a node restarts with an unused block</td></tr>
+              <tr><td>Snowflake-style 64-bit id</td><td>Roughly time-ordered (k-sorted)</td><td>None per id; unique worker id assigned once</td><td>41 bits of milliseconds, 10 bits worker, 12 bits sequence in the original layout: 4096 ids per ms per worker, about 69 years of timestamps</td></tr>
+              <tr><td>UUIDv4</td><td>None</td><td>None</td><td>122 random bits; poor B-tree locality as a primary key</td></tr>
+              <tr><td>UUIDv7 / ULID</td><td>Time-ordered to the millisecond</td><td>None</td><td>48-bit timestamp plus random bits; index-friendly; 128 bits wide</td></tr>
+              <tr><td>Central timestamp or sequence oracle</td><td>Strictly increasing</td><td>Every id (batched) from a consensus-backed service</td><td>Used by some distributed databases for transaction timestamps; a deliberate central dependency</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <ul>
+          <li><b>Snowflake failure mode:</b> the clock stepping backwards produces duplicate or out-of-order ids. Generators refuse to issue ids until the clock catches up, and worker ids must never be shared by two live processes (assign them through a coordination service).</li>
+          <li>A <b>gapless</b> strictly increasing sequence (invoice numbers) requires a single serialised allocator in the same transaction as the row. Keep it off the hot path: assign it asynchronously after the order is created.</li>
+          <li>Time-ordered ids from different nodes are ordered only to within clock skew. Do not use them to decide which write happened first.</li>
+        </ul>
+      </section>
+
+      <!-- ===================== PART 8 ===================== -->
+
+      <section class="chapter part" id="consistency">
+        <h2>Consistency in practice</h2>
+        <p class="kind">Part 8 of 8 &middot; what a reader may see</p>
+        <p>Consistency models are promises about reads. Name the weakest one that keeps the product correct, because each stronger one costs latency or availability.</p>
+        <ul>
+          <li><a href="#lin-vs-ser">Linearizability vs serializability</a></li>
+          <li><a href="#eventual-tactics">Eventual consistency tactics</a>: read repair, anti-entropy, CRDTs</li>
+          <li><a href="#read-your-writes">Read-your-writes</a>: implementation options</li>
+          <li><a href="#consistency-pointers">Caches, CQRS and event sourcing</a>: where they are covered</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="lin-vs-ser">
+        <h2>Linearizability vs serializability</h2>
+        <p class="kind"><a href="#consistency">Consistency in practice</a></p>
+        <p>Two different guarantees that are constantly confused. One is about recency of single operations across replicas, the other about isolation of multi-operation transactions.</p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th></th><th>Linearizability</th><th>Serializability</th></tr></thead>
+            <tbody>
+              <tr><td>About</td><td>Single operations on a single object (a register, a key)</td><td>Transactions: groups of operations over many objects</td></tr>
+              <tr><td>Promise</td><td>Each operation appears to take effect at one instant between its start and its end; the system behaves like one copy</td><td>The result equals that of running the transactions one at a time in <b>some</b> order</td></tr>
+              <tr><td>Real-time order</td><td>Yes: once a write has returned, every later read sees it</td><td>No: the equivalent serial order need not match wall-clock order, so a stale snapshot is allowed</td></tr>
+              <tr><td>Belongs to</td><td>Replication. The "C" in CAP</td><td>Concurrency control. The "I" in ACID</td></tr>
+              <tr><td>Prevents</td><td>Stale reads, two leaders both acquiring a lock, uniqueness violations across replicas</td><td>Lost updates, write skew, dirty and non-repeatable reads</td></tr>
+              <tr><td>Typical mechanism</td><td>Consensus or a single leader with synchronous replication; reads confirmed by a quorum</td><td>Two-phase locking, serializable snapshot isolation, single-threaded execution</td></tr>
+              <tr><td>Price</td><td>Latency of a quorum round trip; unavailable on the minority side of a partition</td><td>Aborts and retries, or lock waits and deadlocks</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <ul>
+          <li><b>Strict serializability</b> is both together: serializable, and the serial order respects real time. Spanner calls its version external consistency.</li>
+          <li>A serializable database read through asynchronous replicas is still serializable but not linearizable. A linearizable key-value store without multi-key transactions is not serializable.</li>
+          <li>Many databases default to something weaker than serializable (read committed or snapshot isolation). Check the default before relying on it.</li>
+        </ul>
+        <p class="note"><b>Interview tip:</b> "do you need linearizability?" is answered by finding the invariant: locks, leader election, unique usernames and "never oversell the last seat" need it; timelines, counters and catalogues do not.</p>
+      </section>
+
+      <section class="chapter" id="eventual-tactics">
+        <h2>Eventual consistency tactics</h2>
+        <p class="kind"><a href="#consistency">Consistency in practice</a></p>
+        <p>"Eventually consistent" only promises that replicas converge if writes stop. These are the mechanisms that actually make them converge, and decide what they converge to.</p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+sequenceDiagram
+  participant C as Client
+  participant X as Coordinator
+  participant R1 as Replica 1
+  participant R2 as Replica 2
+  participant R3 as Replica 3
+  C->>X: read key k
+  X->>R1: get k
+  X->>R2: get k
+  X->>R3: get k
+  R1-->>X: value B, version 2
+  R2-->>X: value B, version 2
+  R3-->>X: value A, version 1, stale
+  X-->>C: value B
+  X-)R3: repair, write B version 2
+          </script>
+          <figcaption>Read repair: the read that notices the stale replica also fixes it. Keys that are never read are never repaired this way.</figcaption>
+        </figure>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Tactic</th><th>What it does</th><th>Limit</th></tr></thead>
+            <tbody>
+              <tr><td>Read repair</td><td>On a read, compare replica versions and write the newest back to stale replicas</td><td>Only heals data that is read</td></tr>
+              <tr><td>Anti-entropy</td><td>Background process compares replicas (commonly with Merkle trees, so only differing ranges are transferred) and syncs them</td><td>I/O cost; convergence time depends on how often it runs</td></tr>
+              <tr><td>Hinted handoff</td><td>Another node holds writes meant for an unreachable replica and replays them when it returns</td><td>A hint is not a replica: it improves availability, not durability</td></tr>
+              <tr><td>Conflict resolution</td><td>Last-write-wins, application merge of siblings, or CRDTs</td><td>LWW silently drops concurrent writes and trusts clocks</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p><b>CRDTs.</b> Conflict-free replicated data types are structures (counters, sets, registers, sequences) whose merge is commutative, associative and idempotent, so replicas that have seen the same updates in any order, any number of times, reach the same state without coordination. They cost extra metadata (per-replica counts, tombstones) and cannot enforce invariants that need agreement, such as "balance never below zero" or "at most one winner".</p>
+      </section>
+
+      <section class="chapter" id="read-your-writes">
+        <h2>Read-your-writes</h2>
+        <p class="kind"><a href="#consistency">Consistency in practice</a></p>
+        <p>After a user changes something, that user must see the change, even though replicas lag. Other users may see it later. This is much cheaper than linearizability and is what most products need.</p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Option</th><th>How</th><th>Trade-off</th></tr></thead>
+            <tbody>
+              <tr><td>Read own data from the leader</td><td>Route reads of things the user can edit (own profile, own orders) to the primary</td><td>Simple; fails if most reads are of editable data</td></tr>
+              <tr><td>Leader for a window after a write</td><td>For N seconds after a user writes, send that user's reads to the primary (flag in session or cookie)</td><td>N must exceed replication lag; wrong when lag spikes</td></tr>
+              <tr><td>Version token</td><td>The write returns a log position or timestamp; the client sends it with reads; a replica serves only if it has applied that position, otherwise waits or forwards to the primary</td><td>Precise, works across devices if the token is stored server-side per user; needs replica support</td></tr>
+              <tr><td>Sticky routing</td><td>Pin the user to one replica</td><td>Gives monotonic reads (no going back in time); gives read-your-writes only if that replica has the write; breaks on failover</td></tr>
+              <tr><td>Quorum or synchronous reads</td><td>Read from enough replicas to overlap the write set, or replicate synchronously</td><td>Higher latency on every read or write</td></tr>
+              <tr><td>Client-side echo</td><td>The UI shows what the user just submitted from local state</td><td>Cosmetic: a reload or another device shows the truth</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <ul>
+          <li>Related session guarantees worth naming: <b>monotonic reads</b> (a user never sees data go backwards) and <b>consistent prefix</b> (never a reply before the message it answers).</li>
+          <li>The same problem appears with caches and search indexes: after a write, the user's next read must bypass or wait for the derived store.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="consistency-pointers">
+        <h2>Caches, CQRS and event sourcing</h2>
+        <p class="kind"><a href="#consistency">Consistency in practice</a></p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Topic</th><th>The one-line position</th><th>Covered in</th></tr></thead>
+            <tbody>
+              <tr><td>Cache plus database</td><td>Updating both is a <a href="#dual-write">dual write</a>. Treat the database as the source of truth, invalidate (delete) rather than update the cache after commit, and keep a TTL as the safety net for missed invalidations and races</td><td><a href="sd-building-blocks.html">Building Blocks</a></td></tr>
+              <tr><td>Replication lag, quorum reads and writes, isolation levels</td><td>The storage-level mechanics behind the guarantees on this page</td><td><a href="sd-data-systems.html">Data Systems</a></td></tr>
+              <tr><td>CQRS and event sourcing</td><td>Separate write model and read models, fed by an ordered event log: the <a href="#outbox">outbox</a> idea taken to its conclusion, with read models that are eventually consistent by design</td><td><a href="sd-architecture.html">Architecture Styles</a></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ===================== CHEAT SHEET ===================== -->
+
+      <section class="chapter" id="cheat-sheet">
+        <h2>Cheat sheet</h2>
+        <h3>Problem, pattern, cost</h3>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Problem</th><th>Pattern</th><th>Cost</th></tr></thead>
+            <tbody>
+              <tr><td>Timeout: did it happen?</td><td><a href="#idempotency-keys">Idempotency key</a> plus retry</td><td>Dedup storage; key and effect in one transaction</td></tr>
+              <tr><td>Which write was first?</td><td><a href="#lamport-clocks">Logical clock</a> or a <a href="#ordering">single sequencer</a></td><td>Metadata, or a write bottleneck</td></tr>
+              <tr><td>Detect concurrent updates</td><td><a href="#vector-clocks">Version vectors</a></td><td>O(replicas) per value; merge logic</td></tr>
+              <tr><td>Exactly one leader</td><td><a href="#leader-election">Lease in a consensus store</a> plus <a href="#fencing-tokens">fencing</a></td><td>Coordination cluster; resource must check tokens</td></tr>
+              <tr><td>Replicated state that must not diverge</td><td><a href="#raft-roles">Raft / Paxos</a> log</td><td>Majority round trip per write; no writes without a majority</td></tr>
+              <tr><td>Cluster membership at scale</td><td><a href="#gossip">Gossip</a></td><td>Eventually consistent view</td></tr>
+              <tr><td>DB write plus event publish</td><td><a href="#outbox">Transactional outbox / CDC</a></td><td>Relay to operate; at-least-once; lag</td></tr>
+              <tr><td>Multi-service business transaction</td><td><a href="#sagas">Saga</a></td><td>No isolation; compensations to write and test</td></tr>
+              <tr><td>Atomic commit across databases</td><td><a href="#two-phase-commit">2PC</a></td><td>Blocking, locks held, availability multiplies down</td></tr>
+              <tr><td>Reserve across services</td><td><a href="#tcc">TCC</a></td><td>Three idempotent operations per participant</td></tr>
+              <tr><td>Duplicate messages</td><td><a href="#inbox">Inbox</a> or natural idempotency</td><td>Dedup table and retention window</td></tr>
+              <tr><td>Per-entity ordering</td><td><a href="#ordering-keys">Partition key</a></td><td>Hot partitions; no cross-key order</td></tr>
+              <tr><td>Message that always fails</td><td><a href="#dead-letter">Dead-letter queue</a></td><td>Breaks order for that key; needs an owner</td></tr>
+              <tr><td>Transient errors</td><td><a href="#retries">Backoff, jitter, budget</a></td><td>Added latency; needs idempotency</td></tr>
+              <tr><td>Work for callers who gave up</td><td><a href="#deadlines">Deadline propagation</a></td><td>Plumbing through every hop</td></tr>
+              <tr><td>Failing dependency drags callers down</td><td><a href="#circuit-breaker">Circuit breaker</a>, <a href="#bulkhead">bulkhead</a></td><td>Tuning; idle reserved capacity; needs a fallback</td></tr>
+              <tr><td>More load than capacity</td><td><a href="#load-shedding">Load shedding</a>, <a href="#backpressure">backpressure</a></td><td>Some requests rejected on purpose</td></tr>
+              <tr><td>Slow tail on fan-out</td><td><a href="#hedging">Hedged requests</a></td><td>A few percent extra load; reads only</td></tr>
+              <tr><td>Only one worker may act</td><td><a href="#distributed-locks">Conditional write</a>, or lock plus fencing</td><td>Losers retry; storage must enforce</td></tr>
+              <tr><td>User must see own write</td><td><a href="#read-your-writes">Version token or leader read</a></td><td>More load on the leader or waiting replicas</td></tr>
+              <tr><td>Replicas must converge without coordination</td><td><a href="#eventual-tactics">Read repair, anti-entropy, CRDTs</a></td><td>Metadata; no global invariants</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <h3>Which guarantee do I actually need?</h3>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart TD
+  A{{"Must 2 or more things change together?"}} -->|yes| B{{"Can they live in one database or shard?"}}
+  B -->|yes| L[Local ACID transaction]
+  B -->|no| C{{"Is a visible intermediate state acceptable?"}}
+  C -->|yes| S["Saga on outbox, idempotent steps"]
+  C -->|no| T["2PC, TCC or a distributed SQL database"]
+  A -->|no| R{{"Who must see a write immediately?"}}
+  R -->|everyone| LIN["Linearizable: consensus or leader reads"]
+  R -->|only the writer| RYW[Read-your-writes]
+  R -->|nobody| EV["Eventual consistency plus a merge rule"]
+          </script>
+          <figcaption>Data guarantees. Walk it per invariant, not per system: one design usually ends in several different leaves.</figcaption>
+        </figure>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  M{{"Can the operation arrive or run twice?"}} -->|"yes, assume so"| N{{"Naturally idempotent?"}}
+  N -->|yes| N1[At-least-once is enough]
+  N -->|no| N2["Idempotency key or inbox"]
+  M --> O{{"Does order matter?"}}
+  O -->|per entity| O1[Partition key plus version]
+  O -->|globally| O2["Single partition or consensus log"]
+  M --> X{{"Must only one actor run it?"}}
+  X -->|duplicate is wasteful| X1[Best-effort lock with TTL]
+  X -->|duplicate is harmful| X2["Conditional write or fencing token"]
+          </script>
+          <figcaption>Messaging and coordination guarantees. Three independent questions to ask of every asynchronous arrow and every background job.</figcaption>
+        </figure>
+        <ul>
+          <li><b>Five sentences to have ready:</b> a timeout is an unknown outcome; delivery is at-least-once so handlers are idempotent; a lease can be held twice so writes are fenced; a majority is needed for anything that must not diverge; pick the weakest consistency that preserves the invariant.</li>
+        </ul>
+        <p>Next: <a href="sd-api-design.html">API and Communication Design</a>, where these guarantees are turned into concrete request, response and streaming contracts.</p>
+      </section>
+
+    </div>
+  </main>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script src="../../assets/tutorial.js?v=8"></script>
+</body>
+</html>

@@ -1,0 +1,2080 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>HLD Case Studies: Advanced</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@500;700&display=swap">
+<link rel="stylesheet" href="../../assets/tutorial.css?v=8">
+</head>
+<body data-track="system">
+
+<header class="topbar">
+  <div class="topbar-in">
+    <a class="brand" href="../../../index.html">Learnings</a>
+    <nav class="tracks" aria-label="Paths">
+      <a href="../../../index.html#system-design" aria-current="true">System Design</a>
+      <a href="../../../archive.html">Archive</a>
+    </nav>
+    <div class="tools">
+      <button class="btn" id="menu" type="button" aria-expanded="false">Chapters</button>
+      <input id="q" type="search" placeholder="Search chapters" aria-label="Search chapters">
+      <button class="btn" id="theme" type="button">Dark mode</button>
+    </div>
+  </div>
+</header>
+
+<div class="shell">
+  <aside class="side">
+    <p class="side-label">HLD cases 2</p>
+    <nav id="toc" aria-label="Chapters"></nav>
+  </aside>
+
+  <main>
+    <div class="page-head">
+      <p class="eyebrow">System design, part 9 of 12</p>
+      <h1>HLD Case Studies: Advanced</h1>
+      <p class="lead">Eight worked high-level designs of the harder kind asked at senior and staff level: payments, seat booking, ride hailing, video streaming, file sync, a web crawler, a job scheduler and a metrics pipeline. Every case follows the same five steps, so you can compare them and reuse the shape on a question you have not seen. All numbers are order-of-magnitude assumptions, stated so the arithmetic can be checked.</p>
+    </div>
+
+    <div class="chapters">
+
+      <section class="chapter part" id="how-to-use">
+        <h2>How to use these</h2>
+        <p class="kind">Part 1 of 9 &middot; the template and the pattern map</p>
+        <p>Each case is one part with five short chapters in a fixed order. Read one case end to end, then close the page and redraw its architecture diagram and its hardest deep dive from memory. The simpler cases are in <a href="sd-hld-cases-1.html">HLD Case Studies: Core</a>.</p>
+        <ul>
+          <li><a href="#template">The five-step template</a>: what each step produces and how long it gets</li>
+          <li><a href="#pattern-map">Which patterns each case exercises</a>: where to revise the building blocks</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="template">
+        <h2>The five-step template</h2>
+        <p class="kind"><a href="#how-to-use">How to use these</a></p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Step</th><th>You produce</th><th>Time in 45 min</th><th>Common mistake</th></tr></thead>
+            <tbody>
+              <tr><td>1. Requirements and scale</td><td>3 to 5 functional needs, non-functional targets with numbers, what is out of scope, one estimation table</td><td>about 7 min</td><td>Estimating everything. Compute only the numbers that change the design.</td></tr>
+              <tr><td>2. API and data model</td><td>3 to 5 endpoints, the main entities, the store and why</td><td>about 5 min</td><td>Picking a database before knowing the access patterns.</td></tr>
+              <tr><td>3. High-level design</td><td>One diagram of 8 to 12 boxes, then the main write path and read path in words</td><td>about 10 min</td><td>Drawing every component you know instead of the ones this problem needs.</td></tr>
+              <tr><td>4. Deep dives</td><td>The 2 to 4 hard parts, each with alternatives and a choice</td><td>about 15 min</td><td>Going deep on the easy part. Name the hard part yourself before you are asked.</td></tr>
+              <tr><td>5. Trade-offs and follow-ups</td><td>Decisions with what was paid, failure modes, what changes at 10x</td><td>about 5 min</td><td>Presenting the design as free of cost.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><b>Senior signal:</b> in every case below one property is the reason the question exists (money is never duplicated, a seat is sold once, a host is never hammered). State that property in the first two minutes and let it drive every later choice.</p>
+      </section>
+
+      <section class="chapter" id="pattern-map">
+        <h2>Which patterns each case exercises</h2>
+        <p class="kind"><a href="#how-to-use">How to use these</a></p>
+        <p>The cases reuse a small set of ideas. Components are covered in <a href="sd-building-blocks.html">Building Blocks</a>, stores and stream processing in <a href="sd-data-systems.html">Data Systems</a>, and coordination patterns in <a href="sd-distributed-systems.html">Distributed Systems Patterns</a>.</p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Case</th><th>The property that matters</th><th>Patterns it exercises</th><th>Revise in</th></tr></thead>
+            <tbody>
+              <tr><td><a href="#pay">Payment system</a></td><td>Money moves exactly once</td><td>Idempotency keys, double-entry ledger, state machine, saga, outbox, reconciliation</td><td><a href="sd-distributed-systems.html">Distributed Systems Patterns</a>, <a href="sd-data-systems.html">Data Systems</a></td></tr>
+              <tr><td><a href="#book">Seat booking</a></td><td>A seat is sold once</td><td>Conditional writes, optimistic and pessimistic locking, TTL holds, admission queue, cache with stale reads</td><td><a href="sd-data-systems.html">Data Systems</a>, <a href="sd-building-blocks.html">Building Blocks</a></td></tr>
+              <tr><td><a href="#ride">Ride hailing</a></td><td>Fresh locations, one trip per driver</td><td>Geospatial index, in-memory state with TTL, WebSockets, compare-and-set, partitioning by region</td><td><a href="sd-building-blocks.html">Building Blocks</a>, <a href="sd-distributed-systems.html">Distributed Systems Patterns</a></td></tr>
+              <tr><td><a href="#video">Video streaming</a></td><td>Smooth playback at low cost per byte</td><td>Object storage, queue and worker DAG, CDN tiers, metadata and blob split, stream aggregation</td><td><a href="sd-building-blocks.html">Building Blocks</a>, <a href="sd-data-systems.html">Data Systems</a></td></tr>
+              <tr><td><a href="#drive">File sync</a></td><td>No lost edit, few bytes moved</td><td>Content-addressed blocks, change journal, long poll, versioning, write ordering across two stores</td><td><a href="sd-data-systems.html">Data Systems</a>, <a href="sd-distributed-systems.html">Distributed Systems Patterns</a></td></tr>
+              <tr><td><a href="#crawl">Web crawler</a></td><td>Polite, broad, no repeats</td><td>Priority and per-host queues, Bloom filter, fingerprints, hash partitioning, rate limiting</td><td><a href="sd-building-blocks.html">Building Blocks</a>, <a href="sd-data-systems.html">Data Systems</a></td></tr>
+              <tr><td><a href="#sched">Job scheduler</a></td><td>Every due job runs, on time</td><td>Leases and visibility timeouts, fencing tokens, leader election, sharding, retries and dead letters</td><td><a href="sd-distributed-systems.html">Distributed Systems Patterns</a></td></tr>
+              <tr><td><a href="#metrics">Metrics and click aggregation</a></td><td>Correct counts, cheap queries</td><td>Durable log, windows and watermarks, roll-ups, time-series storage, batch reconciliation</td><td><a href="sd-data-systems.html">Data Systems</a>, <a href="sd-building-blocks.html">Building Blocks</a></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="chapter part" id="pay">
+        <h2>Payment system and digital wallet</h2>
+        <p class="kind">Part 2 of 9 &middot; correctness when the outcome is unknown</p>
+        <p>Design a wallet: users top up from a card or bank through an external payment provider, pay merchants and send money to each other. This is the site's bank example at scale. It is asked because throughput is modest and correctness is everything: money must never be created, lost or moved twice, even when a call times out.</p>
+        <ul>
+          <li><a href="#pay-requirements">Requirements and scale</a></li>
+          <li><a href="#pay-api">API and data model</a></li>
+          <li><a href="#pay-design">High-level design</a></li>
+          <li><a href="#pay-deep-dives">Deep dives</a>: ledger, idempotency and state machine, provider integration, transaction vs saga</li>
+          <li><a href="#pay-tradeoffs">Trade-offs and follow-ups</a></li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="pay-requirements">
+        <h2>Requirements and scale</h2>
+        <p class="kind"><a href="#pay">Payment system</a></p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Kind</th><th>Requirement</th></tr></thead>
+            <tbody>
+              <tr><td>Functional</td><td>Top up a wallet through an external provider. Transfer wallet to wallet and pay a merchant. Refund a payment. Show balance and statement.</td></tr>
+              <tr><td>Non-functional</td><td>No double or lost money movement (consistency over availability on the write path). Durability with zero acknowledged writes lost (synchronous replication). 99.99% API availability. p99 under 500 ms for an internal transfer, under 2 s when the provider is involved. Every movement auditable for years.</td></tr>
+              <tr><td>Out of scope</td><td>Onboarding and identity checks, card issuing, currency conversion, chargeback workflow, lending.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Quantity</th><th>Arithmetic</th><th>Result (approx.)</th></tr></thead>
+            <tbody>
+              <tr><td>Daily active users</td><td>assumed, of 300M registered</td><td>50M</td></tr>
+              <tr><td>Payments per day</td><td>50M users x 2</td><td>100M</td></tr>
+              <tr><td>Write QPS</td><td>100M / 86,400 s; peak x5</td><td>1,160/s average, 5,800/s peak</td></tr>
+              <tr><td>Read QPS (balance, history)</td><td>10 reads per write</td><td>11,600/s average, 58,000/s peak</td></tr>
+              <tr><td>Ledger storage</td><td>100M x 2 entries x 200 B = 40 GB/day; x 365</td><td>14.6 TB/year</td></tr>
+              <tr><td>Payment rows</td><td>100M x 500 B = 50 GB/day; x 365</td><td>18 TB/year</td></tr>
+              <tr><td>Bandwidth</td><td>1,160/s x 2 KB</td><td>2.3 MB/s (about 19 Mbps), not a constraint</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><b>Interview tip:</b> say out loud that a few thousand writes per second is small. The design is shaped by failure handling and auditability, not by load.</p>
+      </section>
+
+      <section class="chapter" id="pay-api">
+        <h2>API and data model</h2>
+        <p class="kind"><a href="#pay">Payment system</a></p>
+        <script type="text/plain" data-lang="text" data-file="API" data-norun>
+POST /v1/payments                  Idempotency-Key: <uuid chosen by the client>
+     {payer_account, payee_account, amount_minor, currency, method}
+     -> 201 {payment_id, status}
+     same key + same body      -> the stored response, nothing runs twice
+     same key + different body -> 422
+GET  /v1/payments/{id}             -> {status, amount_minor, currency, ...}
+POST /v1/payments/{id}/refunds     Idempotency-Key    {amount_minor}
+GET  /v1/accounts/{id}/balance     -> {available_minor, currency}
+GET  /v1/accounts/{id}/entries?cursor=
+POST /v1/webhooks/provider         signed by the provider, deduplicated by event id
+        </script>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+erDiagram
+  ACCOUNT ||--o{ LEDGER_ENTRY : has
+  PAYMENT ||--|{ LEDGER_ENTRY : posts
+  PAYMENT ||--o{ PROVIDER_ATTEMPT : tries
+  ACCOUNT {
+    bigint id PK
+    string kind
+    string currency
+    bigint balance_minor
+  }
+  PAYMENT {
+    uuid id PK
+    string idem_key UK
+    string status
+    bigint amount_minor
+  }
+  LEDGER_ENTRY {
+    bigint id PK
+    uuid payment_id FK
+    bigint account_id FK
+    bigint amount_minor
+  }
+  PROVIDER_ATTEMPT {
+    uuid id PK
+    uuid payment_id FK
+    string provider_ref
+    string status
+  }
+          </script>
+          <figcaption>Entries are append-only and carry a signed amount. The balance on ACCOUNT is a cache of the sum of its entries, updated in the same transaction.</figcaption>
+        </figure>
+        <ul>
+          <li><b>Store:</b> a relational database with ACID transactions (PostgreSQL or MySQL, or a distributed SQL database), synchronously replicated, sharded by account id when one node is not enough. The reason is multi-row transactions and unique constraints, not query flexibility.</li>
+          <li><b>Money:</b> integers in minor units (paise, cents) plus a currency code. Never floats.</li>
+          <li><b>Idempotency key:</b> unique on (caller, key), stored with a hash of the request and the response, kept at least 24 hours.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="pay-design">
+        <h2>High-level design</h2>
+        <p class="kind"><a href="#pay">Payment system</a></p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  C([Client]) --> GW[API gateway]
+  GW --> PS[Payment service]
+  PS --> RK[Risk service]
+  PS --> LS[Ledger service]
+  PS --> DB[(Payments and ledger DB)]
+  LS --> DB
+  PS --> PA[Provider adapter]
+  PA --> PSP([Payment provider])
+  PSP -.->|webhook| WH[Webhook handler]
+  WH --> PS
+  DB -.->|outbox| K[[Event log]]
+  K -.-> N[Notifications]
+  K -.-> RC[Reconciliation]
+          </script>
+          <figcaption>The payment service owns the state machine, the ledger service owns the money. The provider is reached through one adapter and answers twice: in the response and by webhook.</figcaption>
+        </figure>
+        <ul>
+          <li><b>Internal transfer (write):</b> the payment service stores the idempotency key and a payment row, calls the risk service, then the ledger service posts two entries and updates both balances in one database transaction. An outbox row is written in that same transaction.</li>
+          <li><b>Top-up (write):</b> the payment is saved as pending <i>before</i> the provider is called. The adapter sends the charge with our attempt id as the provider's idempotency key. The ledger is credited only after the provider confirms, by response or by webhook, whichever arrives first.</li>
+          <li><b>Read:</b> balance comes from the account row on the primary for anything that decides a debit. Display reads and statements can use replicas, paginated by (account id, entry id).</li>
+          <li><b>Async:</b> a relay publishes outbox rows to the event log. Notifications, analytics and reconciliation consume it and must be idempotent, because delivery is at least once.</li>
+          <li><b>Reconciliation:</b> a scheduled job compares the provider's settlement report with our ledger and flags every difference.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="pay-deep-dives">
+        <h2>Deep dives</h2>
+        <p class="kind"><a href="#pay">Payment system</a></p>
+        <h3>1. Double-entry ledger as the source of truth</h3>
+        <p>Every movement is one transaction of two or more entries that sum to zero. Entries are never updated or deleted. A mistake is fixed by posting a reversing transaction.</p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Transaction</th><th>Account</th><th>Amount (paise)</th><th>Sum</th></tr></thead>
+            <tbody>
+              <tr><td rowspan="2">T1: Rishikesh tops up 500.00</td><td>provider_clearing</td><td>-50,000</td><td rowspan="2">0</td></tr>
+              <tr><td>wallet:rishikesh</td><td>+50,000</td></tr>
+              <tr><td rowspan="2">T2: Rishikesh sends Sandhya 200.00</td><td>wallet:rishikesh</td><td>-20,000</td><td rowspan="2">0</td></tr>
+              <tr><td>wallet:sandhya</td><td>+20,000</td></tr>
+              <tr><td rowspan="3">T3: Sandhya pays a merchant 100.00, fee 2%</td><td>wallet:sandhya</td><td>-10,000</td><td rowspan="3">0</td></tr>
+              <tr><td>merchant:store</td><td>+9,800</td></tr>
+              <tr><td>revenue:fees</td><td>+200</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <ul>
+          <li><b>Sign convention here:</b> positive means we owe the account holder more. The clearing account is money the provider owes us, so it runs negative until the settlement arrives. Real ledgers record debit and credit with account types; the invariant is the same.</li>
+          <li><b>Invariants to check continuously:</b> each transaction sums to zero; all entries together sum to zero; every stored balance equals the sum of that account's entries.</li>
+          <li><b>Derived balance:</b> the balance column is updated in the same transaction as the entries, and can be rebuilt by replaying entries. No overdraft: <code>UPDATE account SET balance = balance - :amt WHERE id = :id AND balance &gt;= :amt</code> and abort if no row changed.</li>
+          <li><b>Deadlocks:</b> a transfer touches two account rows. Always lock them in account id order.</li>
+          <li><b>Alternative rejected:</b> a mutable balance column with no entries. It is fast, but it cannot explain how a balance came to be and cannot be repaired after a bug.</li>
+        </ul>
+        <h3>2. Idempotency end to end and the payment state machine</h3>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+stateDiagram-v2
+  [*] --> Created
+  Created --> Rejected: risk declined
+  Created --> Pending: sent to provider
+  Created --> Succeeded: internal transfer posted
+  Pending --> Pending: timeout, ask again
+  Pending --> Succeeded: provider confirmed
+  Pending --> Failed: provider declined
+  Succeeded --> Refunded: reversal posted
+  Rejected --> [*]
+  Failed --> [*]
+  Refunded --> [*]
+          </script>
+          <figcaption>A timeout does not leave Pending. Only a definite answer from the provider moves a payment to a terminal state.</figcaption>
+        </figure>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Hop</th><th>Key that makes a retry harmless</th></tr></thead>
+            <tbody>
+              <tr><td>Client to API</td><td><code>Idempotency-Key</code> header, unique constraint, stored response returned on replay</td></tr>
+              <tr><td>Payment service to ledger</td><td>Unique (payment id, entry type) on the ledger transaction, so a second post is rejected</td></tr>
+              <tr><td>Adapter to provider</td><td>Provider idempotency key = our attempt id. A retry of the same attempt reuses it; a new key is used only after a definite failure</td></tr>
+              <tr><td>Provider webhook to us</td><td>Signature check, then deduplicate on the provider's event id</td></tr>
+              <tr><td>Event log to consumers</td><td>Event id stored by each consumer (delivery is at least once)</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <ul>
+          <li><b>Exactly-once effect</b> is at-least-once delivery plus idempotent handling. No hop delivers exactly once on its own.</li>
+          <li>Each transition is a conditional update: <code>UPDATE payment SET status = 'SUCCEEDED' WHERE id = :id AND status = 'PENDING'</code>, in the same transaction as the ledger post. If no row changed, another worker already did it and this one stops.</li>
+        </ul>
+        <h3>3. The external provider: sync call, webhook, reconciliation</h3>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+sequenceDiagram
+  participant P as Payment service
+  participant A as Provider adapter
+  participant X as Provider
+  participant L as Ledger
+  P->>P: save payment as PENDING
+  P->>A: charge, key = attempt id
+  A->>X: POST charge
+  Note over A,X: timeout, outcome unknown
+  A-->>P: unknown
+  P-->>P: stay PENDING, schedule a status check
+  X-->>P: webhook charge succeeded
+  P->>L: post entries once
+  P->>X: GET charge by key
+  X-->>P: succeeded, already applied
+          </script>
+          <figcaption>After a timeout the payment may or may not have happened. The service never guesses: it waits for the webhook, asks the provider by key, and the conditional update makes whichever arrives second a no-op.</figcaption>
+        </figure>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Channel</th><th>Gives you</th><th>Weakness</th></tr></thead>
+            <tbody>
+              <tr><td>Synchronous response</td><td>Fast answer for the user in the common case</td><td>Lost on timeout or crash</td></tr>
+              <tr><td>Webhook</td><td>Asynchronous results (bank transfers, 3-D Secure, delayed captures)</td><td>Can be late, duplicated, out of order or never sent</td></tr>
+              <tr><td>Status poll by key</td><td>Resolves pending payments older than a few seconds</td><td>Costs provider quota; needs backoff</td></tr>
+              <tr><td>Reconciliation job</td><td>Final safety net: settlement file vs ledger, daily or hourly</td><td>Slow; differences go to a suspense account and a review queue</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><b>Failure mode:</b> treating a timeout as a failure and retrying with a new key charges the customer twice. Treating it as success credits money that may never arrive. Unknown is a real state and needs its own handling.</p>
+        <h3>4. One transaction or a saga</h3>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Case</th><th>Use</th><th>Why</th></tr></thead>
+            <tbody>
+              <tr><td>Both accounts in one database or shard</td><td>One ACID transaction: entries, balances, payment status, outbox row</td><td>Simplest correct answer. Keep wallet balance and ledger in the same database so this stays possible.</td></tr>
+              <tr><td>Accounts on different shards</td><td>Two local transactions through a transit account, driven by the outbox (or a distributed SQL database that does the two-phase commit for you)</td><td>The credit leg cannot fail for a business reason, so it is retried until it succeeds; no compensation needed.</td></tr>
+              <tr><td>A step outside our systems (provider, bank payout)</td><td>Saga with a hold: move funds to a holding account, call out, then settle the hold or release it</td><td>An external party cannot join our transaction. The hold keeps the money unspendable while the outcome is unknown.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <h3>5. Risk, card data and audit</h3>
+        <ul>
+          <li><b>Risk check placement:</b> synchronously after validation and before any money moves, with a tight budget (about 100 ms) and a defined behaviour on timeout (decline or step-up above a threshold, allow below it). Heavier models run asynchronously on the event log and can freeze an account afterwards.</li>
+          <li><b>PCI scope:</b> the card number is entered into the provider's hosted field and goes straight to the provider, which returns a token. Our systems store and pass only the token, so most of the platform stays outside PCI DSS scope.</li>
+          <li><b>Auditability:</b> immutable entries, a row per state transition with actor and time, the raw provider messages kept, and write access to the ledger limited to the ledger service.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="pay-tradeoffs">
+        <h2>Trade-offs and follow-ups</h2>
+        <p class="kind"><a href="#pay">Payment system</a></p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Decision</th><th>Alternative</th><th>Why</th></tr></thead>
+            <tbody>
+              <tr><td>Append-only ledger, balance derived</td><td>Mutable balance only</td><td>Audit and repair. Pays extra storage and one more write.</td></tr>
+              <tr><td>Relational, synchronous replication</td><td>Eventually consistent key-value store</td><td>Multi-row atomic writes and no lost commits. Pays write latency and failover complexity.</td></tr>
+              <tr><td>Save PENDING before calling the provider</td><td>Call first, write after</td><td>A crash after the call would leave a charge we know nothing about.</td></tr>
+              <tr><td>Saga with holds for external steps</td><td>Two-phase commit</td><td>Providers do not take part in 2PC. Pays for explicit pending states.</td></tr>
+              <tr><td>Outbox and event log for side effects</td><td>Publish directly after commit</td><td>A crash between commit and publish loses the event.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Failure mode</th><th>Mitigation</th></tr></thead>
+            <tbody>
+              <tr><td>Crash after provider success, before the ledger post</td><td>Recovery worker scans PENDING payments older than N seconds and queries the provider; the webhook covers the same gap</td></tr>
+              <tr><td>Duplicate or out-of-order webhooks</td><td>Deduplicate by event id; apply only legal state transitions</td></tr>
+              <tr><td>Two concurrent debits on one wallet</td><td>Conditional balance update or row lock inside the transaction</td></tr>
+              <tr><td>Hot merchant account (thousands of credits per second on one row)</td><td>Append entries without locking the merchant balance and fold them in periodically, or split into sub-accounts</td></tr>
+              <tr><td>Provider outage</td><td>Circuit breaker, second provider behind the adapter, payments queue as pending rather than fail silently</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <ul>
+          <li><b>How do you prove no money was lost?</b> Sum of all entries is zero, balances match entries, ledger matches the provider settlement report. Run all three on a schedule and alert on any difference.</li>
+          <li><b>How does a refund work?</b> A new transaction with reversing entries linked to the original payment, with its own idempotency key and its own provider call.</li>
+          <li><b>Multiple currencies?</b> One account per currency. A conversion is two transfers through an exchange account at a recorded rate.</li>
+          <li><b>Can balance be read from a replica?</b> For display only. Any decision to debit reads and writes the primary in one transaction.</li>
+          <li><b>What changes at 10x?</b> Shard by account id, move statements to a read store fed by the event log, archive old entries to cold storage with periodic balance snapshots.</li>
+        </ul>
+        <p class="note"><b>Senior signal:</b> separating "delivered at least once" from "applied once", naming unknown as a state, and volunteering reconciliation as the last line of defence before the interviewer asks.</p>
+      </section>
+
+      <section class="chapter part" id="book">
+        <h2>Ticket and seat booking</h2>
+        <p class="kind">Part 3 of 9 &middot; contention on scarce inventory</p>
+        <p>Design booking for concerts and cinemas: a user picks specific seats, holds them for a few minutes, pays and gets a ticket. It is asked because thousands of people race for the same seat and exactly one may win, and because a flash sale sends a hundred times the normal traffic at one event.</p>
+        <ul>
+          <li><a href="#book-requirements">Requirements and scale</a></li>
+          <li><a href="#book-api">API and data model</a></li>
+          <li><a href="#book-design">High-level design</a></li>
+          <li><a href="#book-deep-dives">Deep dives</a>: double booking, hold and payment timeout, waiting room, cache vs database</li>
+          <li><a href="#book-tradeoffs">Trade-offs and follow-ups</a></li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="book-requirements">
+        <h2>Requirements and scale</h2>
+        <p class="kind"><a href="#book">Seat booking</a></p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Kind</th><th>Requirement</th></tr></thead>
+            <tbody>
+              <tr><td>Functional</td><td>Browse an event and its seat map with availability. Hold chosen seats for a few minutes. Pay and confirm. Release seats on cancel or expiry. Queue users fairly when demand exceeds capacity.</td></tr>
+              <tr><td>Non-functional</td><td>A seat is never sold twice (strong consistency on seat state). The seat map may be a few seconds stale. Hold p99 under 200 ms. Survive a 100x spike without the database falling over. Admission order roughly first come, first served.</td></tr>
+              <tr><td>Out of scope</td><td>Pricing rules, seat-map authoring, payment internals (see the <a href="#pay">payment case</a>), resale, recommendations.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Quantity</th><th>Arithmetic</th><th>Result (approx.)</th></tr></thead>
+            <tbody>
+              <tr><td>Daily active users</td><td>assumed</td><td>20M</td></tr>
+              <tr><td>Read QPS (browse, seat map)</td><td>20M x 10 views = 200M/day; / 86,400; peak x5</td><td>2,300/s average, 11,600/s peak</td></tr>
+              <tr><td>Bookings</td><td>1M/day / 86,400</td><td>12/s average</td></tr>
+              <tr><td>Flash sale arrival</td><td>2M users for 50,000 seats, arriving within 60 s</td><td>33,000 new sessions/s at the edge</td></tr>
+              <tr><td>Flash sale booking load</td><td>admit 500 users/s x 4 calls each</td><td>2,000 requests/s on the booking path, by design</td></tr>
+              <tr><td>Storage</td><td>1M bookings x 1 KB = 1 GB/day; seats: 10,000 live events x 5,000 seats x 100 B</td><td>365 GB/year of bookings; 5 GB of live seats</td></tr>
+              <tr><td>Bandwidth</td><td>availability for 5,000 seats is about 1 KB; x 11,600/s</td><td>12 MB/s peak; the 50 KB static layout comes from the CDN</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><b>Interview tip:</b> the data is tiny. The whole problem is a short burst of contention on a few thousand rows, so the design goal is to control how much traffic reaches those rows.</p>
+      </section>
+
+      <section class="chapter" id="book-api">
+        <h2>API and data model</h2>
+        <p class="kind"><a href="#book">Seat booking</a></p>
+        <script type="text/plain" data-lang="text" data-file="API" data-norun>
+GET    /v1/events/{id}/seats                        -> layout version + availability (cached 1 to 3 s)
+POST   /v1/events/{id}/holds     Idempotency-Key    {seat_ids[]}
+       -> 201 {hold_id, expires_at}  |  409 {taken: [seat_ids]}
+POST   /v1/holds/{id}/checkout   Idempotency-Key    {payment_method} -> {booking_id, status}
+DELETE /v1/holds/{id}                               -> seats released
+GET    /v1/queue/{event_id}/status                  -> {position, eta}  then  {admission_token}
+        </script>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+erDiagram
+  EVENT ||--|{ SEAT : has
+  HOLD ||--|{ SEAT : reserves
+  HOLD ||--o| BOOKING : becomes
+  EVENT {
+    bigint id PK
+    string venue
+    datetime starts_at
+  }
+  SEAT {
+    bigint event_id PK
+    string seat_id PK
+    string status
+    uuid hold_id FK
+    datetime hold_expires_at
+  }
+  HOLD {
+    uuid id PK
+    bigint user_id
+    datetime expires_at
+  }
+  BOOKING {
+    uuid id PK
+    uuid hold_id FK
+    uuid payment_id
+    string status
+  }
+          </script>
+          <figcaption>One row per seat per event. The seat row itself carries the hold and its expiry, so one conditional write decides who wins.</figcaption>
+        </figure>
+        <ul>
+          <li><b>Store:</b> a relational database sharded by event id. All seats of an event live on one shard, so holding three seats together is one local transaction.</li>
+          <li><b>Cache:</b> availability per event in an in-memory store, refreshed from change data capture. It serves reads only and never decides a sale.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="book-design">
+        <h2>High-level design</h2>
+        <p class="kind"><a href="#book">Seat booking</a></p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  U([User]) --> CDN[CDN]
+  U --> WR[Waiting room]
+  WR -->|admission token| GW[API gateway]
+  GW --> CAT[Catalog service]
+  CAT --> RC[(Availability cache)]
+  GW --> BS[Booking service]
+  BS --> DB[(Seat DB)]
+  BS --> PAY[Payment service]
+  DB -.->|change stream| RC
+  BS -.-> Q[[Expiry queue]]
+  Q -.-> EX[Expiry worker]
+  EX --> DB
+          </script>
+          <figcaption>Reads go to the CDN and the cache. Only admitted users reach the booking service, and only the booking service writes seat state.</figcaption>
+        </figure>
+        <ul>
+          <li><b>Read:</b> static layout from the CDN, availability from the cache. A seat that looks free but is not simply fails at hold time with 409 and the client refreshes.</li>
+          <li><b>Hold (write):</b> one transaction flips every requested seat from free to held with an expiry. All seats or none.</li>
+          <li><b>Checkout:</b> the payment is created with the hold id as its idempotency key. On success the seats move from held to booked, conditional on the hold still owning them.</li>
+          <li><b>Expiry:</b> a delayed message releases the hold at its deadline. The hold query also treats an expired hold as free, so correctness never depends on the worker being on time.</li>
+          <li><b>Flash sale:</b> the waiting room sits in front and releases users at a fixed rate with a signed, short-lived token that the gateway checks.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="book-deep-dives">
+        <h2>Deep dives</h2>
+        <p class="kind"><a href="#book">Seat booking</a></p>
+        <h3>1. Preventing double booking</h3>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Approach</th><th>How</th><th>Good when</th><th>Cost</th></tr></thead>
+            <tbody>
+              <tr><td>Pessimistic lock</td><td><code>SELECT ... FOR UPDATE</code> on the seat rows, check, then update</td><td>Contention is high and the transaction is short</td><td>Waiters queue on the lock; a slow transaction blocks others; never hold it across the payment</td></tr>
+              <tr><td>Optimistic lock</td><td>Read the row with its version; <code>UPDATE ... WHERE version = :v</code></td><td>Conflicts are rare</td><td>Under a flash sale most attempts fail and retry, wasting work</td></tr>
+              <tr><td>Atomic conditional update (chosen)</td><td>One statement that sets held only if the seat is free; count the rows changed</td><td>The check fits in the WHERE clause</td><td>None extra: one round trip, the row lock lasts for one statement</td></tr>
+              <tr><td>Distributed lock in a cache</td><td><code>SET seat:key NX PX ttl</code> before touching the database</td><td>Shedding load before the database</td><td>Not a correctness guarantee on its own (expiry, failover); the database condition must stay</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <script type="text/plain" data-lang="text" data-file="SQL" data-norun>
+BEGIN;
+UPDATE seat
+   SET status = 'HELD', hold_id = :hold, hold_expires_at = now() + interval '8 minutes'
+ WHERE event_id = :event AND seat_id IN (:s1, :s2, :s3)
+   AND (status = 'FREE' OR (status = 'HELD' AND hold_expires_at < now()));
+-- rows changed = 3 -> INSERT the hold, COMMIT
+-- rows changed < 3 -> ROLLBACK, return 409 with the seats that were taken
+        </script>
+        <h3>2. Reservation state machine and the payment timeout</h3>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+stateDiagram-v2
+  [*] --> Free
+  Free --> Held: hold placed
+  Held --> Free: expired or cancelled
+  Held --> Booked: payment succeeded
+  Booked --> Free: refunded
+  Booked --> [*]: event over
+          </script>
+          <figcaption>Held is the only state with a clock. Every transition is a conditional update on the current state and the owning hold id.</figcaption>
+        </figure>
+        <ul>
+          <li><b>Make the hold outlive the payment:</b> for example an 8 minute hold with a 6 minute payment session, so a payment that succeeds can still be confirmed.</li>
+          <li><b>Payment succeeds after the hold expired:</b> try to take the same seats again atomically. If they are gone, refund automatically and tell the user. Never confirm seats the hold no longer owns.</li>
+          <li><b>Payment outcome unknown:</b> keep the seats held (extend once) until the payment resolves, as in the <a href="#pay-deep-dives">payment deep dive</a>.</li>
+          <li><b>Abuse:</b> cap seats per hold and active holds per user, or bots hold the house without paying.</li>
+        </ul>
+        <h3>3. Flash sale: virtual waiting room and fairness</h3>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  U([2M users]) --> E[Edge queue page]
+  E --> QS[Queue service]
+  QS --> ZS[(Ordered queue)]
+  AD[Admission controller] -->|pop 500 per second| ZS
+  AD -->|signed token| U
+  U -->|token| GW[API gateway]
+  GW --> BS[Booking service]
+  BS -->|sold or free capacity| AD
+          </script>
+          <figcaption>The queue absorbs the spike at the edge. The booking path sees a steady, chosen rate, and admission slows or stops as inventory runs out.</figcaption>
+        </figure>
+        <ul>
+          <li><b>Queue page</b> is static and served by the CDN. It polls a cheap status endpoint with backoff, so 2M waiting users cost little.</li>
+          <li><b>Fairness:</b> first come, first served by enqueue time once the sale is open. Users who arrived before opening are shuffled into a random order, which removes the reward for hammering refresh at the exact second.</li>
+          <li><b>Token:</b> signed, bound to the user and event, valid for about 10 minutes, one active token per user. The gateway rejects booking calls without one.</li>
+          <li><b>Alternative:</b> plain rate limiting returns errors and rewards whoever retries fastest. A queue keeps order and gives an honest wait time.</li>
+        </ul>
+        <h3>4. Inventory in cache or database</h3>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Inventory lives in</th><th>Use for</th><th>Risk</th></tr></thead>
+            <tbody>
+              <tr><td>Database only, cache for display (chosen for seats)</td><td>Assigned seating, where each seat is a row</td><td>Database write rate is the ceiling, which the waiting room controls</td></tr>
+              <tr><td>Cache counter as the gate, database as the record</td><td>General admission: an atomic decrement of "remaining" in the cache, then an order row</td><td>Cache loss or failover can oversell or strand stock; needs a rebuild from the database and a reconciliation job</td></tr>
+              <tr><td>Database counter</td><td>Small sales: <code>SET remaining = remaining - :n WHERE remaining &gt;= :n</code></td><td>One hot row; split stock into buckets if it becomes the bottleneck</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="chapter" id="book-tradeoffs">
+        <h2>Trade-offs and follow-ups</h2>
+        <p class="kind"><a href="#book">Seat booking</a></p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Decision</th><th>Alternative</th><th>Why</th></tr></thead>
+            <tbody>
+              <tr><td>Conditional update in the database</td><td>Lock in a cache</td><td>The database constraint is the only thing that survives every failure.</td></tr>
+              <tr><td>Hold with TTL before payment</td><td>Lock the seat only at payment</td><td>Users do not pay for seats that vanish. Pays with seats idle during abandoned holds.</td></tr>
+              <tr><td>Stale availability on reads</td><td>Read seat state from the primary</td><td>Protects the database. Pays with occasional "seat just taken" errors.</td></tr>
+              <tr><td>Waiting room</td><td>Autoscale everything</td><td>Inventory is fixed, so more servers only let more people fail faster.</td></tr>
+              <tr><td>Shard by event</td><td>Shard by user</td><td>Multi-seat holds stay in one transaction. Pays with one hot shard per hot event.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Failure mode</th><th>Mitigation</th></tr></thead>
+            <tbody>
+              <tr><td>Expiry worker down, seats stuck as held</td><td>Expired holds count as free in the hold query; the worker only tidies up</td></tr>
+              <tr><td>User double-clicks or the client retries the hold</td><td>Idempotency key returns the same hold</td></tr>
+              <tr><td>Cache shows sold-out seats as free</td><td>Hold returns 409 with the taken seats; cache entries have a short TTL as a backstop</td></tr>
+              <tr><td>Hot event overloads its shard</td><td>Waiting room rate set from measured shard capacity; move the event to a dedicated shard before the sale</td></tr>
+              <tr><td>Payment confirmed but booking write fails</td><td>Retry the confirm from the payment event; refund if the hold is lost</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <ul>
+          <li><b>How long should the hold be?</b> Long enough to pay (5 to 10 minutes), short enough that abandoned seats return while buyers are still queued.</li>
+          <li><b>"Best available" instead of picking seats?</b> The server picks adjacent free seats and applies the same conditional update; on conflict it picks again.</li>
+          <li><b>Hotel or flight inventory?</b> Inventory is a count per room type per night, so a stay is a conditional decrement across several date rows in one transaction.</li>
+          <li><b>How do you show live availability?</b> Push seat changes for the open event over a WebSocket or server-sent events from the change stream.</li>
+        </ul>
+        <p class="note"><b>Senior signal:</b> pointing out that scaling out cannot help when the inventory is fixed, so the answer is admission control plus one cheap atomic write, and that the hold must be correct even if every background worker is down.</p>
+      </section>
+
+      <section class="chapter part" id="ride">
+        <h2>Ride hailing</h2>
+        <p class="kind">Part 4 of 9 &middot; moving objects and real-time matching</p>
+        <p>Design a service that matches a rider to a nearby driver and tracks the trip live for both. It is asked for three things at once: a location stream with a very high write rate, a geospatial index over objects that keep moving, and a stateful dispatch flow where a driver must never be given two trips.</p>
+        <ul>
+          <li><a href="#ride-requirements">Requirements and scale</a></li>
+          <li><a href="#ride-api">API and data model</a></li>
+          <li><a href="#ride-design">High-level design</a></li>
+          <li><a href="#ride-deep-dives">Deep dives</a>: geospatial index, location ingestion, dispatch and trip states, live updates, ETA, surge</li>
+          <li><a href="#ride-tradeoffs">Trade-offs and follow-ups</a></li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="ride-requirements">
+        <h2>Requirements and scale</h2>
+        <p class="kind"><a href="#ride">Ride hailing</a></p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Kind</th><th>Requirement</th></tr></thead>
+            <tbody>
+              <tr><td>Functional</td><td>Drivers stream their location. A rider gets a fare estimate and ETA, then requests a ride. The system offers the trip to a suitable nearby driver who accepts or declines. Both sides see live position and status. The trip runs through its lifecycle to a final fare.</td></tr>
+              <tr><td>Non-functional</td><td>Match within about 10 s at p95. Driver positions at most about 5 s old. 99.99% availability for request and dispatch. A driver has at most one active trip. Losing an individual location point is acceptable.</td></tr>
+              <tr><td>Out of scope</td><td>Payments, the routing engine itself, shared rides, driver onboarding, ratings.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Quantity</th><th>Arithmetic</th><th>Result (approx.)</th></tr></thead>
+            <tbody>
+              <tr><td>Daily active users</td><td>assumed</td><td>20M riders, 5M drivers; 2M drivers online at peak, 1M on average</td></tr>
+              <tr><td>Trips</td><td>20M/day / 86,400; peak x4</td><td>230/s average, 900/s peak</td></tr>
+              <tr><td>Location writes</td><td>2M drivers / 4 s interval</td><td>500,000/s peak, 250,000/s average</td></tr>
+              <tr><td>Nearby-driver queries</td><td>20M trips x 20 lookups = 400M/day; / 86,400; peak x4</td><td>4,600/s average, 18,500/s peak</td></tr>
+              <tr><td>Live index size</td><td>2M drivers x 100 B</td><td>200 MB, fits in memory</td></tr>
+              <tr><td>Location history</td><td>250,000/s x 86,400 = 21.6B points/day x 50 B</td><td>1.1 TB/day raw, before sampling and compression</td></tr>
+              <tr><td>Bandwidth in</td><td>500,000/s x 100 B</td><td>50 MB/s (400 Mbps) at peak</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><b>Interview tip:</b> location writes outnumber trip writes by about 1,000 to 1 and have opposite needs. Say early that they get different stores: memory for the latest position, a database for trips.</p>
+      </section>
+
+      <section class="chapter" id="ride-api">
+        <h2>API and data model</h2>
+        <p class="kind"><a href="#ride">Ride hailing</a></p>
+        <script type="text/plain" data-lang="text" data-file="API" data-norun>
+WS    /v1/driver/stream            driver -> {lat, lng, heading, ts} every 4 s ; server -> ride offers
+POST  /v1/rides/estimate           {pickup, dropoff} -> {fare_range, eta_s, surge}
+POST  /v1/rides    Idempotency-Key {pickup, dropoff, product} -> {ride_id, status: MATCHING}
+POST  /v1/offers/{id}/accept       (driver) -> 200 | 409 offer expired or taken
+PATCH /v1/rides/{id}               {status: ARRIVED | STARTED | COMPLETED | CANCELLED}
+WS    /v1/rider/stream             server -> {driver position, eta_s, status}
+        </script>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Data</th><th>Shape</th><th>Store</th><th>Why</th></tr></thead>
+            <tbody>
+              <tr><td>Latest driver position</td><td>cell id -&gt; set of drivers; driver -&gt; {position, ts}, TTL 30 s</td><td>In-memory geo index, sharded by city</td><td>Overwritten every 4 s; durability is worthless, speed is everything</td></tr>
+              <tr><td>Driver state</td><td>driver -&gt; AVAILABLE, OFFERED or ON_TRIP, with a version</td><td>Key-value store with compare-and-set</td><td>The single guard against double dispatch</td></tr>
+              <tr><td>Trip</td><td>ride id, rider, driver, status, fare, timestamps</td><td>Relational or distributed SQL, partitioned by city</td><td>Durable, transactional status changes, used for billing</td></tr>
+              <tr><td>Location history</td><td>(trip id, ts) -&gt; point</td><td>Event log into a wide-column or object store</td><td>Append-only, large, read rarely (fare, disputes, analytics)</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="chapter" id="ride-design">
+        <h2>High-level design</h2>
+        <p class="kind"><a href="#ride">Ride hailing</a></p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  D([Driver app]) --> WS[WebSocket gateway]
+  R([Rider app]) --> GW[API gateway]
+  WS --> LOC[Location service]
+  LOC --> GEO[(Geo index)]
+  LOC -.-> K[[Location log]]
+  K -.-> H[(Trip history)]
+  GW --> RS[Ride service]
+  RS --> DB[(Trip DB)]
+  RS --> DSP[Dispatch service]
+  DSP --> GEO
+  DSP --> ETA[ETA and pricing]
+  DSP -->|offer| WS
+          </script>
+          <figcaption>Two separate paths: the location stream on top (memory and a log), the trip flow below (a database). Dispatch is the only component that reads both.</figcaption>
+        </figure>
+        <ul>
+          <li><b>Location (write):</b> the driver app sends a point every 4 s over its WebSocket. The location service overwrites the driver's entry in the geo index and appends the point to the log. Nothing on this path touches a database.</li>
+          <li><b>Request (write):</b> the ride service creates the trip row as matching and hands it to dispatch.</li>
+          <li><b>Match:</b> dispatch reads nearby available drivers from the geo index, ranks the best few by ETA, reserves one with a compare-and-set and pushes an offer down that driver's socket.</li>
+          <li><b>Accept:</b> the trip row gets the driver and the driver state becomes on-trip. On decline or a 10 to 15 s timeout the driver is released and the next candidate is offered.</li>
+          <li><b>Read:</b> the rider's socket receives the assigned driver's position, which the location service fans out to subscribers of that trip.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="ride-deep-dives">
+        <h2>Deep dives</h2>
+        <p class="kind"><a href="#ride">Ride hailing</a></p>
+        <h3>1. Geospatial index for nearest-driver search</h3>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Index</th><th>Idea</th><th>Strength</th><th>Weakness</th></tr></thead>
+            <tbody>
+              <tr><td>Geohash</td><td>Interleave latitude and longitude bits into a string; a shared prefix means a shared rectangle. 6 characters is about 1.2 km x 0.6 km.</td><td>Just a string key: works in any key-value store or sorted index</td><td>Two nearby points can sit in different cells, so always query the cell plus its 8 neighbours; cell shape varies with latitude</td></tr>
+              <tr><td>Quadtree</td><td>Split a square into four whenever it holds too many points</td><td>Adapts to density: small cells downtown, large in the suburbs</td><td>An in-memory tree that must be rebalanced as drivers move; harder to shard</td></tr>
+              <tr><td>Hexagonal cells (H3 style)</td><td>A fixed hierarchy of hexagons; resolution 8 is about 0.7 square km per cell</td><td>All six neighbours are the same distance away, so "rings around a cell" is a clean radius search; also a good unit for surge</td><td>A library dependency; a hexagon's children do not fit exactly inside it</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  P([Pickup point]) --> C[Cell id]
+  C --> N[Cell plus neighbour ring]
+  N --> L[Drivers in those cells]
+  L --> F{{Available and fresh?}}
+  F -->|yes| T[Top 10 by distance]
+  T --> E[Rank by road ETA]
+  F -->|too few| W[Widen the ring]
+  W --> N
+          </script>
+          <figcaption>Cells give a cheap candidate set. The expensive routing ETA is computed only for the top few.</figcaption>
+        </figure>
+        <ul>
+          <li><b>Choice:</b> fixed cells (geohash or hexagons) as keys in an in-memory store, because moving a driver is two cheap set operations and the key shards naturally. A quadtree fits static points of interest better than moving drivers.</li>
+        </ul>
+        <h3>2. Location ingestion at 500,000 writes per second</h3>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Decision</th><th>Choice</th><th>Alternative and why not</th></tr></thead>
+            <tbody>
+              <tr><td>Transport</td><td>One persistent WebSocket per driver, small binary messages</td><td>HTTP per update pays connection and header overhead 500,000 times a second</td></tr>
+              <tr><td>Latest position</td><td>Overwrite in memory with a TTL; a driver who stops sending disappears</td><td>A database row per update turns a cache problem into a write-scaling problem</td></tr>
+              <tr><td>History</td><td>Append to a log, consume in batches into cold storage</td><td>Synchronous history writes would couple dispatch latency to storage</td></tr>
+              <tr><td>Sharding</td><td>By city, then by cell range inside large cities</td><td>By driver id spreads one city's drivers over every shard, so a nearby query fans out everywhere</td></tr>
+              <tr><td>Client</td><td>Send less often when stationary; batch points when offline and replay to history only</td><td>Fixed interval wastes battery and bandwidth</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <h3>3. Dispatch and the trip state machine</h3>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+stateDiagram-v2
+  [*] --> Matching
+  Matching --> Offered: driver reserved
+  Offered --> Matching: declined or timed out
+  Offered --> Accepted: driver accepts
+  Accepted --> Arrived
+  Arrived --> InProgress: rider picked up
+  InProgress --> Completed
+  Matching --> Cancelled: no driver or rider cancels
+  Accepted --> Cancelled
+  Completed --> [*]
+  Cancelled --> [*]
+          </script>
+          <figcaption>Offered loops back to Matching until a driver accepts. Every transition is a conditional update, so a late accept on an expired offer is rejected.</figcaption>
+        </figure>
+        <ul>
+          <li><b>No double dispatch:</b> reserve the driver with a compare-and-set from AVAILABLE to OFFERED before sending the offer. Two dispatchers that pick the same driver cannot both succeed.</li>
+          <li><b>Greedy vs batched matching:</b> greedy offers the nearest driver immediately (simple, low wait). Batched collects requests and drivers in an area for a few seconds and solves an assignment that minimises total pickup time (better overall, slightly slower first answer).</li>
+          <li><b>Dispatcher crash:</b> the offer carries an expiry stored with the driver state, so a reserved driver frees itself; the trip stays in matching and another dispatcher picks it up.</li>
+        </ul>
+        <h3>4. Live updates, ETA, surge and partitioning</h3>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Topic</th><th>Approach</th></tr></thead>
+            <tbody>
+              <tr><td>Updates to both parties</td><td>Driver app holds a WebSocket (it sends constantly anyway). Rider app holds one during an active trip; a mobile push notification covers the app being in the background. A connection registry maps user to gateway node so any service can reach a user.</td></tr>
+              <tr><td>ETA</td><td>Shortest path on a road graph whose edge weights are travel times from live and historical traffic, made fast by precomputed shortcuts. Straight-line distance is used only to shortlist candidates.</td></tr>
+              <tr><td>Surge pricing</td><td>A stream job computes demand (open requests) over supply (available drivers) per cell over a sliding window of a few minutes, then smooths and caps the multiplier. The quoted price is locked for a short time so it does not change under the rider.</td></tr>
+              <tr><td>Partitioning</td><td>A trip starts and ends in one metro area, so city or region is the shard key for the geo index, dispatch and trips. It is also the failure boundary: one region's outage does not take down others.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="chapter" id="ride-tradeoffs">
+        <h2>Trade-offs and follow-ups</h2>
+        <p class="kind"><a href="#ride">Ride hailing</a></p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Decision</th><th>Alternative</th><th>Why</th></tr></thead>
+            <tbody>
+              <tr><td>Positions in memory, not durable</td><td>Persist every point before acknowledging</td><td>A lost point is replaced in 4 s. Pays with a cold index after a node restart (refilled within seconds).</td></tr>
+              <tr><td>Fixed cells</td><td>Quadtree</td><td>Cheap updates and easy sharding. Pays with uneven cell load between dense and sparse areas.</td></tr>
+              <tr><td>WebSocket</td><td>Polling</td><td>Push in both directions with low overhead. Pays with stateful gateways and reconnect handling.</td></tr>
+              <tr><td>Shard by city</td><td>Shard by user id</td><td>Queries stay local. Pays with uneven shard sizes and special handling at region borders.</td></tr>
+              <tr><td>Compare-and-set on driver state</td><td>Distributed lock around dispatch</td><td>One atomic write, no lock service on the hot path.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Failure mode</th><th>Mitigation</th></tr></thead>
+            <tbody>
+              <tr><td>Geo index node lost</td><td>Replica per shard; otherwise the index refills from the next round of updates</td></tr>
+              <tr><td>Stale driver (app killed, tunnel)</td><td>TTL on the position; dispatch filters on timestamp age</td></tr>
+              <tr><td>WebSocket gateway restart</td><td>Clients reconnect with jittered backoff and resume from the trip state in the database</td></tr>
+              <tr><td>Driver accepts after the offer expired</td><td>Conditional update fails; the driver app is told the trip is gone</td></tr>
+              <tr><td>Demand spike (rain, an event ending)</td><td>Surge raises supply and lowers demand; batched matching; widen the search ring gradually</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <ul>
+          <li><b>Pickup near a city border?</b> Cells belong to one region; the neighbour ring query is allowed to read the adjacent region's index.</li>
+          <li><b>How is the fare computed?</b> From the stored trip trace (distance and time) and the price locked at request time, by a job that reads the location history.</li>
+          <li><b>How do you test dispatch changes?</b> Replay recorded location and request logs through the new matcher and compare wait times.</li>
+          <li><b>What changes at 10x?</b> More shards per large city, finer cells in dense areas, and location updates sampled before they reach the history log.</li>
+        </ul>
+        <p class="note"><b>Senior signal:</b> treating latest position as disposable state and trips as durable state, and choosing the shard key (city) from the query that must stay local rather than from the entity id.</p>
+      </section>
+
+      <section class="chapter part" id="video">
+        <h2>Video streaming platform</h2>
+        <p class="kind">Part 5 of 9 &middot; big blobs, long pipelines, expensive bytes</p>
+        <p>Design a platform where creators upload videos and viewers watch them on any device and network. It is asked because it separates a slow, heavy write pipeline (upload and transcode) from a huge, latency-sensitive read path (CDN delivery), and because the dominant constraint is the cost of storage and egress.</p>
+        <ul>
+          <li><a href="#video-requirements">Requirements and scale</a></li>
+          <li><a href="#video-api">API and data model</a></li>
+          <li><a href="#video-design">High-level design</a></li>
+          <li><a href="#video-deep-dives">Deep dives</a>: resumable upload, transcoding DAG, adaptive bitrate and CDN, view counts and cost</li>
+          <li><a href="#video-tradeoffs">Trade-offs and follow-ups</a></li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="video-requirements">
+        <h2>Requirements and scale</h2>
+        <p class="kind"><a href="#video">Video streaming</a></p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Kind</th><th>Requirement</th></tr></thead>
+            <tbody>
+              <tr><td>Functional</td><td>Upload large files reliably. Transcode into several resolutions and bitrates. Play with adaptive quality. Store and serve metadata (title, channel, status). Count views.</td></tr>
+              <tr><td>Non-functional</td><td>Playback starts in under 2 s at p95 with rebuffering under 1% of watch time. 99.99% availability for playback; processing may take minutes. Uploaded sources are never lost. View counts may lag by seconds to minutes.</td></tr>
+              <tr><td>Out of scope</td><td>Recommendations, search, comments, live streaming, ads, DRM details.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Quantity</th><th>Arithmetic</th><th>Result (approx.)</th></tr></thead>
+            <tbody>
+              <tr><td>Daily active users</td><td>assumed, each watching 30 min/day</td><td>100M</td></tr>
+              <tr><td>Playback starts</td><td>100M x 6 videos = 600M/day; / 86,400; peak x3</td><td>6,900/s average, 21,000/s peak</td></tr>
+              <tr><td>Uploads</td><td>500,000/day / 86,400</td><td>6/s</td></tr>
+              <tr><td>Source storage</td><td>500,000 x 200 MB (about 5 min at 5 Mbps)</td><td>100 TB/day</td></tr>
+              <tr><td>Total storage</td><td>source 100 TB + renditions about 100 TB = 200 TB/day; x 365</td><td>73 PB/year before replication</td></tr>
+              <tr><td>Concurrent viewers</td><td>100M x 30 min / 1,440 min</td><td>2.1M average</td></tr>
+              <tr><td>Egress</td><td>2.1M x 2.5 Mbps; per day 100M x 1,800 s x 2.5 Mbps / 8</td><td>5.2 Tbps average, about 10 Tbps peak; 56 PB/day</td></tr>
+              <tr><td>Playback events</td><td>2.1M viewers / 10 s heartbeat</td><td>210,000 events/s</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><b>Interview tip:</b> the request rates are ordinary. The numbers that shape the design are petabytes stored and terabits per second served, so the answer is object storage plus a CDN, and the application servers never touch video bytes.</p>
+      </section>
+
+      <section class="chapter" id="video-api">
+        <h2>API and data model</h2>
+        <p class="kind"><a href="#video">Video streaming</a></p>
+        <script type="text/plain" data-lang="text" data-file="API" data-norun>
+POST /v1/uploads                 {filename, size, sha256}
+     -> {upload_id, part_size, part_urls[]}          pre-signed, straight to object storage
+PUT  <part_url>                  bytes of part N -> ETag     retry any single part
+POST /v1/uploads/{id}/complete   {parts: [{n, etag}]} -> {video_id, status: PROCESSING}
+GET  /v1/videos/{id}             -> {title, status, manifest_url, thumbnails}
+GET  <cdn>/v/{id}/master.m3u8    -> list of renditions, then /{rendition}/seg_00042.m4s
+POST /v1/events/playback         [{video_id, session_id, position_s, event}]   batched
+        </script>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+erDiagram
+  CHANNEL ||--o{ VIDEO : owns
+  VIDEO ||--o{ RENDITION : has
+  VIDEO ||--o{ TRANSCODE_TASK : needs
+  CHANNEL {
+    bigint id PK
+    string name
+  }
+  VIDEO {
+    bigint id PK
+    bigint channel_id FK
+    string title
+    string status
+    string source_key
+    int duration_s
+  }
+  RENDITION {
+    bigint video_id PK
+    string profile PK
+    string codec
+    int bitrate_kbps
+    string manifest_key
+  }
+  TRANSCODE_TASK {
+    bigint video_id PK
+    string step PK
+    string status
+    int attempt
+  }
+          </script>
+          <figcaption>The database holds only pointers (object keys) and state. Video bytes live in object storage and are never read through the database.</figcaption>
+        </figure>
+        <ul>
+          <li><b>Metadata:</b> a relational or distributed SQL store keyed by video id, with a cache in front, because rows are small and read on every playback start.</li>
+          <li><b>Blobs:</b> object storage for sources and segments: cheap per byte, very high durability, served directly to the CDN.</li>
+          <li><b>Counters:</b> a separate key-value or analytical store fed by the event stream, so view traffic never loads the metadata database.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="video-design">
+        <h2>High-level design</h2>
+        <p class="kind"><a href="#video">Video streaming</a></p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  UP([Uploader]) --> API[Upload API]
+  UP -->|parts| RAW[(Source bucket)]
+  API --> MD[(Metadata DB)]
+  RAW -.->|upload complete| Q[[Job queue]]
+  Q --> TR[Transcode workers]
+  TR --> OUT[(Segment bucket)]
+  TR --> MD
+  OUT --> CDN[CDN]
+  V([Viewer]) --> PB[Playback API]
+  PB --> MD
+  V -->|segments| CDN
+          </script>
+          <figcaption>Write path on top: bytes go straight to storage and a queue drives transcoding. Read path at the bottom: the API returns a manifest URL and every segment comes from the CDN.</figcaption>
+        </figure>
+        <ul>
+          <li><b>Upload (write):</b> the API creates the video row and returns pre-signed part URLs. The client uploads parts in parallel directly to the source bucket, then calls complete.</li>
+          <li><b>Process:</b> the completion event enqueues a job. Workers transcode, write segments and manifests to the segment bucket and mark the video ready in the metadata database.</li>
+          <li><b>Play (read):</b> the playback API checks status and access, and returns a signed manifest URL. The player fetches the manifest and then segments from the nearest CDN edge.</li>
+          <li><b>Adapt:</b> after each segment the player measures throughput and buffer level and picks the next segment's rendition.</li>
+          <li><b>Count:</b> the player posts batched playback events to an event stream that feeds view counts (see the last deep dive).</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="video-deep-dives">
+        <h2>Deep dives</h2>
+        <p class="kind"><a href="#video">Video streaming</a></p>
+        <h3>1. Resumable, chunked upload</h3>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+sequenceDiagram
+  participant C as Client
+  participant A as Upload API
+  participant S as Object storage
+  participant Q as Job queue
+  C->>A: start upload, size and hash
+  A->>S: create multipart upload
+  A-->>C: upload id and signed part URLs
+  par parts in parallel
+    C->>S: PUT part 1
+    C->>S: PUT part 2
+  end
+  Note over C,S: network drops, client lists parts and resends only the missing ones
+  C->>A: complete with part list
+  A->>S: assemble and verify hash
+  S-->>Q: object created event
+          </script>
+          <figcaption>The API handles a few small calls. The gigabytes flow from client to storage, and a failure costs one part, not the whole file.</figcaption>
+        </figure>
+        <ul>
+          <li><b>Part size</b> of 8 to 16 MB balances retry cost against request count. Unfinished uploads are aborted by a lifecycle rule after a few days.</li>
+          <li><b>Alternative:</b> streaming through the application servers ties up a connection per upload for minutes and doubles the bandwidth bill. An offset-based resumable protocol is equivalent when storage does not offer multipart.</li>
+        </ul>
+        <h3>2. Transcoding as a DAG of jobs</h3>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  SRC[(Source)] --> PRB[Probe and validate]
+  PRB --> SPL[Split into chunks]
+  SPL --> A1[Encode 1080p chunks]
+  SPL --> A2[Encode 720p chunks]
+  SPL --> A3[Encode 360p chunks]
+  PRB --> AU[Encode audio]
+  PRB --> TH[Thumbnails]
+  A1 --> PK[Package and manifest]
+  A2 --> PK
+  A3 --> PK
+  AU --> PK
+  PK --> PUB[Publish]
+          </script>
+          <figcaption>Splitting at keyframes turns one long encode into many short, independent tasks that fan out across workers and fan back in at packaging.</figcaption>
+        </figure>
+        <ul>
+          <li><b>Orchestration:</b> each node is a task row plus a queue message. A coordinator enqueues a task when its parents are done. Tasks are idempotent: output key is derived from (video, rendition, chunk), so a retry overwrites the same object.</li>
+          <li><b>Failure handling:</b> visibility timeout and retry with backoff per task; after N attempts the task goes to a dead letter queue and the video is marked failed. Only the failed chunk is redone.</li>
+          <li><b>Scheduling:</b> publish the low renditions first so the video is watchable early. Separate queues by priority and size so one 4-hour upload does not starve short ones. Workers are stateless, so cheap interruptible instances fit.</li>
+          <li><b>Alternative:</b> one monolithic encode per video is simpler but cannot be parallelised and restarts from zero on failure.</li>
+        </ul>
+        <h3>3. Adaptive bitrate and the CDN</h3>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Piece</th><th>What it is</th></tr></thead>
+            <tbody>
+              <tr><td>Rendition ladder</td><td>The same video at several qualities, for example 240p at about 0.4 Mbps, 480p at 1 Mbps, 720p at 2.5 Mbps, 1080p at 5 Mbps (illustrative values)</td></tr>
+              <tr><td>Segments</td><td>Each rendition cut into 2 to 6 s files that all start on a keyframe at the same timestamps, so the player can switch rendition at any segment boundary</td></tr>
+              <tr><td>Manifest</td><td>A master playlist listing the renditions and one playlist per rendition listing segment URLs (HLS <code>.m3u8</code>, DASH <code>.mpd</code>). One set of fragmented MP4 segments can serve both formats</td></tr>
+              <tr><td>Player logic</td><td>Start low for a fast first frame, then step up or down from measured throughput and buffer level</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  V([Viewer]) --> E[Edge cache]
+  E -->|miss| M[Regional cache]
+  M -->|miss| O[(Origin bucket)]
+  E -.-> H1[Hot titles, most requests]
+  M -.-> H2[Warm titles]
+  O -.-> H3[Long tail]
+          </script>
+          <figcaption>A cache hierarchy: the edge holds what is popular nearby, a regional tier shields the origin, and the long tail is fetched on demand.</figcaption>
+        </figure>
+        <ul>
+          <li><b>Cache keys:</b> segments are immutable, so they get a long TTL and a versioned path. Re-encoding publishes under a new path instead of invalidating.</li>
+          <li><b>Skew:</b> a small share of videos gets most of the views. Pre-warm expected hits; let the long tail miss to the regional tier, or serve it from fewer locations to save cache space.</li>
+          <li><b>Access control:</b> signed URLs or tokens checked at the edge, so private videos stay cacheable.</li>
+          <li><b>Alternative:</b> progressive download of one MP4 is simple but cannot adapt to the network and wastes bytes the viewer never watches.</li>
+        </ul>
+        <h3>4. View counts as a stream, and where the money goes</h3>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  P([Players]) --> IN[Event ingest]
+  IN --> K[[Event log]]
+  K --> AG[Stream aggregator]
+  AG --> CS[(Counter store)]
+  CS --> API[Playback API]
+  K -.-> AR[(Raw archive)]
+  AR -.-> BJ[Batch job]
+  BJ -.->|corrected totals| CS
+          </script>
+          <figcaption>A view is an event, not a database increment. The stream gives a fast approximate count and a batch job over the archive gives the audited one.</figcaption>
+        </figure>
+        <ul>
+          <li><b>Why not <code>UPDATE video SET views = views + 1</code>:</b> a popular video becomes one hot row taking thousands of writes per second. Aggregating per video per window turns that into one write per window.</li>
+          <li><b>What counts as a view:</b> deduplicate by session id and require a minimum watch time; filtering of bots happens in the batch pass. The same pipeline shape is the <a href="#metrics">metrics case</a>.</li>
+        </ul>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Cost driver</th><th>Lever</th></tr></thead>
+            <tbody>
+              <tr><td>Egress (largest)</td><td>More efficient codecs for popular titles (spend CPU once, save bytes on every view), cap bitrate by device, own or negotiated CDN capacity</td></tr>
+              <tr><td>Storage</td><td>Move sources and rarely watched renditions to cold tiers; keep fewer renditions for the long tail and transcode the rest on demand</td></tr>
+              <tr><td>Compute</td><td>Interruptible instances for transcoding; encode the expensive codecs only after a video proves popular</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="chapter" id="video-tradeoffs">
+        <h2>Trade-offs and follow-ups</h2>
+        <p class="kind"><a href="#video">Video streaming</a></p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Decision</th><th>Alternative</th><th>Why</th></tr></thead>
+            <tbody>
+              <tr><td>Direct-to-storage upload</td><td>Upload through the API</td><td>App tier stays small and stateless. Pays with signed-URL handling in the client.</td></tr>
+              <tr><td>Chunked parallel transcode</td><td>One job per video</td><td>Faster and retries are cheap. Pays with a coordinator and many small tasks.</td></tr>
+              <tr><td>Segmented HTTP streaming</td><td>A stateful streaming protocol</td><td>Plain cacheable files work with any CDN. Pays a few seconds of latency, which is fine for on-demand video.</td></tr>
+              <tr><td>Metadata and blobs in different stores</td><td>Everything in one store</td><td>Each store does what it is good at. Pays with a consistency gap between them (below).</td></tr>
+              <tr><td>Approximate real-time counts</td><td>Exact synchronous counters</td><td>No hot rows. Pays with counts that lag and are corrected later.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Failure mode</th><th>Mitigation</th></tr></thead>
+            <tbody>
+              <tr><td>Transcode worker dies mid-task</td><td>Message becomes visible again after the timeout; idempotent output keys</td></tr>
+              <tr><td>Video row says ready but segments are missing</td><td>Mark ready only after the packager has verified every object exists; write blobs first, metadata last</td></tr>
+              <tr><td>A corrupt or hostile source file</td><td>Probe step validates and enforces limits; encoders run sandboxed with time and memory caps</td></tr>
+              <tr><td>CDN or region outage</td><td>More than one CDN, selected per session through the manifest URL; the player retries on another host</td></tr>
+              <tr><td>A video goes viral before caches are warm</td><td>Regional tier collapses concurrent misses into one origin fetch</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <ul>
+          <li><b>How do you delete a video?</b> Flip the status first (playback stops at once), purge the CDN, then delete objects asynchronously.</li>
+          <li><b>How does live streaming differ?</b> Segments are produced continuously, manifests change every few seconds and need short TTLs, and latency becomes the main target.</li>
+          <li><b>Duplicate uploads?</b> The source hash detects exact re-uploads so the transcode can be reused.</li>
+          <li><b>What changes at 10x?</b> Mostly the bill: more aggressive tiering, per-title encoding ladders and CDN capacity placed inside access networks.</li>
+        </ul>
+        <p class="note"><b>Senior signal:</b> doing the egress arithmetic unprompted and letting cost drive choices (which codecs, which renditions, which tier), and keeping every video byte off the application servers.</p>
+      </section>
+
+      <section class="chapter part" id="drive">
+        <h2>File sync and storage</h2>
+        <p class="kind">Part 6 of 9 &middot; two stores that must agree</p>
+        <p>Design a service that keeps a folder identical across a user's devices and lets them share files. It is asked because the client is half the system (it chunks, hashes and syncs), because moving only changed bytes is the whole efficiency story, and because metadata and file content live in different stores that must stay consistent.</p>
+        <ul>
+          <li><a href="#drive-requirements">Requirements and scale</a></li>
+          <li><a href="#drive-api">API and data model</a></li>
+          <li><a href="#drive-design">High-level design</a></li>
+          <li><a href="#drive-deep-dives">Deep dives</a>: chunking and deduplication, sync protocol, conflicts and versions, metadata vs block consistency, sharing</li>
+          <li><a href="#drive-tradeoffs">Trade-offs and follow-ups</a></li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="drive-requirements">
+        <h2>Requirements and scale</h2>
+        <p class="kind"><a href="#drive">File sync</a></p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Kind</th><th>Requirement</th></tr></thead>
+            <tbody>
+              <tr><td>Functional</td><td>Upload and download files from any device. Sync changes automatically to the user's other devices. Share files and folders with people or by link, with roles. Keep version history and restore. Accept offline edits and resolve conflicts.</td></tr>
+              <tr><td>Non-functional</td><td>Stored files are never lost or corrupted. A change reaches other online devices in under 10 s at p95. Metadata is strongly consistent within a folder tree. Only changed bytes are transferred. Files up to tens of GB, with resumable transfer.</td></tr>
+              <tr><td>Out of scope</td><td>Real-time co-editing inside a document, full-text search, previews, malware scanning.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Quantity</th><th>Arithmetic</th><th>Result (approx.)</th></tr></thead>
+            <tbody>
+              <tr><td>Daily active users</td><td>assumed, of 500M registered</td><td>50M</td></tr>
+              <tr><td>File changes (metadata writes)</td><td>50M x 10 = 500M/day; / 86,400; peak x3</td><td>5,800/s average, 17,000/s peak</td></tr>
+              <tr><td>Bytes uploaded</td><td>500M changes x 500 KB</td><td>250 TB/day</td></tr>
+              <tr><td>Bytes stored</td><td>250 TB x 0.6 (assume 40% saved by deduplication and compression) = 150 TB/day; x 365</td><td>55 PB/year</td></tr>
+              <tr><td>Metadata</td><td>500M users x 200 files = 100B rows x 500 B</td><td>50 TB, must be sharded</td></tr>
+              <tr><td>Bandwidth in</td><td>250 TB / 86,400 s</td><td>2.9 GB/s (23 Gbps) average</td></tr>
+              <tr><td>Open notification connections</td><td>about 2 online devices per active user</td><td>100M mostly idle connections</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="chapter" id="drive-api">
+        <h2>API and data model</h2>
+        <p class="kind"><a href="#drive">File sync</a></p>
+        <script type="text/plain" data-lang="text" data-file="API" data-norun>
+POST /v1/blocks/check        {hashes[]} -> {missing[]}            upload only what the server lacks
+PUT  /v1/blocks/{sha256}     bytes (up to 4 MB) -> 201             idempotent: the name is the content
+POST /v1/files/commit        {path, base_version, blocklist[], size, mtime}
+     -> 200 {version, seq}  |  409 {current_version}               base_version is stale
+GET  /v1/delta?cursor=       -> {entries[], cursor, has_more}      journal entries after the cursor
+GET  /v1/notify?cursor=      long poll: returns when the journal has moved
+POST /v1/shares              {file_id, grantee | link, role}
+        </script>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+erDiagram
+  NAMESPACE ||--o{ FILE : contains
+  FILE ||--|{ FILE_VERSION : has
+  NAMESPACE ||--o{ JOURNAL_ENTRY : logs
+  NAMESPACE ||--o{ MEMBERSHIP : grants
+  NAMESPACE {
+    bigint id PK
+    bigint owner_id
+    bigint last_seq
+  }
+  FILE {
+    bigint id PK
+    bigint namespace_id FK
+    string path
+    bigint current_version
+    boolean deleted
+  }
+  FILE_VERSION {
+    bigint file_id PK
+    bigint version PK
+    string blocklist
+    bigint size
+  }
+  JOURNAL_ENTRY {
+    bigint namespace_id PK
+    bigint seq PK
+    bigint file_id
+    string op
+  }
+  MEMBERSHIP {
+    bigint namespace_id PK
+    bigint user_id PK
+    string role
+  }
+          </script>
+          <figcaption>A namespace is a root folder or a shared folder. A file version is just an ordered list of block hashes, and the journal gives every change in a namespace a sequence number.</figcaption>
+        </figure>
+        <ul>
+          <li><b>Metadata:</b> a relational store sharded by namespace id. A commit updates the file, adds a version and appends to the journal in one transaction, which needs all three on the same shard.</li>
+          <li><b>Blocks:</b> object storage keyed by content hash. Blocks are immutable, so they replicate and cache trivially.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="drive-design">
+        <h2>High-level design</h2>
+        <p class="kind"><a href="#drive">File sync</a></p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  CL([Sync client]) --> GW[API gateway]
+  GW --> BL[Block service]
+  BL --> OBJ[(Block store)]
+  GW --> MS[Metadata service]
+  MS --> MDB[(Metadata DB)]
+  MS --> SH[Sharing and ACL]
+  MS -.->|journal moved| MQ[[Change queue]]
+  MQ -.-> NT[Notification service]
+  NT -.->|wake long poll| CL
+  GW --> NT
+          </script>
+          <figcaption>Bytes go to the block service, structure goes to the metadata service. The notification service only says "something changed"; the client then pulls the delta.</figcaption>
+        </figure>
+        <ul>
+          <li><b>Client:</b> a watcher sees a local change, the chunker splits the file and hashes each block, and a local database remembers the last synced state and the journal cursor.</li>
+          <li><b>Upload (write):</b> the client asks which hashes are missing, uploads only those blocks, then commits the new blocklist with the version it was based on.</li>
+          <li><b>Commit:</b> the metadata service checks permission and base version, verifies that every block exists, writes version and journal entry in one transaction, and publishes a change event.</li>
+          <li><b>Sync (read):</b> other devices hold a long poll. When it returns they call delta with their cursor, download the blocks they do not have and rebuild the file.</li>
+          <li><b>Download:</b> blocks are fetched with short-lived signed URLs, through a CDN for shared and public files.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="drive-deep-dives">
+        <h2>Deep dives</h2>
+        <p class="kind"><a href="#drive">File sync</a></p>
+        <h3>1. Chunking and content-addressed deduplication</h3>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  F[File] --> CH[Split into blocks]
+  CH --> HS[SHA-256 per block]
+  HS --> CK{{Server has it?}}
+  CK -->|no| UPL[Upload block]
+  CK -->|yes| SKIP[Skip]
+  UPL --> CM[Commit blocklist]
+  SKIP --> CM
+          </script>
+          <figcaption>A block's name is the hash of its content. Editing one part of a large file uploads one block; an identical block is stored once.</figcaption>
+        </figure>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Choice</th><th>Options</th><th>Trade-off</th></tr></thead>
+            <tbody>
+              <tr><td>Block boundaries</td><td>Fixed size (about 4 MB) vs content-defined (a rolling hash picks the cut points)</td><td>Fixed is simple, but inserting a byte at the start shifts every later block. Content-defined keeps boundaries stable after inserts at the cost of CPU and variable sizes.</td></tr>
+              <tr><td>Deduplication scope</td><td>Per user or namespace vs global</td><td>Global saves the most, but "this block already exists" tells one user that someone else has the file. Scope the check to the account, or require proof that the client holds the content.</td></tr>
+              <tr><td>Integrity</td><td>Server recomputes the hash on upload</td><td>Costs CPU; without it a client could store bad content under a good name.</td></tr>
+              <tr><td>Resumable upload</td><td>Falls out of blocks: after a failure, check again and send only the missing ones</td><td>No separate upload-session protocol needed.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <h3>2. Sync protocol: journal, cursor, notification</h3>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+sequenceDiagram
+  participant A as Device A
+  participant M as Metadata service
+  participant N as Notification service
+  participant B as Device B
+  B->>N: long poll, cursor 41
+  A->>M: commit file, base version 3
+  M->>M: write version 4 and journal seq 42
+  M-->>A: ok, seq 42
+  M-)N: namespace moved to 42
+  N-->>B: changed
+  B->>M: delta after cursor 41
+  M-->>B: entry 42 with blocklist
+  B->>B: fetch missing blocks, apply, cursor 42
+          </script>
+          <figcaption>The journal is the single ordered list of changes per namespace. A device is fully described by its cursor, so reconnecting after a week is the same call as after a second.</figcaption>
+        </figure>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Channel</th><th>Fit</th></tr></thead>
+            <tbody>
+              <tr><td>Long poll (chosen)</td><td>Changes are rare per device and one-directional; works through every proxy; servers hold cheap idle connections</td></tr>
+              <tr><td>WebSocket</td><td>Better when updates are frequent or bidirectional; more state to manage for little gain here</td></tr>
+              <tr><td>Mobile push</td><td>For phones where a held connection costs battery; treat it as a hint, then pull the delta</td></tr>
+              <tr><td>Periodic polling</td><td>Fallback only: wasteful at 100M devices and slow to notice changes</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><b>Trade-off:</b> the notification carries no data on purpose. It can be lost or duplicated without harm, because the client always asks the journal for the truth.</p>
+        <h3>3. Conflicts and versioning</h3>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Strategy</th><th>Behaviour</th><th>Verdict</th></tr></thead>
+            <tbody>
+              <tr><td>Last writer wins</td><td>The later commit silently replaces the earlier one</td><td>Loses someone's work; acceptable only because the old version is still in history</td></tr>
+              <tr><td>Reject and keep both (chosen)</td><td>A commit whose base version is stale gets 409; the client saves its copy as "name (conflicted copy)" and downloads the server version</td><td>Never loses data; the user merges by hand</td></tr>
+              <tr><td>Automatic merge</td><td>Operational transforms or CRDTs on document structure</td><td>Only for formats the service understands; that is the collaborative editor problem</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <ul>
+          <li><b>Versioning is nearly free:</b> a version is a blocklist, and unchanged blocks are shared between versions. Restore creates a new version that points at the old blocks.</li>
+          <li><b>Retention:</b> keep versions for N days or N versions; deleted files go to a trash state first.</li>
+        </ul>
+        <h3>4. Keeping metadata and blocks consistent</h3>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Rule</th><th>Prevents</th></tr></thead>
+            <tbody>
+              <tr><td>Upload blocks first, commit metadata second</td><td>Metadata pointing at a block that does not exist (a corrupt file)</td></tr>
+              <tr><td>Commit verifies every hash in the blocklist exists</td><td>A client committing blocks it never finished uploading</td></tr>
+              <tr><td>Blocks with no reference are legal and are collected later</td><td>Needing a transaction across two stores; a crash between the steps only leaves garbage</td></tr>
+              <tr><td>Garbage collection is delayed and mark-and-sweep: delete only blocks older than a grace period that no version references</td><td>Deleting a block that an in-flight commit is about to reference</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <h3>5. Sharing and permissions</h3>
+        <ul>
+          <li><b>Model:</b> sharing a folder makes it its own namespace, mounted into each member's tree. Membership rows carry the role (viewer, editor, owner); files inherit from their namespace.</li>
+          <li><b>Enforcement:</b> the metadata service checks membership on every commit and delta. Block downloads use signed URLs issued only after that check, so the block store needs no permission logic.</li>
+          <li><b>Links:</b> a random token mapped to a file and role, with optional expiry and password. Revoking deletes the token.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="drive-tradeoffs">
+        <h2>Trade-offs and follow-ups</h2>
+        <p class="kind"><a href="#drive">File sync</a></p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Decision</th><th>Alternative</th><th>Why</th></tr></thead>
+            <tbody>
+              <tr><td>Blocks addressed by hash</td><td>Whole files as single objects</td><td>Delta sync, deduplication and resume from one mechanism. Pays with a blocklist per version and garbage collection.</td></tr>
+              <tr><td>Separate metadata and block stores</td><td>One store</td><td>Transactions where they matter, cheap bytes where they do not. Pays with ordering rules between the two.</td></tr>
+              <tr><td>Journal with cursor</td><td>Compare full directory listings</td><td>Sync cost is proportional to what changed. Pays with journal storage and compaction.</td></tr>
+              <tr><td>Shard metadata by namespace</td><td>Shard by file id</td><td>One-transaction commits and ordered journals. Pays with large shared folders becoming hot shards.</td></tr>
+              <tr><td>Conflicted copies</td><td>Last writer wins</td><td>No silent data loss. Pays with clutter the user must clean up.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Failure mode</th><th>Mitigation</th></tr></thead>
+            <tbody>
+              <tr><td>Client crashes mid-upload</td><td>Restart, re-check hashes, send the rest; nothing was committed</td></tr>
+              <tr><td>Notification service down</td><td>Clients fall back to calling delta on a timer; no data is lost, only freshness</td></tr>
+              <tr><td>Device offline for weeks</td><td>If its cursor is older than the retained journal, do a full listing and reconcile</td></tr>
+              <tr><td>Silent corruption of a block</td><td>Hash verified on read; repair from another replica</td></tr>
+              <tr><td>Ransomware or mass accidental delete</td><td>Version history and trash allow restoring a whole namespace to a point in time</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <ul>
+          <li><b>Moving a folder with 100,000 files?</b> Store parent pointers rather than full paths, so a move is one row change and one journal entry.</li>
+          <li><b>End-to-end encryption?</b> Blocks encrypted with per-user keys no longer deduplicate across users; that is the price.</li>
+          <li><b>Small files?</b> Many tiny blocks waste round trips; batch several into one request.</li>
+          <li><b>What changes at 10x?</b> Cold storage tiers and erasure coding for old blocks, and splitting very large namespaces.</li>
+        </ul>
+        <p class="note"><b>Senior signal:</b> explaining the write order across the two stores and why orphan blocks are fine while dangling references are not, and making the notification a hint instead of a data channel.</p>
+      </section>
+
+      <section class="chapter part" id="crawl">
+        <h2>Web crawler</h2>
+        <p class="kind">Part 7 of 9 &middot; a pipeline that generates its own load</p>
+        <p>Design a crawler that downloads billions of pages for a search index. It is asked because there are no users to bound the load: the system must decide what to fetch next, stay polite to every host, avoid fetching the same thing twice and survive a web that is partly hostile.</p>
+        <ul>
+          <li><a href="#crawl-requirements">Requirements and scale</a></li>
+          <li><a href="#crawl-api">API and data model</a></li>
+          <li><a href="#crawl-design">High-level design</a></li>
+          <li><a href="#crawl-deep-dives">Deep dives</a>: frontier, distribution by host, duplicate detection, robots, traps, freshness, DNS</li>
+          <li><a href="#crawl-tradeoffs">Trade-offs and follow-ups</a></li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="crawl-requirements">
+        <h2>Requirements and scale</h2>
+        <p class="kind"><a href="#crawl">Web crawler</a></p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Kind</th><th>Requirement</th></tr></thead>
+            <tbody>
+              <tr><td>Functional</td><td>Start from seed URLs, download HTML pages, extract and follow links. Store page content for the indexer. Obey robots.txt and per-host rate limits. Skip URLs and content already seen. Revisit pages to keep them fresh.</td></tr>
+              <tr><td>Non-functional</td><td>10 billion pages per month. Polite: about one request per second per host unless told otherwise. Robust to traps, slow servers and malformed pages. Important pages recrawled within hours, the rest within weeks. Scales by adding machines.</td></tr>
+              <tr><td>Out of scope</td><td>Indexing and ranking, running JavaScript, images and video, pages behind a login.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Quantity</th><th>Arithmetic</th><th>Result (approx.)</th></tr></thead>
+            <tbody>
+              <tr><td>Daily active users</td><td>none: the crawler creates its own load</td><td>not applicable</td></tr>
+              <tr><td>Fetch rate</td><td>10B / (30 x 86,400 = 2.59M s); design for x2</td><td>3,900 pages/s average, 8,000/s peak</td></tr>
+              <tr><td>Storage</td><td>10B x 100 KB = 1 PB/month raw; / 5 with compression</td><td>200 TB/month</td></tr>
+              <tr><td>Bandwidth in</td><td>3,900/s x 100 KB</td><td>390 MB/s (3.1 Gbps)</td></tr>
+              <tr><td>URL-seen filter</td><td>50B URLs x 10 bits = 500 Gbit</td><td>62 GB Bloom filter at about 1% false positives</td></tr>
+              <tr><td>Hosts in flight</td><td>3,900 pages/s at 1 request/s per host</td><td>at least 3,900 distinct hosts being crawled at every moment</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><b>Interview tip:</b> the last row is the insight. Politeness caps the rate per host, so throughput comes from breadth across hosts, and that shapes the frontier.</p>
+      </section>
+
+      <section class="chapter" id="crawl-api">
+        <h2>API and data model</h2>
+        <p class="kind"><a href="#crawl">Web crawler</a></p>
+        <p>There is no public API. These are the internal interfaces between stages.</p>
+        <script type="text/plain" data-lang="text" data-file="Interfaces" data-norun>
+frontier.add(url, priority, found_on)
+frontier.next(fetcher_id)      -> {url, host, not_before}      leased; returned to the queue if not finished
+frontier.done(url, status, next_crawl_at)
+fetch(url, if_none_match)      -> {status, headers, body, final_url}
+urldb.upsert(url_hash, {last_crawled, etag, fingerprint, change_rate, next_crawl_at})
+pagestore.put(content_hash, compressed_body)
+        </script>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Data</th><th>Key and fields</th><th>Store</th><th>Why</th></tr></thead>
+            <tbody>
+              <tr><td>URL record</td><td>reversed host + URL hash -&gt; status, last crawl, ETag, fingerprint, next crawl time</td><td>Wide-column store</td><td>Tens of billions of small rows, point lookups, range scans per host</td></tr>
+              <tr><td>Page content</td><td>content hash -&gt; compressed body, batched into large archive files</td><td>Object storage</td><td>Write once, read in bulk by the indexer; cheapest per byte</td></tr>
+              <tr><td>Frontier queues</td><td>per-host queues plus a schedule of when each host may be hit next</td><td>Disk-backed queues with an in-memory head, per shard</td><td>Too large for memory, must survive restarts</td></tr>
+              <tr><td>URL-seen set</td><td>Bloom filter over normalised URLs</td><td>Memory, per shard, checkpointed</td><td>Billions of membership tests per day at memory speed</td></tr>
+              <tr><td>Robots and DNS</td><td>host -&gt; rules; host -&gt; IP addresses, each with a TTL</td><td>Cache</td><td>Read before every fetch, change rarely</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="chapter" id="crawl-design">
+        <h2>High-level design</h2>
+        <p class="kind"><a href="#crawl">Web crawler</a></p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  SEED([Seed URLs]) --> FR[URL frontier]
+  FR --> FE[Fetchers]
+  FE --> DNS[DNS cache]
+  FE --> RB[(Robots cache)]
+  FE --> WEB([Web hosts])
+  FE --> PR[Parser]
+  PR --> CD{{Content seen?}}
+  CD -->|new| ST[(Page store)]
+  CD -->|new| LX[Link extractor]
+  LX --> UF{{URL seen?}}
+  UF -->|new| FR
+          </script>
+          <figcaption>A loop: the frontier feeds fetchers, parsed pages yield links, and unseen links return to the frontier. The two filters keep the loop from growing without bound.</figcaption>
+        </figure>
+        <ul>
+          <li><b>Schedule:</b> the frontier hands a fetcher a URL only when that URL's host is allowed another request.</li>
+          <li><b>Fetch:</b> resolve the host from the DNS cache, check the cached robots rules, download with strict timeouts and a size cap.</li>
+          <li><b>Parse:</b> validate, compute a content fingerprint, drop the page if the content was already seen, otherwise store it.</li>
+          <li><b>Extract:</b> pull links, normalise them (lowercase host, remove fragments and tracking parameters, resolve relative paths), filter by rules, and add the unseen ones to the frontier with a priority.</li>
+          <li><b>Recrawl:</b> a scheduler scans the URL records for pages that are due and feeds them back into the frontier.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="crawl-deep-dives">
+        <h2>Deep dives</h2>
+        <p class="kind"><a href="#crawl">Web crawler</a></p>
+        <h3>1. The URL frontier: priority in front, politeness behind</h3>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  IN([New URLs]) --> PRI[Prioritiser]
+  PRI --> F1[[High priority]]
+  PRI --> F2[[Medium priority]]
+  PRI --> F3[[Low priority]]
+  F1 --> SEL[Biased selector]
+  F2 --> SEL
+  F3 --> SEL
+  SEL --> RT[Host router]
+  RT --> B1[[Queue host A]]
+  RT --> B2[[Queue host B]]
+  B1 --> HP[Heap by next allowed time]
+  B2 --> HP
+  HP --> FE[Fetcher]
+          </script>
+          <figcaption>Front queues decide what matters most. Back queues hold one host each, and a heap of "earliest next request" times guarantees a host is never hit faster than its limit.</figcaption>
+        </figure>
+        <ul>
+          <li><b>Priority</b> comes from page importance (link-based score, site quality) and how overdue a recrawl is. The selector favours high queues but never starves low ones.</li>
+          <li><b>Politeness:</b> a fetcher pops the host with the earliest allowed time, fetches one URL from that host's queue, then pushes the host back with time = now + delay. The delay is the larger of the configured gap and a multiple of the last response time, so slow servers get more room.</li>
+          <li><b>Alternative:</b> a single priority queue with a rate limiter in each fetcher. Popular hosts fill the head of the queue and fetchers sit idle waiting on them.</li>
+        </ul>
+        <h3>2. Distributing the frontier by host hash</h3>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Partition by</th><th>Politeness</th><th>Problem</th></tr></thead>
+            <tbody>
+              <tr><td>hash(host) (chosen)</td><td>Each host is owned by exactly one node, so the limit is enforced locally with no coordination</td><td>A few giant hosts skew load; give them more back queues of their own and a higher allowed rate where the site permits</td></tr>
+              <tr><td>hash(URL)</td><td>Many nodes fetch the same host, so a shared rate limiter is needed on every request</td><td>Coordination on the hot path</td></tr>
+              <tr><td>One central frontier</td><td>Trivial</td><td>A bottleneck and a single point of failure at thousands of URLs per second</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <ul>
+          <li>Extracted links that belong to another node's hosts are forwarded in batches. Consistent hashing limits how many hosts move when a node is added or lost.</li>
+          <li>Each node keeps its own Bloom filter and DNS and robots caches for its hosts, so the same partitioning shards everything.</li>
+        </ul>
+        <h3>3. Duplicate detection: URLs and content</h3>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>What</th><th>Technique</th><th>Notes</th></tr></thead>
+            <tbody>
+              <tr><td>Same URL again</td><td>Normalise, then test a Bloom filter</td><td>No false negatives. A false positive means a new URL is wrongly skipped; at about 1% that is acceptable, or confirm positives against the URL store.</td></tr>
+              <tr><td>Same content, different URL</td><td>Hash of the body (mirrors, session ids in URLs)</td><td>Exact matches only: one changed character defeats it.</td></tr>
+              <tr><td>Near-duplicate content</td><td>SimHash: a 64-bit fingerprint where similar documents differ in few bits; treat a small Hamming distance (around 3) as duplicate</td><td>Catches pages that differ only in ads, dates or counters. Needs an index that finds fingerprints within a few bits.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <ul>
+          <li><b>Alternative to Bloom:</b> an exact set in the URL store costs a disk or network lookup per extracted link. A page has dozens of links, so the filter in memory removes most of those lookups.</li>
+          <li>A standard Bloom filter cannot delete. That is fine here: a URL once seen stays seen, and recrawls are scheduled from the URL store.</li>
+        </ul>
+        <h3>4. Robots, traps, freshness and DNS</h3>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Topic</th><th>Approach</th></tr></thead>
+            <tbody>
+              <tr><td>robots.txt</td><td>Fetch once per host and cache (commonly up to a day). Check every URL against it before fetching. If the file is unreachable with a server error, back off from the host rather than assume everything is allowed.</td></tr>
+              <tr><td>Spider traps</td><td>Infinite calendars, session ids, endlessly nested paths. Defences: cap URL length and path depth, cap pages per host scaled by host quality, detect repeating path patterns, and watch the duplicate-content ratio per host.</td></tr>
+              <tr><td>Freshness</td><td>Recrawl interval per page from its observed change rate and its importance: news front pages in minutes, archives in months. Conditional requests (<code>If-None-Match</code>, <code>If-Modified-Since</code>) make an unchanged page cost a 304 with no body. Sitemaps give hints.</td></tr>
+              <tr><td>DNS</td><td>A lookup can take tens of milliseconds and many resolver libraries block. Run local caching resolvers, cache per host with the record's TTL, and resolve ahead of time for hosts about to be fetched.</td></tr>
+              <tr><td>Page storage</td><td>Compress and append many pages into large archive files in object storage, indexed by content hash, so the indexer reads sequentially.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="chapter" id="crawl-tradeoffs">
+        <h2>Trade-offs and follow-ups</h2>
+        <p class="kind"><a href="#crawl">Web crawler</a></p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Decision</th><th>Alternative</th><th>Why</th></tr></thead>
+            <tbody>
+              <tr><td>Breadth-first with priorities</td><td>Depth-first</td><td>Finds important pages early and spreads load over hosts. Pays with a very large frontier.</td></tr>
+              <tr><td>Partition by host</td><td>Partition by URL</td><td>Politeness without coordination. Pays with skew from large hosts.</td></tr>
+              <tr><td>Bloom filter for seen URLs</td><td>Exact lookup</td><td>Memory-speed checks. Pays with a small share of URLs never crawled.</td></tr>
+              <tr><td>Adaptive recrawl</td><td>Fixed interval for everything</td><td>Spends the budget where pages change. Pays with per-page bookkeeping.</td></tr>
+              <tr><td>Fetch and parse as separate stages</td><td>One process does both</td><td>Network-bound and CPU-bound work scale separately. Pays with a queue between them.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Failure mode</th><th>Mitigation</th></tr></thead>
+            <tbody>
+              <tr><td>Frontier node crashes</td><td>Queues are on disk and replicated; leased URLs return after a timeout; the filter is rebuilt from a checkpoint</td></tr>
+              <tr><td>A host is slow or returns errors</td><td>Exponential backoff per host; a slow host only blocks its own back queue</td></tr>
+              <tr><td>Huge or never-ending responses</td><td>Size cap, total time limit, abort on low transfer rate</td></tr>
+              <tr><td>The crawler overloads a small site</td><td>Adaptive delay from response time, obey crawl delay hints, identify the crawler in the user agent with a contact</td></tr>
+              <tr><td>Malicious content</td><td>Parse in a sandbox; never execute fetched content</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <ul>
+          <li><b>Pages that need JavaScript?</b> A separate, much slower rendering tier with headless browsers, used only for pages that are detected to need it.</li>
+          <li><b>Why not depth-first?</b> It dives into one site, which is both impolite and a trap risk.</li>
+          <li><b>How do you measure quality?</b> Coverage of known important pages, average age of stored copies, duplicate rate, and fetches per useful new page.</li>
+          <li><b>What changes at 10x?</b> More frontier shards and fetch locations closer to the hosts; the design stays the same.</li>
+        </ul>
+        <p class="note"><b>Senior signal:</b> deriving the architecture from politeness (one owner per host, breadth as the source of throughput) rather than starting from "a queue and some workers".</p>
+      </section>
+
+      <section class="chapter part" id="sched">
+        <h2>Distributed job scheduler</h2>
+        <p class="kind">Part 8 of 9 &middot; time, leases and at-least-once</p>
+        <p>Design a service that runs one-off jobs at a given time and recurring jobs on a cron schedule, for many teams. It is asked because "run this once at 09:00" hides hard problems: finding due jobs among millions cheaply, making sure a crashed worker's job still runs, and not running it twice when a worker was only slow.</p>
+        <ul>
+          <li><a href="#sched-requirements">Requirements and scale</a></li>
+          <li><a href="#sched-api">API and data model</a></li>
+          <li><a href="#sched-design">High-level design</a></li>
+          <li><a href="#sched-deep-dives">Deep dives</a>: finding due jobs, leases and one runner, leader election and sharding, retries, missed runs, observability</li>
+          <li><a href="#sched-tradeoffs">Trade-offs and follow-ups</a></li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="sched-requirements">
+        <h2>Requirements and scale</h2>
+        <p class="kind"><a href="#sched">Job scheduler</a></p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Kind</th><th>Requirement</th></tr></thead>
+            <tbody>
+              <tr><td>Functional</td><td>Create a one-off job (run at time T) or a recurring job (cron expression with a time zone). Run it by calling a target (HTTP endpoint or queue). Retry failures with backoff. Pause, update, cancel. Show run history and status.</td></tr>
+              <tr><td>Non-functional</td><td>A due job is never silently skipped (at-least-once). It starts within a few seconds of its due time at p99. Schedules survive any single machine failure. No single point of failure. One tenant cannot starve another.</td></tr>
+              <tr><td>Out of scope</td><td>Workflows with dependencies between jobs, placing jobs on machines by CPU and memory, sandboxing user code.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Quantity</th><th>Arithmetic</th><th>Result (approx.)</th></tr></thead>
+            <tbody>
+              <tr><td>Users</td><td>assumed: 100,000 teams (tenants), not end users</td><td>50M job definitions</td></tr>
+              <tr><td>Runs</td><td>100M/day / 86,400</td><td>1,160/s average</td></tr>
+              <tr><td>Peak</td><td>3M jobs due at exactly 00:00:00, drained within 60 s</td><td>50,000 dispatches/s</td></tr>
+              <tr><td>Definitions storage</td><td>50M x 1 KB</td><td>50 GB</td></tr>
+              <tr><td>Run history</td><td>100M x 500 B = 50 GB/day; x 30 days kept</td><td>1.5 TB</td></tr>
+              <tr><td>Bandwidth</td><td>1,160/s x 2 KB; peak 50,000/s x 2 KB</td><td>2.3 MB/s average, 100 MB/s peak</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><b>Interview tip:</b> cron load is not smooth. People schedule on the hour and at midnight, so the peak is about 40 times the average and the design must be sized for that second.</p>
+      </section>
+
+      <section class="chapter" id="sched-api">
+        <h2>API and data model</h2>
+        <p class="kind"><a href="#sched">Job scheduler</a></p>
+        <script type="text/plain" data-lang="text" data-file="API" data-norun>
+POST   /v1/jobs     Idempotency-Key
+       {schedule: {cron: "0 * * * *", timezone: "Asia/Kolkata"} | {run_at},
+        target, payload, retry: {max_attempts, backoff}, timeout_s, misfire_policy, overlap_policy}
+PATCH  /v1/jobs/{id}   {paused: true}        DELETE /v1/jobs/{id}
+GET    /v1/jobs/{id}/runs?cursor=
+
+-- worker side
+POST   /v1/runs/lease            {worker_id, max: 10} -> [{run_id, attempt, lease_until, payload}]
+POST   /v1/runs/{id}/heartbeat   {attempt} -> extends the lease
+POST   /v1/runs/{id}/complete    {attempt, status}    rejected if the attempt is no longer current
+        </script>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+erDiagram
+  TENANT ||--o{ JOB : owns
+  JOB ||--o{ RUN : produces
+  TENANT {
+    bigint id PK
+    int max_concurrency
+  }
+  JOB {
+    bigint id PK
+    bigint tenant_id FK
+    string schedule
+    string timezone
+    datetime next_run_at
+    int shard
+    boolean paused
+  }
+  RUN {
+    bigint job_id PK
+    datetime scheduled_for PK
+    string status
+    int attempt
+    string lease_owner
+    datetime lease_until
+  }
+          </script>
+          <figcaption>A run is identified by (job, scheduled time). That key is unique, so creating the same run twice is impossible, and it is the idempotency key passed to the target.</figcaption>
+        </figure>
+        <ul>
+          <li><b>Store:</b> a sharded relational or wide-column store with an index on (shard, next_run_at). It must support a range scan by due time and conditional updates; a plain key-value store cannot find due jobs.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="sched-design">
+        <h2>High-level design</h2>
+        <p class="kind"><a href="#sched">Job scheduler</a></p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  U([Client]) --> API[Job API]
+  API --> JS[(Job store)]
+  CO[(Coordination store)] -.->|shard leases| SCH[Scheduler nodes]
+  SCH -->|scan due buckets| JS
+  SCH --> Q[[Ready queue]]
+  Q --> W[Workers]
+  W --> T([Job target])
+  W -->|heartbeat and result| RS[Run service]
+  RS --> JS
+  Q -.->|attempts exhausted| DLQ[[Dead letter queue]]
+  RS -.-> OBS[Metrics and history]
+          </script>
+          <figcaption>Three roles: the scheduler decides when (and writes a run), the queue buffers, workers do. Each can fail and scale on its own.</figcaption>
+        </figure>
+        <ul>
+          <li><b>Create (write):</b> the API validates the schedule, computes <code>next_run_at</code>, assigns a shard from the job id and stores the job.</li>
+          <li><b>Schedule:</b> each scheduler node owns some shards. It scans its shards for jobs that are due, and in one transaction inserts the run row and advances the job's <code>next_run_at</code>. Then it enqueues the run.</li>
+          <li><b>Execute:</b> a worker leases a run, calls the target with the run id, heartbeats while it works, and reports the result.</li>
+          <li><b>Recover:</b> a sweeper re-enqueues runs that were inserted but never enqueued, and runs whose lease expired.</li>
+          <li><b>Read:</b> history and status come from the run table, moved to cheaper storage after the retention window.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="sched-deep-dives">
+        <h2>Deep dives</h2>
+        <p class="kind"><a href="#sched">Job scheduler</a></p>
+        <h3>1. Finding due jobs</h3>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Approach</th><th>How</th><th>Fit</th></tr></thead>
+            <tbody>
+              <tr><td>Indexed scan</td><td><code>WHERE next_run_at &lt;= now()</code> on an index, every second</td><td>Fine up to roughly a million jobs on one database; one scanner</td></tr>
+              <tr><td>Time buckets x shards</td><td>Partition key (shard, minute bucket); each scheduler reads only its shards' current bucket</td><td>Scales out; cost is proportional to due jobs, not total jobs</td></tr>
+              <tr><td>Timing wheel in memory</td><td>A ring of slots, one per second; jobs due soon are hashed into slots; a tick fires one slot. Insert and fire are O(1)</td><td>Second-level precision at high volume, but memory only: must be reloaded from the store</td></tr>
+              <tr><td>Delay queue</td><td>Enqueue with a delivery delay, or a sorted set scored by due time</td><td>Good for short delays; many managed queues cap the delay, and cron still needs a store</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  JS[("Job store, bucketed")] -->|load next 2 minutes| LD[Loader]
+  LD --> TW[Timing wheel]
+  TW -->|slot fires| MK[Create run row]
+  MK --> Q[[Ready queue]]
+  API[Job API] -.->|job due sooner than loaded window| TW
+          </script>
+          <figcaption>The usual combination: the durable store is the truth, and a small in-memory wheel holds only the next couple of minutes for precise firing.</figcaption>
+        </figure>
+        <ul>
+          <li>A scheduler that restarts loses nothing: it reloads the window, and any bucket in the past that still has due jobs is processed first.</li>
+          <li>Add a random offset of a few seconds to jobs that allow it. It flattens the top-of-the-hour spike more cheaply than hardware.</li>
+        </ul>
+        <h3>2. Leases, visibility timeouts and "exactly one runner"</h3>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+sequenceDiagram
+  participant W1 as Worker 1
+  participant R as Run service
+  participant W2 as Worker 2
+  participant T as Target
+  W1->>R: lease run 77
+  R-->>W1: attempt 1, lease 30 s
+  W1->>T: execute, key run 77
+  Note over W1: long pause, no heartbeat
+  R->>R: lease expired
+  W2->>R: lease run 77
+  R-->>W2: attempt 2, lease 30 s
+  W2->>T: execute, key run 77
+  T-->>W2: already done, same result
+  W2->>R: complete attempt 2
+  W1->>R: complete attempt 1
+  R-->>W1: rejected, stale attempt
+          </script>
+          <figcaption>The lease makes sure a dead worker's job runs again. It cannot stop a slow worker from overlapping, so the attempt number fences stale reports and the target deduplicates by run id.</figcaption>
+        </figure>
+        <ul>
+          <li><b>Lease:</b> a conditional update sets owner, <code>lease_until</code> and attempt + 1 only if the run is ready or its lease has expired. A queue's visibility timeout is the same idea.</li>
+          <li><b>Exactly-once execution is not achievable</b> in general: the scheduler cannot tell a dead worker from a slow one. The honest contract is at-least-once delivery plus idempotent jobs.</li>
+          <li><b>Lease length:</b> short with heartbeats beats long without. Too short causes duplicates, too long delays recovery.</li>
+          <li><b>When a duplicate is unacceptable</b> and the target cannot deduplicate, offer at-most-once: mark the run started before calling and never retry automatically. The price is runs lost on a crash.</li>
+        </ul>
+        <h3>3. Leader election and sharding</h3>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Scheduler topology</th><th>How</th><th>Trade-off</th></tr></thead>
+            <tbody>
+              <tr><td>Single leader</td><td>One active scheduler holds a lease in a coordination store (etcd or ZooKeeper style); standbys take over when it expires</td><td>Simple; throughput of one node; failover gap of one lease period</td></tr>
+              <tr><td>Sharded leaders (chosen)</td><td>hash(job id) picks one of N virtual shards; each scheduler node holds leases on a set of shards; shards are reassigned when a node dies</td><td>Scales out and limits the blast radius; needs rebalancing</td></tr>
+              <tr><td>Leaderless claim</td><td>Every node runs <code>SELECT ... FOR UPDATE SKIP LOCKED</code> on due rows</td><td>No coordination service; the database becomes the limit at a few thousand claims per second</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <ul>
+          <li><b>Two leaders for one shard</b> can happen briefly after a pause or partition. It is harmless because the run row has a unique key (job, scheduled time): the second insert fails.</li>
+          <li><b>Shard by job id</b>, not by tenant, so one large tenant does not make a hot shard. Tenant fairness is enforced at dispatch with per-tenant concurrency limits.</li>
+        </ul>
+        <h3>4. Retries, dead letters, missed runs and observability</h3>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Topic</th><th>Approach</th></tr></thead>
+            <tbody>
+              <tr><td>Retries</td><td>Exponential backoff with jitter, a maximum number of attempts, and a per-attempt timeout. Retry only failures that can succeed later (timeouts, 5xx), not validation errors.</td></tr>
+              <tr><td>Dead letters</td><td>After the last attempt the run goes to a dead letter queue with its error, is shown to the owner, and can be replayed by hand.</td></tr>
+              <tr><td>Missed runs</td><td>After an outage, a job may have several past due times. The misfire policy per job says: run once now (coalesce), run every missed occurrence (backfill, rate-limited), or skip to the next. Default to run once.</td></tr>
+              <tr><td>Cron arithmetic</td><td>Compute the next time from the scheduled time, not from when the run finished, or the schedule drifts. Store the time zone name and handle local times that occur twice or not at all when clocks change.</td></tr>
+              <tr><td>Overlap</td><td>If a run is still going when the next is due: allow, skip, or queue, chosen per job.</td></tr>
+              <tr><td>Observability</td><td>The main indicator is schedule lag: dispatch time minus scheduled time. Also queue depth, lease expiries, retry and dead letter rates, all per tenant. Alert on a scheduler shard with no owner.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="chapter" id="sched-tradeoffs">
+        <h2>Trade-offs and follow-ups</h2>
+        <p class="kind"><a href="#sched">Job scheduler</a></p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Decision</th><th>Alternative</th><th>Why</th></tr></thead>
+            <tbody>
+              <tr><td>At-least-once with idempotent jobs</td><td>At-most-once</td><td>A skipped payroll job is worse than a deduplicated repeat. Pays by pushing idempotency onto job authors.</td></tr>
+              <tr><td>Durable store plus in-memory wheel</td><td>Only a delay queue</td><td>Handles cron, long horizons and edits. Pays with two components to keep in step.</td></tr>
+              <tr><td>Scheduler separate from workers</td><td>Schedulers execute jobs themselves</td><td>A slow job cannot delay scheduling. Pays with a queue hop.</td></tr>
+              <tr><td>Sharded leaders</td><td>One leader</td><td>Throughput and smaller failures. Pays with a coordination store and rebalancing.</td></tr>
+              <tr><td>Run row written before enqueue</td><td>Enqueue only</td><td>The run survives a lost message and gives history. Pays one extra write per run.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Failure mode</th><th>Mitigation</th></tr></thead>
+            <tbody>
+              <tr><td>Scheduler node dies</td><td>Its shard leases expire and move; the new owner processes overdue buckets first</td></tr>
+              <tr><td>Crash between writing the run and enqueueing it</td><td>Sweeper finds ready runs older than a threshold and enqueues them</td></tr>
+              <tr><td>Worker dies mid-run</td><td>Lease expires, the run is retried as the next attempt</td></tr>
+              <tr><td>Target is down</td><td>Backoff, per-target circuit breaker, dead letters; other tenants unaffected because of per-tenant limits</td></tr>
+              <tr><td>Clock skew between nodes</td><td>Use the database's time for due checks and lease expiry, not each node's clock</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <ul>
+          <li><b>A job is edited while it is running?</b> The run keeps the definition it started with; the change applies from the next run.</li>
+          <li><b>One tenant schedules a million jobs for the same second?</b> Per-tenant dispatch limits and quotas at creation; their backlog waits, others do not.</li>
+          <li><b>Long-running jobs?</b> Heartbeats extend the lease; a hard timeout bounds it.</li>
+          <li><b>Jobs with dependencies?</b> That is a workflow engine: a DAG of tasks with state, built on this scheduler's primitives.</li>
+        </ul>
+        <p class="note"><b>Senior signal:</b> refusing to promise exactly-once execution, and showing the three layers that make duplicates harmless: a unique run key, a fenced attempt number and an idempotent target.</p>
+      </section>
+
+      <section class="chapter part" id="metrics">
+        <h2>Metrics, monitoring and ad-click aggregation</h2>
+        <p class="kind">Part 9 of 9 &middot; counting a firehose correctly</p>
+        <p>Design a pipeline that ingests a very large stream of events (metric points, or ad clicks), aggregates them over time windows and serves dashboards and alerts. Monitoring and ad-click counting are the same shape; clicks add the demand that the numbers are right, because they are billed. It is asked for stream processing, time-series storage and the gap between fast answers and correct ones.</p>
+        <ul>
+          <li><a href="#metrics-requirements">Requirements and scale</a></li>
+          <li><a href="#metrics-api">API and data model</a></li>
+          <li><a href="#metrics-design">High-level design</a></li>
+          <li><a href="#metrics-deep-dives">Deep dives</a>: windows and late data, exactly-once counting and reconciliation, roll-ups and retention, cardinality, queries and alerting</li>
+          <li><a href="#metrics-tradeoffs">Trade-offs and follow-ups</a></li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="metrics-requirements">
+        <h2>Requirements and scale</h2>
+        <p class="kind"><a href="#metrics">Metrics and click aggregation</a></p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Kind</th><th>Requirement</th></tr></thead>
+            <tbody>
+              <tr><td>Functional</td><td>Ingest events from agents and SDKs. Aggregate by time window and dimensions (clicks per ad per minute, request rate per service). Query the last minutes to the last year for dashboards. Evaluate alert rules and notify. Produce exact totals for billing.</td></tr>
+              <tr><td>Non-functional</td><td>An event is visible on a dashboard within about 30 s. Dashboard queries under 1 s at p95. Ingestion 99.99% available and never drops accepted events. Real-time numbers may be approximate; billing numbers are exact after reconciliation. Raw data kept for days, aggregates for a year or more.</td></tr>
+              <tr><td>Out of scope</td><td>Logs and traces, anomaly detection models, click-fraud rules, the agent itself.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Quantity</th><th>Arithmetic</th><th>Result (approx.)</th></tr></thead>
+            <tbody>
+              <tr><td>Daily active users</td><td>not the driver; events are</td><td>10B events/day</td></tr>
+              <tr><td>Ingest rate</td><td>10B / 86,400; peak x5</td><td>116,000/s average, 580,000/s peak</td></tr>
+              <tr><td>Raw storage</td><td>10B x 200 B = 2 TB/day; x 30 days</td><td>60 TB, about 12 TB compressed 5x</td></tr>
+              <tr><td>One-minute aggregates</td><td>10M active series x 1,440 points = 14.4B points/day x 16 B</td><td>230 GB/day raw, about 29 GB/day at 2 B per point compressed</td></tr>
+              <tr><td>Bandwidth in</td><td>116,000/s x 200 B; peak x5</td><td>23 MB/s (185 Mbps) average, 116 MB/s peak</td></tr>
+              <tr><td>Query rate</td><td>15,000 open dashboards x 10 panels / 30 s refresh</td><td>5,000 queries/s</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><b>Interview tip:</b> the aggregate storage row depends on the number of series, not the number of events. Doubling events costs little; doubling label combinations doubles the store. That is why cardinality gets its own deep dive.</p>
+      </section>
+
+      <section class="chapter" id="metrics-api">
+        <h2>API and data model</h2>
+        <p class="kind"><a href="#metrics">Metrics and click aggregation</a></p>
+        <script type="text/plain" data-lang="text" data-file="API" data-norun>
+POST /v1/events        batched, compressed -> 202 once written to the log
+     [{event_id, ts, name: "ad_click", dims: {ad_id, campaign, country}, value: 1}]
+GET  /v1/query?metric=ad_click&agg=sum&group_by=campaign&from=..&to=..&step=60s
+     -> [{campaign, points: [[ts, value], ...]}]
+POST /v1/alerts        {query, condition: "> 100 for 5m", severity, notify}
+GET  /v1/alerts/{id}/state
+        </script>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Data</th><th>Shape</th><th>Store</th><th>Why</th></tr></thead>
+            <tbody>
+              <tr><td>Raw events</td><td>append-only, partitioned by a key such as ad id</td><td>Durable log for days, then columnar files in object storage</td><td>Replay and batch recompute need the originals</td></tr>
+              <tr><td>Aggregates</td><td>(metric, dimension set, window start) -&gt; sum, count, min, max, sketch</td><td>Time-series or columnar analytical store, partitioned by time</td><td>Sequential writes, time-range scans, strong compression of timestamps and values</td></tr>
+              <tr><td>Series index</td><td>label = value -&gt; list of series ids</td><td>Inverted index beside the time-series store</td><td>Finds which series a query touches without scanning data</td></tr>
+              <tr><td>Alert rules and state</td><td>rule, current state, since when</td><td>Relational</td><td>Small, edited by people, needs transactions</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="chapter" id="metrics-design">
+        <h2>High-level design</h2>
+        <p class="kind"><a href="#metrics">Metrics and click aggregation</a></p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  SRC([Agents and SDKs]) --> ING[Ingest gateway]
+  ING --> K[[Event log]]
+  K --> SP[Stream aggregator]
+  SP --> TS[(Time-series store)]
+  K -.-> RAW[(Raw archive)]
+  RAW -.-> BT[Batch recompute]
+  BT -.->|corrections| TS
+  TS --> QS[Query service]
+  QS --> DSH([Dashboards])
+  TS --> AL[Alert evaluator]
+  AL --> NT[Notifier]
+          </script>
+          <figcaption>The log decouples ingestion from everything else. The solid path is fast and approximate; the dashed path recomputes from raw data and corrects the stored aggregates.</figcaption>
+        </figure>
+        <ul>
+          <li><b>Ingest (write):</b> the gateway authenticates, validates, applies per-tenant limits and appends to the log. It acknowledges only after the log has the event, and does no aggregation itself.</li>
+          <li><b>Aggregate:</b> the stream job reads the log, assigns each event to a window by its own timestamp, keeps running totals per key and writes finished windows to the time-series store.</li>
+          <li><b>Archive and correct:</b> raw events are also written to cheap storage. A batch job recomputes each closed hour or day and overwrites the aggregates where they differ.</li>
+          <li><b>Query (read):</b> the query service picks the coarsest resolution that satisfies the time range, fans out to the shards holding those series, merges and caches.</li>
+          <li><b>Alert:</b> an evaluator runs each rule's query on a schedule and passes state changes to the notifier.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="metrics-deep-dives">
+        <h2>Deep dives</h2>
+        <p class="kind"><a href="#metrics">Metrics and click aggregation</a></p>
+        <h3>1. Windows and late data</h3>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Term</th><th>Meaning</th></tr></thead>
+            <tbody>
+              <tr><td>Event time vs processing time</td><td>When it happened vs when the pipeline saw it. Aggregate by event time, or a slow network moves clicks into the wrong minute.</td></tr>
+              <tr><td>Tumbling window</td><td>Fixed, non-overlapping (each minute). The default for counts.</td></tr>
+              <tr><td>Sliding window</td><td>Overlapping (last 5 minutes, updated every minute). For rates and alert conditions.</td></tr>
+              <tr><td>Watermark</td><td>The job's estimate that all events up to time T have arrived, usually "largest timestamp seen minus a fixed delay". A window is emitted when the watermark passes its end.</td></tr>
+              <tr><td>Allowed lateness</td><td>How long after emission a window still accepts events and re-emits a corrected value.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  EV([Event with timestamp]) --> W1{{Window still open?}}
+  W1 -->|yes| ST[Add to window state]
+  ST --> EM[Emit when watermark passes]
+  W1 -->|no| W2{{Within allowed lateness?}}
+  W2 -->|yes| UP[Update and re-emit window]
+  W2 -->|no| SO[Late side output]
+  SO -.-> BT[Batch correction]
+          </script>
+          <figcaption>Three fates for an event: on time, late but still accepted, or too late for the stream and left to the batch job.</figcaption>
+        </figure>
+        <ul>
+          <li><b>Trade-off:</b> a longer watermark delay catches more late events but makes every result later. Typical choice: emit early with a short delay, accept corrections for a few minutes, and let batch fix the rest.</li>
+          <li>Writes to the store must be upserts keyed by (series, window start), so a re-emitted window replaces the old value instead of adding to it.</li>
+        </ul>
+        <h3>2. Exactly-once counting and reconciliation with batch</h3>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Where counts go wrong</th><th>Effect</th><th>Fix</th></tr></thead>
+            <tbody>
+              <tr><td>Client retries a batch after a timeout</td><td>Duplicates</td><td>Event id on every event; deduplicate in the stream job with keyed state kept for a bounded time</td></tr>
+              <tr><td>Stream job crashes and replays from the log</td><td>Double counting of in-flight events</td><td>Checkpoint the job's state together with its log offsets, so a restart resumes both from the same point</td></tr>
+              <tr><td>Sink write is retried</td><td>Double addition</td><td>Idempotent upsert of the window total, or a transactional sink that commits with the checkpoint</td></tr>
+              <tr><td>Events later than allowed lateness</td><td>Undercount</td><td>Batch recompute from the raw archive</td></tr>
+              <tr><td>Ingest gateway acknowledges before the log write is durable</td><td>Loss</td><td>Acknowledge after a replicated write; clients buffer and retry</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <ul>
+          <li><b>What "exactly once" means here:</b> each event affects the stored result once, even though it may be delivered and processed more than once. It is replay plus consistent checkpoints plus idempotent or transactional output.</li>
+          <li><b>Reconciliation:</b> a batch job recomputes each closed period from the raw archive with full deduplication and compares with the stream's totals. Differences above a threshold raise an alert; the batch value is what billing uses.</li>
+          <li><b>Alternative:</b> a single stream pipeline that reprocesses from the log when logic changes, with no separate batch code. It is simpler to maintain; it needs a long-retention log and enough capacity to replay.</li>
+        </ul>
+        <h3>3. Pre-aggregation, roll-ups and retention tiers</h3>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Tier</th><th>Resolution</th><th>Kept for</th><th>Used by</th></tr></thead>
+            <tbody>
+              <tr><td>Raw events</td><td>every event</td><td>7 to 30 days</td><td>Replay, batch, investigations</td></tr>
+              <tr><td>Fine</td><td>10 s to 1 min</td><td>about 30 days</td><td>Live dashboards, alerts</td></tr>
+              <tr><td>Medium</td><td>1 hour</td><td>about 1 year</td><td>Weekly and monthly views</td></tr>
+              <tr><td>Coarse</td><td>1 day</td><td>years</td><td>Capacity planning, billing history</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <ul>
+          <li><b>Downsampling</b> keeps sum, count, min and max per bucket so averages can be recomputed correctly. An average of averages is wrong when buckets have different counts.</li>
+          <li><b>Percentiles</b> cannot be rolled up from percentiles. Store a mergeable sketch or histogram per bucket and merge those.</li>
+          <li><b>Pre-aggregation:</b> compute totals for the dimension sets that dashboards actually group by (per campaign, per country). It trades storage and write work for fast reads; unplanned groupings fall back to a slower scan of finer data.</li>
+          <li><b>Storage engine:</b> time-partitioned blocks, timestamps stored as deltas and values as differences from the previous value, which is why a point can cost about 1 to 2 bytes. Dropping an expired partition is a file delete.</li>
+        </ul>
+        <h3>4. Cardinality, the query path and alerting</h3>
+        <ul>
+          <li><b>Cardinality is the cost driver:</b> the number of series is the product of the distinct values of every label. 100 services x 50 endpoints x 5 status codes = 25,000 series; add a user id label with 1M values and it becomes 25 billion. Memory for the index, storage and query time all follow series count.</li>
+          <li><b>Controls:</b> per-tenant series limits, reject or drop unbounded labels (user id, request id, raw URL) at ingest, and keep such detail in logs or the raw archive instead.</li>
+          <li><b>Query path:</b> choose the tier from the time range (a 30-day chart reads hourly points, not minutes), limit the series a query may touch, cache results aligned to step boundaries so refreshes reuse them.</li>
+        </ul>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+stateDiagram-v2
+  [*] --> Inactive
+  Inactive --> Pending: condition true
+  Pending --> Inactive: condition false
+  Pending --> Firing: true for the whole duration
+  Firing --> Resolved: condition false
+  Resolved --> Inactive
+  Firing --> Firing: repeat reminder
+          </script>
+          <figcaption>The pending state is the "for 5 minutes" clause: it stops a single noisy point from paging someone.</figcaption>
+        </figure>
+        <ul>
+          <li><b>Pipeline:</b> evaluate rules on a schedule, then group related alerts, deduplicate, silence during maintenance, route by severity to chat, email or paging.</li>
+          <li><b>Missing data is a signal:</b> alert when an expected series stops reporting. Monitor the monitoring system from outside it with a heartbeat alert that must keep arriving.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="metrics-tradeoffs">
+        <h2>Trade-offs and follow-ups</h2>
+        <p class="kind"><a href="#metrics">Metrics and click aggregation</a></p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Decision</th><th>Alternative</th><th>Why</th></tr></thead>
+            <tbody>
+              <tr><td>Durable log before any processing</td><td>Aggregate in the gateway</td><td>Absorbs spikes and allows replay. Pays with seconds of latency and log cost.</td></tr>
+              <tr><td>Stream for speed, batch for truth</td><td>Stream only</td><td>Billing-grade totals. Pays with two code paths that must agree.</td></tr>
+              <tr><td>Pre-aggregated roll-ups</td><td>Aggregate raw data at query time</td><td>Sub-second dashboards. Pays with fixed dimensions and extra writes.</td></tr>
+              <tr><td>Event-time windows with watermarks</td><td>Processing-time windows</td><td>Counts land in the right minute. Pays with late-data handling.</td></tr>
+              <tr><td>Hard limits on cardinality</td><td>Accept any labels</td><td>Predictable cost. Pays with less detail in metrics.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Failure mode</th><th>Mitigation</th></tr></thead>
+            <tbody>
+              <tr><td>Stream job falls behind</td><td>Consumer lag is the key metric; scale partitions and workers; shed low-priority streams first</td></tr>
+              <tr><td>Hot key (one ad gets most clicks)</td><td>Pre-aggregate locally per worker, then combine; or add a random suffix to the key and merge in a second stage</td></tr>
+              <tr><td>A tenant sends a label explosion</td><td>Per-tenant limits at the gateway; isolate tenants into separate partitions</td></tr>
+              <tr><td>Time-series store node lost</td><td>Replicated shards; recent data can be rebuilt by replaying the log</td></tr>
+              <tr><td>Alerting outage goes unnoticed</td><td>External heartbeat check; evaluator and notifier run in more than one zone</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <ul>
+          <li><b>Pull or push collection?</b> Pull (the server scrapes targets) gives the server control and shows a dead target at once. Push suits short-lived jobs and clients behind firewalls, and is the only option for clicks.</li>
+          <li><b>Top N ads in the last minute?</b> Keep per-partition top lists in the stream job and merge them; exact top N needs the full counts.</li>
+          <li><b>Unique users instead of counts?</b> Distinct counts do not add up across windows; store a mergeable cardinality sketch.</li>
+          <li><b>What changes at 10x?</b> More log partitions, a tiered time-series store with object storage for old blocks, and stricter cardinality budgets.</li>
+        </ul>
+        <p class="note"><b>Senior signal:</b> defining exactly-once as an effect, not a delivery guarantee, keeping raw data so every number can be recomputed, and naming series cardinality as the thing that sets the bill.</p>
+      </section>
+
+      <section class="chapter" id="cheat-sheet">
+        <h2>Cheat sheet</h2>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Case</th><th>Core idea in one line</th><th>Key data store</th><th>Hardest deep dive</th></tr></thead>
+            <tbody>
+              <tr><td><a href="#pay">Payment system</a></td><td>Append-only double-entry ledger, idempotency keys on every hop, a state machine where unknown is a state</td><td>ACID relational database, synchronously replicated</td><td>Provider timeout with unknown outcome, closed by webhook, status query and reconciliation</td></tr>
+              <tr><td><a href="#book">Seat booking</a></td><td>One atomic conditional write per hold, a TTL on the hold, a waiting room in front</td><td>Relational database sharded by event; cache for display only</td><td>Flash-sale admission and fairness without overselling</td></tr>
+              <tr><td><a href="#ride">Ride hailing</a></td><td>Latest positions in an in-memory cell index, trips in a database, compare-and-set to reserve a driver</td><td>In-memory geo index per city; SQL for trips</td><td>Nearest-driver search over moving objects at 500,000 updates/s</td></tr>
+              <tr><td><a href="#video">Video streaming</a></td><td>Upload straight to object storage, transcode as a parallel DAG, serve segments from a CDN</td><td>Object storage plus CDN; small metadata database</td><td>Transcoding pipeline and the cost of egress</td></tr>
+              <tr><td><a href="#drive">File sync</a></td><td>Files are lists of content-addressed blocks; a per-namespace journal with cursors drives sync</td><td>Object storage for blocks; relational metadata sharded by namespace</td><td>Sync protocol and conflicts, with metadata and blocks kept consistent</td></tr>
+              <tr><td><a href="#crawl">Web crawler</a></td><td>Frontier with priority queues in front and per-host queues behind, partitioned by host hash</td><td>Disk-backed frontier, Bloom filter, wide-column URL store, object storage for pages</td><td>Frontier design that is polite and still fast</td></tr>
+              <tr><td><a href="#sched">Job scheduler</a></td><td>Durable job store scanned by time bucket, runs leased to workers, duplicates made harmless</td><td>Sharded store indexed by due time; coordination store for leases</td><td>Leases and fencing: at-least-once without harmful double runs</td></tr>
+              <tr><td><a href="#metrics">Metrics and click aggregation</a></td><td>Durable log, event-time windows, roll-ups in a time-series store, batch as the source of truth</td><td>Event log plus time-series store; raw archive in object storage</td><td>Late data and exactly-once counting, with cardinality as the cost</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <h3>Recurring moves</h3>
+        <ul>
+          <li><b>Unknown outcome:</b> persist intent first, call with an idempotency key, resolve later by query or callback (payments, bookings, scheduler).</li>
+          <li><b>Scarce resource:</b> one atomic conditional write decides the winner; everything else is load shedding in front of it (seats, drivers, wallet balance).</li>
+          <li><b>Bytes and structure apart:</b> blobs in object storage, pointers and state in a database, blobs written first (video, file sync, crawler).</li>
+          <li><b>Fast and exact apart:</b> a stream gives the quick answer, a recompute from raw data gives the right one (view counts, clicks, reconciliation).</li>
+          <li><b>Shard by the query that must stay local:</b> event, city, namespace, host, job id.</li>
+        </ul>
+        <h3>Practise next with the same template</h3>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Question</th><th>The deep dive that defines it</th></tr></thead>
+            <tbody>
+              <tr><td>E-commerce checkout</td><td>Inventory reservation and the order saga across stock, payment and shipping</td></tr>
+              <tr><td>Food delivery</td><td>Three-sided dispatch where the ETA includes restaurant preparation time</td></tr>
+              <tr><td>Collaborative editor</td><td>Convergence of concurrent edits: operational transforms vs CRDTs</td></tr>
+              <tr><td>Distributed cache</td><td>Consistent hashing, replication and what happens to hot keys and node loss</td></tr>
+              <tr><td>Logging pipeline</td><td>Backpressure when producers outrun the index, and the cost of indexing vs scanning</td></tr>
+              <tr><td>Stock exchange matching engine</td><td>A single-threaded deterministic order book per symbol, fed by one sequenced log that is replicated for failover</td></tr>
+              <tr><td>Hotel reservations</td><td>Inventory as counts per room type per night, and overbooking as a business rule</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>Next: <a href="sd-lld.html">Low-Level Design</a>, where the focus moves from boxes and data flow to classes and their responsibilities.</p>
+      </section>
+
+    </div>
+  </main>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script src="../../assets/tutorial.js?v=8"></script>
+</body>
+</html>

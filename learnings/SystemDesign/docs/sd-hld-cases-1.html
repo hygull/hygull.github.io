@@ -1,0 +1,1885 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>HLD Case Studies: Core</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@500;700&display=swap">
+<link rel="stylesheet" href="../../assets/tutorial.css?v=8">
+</head>
+<body data-track="system">
+
+<header class="topbar">
+  <div class="topbar-in">
+    <a class="brand" href="../../../index.html">Learnings</a>
+    <nav class="tracks" aria-label="Paths">
+      <a href="../../../index.html#system-design" aria-current="true">System Design</a>
+      <a href="../../../archive.html">Archive</a>
+    </nav>
+    <div class="tools">
+      <button class="btn" id="menu" type="button" aria-expanded="false">Chapters</button>
+      <input id="q" type="search" placeholder="Search chapters" aria-label="Search chapters">
+      <button class="btn" id="theme" type="button">Dark mode</button>
+    </div>
+  </div>
+</header>
+
+<div class="shell">
+  <aside class="side">
+    <p class="side-label">HLD Cases: Core</p>
+    <nav id="toc" aria-label="Chapters"></nav>
+  </aside>
+
+  <main>
+    <div class="page-head">
+      <p class="eyebrow">System design, part 8 of 12</p>
+      <h1>HLD Case Studies: Core</h1>
+      <p class="lead">Eight worked high-level designs, the ones asked most often: URL shortener, rate limiter, key-value store, unique ID generator, notification system, news feed, chat and search autocomplete. Every case follows the same five steps, so you learn the rhythm as well as the answers. All numbers are order-of-magnitude assumptions chosen to make the arithmetic easy; in an interview, state yours and move on.</p>
+    </div>
+
+    <div class="chapters">
+
+      <section class="chapter part" id="how-to-use">
+        <h2>How to use these</h2>
+        <p class="kind">Part 1 of 9 &middot; the template and the map</p>
+        <p>Do not memorise the designs. Memorise the five steps and the two or three deep dives that make each problem different, then rebuild the rest from <a href="sd-building-blocks.html">Building Blocks</a>.</p>
+        <ul>
+          <li><a href="#template">The five-step template</a>: what to produce in each step and how long to spend</li>
+          <li><a href="#blocks-map">Building blocks per case</a>: which earlier pages each case exercises</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="template">
+        <h2>The five-step template</h2>
+        <p class="kind"><a href="#how-to-use">How to use these</a></p>
+        <p>Each case below has these five chapters, in this order. Timings assume a 45 minute interview.</p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Step</th><th>What you produce</th><th>Time</th><th>Common mistake</th></tr></thead>
+            <tbody>
+              <tr><td>1. Requirements and scale</td><td>3 to 5 functional, non-functional with numbers, out of scope, a small estimate</td><td>5 to 7 min</td><td>Estimating everything; only compute numbers that change a decision</td></tr>
+              <tr><td>2. API and data model</td><td>3 to 5 endpoints, main entities, the store and why</td><td>5 min</td><td>Picking a database before knowing the access pattern</td></tr>
+              <tr><td>3. High-level design</td><td>One diagram, read path and write path walked end to end</td><td>10 min</td><td>Drawing 25 boxes and explaining none</td></tr>
+              <tr><td>4. Deep dives</td><td>2 to 4 hard parts, each with alternatives</td><td>15 min</td><td>Waiting to be asked; propose the deep dives yourself</td></tr>
+              <tr><td>5. Trade-offs and follow-ups</td><td>Decisions with reasons, failure modes, what changes at 10x</td><td>5 min</td><td>Presenting the design as having no costs</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><b>Interview tip:</b> the estimate exists to answer three questions: does it fit on one machine, is it read-heavy or write-heavy, and what is the hot path. Say the answer out loud after the arithmetic.</p>
+      </section>
+
+      <section class="chapter" id="blocks-map">
+        <h2>Building blocks per case</h2>
+        <p class="kind"><a href="#how-to-use">How to use these</a></p>
+        <p>The blocks themselves are covered in <a href="sd-building-blocks.html">Building Blocks</a>, <a href="sd-data-systems.html">Data Systems</a> and <a href="sd-distributed-systems.html">Distributed Systems Patterns</a>. This table shows where each one is put to work.</p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Case</th><th>Shape of the load</th><th>Building blocks exercised</th></tr></thead>
+            <tbody>
+              <tr><td><a href="#url">URL shortener</a></td><td>Read-heavy, tiny records</td><td>Key generation, cache-aside, KV store sharding, async event pipeline, HTTP redirects</td></tr>
+              <tr><td><a href="#rate">Rate limiter</a></td><td>On every request, latency critical</td><td>Token bucket and window algorithms, Redis atomic scripts, API gateway, fail-open policy</td></tr>
+              <tr><td><a href="#kv">Key-value store</a></td><td>Balanced, always writable</td><td>Consistent hashing, quorum replication, vector clocks, gossip, Merkle trees, LSM trees</td></tr>
+              <tr><td><a href="#id">Unique ID generator</a></td><td>Write-only, no storage</td><td>Clocks and skew, coordination service leases, bit packing</td></tr>
+              <tr><td><a href="#notify">Notification system</a></td><td>Bursty writes, external providers</td><td>Queues per channel, idempotency keys, retries with backoff, dead-letter queues, circuit breakers</td></tr>
+              <tr><td><a href="#feed">News feed</a></td><td>Read-heavy with write amplification</td><td>Fan-out, sorted lists in a cache, cursors, CDN and object store, counters</td></tr>
+              <tr><td><a href="#chat">Chat</a></td><td>Write-heavy, long-lived connections</td><td>WebSockets, session registry, per-partition sequence ids, wide-column store, push notifications</td></tr>
+              <tr><td><a href="#typeahead">Search autocomplete</a></td><td>Very read-heavy, tight latency</td><td>Trie and prefix index, batch and stream processing, multi-layer caching, sharding</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="chapter part" id="url">
+        <h2>URL shortener</h2>
+        <p class="kind">Part 2 of 9 &middot; read-heavy key lookup</p>
+        <p>Map a long URL to a short key and redirect on lookup. It is asked because it is small enough to finish, yet forces a real decision on key generation, caching and the redirect status code.</p>
+        <ul>
+          <li><a href="#url-requirements">Requirements and scale</a></li>
+          <li><a href="#url-api">API and data model</a></li>
+          <li><a href="#url-design">High-level design</a></li>
+          <li><a href="#url-deep-dives">Deep dives</a>: key generation, the read path, aliases and expiry, analytics, scaling the store</li>
+          <li><a href="#url-tradeoffs">Trade-offs and follow-ups</a></li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="url-requirements">
+        <h2>Requirements and scale</h2>
+        <p class="kind"><a href="#url">URL shortener</a></p>
+        <ul>
+          <li><b>Functional:</b> create a short URL for a long one; redirect short to long; optional custom alias; optional expiry; click counts per link.</li>
+          <li><b>Non-functional:</b> redirect adds under about 50 ms at p99; redirects available 99.99%; a created link is never lost; keys are not trivially enumerable.</li>
+          <li><b>Out of scope:</b> accounts and billing, malware and spam scanning, a dashboard UI.</li>
+        </ul>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Quantity</th><th>Arithmetic</th><th>Result (approx.)</th></tr></thead>
+            <tbody>
+              <tr><td>New URLs</td><td>Assumption</td><td>100 M per month</td></tr>
+              <tr><td>Write QPS</td><td>100 M / (30 x 86,400 s = 2.6 M s)</td><td>40 per second average, 200 peak (5x)</td></tr>
+              <tr><td>Read QPS</td><td>100 reads per write: 10 B per month / 2.6 M s</td><td>4,000 per second average, 12,000 peak (3x)</td></tr>
+              <tr><td>Daily users</td><td>10 B / 30 = 333 M redirects per day, about 10 per user</td><td>30 M DAU</td></tr>
+              <tr><td>Storage</td><td>100 M x 12 x 5 years = 6 B rows x 500 bytes</td><td>3 TB</td></tr>
+              <tr><td>Bandwidth</td><td>4,000 per second x 500 bytes</td><td>2 MB per second out</td></tr>
+              <tr><td>Key space</td><td>62^7</td><td>3.5 x 10^12 keys, about 600x the 6 B needed</td></tr>
+              <tr><td>Cache</td><td>20 M hot links x 500 bytes</td><td>10 GB, one Redis node plus replica</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><b>What the numbers say:</b> 100:1 read-heavy, 3 TB total, a 10 GB hot set. The whole problem is a cached key lookup; writes are almost irrelevant to capacity.</p>
+      </section>
+
+      <section class="chapter" id="url-api">
+        <h2>API and data model</h2>
+        <p class="kind"><a href="#url">URL shortener</a></p>
+        <script type="text/plain" data-lang="text" data-file="API">
+POST   /v1/urls               {long_url, custom_alias?, expires_at?}  -> 201 {key, short_url}
+GET    /{key}                 -> 302 Location: <long_url> | 404 unknown | 410 expired
+GET    /v1/urls/{key}/stats   ?from=&to=                              -> {clicks, by_day[]}
+DELETE /v1/urls/{key}         (owner only)                            -> 204
+        </script>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+erDiagram
+  URL ||--o{ CLICK_DAILY : "aggregated into"
+  URL {
+    string short_key PK
+    string long_url
+    bigint owner_id
+    timestamp created_at
+    timestamp expires_at
+  }
+  CLICK_DAILY {
+    string short_key PK
+    date day PK
+    bigint clicks
+  }
+          </script>
+          <figcaption>Two tables. The hot path reads one row by primary key; click counts live elsewhere and are filled asynchronously.</figcaption>
+        </figure>
+        <ul>
+          <li><b>Store:</b> a key-value or wide-column store (DynamoDB, Cassandra) or sharded MySQL. Every query is a single-key get or a conditional put, with no joins, so pick for operational simplicity and replication.</li>
+          <li><b>Analytics:</b> a columnar or time-series store fed from the event log, never the URL table.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="url-design">
+        <h2>High-level design</h2>
+        <p class="kind"><a href="#url">URL shortener</a></p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  C([Client]) --> LB[Load balancer]
+  LB --> W[Write API]
+  LB --> R[Redirect service]
+  W --> KS[Key service]
+  W --> DB[(URL store)]
+  R --> CA[(Redis cache)]
+  R --> DB
+  R -.->|click event| Q[[Event log]]
+  Q --> AG[Stream aggregator]
+  AG --> AN[(Analytics store)]
+          </script>
+          <figcaption>Writes and redirects are separate services so the 100x heavier read path scales, deploys and fails on its own.</figcaption>
+        </figure>
+        <ul>
+          <li><b>Write:</b> Write API validates the URL, takes a key from the key service (or checks the custom alias), does a conditional insert, returns the short URL.</li>
+          <li><b>Read:</b> Redirect service looks up the key in Redis; on a miss it reads the store, populates the cache with a TTL and answers with a redirect.</li>
+          <li><b>Analytics:</b> the redirect emits a click event to a log without waiting for it; a stream job aggregates per key and day.</li>
+          <li><b>Stateless tiers:</b> both services scale horizontally behind the load balancer; state is only in the store, cache and log.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="url-deep-dives">
+        <h2>Deep dives</h2>
+        <p class="kind"><a href="#url">URL shortener</a></p>
+        <h3>Key generation</h3>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Approach</th><th>How</th><th>Gain</th><th>Cost</th></tr></thead>
+            <tbody>
+              <tr><td>Hash of the URL</td><td>First 7 base62 characters of MD5 or SHA-256</td><td>Stateless; same URL gives same key</td><td>Collisions need a check and retry with a salt; same-URL dedup is rarely wanted per user</td></tr>
+              <tr><td>Base62 of a counter</td><td>Each server leases a range of ids, encodes the next one</td><td>Unique by construction, no read before write</td><td>Sequential keys are enumerable; needs a range allocator</td></tr>
+              <tr><td>Pre-generated keys</td><td>A key service creates random unused keys offline and hands out batches</td><td>Unguessable, no collision at write time</td><td>One more stateful service; unused batches are lost on a crash (acceptable)</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  A1[Write API 1] -->|lease 1000 ids| RA[Range allocator]
+  A2[Write API 2] -->|lease 1000 ids| RA
+  RA --> ZK[(Counter in etcd)]
+  A1 --> P[Permute then base62]
+  A2 --> P
+  P --> DB[(URL store)]
+          </script>
+          <figcaption>Counter ranges remove the per-write coordination. A keyed bijective permutation of the id before encoding hides the sequence.</figcaption>
+        </figure>
+        <ul>
+          <li><b>Collision odds for random keys:</b> with 6 B keys used out of 3.5 x 10^12, a random key is taken about 0.17% of the time (6 x 10^9 / 3.5 x 10^12). Always insert with "put if absent" and retry.</li>
+          <li><b>Pick:</b> counter ranges plus a permutation, or the key service. Both avoid a read before every write.</li>
+        </ul>
+        <h3>Read path: cache and 301 versus 302</h3>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+sequenceDiagram
+  participant B as Browser
+  participant R as Redirect service
+  participant K as Redis
+  participant D as URL store
+  B->>R: GET /aZ3kP9x
+  R->>K: get aZ3kP9x
+  K-->>R: miss
+  R->>D: read by key
+  D-->>R: long_url, expires_at
+  R->>K: set with TTL
+  R-->>B: 302 Location long_url
+          </script>
+          <figcaption>Cache-aside on the redirect. Cache unknown keys too (short TTL) so scans of random keys do not hammer the store.</figcaption>
+        </figure>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Status</th><th>Browser behaviour</th><th>Use when</th></tr></thead>
+            <tbody>
+              <tr><td>301 Moved Permanently</td><td>Caches the mapping; later clicks may never reach you</td><td>Lowest load matters more than analytics, and targets never change</td></tr>
+              <tr><td>302 Found (or 307)</td><td>Asks you every time</td><td>You need click analytics, expiry, deletion or editable targets. The usual choice.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <h3>Custom aliases and expiry</h3>
+        <ul>
+          <li>Aliases share the key namespace: conditional insert, return 409 if taken. Reserve words (<code>api</code>, <code>admin</code>), restrict the alphabet, and keep generated keys at a fixed length that aliases may not use, so the two can never collide.</li>
+          <li>Expiry: check <code>expires_at</code> on read and answer 410; delete lazily with the store's TTL feature or a background sweep. Set the cache TTL to no more than the time left.</li>
+          <li>Do not recycle expired keys quickly: old links in the wild would point to a stranger's target.</li>
+        </ul>
+        <h3>Analytics as an async pipeline</h3>
+        <ul>
+          <li>The redirect never writes a counter synchronously. It appends an event (key, time, country, referrer) to a log such as Kafka and returns.</li>
+          <li>A stream job aggregates per key and minute or day with idempotent upserts, because delivery is at least once.</li>
+          <li><b>Trade-off:</b> counts lag by seconds to minutes, and under overload you shed events, not redirects.</li>
+        </ul>
+        <h3>Scaling the store</h3>
+        <ul>
+          <li>Shard by hash of <code>short_key</code>; 3 TB over 5 years is a handful of shards, each replicated 3 times.</li>
+          <li>Most reads never reach it: with a 90% cache hit rate the store sees about 1,200 of the 12,000 peak reads per second.</li>
+          <li>Multi-region: replicate the store asynchronously and serve redirects from the nearest region; route creates to a home region or use region-prefixed key ranges to avoid conflicts.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="url-tradeoffs">
+        <h2>Trade-offs and follow-ups</h2>
+        <p class="kind"><a href="#url">URL shortener</a></p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Decision</th><th>Choice</th><th>Alternative</th><th>Why</th></tr></thead>
+            <tbody>
+              <tr><td>Key generation</td><td>Counter ranges plus permutation</td><td>Hash and retry</td><td>No read before write, no collisions</td></tr>
+              <tr><td>Redirect code</td><td>302</td><td>301</td><td>Keeps analytics, expiry and edits working</td></tr>
+              <tr><td>Store</td><td>KV store, hash-sharded</td><td>Single relational primary</td><td>Single-key access, grows without resharding pain</td></tr>
+              <tr><td>Click counting</td><td>Async event log</td><td>Counter update per redirect</td><td>Redirect latency and availability do not depend on analytics</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <ul>
+          <li><b>Failure mode:</b> cache down. Redirects fall through to the store at 10x the usual load; keep replicas sized for it or shed with a small local in-process cache.</li>
+          <li><b>Failure mode:</b> one viral link. It is a hot key, but a read-only one: a local cache in each redirect instance absorbs it.</li>
+          <li><b>Failure mode:</b> range allocator down. Servers keep working from their leased range; lease early.</li>
+        </ul>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Follow-up</th><th>One-line answer</th></tr></thead>
+            <tbody>
+              <tr><td>Same long URL submitted twice?</td><td>Return a new key by default; dedup per owner needs an index on (owner, hash of URL).</td></tr>
+              <tr><td>How do you stop abuse?</td><td>Rate limit creates per account and IP, check targets against a blocklist asynchronously, allow takedown by key.</td></tr>
+              <tr><td>How short can keys be?</td><td>62^6 is 57 B, enough for the 6 B estimate; 7 leaves headroom and keeps random-key collisions rare.</td></tr>
+              <tr><td>Can users edit the target?</td><td>Yes with 302: update the row and delete the cache entry.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><b>Senior signal:</b> you say early that this is a cached point lookup with a 10 GB hot set, spend the time on key generation and the 301 or 302 choice, and keep analytics off the redirect path without being asked.</p>
+      </section>
+
+      <section class="chapter part" id="rate">
+        <h2>Rate limiter</h2>
+        <p class="kind">Part 3 of 9 &middot; a check on every request</p>
+        <p>Decide, for each incoming request, whether a client is within its allowance. It is asked because the algorithm is easy and the distributed version is not: atomic counting, where the limiter sits, and what happens when its store fails.</p>
+        <ul>
+          <li><a href="#rate-requirements">Requirements and scale</a></li>
+          <li><a href="#rate-api">API and data model</a></li>
+          <li><a href="#rate-design">High-level design</a></li>
+          <li><a href="#rate-deep-dives">Deep dives</a>: algorithms, atomic counting in Redis, local versus global, placement, store failure, multi-region</li>
+          <li><a href="#rate-tradeoffs">Trade-offs and follow-ups</a></li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="rate-requirements">
+        <h2>Requirements and scale</h2>
+        <p class="kind"><a href="#rate">Rate limiter</a></p>
+        <ul>
+          <li><b>Functional:</b> limit requests per key (user, API key, IP) and per rule (endpoint, plan); several rules per request; reject with 429 and tell the client when to retry; change rules without a deploy.</li>
+          <li><b>Non-functional:</b> adds about 1 ms at p99; limiter failure must not take the API down; accuracy within a few percent is acceptable; works across many gateway instances.</li>
+          <li><b>Out of scope:</b> network-level DDoS protection, monthly billing quotas, bot detection.</li>
+        </ul>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Quantity</th><th>Arithmetic</th><th>Result (approx.)</th></tr></thead>
+            <tbody>
+              <tr><td>Active clients</td><td>Assumption</td><td>50 M per day</td></tr>
+              <tr><td>Requests</td><td>50 M x 170 per day = 8.5 B / 86,400 s</td><td>100,000 per second average, 300,000 peak (3x)</td></tr>
+              <tr><td>Limiter checks</td><td>2 rules per request x 300,000, sent as one script call</td><td>300,000 Redis calls per second at peak</td></tr>
+              <tr><td>Storage</td><td>50 M keys x 2 rules x 100 bytes</td><td>10 GB of RAM</td></tr>
+              <tr><td>Bandwidth</td><td>300,000 per second x 200 bytes per round trip</td><td>60 MB per second inside the data centre</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><b>What the numbers say:</b> memory is trivial; throughput is not. One Redis shard handles on the order of 100,000 simple operations per second, so plan several shards keyed by client, or avoid the network hop for most requests.</p>
+      </section>
+
+      <section class="chapter" id="rate-api">
+        <h2>API and data model</h2>
+        <p class="kind"><a href="#rate">Rate limiter</a></p>
+        <script type="text/plain" data-lang="text" data-file="Interface">
+allow(key, rule_id, cost=1)  -> {allowed, limit, remaining, reset_at}    # called by middleware
+
+On every response:  X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Reset
+On rejection:       429 Too Many Requests, Retry-After: <seconds>
+
+PUT /v1/rules/{id}  {match: "POST /v1/payments", key_by: "api_key",
+                     limit: 100, window_s: 60, algorithm: "token_bucket", burst: 20}
+        </script>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Data</th><th>Shape</th><th>Store and reason</th></tr></thead>
+            <tbody>
+              <tr><td>Counters</td><td><code>rl:{rule}:{key}:{window}</code> to an integer with a TTL, or a hash <code>{tokens, last_refill}</code></td><td>Redis: in-memory, atomic increments and scripts, built-in expiry</td></tr>
+              <tr><td>Rules</td><td>Rule id, match, key, limit, window, algorithm</td><td>Relational table or config repo; pushed to every limiter and cached in memory</td></tr>
+              <tr><td>Decisions</td><td>Sampled allow and reject events</td><td>Metrics and logs, for tuning limits and spotting abuse</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="chapter" id="rate-design">
+        <h2>High-level design</h2>
+        <p class="kind"><a href="#rate">Rate limiter</a></p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  C([Client]) --> GW[API gateway]
+  GW --> RL[Limiter middleware]
+  RL -->|check and count| RC[(Redis cluster)]
+  RL -->|allowed| S[Backend services]
+  RL -->|over limit| RJ2[429 response]
+  OP([Operator]) --> RS[Rules service]
+  RS --> RDB[(Rules DB)]
+  RS -.->|push rules| RL
+  RL -.-> M[[Metrics]]
+          </script>
+          <figcaption>The limiter runs inside the gateway. Rules arrive out of band; only the counters need a shared store.</figcaption>
+        </figure>
+        <ul>
+          <li><b>Request path:</b> the middleware matches the request to its rules, builds the keys, and runs one atomic script in Redis that updates the counters and returns the decision.</li>
+          <li><b>Allowed:</b> forward to the backend and add the rate limit headers. <b>Rejected:</b> answer 429 with <code>Retry-After</code>; the backend never sees the request.</li>
+          <li><b>Rule path:</b> operators change rules in the rules service; limiters receive them by push or poll and keep them in memory, so the hot path reads no database.</li>
+          <li><b>Sharding:</b> Redis Cluster shards by key; put the client id in a hash tag so all counters for one client land on one shard and one script can touch them.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="rate-deep-dives">
+        <h2>Deep dives</h2>
+        <p class="kind"><a href="#rate">Rate limiter</a></p>
+        <h3>Algorithms recap</h3>
+        <p>The mechanics are in <a href="sd-building-blocks.html">Building Blocks</a>; this is the comparison to have ready.</p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Algorithm</th><th>State per key</th><th>Bursts</th><th>Weakness</th><th>Use when</th></tr></thead>
+            <tbody>
+              <tr><td>Token bucket</td><td>Tokens, last refill time</td><td>Allowed up to bucket size</td><td>Two parameters to tune</td><td>Default for public APIs</td></tr>
+              <tr><td>Leaky bucket</td><td>Queue or level, last leak time</td><td>Smoothed away</td><td>Bursts wait or drop</td><td>Protecting a backend that needs a steady rate</td></tr>
+              <tr><td>Fixed window</td><td>One counter</td><td>Up to 2x the limit across a boundary</td><td>Boundary spike</td><td>Coarse quotas (per day)</td></tr>
+              <tr><td>Sliding log</td><td>A timestamp per request</td><td>Exact</td><td>Memory grows with the limit</td><td>Low limits that must be exact</td></tr>
+              <tr><td>Sliding window counter</td><td>Two counters</td><td>Approximately exact</td><td>Assumes even spread in the previous window</td><td>High limits, cheap and accurate enough</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <h3>Distributed counting with Redis</h3>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+sequenceDiagram
+  participant G1 as Gateway 1
+  participant G2 as Gateway 2
+  participant R as Redis
+  Note over G1,R: limit is 100, counter is 99
+  G1->>R: GET counter
+  R-->>G1: 99
+  G2->>R: GET counter
+  R-->>G2: 99
+  G1->>R: SET counter 100
+  G2->>R: SET counter 100
+  Note over G1,G2: both allowed, 101 requests passed
+          </script>
+          <figcaption>Read, decide, write from two gateways is a lost update. The check and the update must be one atomic step on the server.</figcaption>
+        </figure>
+        <script type="text/plain" data-lang="text" data-file="fixed_window.lua">
+-- KEYS[1] = counter key, ARGV[1] = window seconds, ARGV[2] = limit
+local n = redis.call('INCR', KEYS[1])
+if n == 1 then
+  redis.call('EXPIRE', KEYS[1], ARGV[1])
+end
+return n <= tonumber(ARGV[2]) and 1 or 0
+        </script>
+        <ul>
+          <li><b>INCR then EXPIRE from the client is a second race:</b> if the client dies between the two commands the key never expires and the client stays blocked for good. A Lua script (or <code>SET key 0 EX 60 NX</code> followed by <code>INCR</code>) closes it, because Redis runs a script as one unit.</li>
+          <li>Token bucket in Redis is the same idea: one script reads <code>{tokens, last_refill}</code>, refills by elapsed time, subtracts the cost and writes back.</li>
+          <li>Use Redis server time inside the script, or pass a time from one source; gateway clocks disagree.</li>
+        </ul>
+        <h3>Local versus global limits</h3>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  subgraph Gateway instance
+    RQ([Request]) --> LB2[Local bucket]
+  end
+  LB2 -->|tokens left| OK[Allow, no network]
+  LB2 -->|empty| LS[Lease next batch]
+  LS --> GR[(Global counter in Redis)]
+  GR -->|batch granted| LB2
+  GR -->|quota used up| RJ[Reject 429]
+          </script>
+          <figcaption>Hybrid: each instance leases a batch of tokens from the global counter and spends it locally, so most requests need no Redis call.</figcaption>
+        </figure>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Mode</th><th>Gain</th><th>Cost</th></tr></thead>
+            <tbody>
+              <tr><td>Local only (limit / instances each)</td><td>No network hop, no dependency</td><td>Wrong when load is uneven or instance count changes</td></tr>
+              <tr><td>Global (Redis on every request)</td><td>Accurate</td><td>A hop per request, Redis on the critical path</td></tr>
+              <tr><td>Hybrid (leased batches)</td><td>Redis load drops by the batch size</td><td>Overshoot up to batch size x instances; more code</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <h3>Placement</h3>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Where</th><th>Gain</th><th>Cost</th><th>Use for</th></tr></thead>
+            <tbody>
+              <tr><td>API gateway or edge</td><td>One place, rejects before any backend work</td><td>Knows little about business cost of a call</td><td>Per-client and per-IP limits on public APIs</td></tr>
+              <tr><td>Sidecar proxy</td><td>Language independent, per-service rules</td><td>Needs a mesh; an extra local hop</td><td>Service-to-service limits</td></tr>
+              <tr><td>Library in the service</td><td>Can limit by business meaning (per tenant, per expensive query)</td><td>One implementation per language, upgrades are slow</td><td>Fine-grained internal limits</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <h3>When the limiter store is down</h3>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Policy</th><th>Behaviour</th><th>Choose for</th></tr></thead>
+            <tbody>
+              <tr><td>Fail open</td><td>Allow traffic, alert, fall back to a coarse local limit</td><td>Most APIs: a limiter outage should not become a product outage</td></tr>
+              <tr><td>Fail closed</td><td>Reject until the store is back</td><td>Limits that are a security or cost control: login attempts, OTP sends, paid third-party calls</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>Give the Redis call a tight timeout (a few milliseconds) and a circuit breaker; a slow limiter is worse than a missing one.</p>
+        <h3>Multi-region</h3>
+        <ul>
+          <li><b>Per-region limits:</b> split the quota by region. Simple, no cross-region latency; a client that roams can get up to the sum.</li>
+          <li><b>Shared global limit:</b> each region counts locally and replicates counts asynchronously. Approximate by the replication lag, which is usually acceptable.</li>
+          <li>Never make a synchronous cross-region call on the request path: it costs tens of milliseconds and couples regions.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="rate-tradeoffs">
+        <h2>Trade-offs and follow-ups</h2>
+        <p class="kind"><a href="#rate">Rate limiter</a></p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Decision</th><th>Choice</th><th>Alternative</th><th>Why</th></tr></thead>
+            <tbody>
+              <tr><td>Algorithm</td><td>Token bucket</td><td>Sliding window counter</td><td>Allows short bursts, two numbers of state</td></tr>
+              <tr><td>Atomicity</td><td>Lua script</td><td>MULTI / EXEC, or client-side locks</td><td>One round trip, read and write in one unit</td></tr>
+              <tr><td>Placement</td><td>Gateway</td><td>Library in each service</td><td>Central rules, rejects early</td></tr>
+              <tr><td>Store failure</td><td>Fail open with local fallback</td><td>Fail closed</td><td>Availability of the API comes first</td></tr>
+              <tr><td>Accuracy</td><td>Approximate (leases, async replication)</td><td>Exact global count</td><td>Exactness costs a synchronous hop everywhere</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <ul>
+          <li><b>Failure mode:</b> hot key. One huge tenant puts all its counting on one shard; lease batches locally or split the tenant's key into sub-keys.</li>
+          <li><b>Failure mode:</b> Redis failover loses recent counters (asynchronous replication). Clients get a brief extra allowance; accept it.</li>
+          <li><b>Failure mode:</b> rejected clients retry at once and add load. Send <code>Retry-After</code> and make 429 responses cheap.</li>
+        </ul>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Follow-up</th><th>One-line answer</th></tr></thead>
+            <tbody>
+              <tr><td>Different cost per endpoint?</td><td>Pass a cost to the bucket: an expensive call takes several tokens.</td></tr>
+              <tr><td>Limit by IP behind NAT?</td><td>IP is a weak identity; prefer API key or user, keep IP limits loose.</td></tr>
+              <tr><td>Hard versus soft limits?</td><td>Soft limits log or throttle (queue, slow down); hard limits reject.</td></tr>
+              <tr><td>How are rules updated safely?</td><td>Versioned config, staged rollout, and a shadow mode that counts without rejecting.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><b>Senior signal:</b> you name the race before the interviewer does, state the fail-open or fail-closed choice per rule and not globally, and offer shadow mode for rolling out a new limit.</p>
+      </section>
+
+      <section class="chapter part" id="kv">
+        <h2>Key-value store</h2>
+        <p class="kind">Part 4 of 9 &middot; Dynamo-style, always writable</p>
+        <p>Design a distributed store for <code>get</code> and <code>put</code> that survives node and network failures. It is asked because it tests the core of distributed data: partitioning, replication, consistency and repair. The design below follows the published Dynamo paper, which Cassandra and Riak also build on.</p>
+        <ul>
+          <li><a href="#kv-requirements">Requirements and scale</a></li>
+          <li><a href="#kv-api">API and data model</a></li>
+          <li><a href="#kv-design">High-level design</a></li>
+          <li><a href="#kv-deep-dives">Deep dives</a>: partitioning and quorums, versioning, failure handling and repair, storage engine, when to use consensus</li>
+          <li><a href="#kv-tradeoffs">Trade-offs and follow-ups</a></li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="kv-requirements">
+        <h2>Requirements and scale</h2>
+        <p class="kind"><a href="#kv">Key-value store</a></p>
+        <ul>
+          <li><b>Functional:</b> <code>put(key, value)</code>, <code>get(key)</code>, <code>delete(key)</code>; opaque values up to about 1 MB; consistency tunable per request.</li>
+          <li><b>Non-functional:</b> writes accepted even during node failure or partition (AP); p99 under about 10 ms; add nodes with no downtime; no single point of failure; each key on 3 replicas.</li>
+          <li><b>Out of scope:</b> range scans, secondary indexes, multi-key transactions.</li>
+        </ul>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Quantity</th><th>Arithmetic</th><th>Result (approx.)</th></tr></thead>
+            <tbody>
+              <tr><td>Callers</td><td>Infrastructure: clients are services, not end users</td><td>DAU not applicable</td></tr>
+              <tr><td>QPS</td><td>Assumption: 200,000 reads + 50,000 writes per second</td><td>250,000 per second average, 500,000 peak (2x)</td></tr>
+              <tr><td>Logical data</td><td>10 B keys x 1 KB</td><td>10 TB</td></tr>
+              <tr><td>Physical data</td><td>10 TB x 3 replicas</td><td>30 TB</td></tr>
+              <tr><td>Nodes</td><td>30 TB / 2 TB per node = 15, kept about 60% full</td><td>About 25 nodes</td></tr>
+              <tr><td>Bandwidth</td><td>Client: 250,000 x 1 KB; replication: 50,000 x 1 KB x 3</td><td>250 MB per second client, 150 MB per second between nodes</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><b>What the numbers say:</b> a few dozen nodes, each serving about 20,000 operations per second at peak. Small enough that every node can know the whole ring, which is what makes one-hop routing and gossip practical.</p>
+      </section>
+
+      <section class="chapter" id="kv-api">
+        <h2>API and data model</h2>
+        <p class="kind"><a href="#kv">Key-value store</a></p>
+        <script type="text/plain" data-lang="text" data-file="API">
+PUT    /kv/{key}   body = value, context = <version from last read>   -> 200 after W replicas ack
+GET    /kv/{key}                                                      -> value(s) + context, after R replies
+DELETE /kv/{key}   context = <version>                                -> writes a tombstone
+
+Per-request tuning:  N = 3 (replicas), W = 2 (write acks), R = 2 (read replies)
+        </script>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Stored per key</th><th>Purpose</th></tr></thead>
+            <tbody>
+              <tr><td>Key, value (opaque bytes)</td><td>The data; partition is chosen by hash of the key</td></tr>
+              <tr><td>Version (vector clock or timestamp)</td><td>Decide which copy is newer, or detect that two are concurrent</td></tr>
+              <tr><td>Tombstone flag and time</td><td>A delete is a write, so it replicates and is not undone by a stale replica; purged after a grace period</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>Each node persists its share in a local LSM-tree engine (see the deep dive). There is no schema and no central metadata store; ring membership is the only shared state.</p>
+      </section>
+
+      <section class="chapter" id="kv-design">
+        <h2>High-level design</h2>
+        <p class="kind"><a href="#kv">Key-value store</a></p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  C([Client]) --> CO[Coordinator node]
+  subgraph Replicas for the key
+    A[Node A]
+    B[Node B]
+    N3[Node C]
+  end
+  CO -->|put| A
+  CO -->|put| B
+  CO -->|put| N3
+  CO -.->|hint if C is down| D[Node D]
+  D -.->|hand off later| N3
+          </script>
+          <figcaption>Any node can coordinate. It forwards to the N replicas for the key and answers after W (or R) of them reply. Dashed edges are the hinted handoff path, used when replica C is unreachable.</figcaption>
+        </figure>
+        <ul>
+          <li><b>Routing:</b> the client (or a load balancer) reaches any node; that node hashes the key, finds the N replicas on the ring and acts as coordinator.</li>
+          <li><b>Write:</b> coordinator sends the put to all N, returns success after W acks; the rest finish in the background.</li>
+          <li><b>Read:</b> coordinator asks all N, returns after R replies, reconciles versions and repairs stale replicas.</li>
+          <li><b>Failure:</b> if a replica is down, another node takes the write with a hint and hands it back later.</li>
+          <li><b>Symmetry:</b> every node has the same role. No leader, so no failover; the price is conflict handling.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="kv-deep-dives">
+        <h2>Deep dives</h2>
+        <p class="kind"><a href="#kv">Key-value store</a></p>
+        <h3>Partitioning and quorums</h3>
+        <ul>
+          <li><b>Consistent hashing with virtual nodes:</b> each physical node owns many small ranges of the hash ring, so adding or losing a node moves about 1/n of the keys and spreads the load over many peers.</li>
+          <li><b>Preference list:</b> the first N distinct physical nodes clockwise from the key, ideally in different racks or zones.</li>
+        </ul>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+sequenceDiagram
+  participant C as Client
+  participant X as Coordinator
+  participant A as Replica A
+  participant B as Replica B
+  participant R as Replica C
+  C->>X: put k = v
+  par to all N = 3
+    X->>A: put
+    X->>B: put
+    X->>R: put
+  end
+  A-->>X: ack
+  B-->>X: ack
+  X-->>C: ok after W = 2
+  R-->>X: ack arrives later
+          </script>
+          <figcaption>The request goes to all N replicas; W only sets how many acks the coordinator waits for. Latency is that of the W-th fastest replica.</figcaption>
+        </figure>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>N, W, R</th><th>Property</th><th>Use when</th></tr></thead>
+            <tbody>
+              <tr><td>3, 2, 2</td><td>R + W &gt; N: every read quorum overlaps the last write quorum; tolerates one node down for both</td><td>Default</td></tr>
+              <tr><td>3, 1, 1</td><td>Fastest; reads can be stale</td><td>Caches, metrics</td></tr>
+              <tr><td>3, 3, 1</td><td>Fast consistent reads; a write fails if any replica is down</td><td>Read-heavy, rarely written</td></tr>
+              <tr><td>3, 1, 3</td><td>Fast writes; a read fails if any replica is down</td><td>Write-heavy ingestion</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><b>Trade-off:</b> R + W &gt; N is not linearizability. Sloppy quorums, concurrent writers and partial write failures can still return stale or conflicting versions.</p>
+        <h3>Versioning and conflict resolution</h3>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  D1["D1<br/>A:1"] --> D2["D2<br/>A:2"]
+  D2 -->|write via B| D3["D3<br/>A:2 B:1"]
+  D2 -->|write via C| D4["D4<br/>A:2 C:1"]
+  D3 --> D5["D5 merged<br/>A:3 B:1 C:1"]
+  D4 --> D5
+          </script>
+          <figcaption>Vector clocks, as in the Dynamo paper. D3 and D4 are concurrent (neither clock dominates), so a read returns both and the next write, via A, merges them.</figcaption>
+        </figure>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Strategy</th><th>Gain</th><th>Cost</th></tr></thead>
+            <tbody>
+              <tr><td>Vector clocks, siblings returned to the client</td><td>No silent data loss</td><td>Client must merge; clocks grow and need pruning</td></tr>
+              <tr><td>Last write wins by timestamp</td><td>Simple, no siblings (the Cassandra default)</td><td>Clock skew silently drops a write</td></tr>
+              <tr><td>CRDT values (counters, sets)</td><td>Merge is automatic and correct</td><td>Only for data types with a defined merge</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <h3>Failure handling and repair</h3>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Problem</th><th>Mechanism</th><th>How it works</th></tr></thead>
+            <tbody>
+              <tr><td>Replica briefly down</td><td>Sloppy quorum and hinted handoff</td><td>The next healthy node accepts the write with a hint naming the owner and replays it when the owner returns</td></tr>
+              <tr><td>Replica missed a write</td><td>Read repair</td><td>On a read the coordinator sees an old version and pushes the newest to that replica</td></tr>
+              <tr><td>Cold data diverged, or a node was replaced</td><td>Anti-entropy with Merkle trees</td><td>Replicas compare hash trees per key range and transfer only the ranges that differ</td></tr>
+              <tr><td>Who is in the cluster, who is dead</td><td>Gossip</td><td>Each node exchanges membership and heartbeat state with a few random peers every second; state spreads in O(log n) rounds</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart TD
+  R["Root hash<br/>differs"] --> L["Keys 0 to 49<br/>same, skip"]
+  R --> H["Keys 50 to 99<br/>differs"]
+  H --> H1["Keys 50 to 74<br/>same, skip"]
+  H --> H2["Keys 75 to 99<br/>differs, sync"]
+          </script>
+          <figcaption>Merkle comparison between two replicas: descend only where hashes differ. Two replicas in sync exchange one hash.</figcaption>
+        </figure>
+        <h3>Storage engine</h3>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  W([Write]) --> CL[Commit log]
+  W --> MT[Memtable]
+  MT -->|flush when full| S1[SSTable new]
+  S1 -->|compaction| S2[SSTable merged]
+  RD([Read]) --> MT
+  RD --> BF[Bloom filters]
+  BF --> S1
+  BF --> S2
+          </script>
+          <figcaption>LSM tree: a write is one sequential append plus a memory update. Reads check the memtable, then only the SSTables whose Bloom filter says "maybe".</figcaption>
+        </figure>
+        <ul>
+          <li><b>LSM tree</b> (RocksDB, Cassandra): sequential writes, good compression; pays with compaction I/O and reads that may touch several files. The usual choice here.</li>
+          <li><b>B-tree</b> (InnoDB): predictable reads, in-place updates; random write I/O. Choose for read-heavy workloads with many range scans.</li>
+        </ul>
+        <h3>When to choose consensus instead</h3>
+        <div class="scroll">
+          <table>
+            <thead><tr><th></th><th>Dynamo-style (leaderless)</th><th>Consensus-based (Raft or Paxos per shard)</th></tr></thead>
+            <tbody>
+              <tr><td>Consistency</td><td>Eventual, tunable</td><td>Linearizable</td></tr>
+              <tr><td>During a partition</td><td>Both sides accept writes</td><td>Only the majority side</td></tr>
+              <tr><td>Conflicts</td><td>Possible, must be resolved</td><td>None</td></tr>
+              <tr><td>Compare-and-set, locks, unique constraints</td><td>Not safely</td><td>Yes</td></tr>
+              <tr><td>Examples</td><td>Cassandra, Riak, the original Dynamo</td><td>etcd, ZooKeeper (ZAB), CockroachDB, TiKV</td></tr>
+              <tr><td>Use for</td><td>Carts, sessions, feeds, time series</td><td>Configuration, leader election, balances, inventory</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="chapter" id="kv-tradeoffs">
+        <h2>Trade-offs and follow-ups</h2>
+        <p class="kind"><a href="#kv">Key-value store</a></p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Decision</th><th>Choice</th><th>Alternative</th><th>Why</th></tr></thead>
+            <tbody>
+              <tr><td>Replication</td><td>Leaderless quorum</td><td>Leader per shard with consensus</td><td>Always writable, no failover step</td></tr>
+              <tr><td>Partitioning</td><td>Consistent hashing with vnodes</td><td>Range partitioning</td><td>Even load, cheap rebalancing; gives up range scans</td></tr>
+              <tr><td>Conflicts</td><td>Vector clocks</td><td>Last write wins</td><td>No silent loss; more work for clients</td></tr>
+              <tr><td>Engine</td><td>LSM tree</td><td>B-tree</td><td>Write throughput</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <ul>
+          <li><b>Failure mode:</b> a deleted key comes back. A replica that was down longer than the tombstone grace period still has the old value and repair copies it back. Repair every node within the grace period.</li>
+          <li><b>Failure mode:</b> hints pile up during a long outage. Cap hint storage and rely on Merkle repair afterwards.</li>
+          <li><b>Failure mode:</b> hot key. Hashing spreads keys, not load per key; cache in front or split the key in the application.</li>
+        </ul>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Follow-up</th><th>One-line answer</th></tr></thead>
+            <tbody>
+              <tr><td>How does a new node join?</td><td>It announces itself by gossip, takes over vnode ranges, and streams those ranges from the current owners before serving.</td></tr>
+              <tr><td>How do you detect a dead node?</td><td>Missed gossip heartbeats, judged by a suspicion level and not one fixed timeout (the phi accrual detector in Cassandra).</td></tr>
+              <tr><td>Multi-datacentre?</td><td>Place replicas per datacentre and use a local quorum for latency; replicate across asynchronously.</td></tr>
+              <tr><td>Read-your-writes?</td><td>R + W &gt; N with strict quorums gets close; for a hard guarantee use a consensus-based store.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><b>Senior signal:</b> you separate the four repair mechanisms by the failure each one covers, say plainly that quorum overlap is not linearizability, and can state when you would not build this and would use a consensus-based store instead.</p>
+      </section>
+
+      <section class="chapter part" id="id">
+        <h2>Unique ID generator</h2>
+        <p class="kind">Part 5 of 9 &middot; coordination-free uniqueness</p>
+        <p>Produce unique, roughly time-ordered 64-bit ids at high rate from many machines. It is asked because the answer fits on a whiteboard and still probes clocks, coordination and failure handling.</p>
+        <ul>
+          <li><a href="#id-requirements">Requirements and scale</a></li>
+          <li><a href="#id-api">API and data model</a></li>
+          <li><a href="#id-design">High-level design</a></li>
+          <li><a href="#id-deep-dives">Deep dives</a>: the options, clock skew, worker ids, multiple datacentres</li>
+          <li><a href="#id-tradeoffs">Trade-offs and follow-ups</a></li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="id-requirements">
+        <h2>Requirements and scale</h2>
+        <p class="kind"><a href="#id">Unique ID generator</a></p>
+        <ul>
+          <li><b>Functional:</b> ids are unique across all machines and datacentres; fit in a signed 64-bit integer; sort roughly by creation time; can be generated in batches.</li>
+          <li><b>Non-functional:</b> 100,000 ids per second at peak; under 1 ms per id; no network call per id; keeps working when the coordination service is down.</li>
+          <li><b>Out of scope:</b> gapless sequences (invoice numbers), unguessable ids (use random tokens for secrets).</li>
+        </ul>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Quantity</th><th>Arithmetic</th><th>Result (approx.)</th></tr></thead>
+            <tbody>
+              <tr><td>Callers</td><td>Infrastructure: called by other services</td><td>DAU not applicable</td></tr>
+              <tr><td>QPS</td><td>Assumption</td><td>10,000 per second average, 100,000 peak</td></tr>
+              <tr><td>Ids per day</td><td>10,000 x 86,400</td><td>864 M</td></tr>
+              <tr><td>Storage</td><td>The generator keeps no ids</td><td>None (8 bytes per id wherever it is used)</td></tr>
+              <tr><td>Bandwidth</td><td>100,000 x 8 bytes</td><td>0.8 MB per second, negligible</td></tr>
+              <tr><td>Capacity per worker</td><td>2^12 = 4,096 per ms x 1,000</td><td>4 M per second</td></tr>
+              <tr><td>Lifetime</td><td>2^41 ms / (3.15 x 10^10 ms per year)</td><td>69 years from the chosen epoch</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><b>What the numbers say:</b> one worker covers the peak 40 times over. Workers are added for availability and locality, not throughput.</p>
+      </section>
+
+      <section class="chapter" id="id-api">
+        <h2>API and data model</h2>
+        <p class="kind"><a href="#id">Unique ID generator</a></p>
+        <script type="text/plain" data-lang="text" data-file="API">
+next_id() -> int64                      # in-process library, the preferred form
+GET /v1/ids?count=100 -> {ids: [...]}   # service form, batched to amortise the hop
+        </script>
+        <p>The "data model" is the bit layout of the id (the Snowflake layout published by Twitter):</p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Bits</th><th>Field</th><th>Range</th><th>Note</th></tr></thead>
+            <tbody>
+              <tr><td>1</td><td>Sign</td><td>Always 0</td><td>Keeps the id positive in signed languages</td></tr>
+              <tr><td>41</td><td>Milliseconds since a custom epoch</td><td>69 years</td><td>Highest bits, so ids sort by time</td></tr>
+              <tr><td>10</td><td>Worker id (5 datacentre + 5 machine)</td><td>1,024 workers</td><td>Must be unique among live workers</td></tr>
+              <tr><td>12</td><td>Sequence within the millisecond</td><td>4,096 per ms</td><td>Resets to 0 each millisecond</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <script type="text/plain" data-lang="text" data-file="Layout">
+ 0 | 41 bits timestamp (ms)                    | 10 bits worker | 12 bits sequence
+id = (ms_since_epoch << 22) | (worker_id << 12) | sequence
+        </script>
+      </section>
+
+      <section class="chapter" id="id-design">
+        <h2>High-level design</h2>
+        <p class="kind"><a href="#id">Unique ID generator</a></p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  subgraph DC1
+    S1[Order service] --> G1[ID worker 1]
+    S2[Feed service] --> G2[ID worker 2]
+  end
+  subgraph DC2
+    S3[Order service] --> G3[ID worker 33]
+  end
+  G1 -.->|lease worker id| CS[(etcd or ZooKeeper)]
+  G2 -.-> CS
+  G3 -.-> CS
+  NT[NTP servers] -.->|clock sync| G1
+  NT -.-> G3
+          </script>
+          <figcaption>The coordination service is used once at startup to lease a worker id. Generating an id is pure local arithmetic.</figcaption>
+        </figure>
+        <ul>
+          <li><b>Startup:</b> a worker leases a unique worker id from the coordination service and reads the last timestamp it used (if persisted).</li>
+          <li><b>Generate:</b> read the clock, bump the sequence if the millisecond is unchanged, pack the three fields. No I/O.</li>
+          <li><b>Deployment:</b> as a library inside each service (no hop, but every instance needs a worker id) or as a small service called in batches.</li>
+          <li><b>Ordering:</b> ids from one worker are strictly increasing; across workers they are ordered to within clock sync error (k-sorted).</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="id-deep-dives">
+        <h2>Deep dives</h2>
+        <p class="kind"><a href="#id">Unique ID generator</a></p>
+        <h3>The options</h3>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Option</th><th>Size</th><th>Ordered</th><th>Coordination</th><th>Cost</th></tr></thead>
+            <tbody>
+              <tr><td>UUID v4 (random)</td><td>128 bits</td><td>No</td><td>None</td><td>Too wide for the requirement; random inserts fragment B-tree indexes</td></tr>
+              <tr><td>UUID v7 (time + random)</td><td>128 bits</td><td>Yes</td><td>None</td><td>Still 128 bits; a good default when 64 bits is not required</td></tr>
+              <tr><td>DB auto-increment, stepped (server k of n issues k, k+n, ...)</td><td>64 bits</td><td>Per server only</td><td>A database write per id</td><td>Hard to add servers; the database is the bottleneck</td></tr>
+              <tr><td>Ticket server with ranges</td><td>64 bits</td><td>Roughly</td><td>One call per range of, say, 1,000 ids</td><td>Central service to keep available; ids reveal volume</td></tr>
+              <tr><td>Snowflake-style</td><td>64 bits</td><td>By time, k-sorted</td><td>Only at startup</td><td>Depends on clocks; worker ids must be managed</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <h3>Clock skew and going backwards</h3>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart TD
+  S([next_id]) --> T{{now vs last}}
+  T -->|now greater| N[sequence = 0]
+  T -->|now equal| Q{{sequence full?}}
+  T -->|now smaller| B{{gap small?}}
+  Q -->|no| I[sequence + 1]
+  Q -->|yes| WM[wait for next ms]
+  B -->|yes| WC[wait until clock catches up]
+  B -->|no| ER[refuse and alert]
+  N --> P[pack and return]
+  I --> P
+  WM --> P
+  WC --> P
+          </script>
+          <figcaption>The generator never issues an id with a timestamp below the last one it used. A small backwards step is waited out; a large one takes the worker out of service.</figcaption>
+        </figure>
+        <ul>
+          <li><b>Why it goes backwards:</b> NTP step corrections, VM migration, leap second handling. Configure NTP to slew, not step.</li>
+          <li><b>Restart hazard:</b> a restarted worker forgets its last timestamp. Persist it periodically (and start from the persisted value plus a margin), or take a fresh worker id on every start.</li>
+          <li><b>Alternative:</b> treat the timestamp field as a logical clock that only moves forward and may run slightly ahead of wall time under bursts.</li>
+        </ul>
+        <h3>Worker id assignment</h3>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Method</th><th>Gain</th><th>Cost</th></tr></thead>
+            <tbody>
+              <tr><td>Static configuration</td><td>No dependency</td><td>Manual, breaks with autoscaling; a copy-paste error gives duplicate ids</td></tr>
+              <tr><td>Lease from etcd or ZooKeeper</td><td>Safe with autoscaling; ids are reused after a lease expires</td><td>Needed at startup; must stop generating if the lease is lost</td></tr>
+              <tr><td>Derive from IP or host name</td><td>No coordination</td><td>Collisions unless the address space maps cleanly into 10 bits</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <h3>Multiple datacentres</h3>
+        <ul>
+          <li>Reserve the top bits of the worker id for the datacentre; each datacentre then assigns machine bits on its own, with no cross-site calls.</li>
+          <li>Uniqueness holds globally. Ordering across sites is only as good as clock sync (typically milliseconds with NTP), so never use id order as proof of causality.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="id-tradeoffs">
+        <h2>Trade-offs and follow-ups</h2>
+        <p class="kind"><a href="#id">Unique ID generator</a></p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Decision</th><th>Choice</th><th>Alternative</th><th>Why</th></tr></thead>
+            <tbody>
+              <tr><td>Scheme</td><td>Snowflake-style</td><td>Ticket server with ranges</td><td>No call per id or per range, time-sortable</td></tr>
+              <tr><td>Bit split</td><td>41 / 10 / 12</td><td>More worker bits, fewer sequence bits</td><td>Tune to fleet size; 4,096 per ms per worker is rarely needed</td></tr>
+              <tr><td>Worker ids</td><td>Leased</td><td>Static</td><td>Safe under autoscaling</td></tr>
+              <tr><td>Clock moving back</td><td>Wait or refuse</td><td>Keep generating</td><td>Duplicates are worse than a brief outage of one worker</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <ul>
+          <li><b>Failure mode:</b> two workers with the same worker id produce duplicates silently. Fence with leases, and keep a unique constraint where the ids are stored.</li>
+          <li><b>Failure mode:</b> coordination service down. Running workers continue; only new workers cannot start.</li>
+          <li><b>Failure mode:</b> ids leak information (creation time, rough volume). Do not expose them where that matters.</li>
+        </ul>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Follow-up</th><th>One-line answer</th></tr></thead>
+            <tbody>
+              <tr><td>Need strictly increasing ids globally?</td><td>That needs a single sequencer or consensus; expect a throughput and availability cost.</td></tr>
+              <tr><td>JavaScript clients?</td><td>Numbers above 2^53 lose precision; send ids as strings in JSON.</td></tr>
+              <tr><td>What after 69 years?</td><td>Pick a recent custom epoch; widening the timestamp later means a new id format.</td></tr>
+              <tr><td>Why do sorted ids help the database?</td><td>Inserts append to the right edge of the index, and the id doubles as a creation-time sort key.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><b>Senior signal:</b> you raise clock regression and duplicate worker ids yourself, and you size the bit fields from the numbers instead of reciting 41 / 10 / 12.</p>
+      </section>
+
+      <section class="chapter part" id="notify">
+        <h2>Notification system</h2>
+        <p class="kind">Part 6 of 9 &middot; reliable delivery through third parties</p>
+        <p>Send push, SMS and email on behalf of many internal services. It is asked because the delivery itself is outsourced, so the design is all about queues, retries, duplicates, limits and provider failure.</p>
+        <ul>
+          <li><a href="#notify-requirements">Requirements and scale</a></li>
+          <li><a href="#notify-api">API and data model</a></li>
+          <li><a href="#notify-design">High-level design</a></li>
+          <li><a href="#notify-deep-dives">Deep dives</a>: deduplication, retries and dead letters, priority and per-user limits, provider failover and tracking</li>
+          <li><a href="#notify-tradeoffs">Trade-offs and follow-ups</a></li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="notify-requirements">
+        <h2>Requirements and scale</h2>
+        <p class="kind"><a href="#notify">Notification system</a></p>
+        <ul>
+          <li><b>Functional:</b> send by push (APNs for iOS, FCM for Android), SMS and email; templates with parameters; per-user channel preferences and opt-out; delivery status per notification; scheduled and bulk sends.</li>
+          <li><b>Non-functional:</b> transactional messages (OTP, payment alerts) leave within about 2 seconds; promotional within minutes; at-least-once with no user-visible duplicates; a slow provider must not block other channels.</li>
+          <li><b>Out of scope:</b> building an SMTP or SMS gateway, an in-app inbox, the campaign authoring tool.</li>
+        </ul>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Quantity</th><th>Arithmetic</th><th>Result (approx.)</th></tr></thead>
+            <tbody>
+              <tr><td>Users</td><td>Assumption</td><td>100 M DAU</td></tr>
+              <tr><td>Notifications</td><td>100 M x 10 per day</td><td>1 B per day: 800 M push, 150 M email, 50 M SMS</td></tr>
+              <tr><td>QPS</td><td>1 B / 86,400 s</td><td>11,600 per second average, 58,000 peak (5x, campaigns)</td></tr>
+              <tr><td>Storage</td><td>1 B x 500 bytes of delivery log per day x 30 days kept</td><td>500 GB per day, 15 TB retained</td></tr>
+              <tr><td>Bandwidth</td><td>11,600 x 1 KB payload</td><td>12 MB per second average, 58 MB per second peak</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><b>What the numbers say:</b> the 5x bursts come from campaigns, and providers throttle you. Queues absorb the burst; the design question is how to stop a campaign from delaying an OTP.</p>
+      </section>
+
+      <section class="chapter" id="notify-api">
+        <h2>API and data model</h2>
+        <p class="kind"><a href="#notify">Notification system</a></p>
+        <script type="text/plain" data-lang="text" data-file="API">
+POST /v1/notifications          {idempotency_key, user_id, template_id, params,
+                                 channels?, priority: "transactional" | "promotional"}
+                                -> 202 {notification_id}
+GET  /v1/notifications/{id}     -> status per channel
+PUT  /v1/users/{id}/preferences {push, sms, email, quiet_hours}
+POST /v1/devices                {user_id, platform, push_token}
+POST /v1/webhooks/{provider}    delivery receipts from providers
+        </script>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+erDiagram
+  USER ||--o{ DEVICE : has
+  USER ||--|| PREFERENCE : sets
+  USER ||--o{ NOTIFICATION : receives
+  TEMPLATE ||--o{ NOTIFICATION : renders
+  NOTIFICATION ||--o{ DELIVERY : "one per channel"
+  DEVICE {
+    string push_token PK
+    bigint user_id FK
+    string platform
+  }
+  NOTIFICATION {
+    bigint id PK
+    string idempotency_key UK
+    bigint user_id FK
+    string priority
+  }
+  DELIVERY {
+    bigint notification_id PK
+    string channel PK
+    string status
+    int attempts
+    string provider_msg_id
+  }
+          </script>
+          <figcaption>A notification is the request; a delivery is one attempt stream on one channel, with its own status and retry count.</figcaption>
+        </figure>
+        <ul>
+          <li><b>Preferences, devices, templates:</b> relational or KV store, read on every send, so cached.</li>
+          <li><b>Notifications and deliveries:</b> append-heavy, queried by id or by user and time, expired after 30 days: a wide-column store with TTL.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="notify-design">
+        <h2>High-level design</h2>
+        <p class="kind"><a href="#notify">Notification system</a></p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  S([Internal services]) --> API[Notification API]
+  API --> PR[(Prefs, devices, templates)]
+  API --> PQ[[Push queue]]
+  API --> SQ[[SMS queue]]
+  API --> EQ[[Email queue]]
+  PQ --> PW[Push workers]
+  SQ --> SW[SMS workers]
+  EQ --> EW[Email workers]
+  PW --> AF["APNs / FCM"]
+  SW --> SP[SMS provider]
+  EW --> EP[Email provider]
+          </script>
+          <figcaption>One queue and one worker pool per channel: a slow SMS provider backs up only the SMS queue.</figcaption>
+        </figure>
+        <ul>
+          <li><b>Accept:</b> the API authenticates the caller, deduplicates on the idempotency key, loads preferences, drops opted-out channels, and enqueues one message per remaining channel. It answers 202 once the messages are durably queued.</li>
+          <li><b>Send:</b> a channel worker renders the template, applies per-user and per-provider rate limits, calls the provider and records the result in the delivery log.</li>
+          <li><b>Track:</b> providers report delivered, bounced or failed through webhooks; a small consumer updates the delivery row.</li>
+          <li><b>Bulk:</b> a campaign is expanded into per-user messages by a separate job that feeds the promotional queues at a controlled rate.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="notify-deep-dives">
+        <h2>Deep dives</h2>
+        <p class="kind"><a href="#notify">Notification system</a></p>
+        <h3>Deduplication and idempotency</h3>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Where duplicates come from</th><th>Defence</th></tr></thead>
+            <tbody>
+              <tr><td>Caller retries the API call after a timeout</td><td>Idempotency key: <code>SET key NX</code> with a 24 hour TTL, or a unique index; return the first notification id</td></tr>
+              <tr><td>Queue redelivers after a worker crash (at-least-once)</td><td>Worker checks and conditionally updates the delivery row for (notification id, channel) before sending</td></tr>
+              <tr><td>Worker sent, then crashed before recording it</td><td>Cannot be fully closed; pass a stable message id or collapse key to the provider where it supports one (<code>apns-collapse-id</code>, FCM <code>collapse_key</code>)</td></tr>
+              <tr><td>Two services send the same event</td><td>Derive the idempotency key from the business event, not from the request</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><b>Trade-off:</b> exactly-once delivery to a phone does not exist. Aim for at-least-once with deduplication, and decide per message type whether a rare duplicate or a rare loss is worse.</p>
+        <h3>Retries, backoff and dead-letter queues</h3>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+stateDiagram-v2
+  [*] --> Queued
+  Queued --> Sending
+  Sending --> Sent: provider accepted
+  Sent --> Delivered: receipt webhook
+  Sending --> RetryWait: timeout or 5xx or 429
+  RetryWait --> Sending: backoff elapsed
+  RetryWait --> DeadLetter: attempts or TTL exceeded
+  Sending --> Failed: invalid token or address
+  Delivered --> [*]
+  Failed --> [*]
+  DeadLetter --> [*]
+          </script>
+          <figcaption>Only transient errors are retried. Permanent errors fail at once and clean up (an invalid push token deletes the device row).</figcaption>
+        </figure>
+        <ul>
+          <li><b>Backoff:</b> exponential with jitter, for example 1 s, 2 s, 4 s, 8 s, 16 s, then dead-letter. Honour the provider's <code>Retry-After</code>.</li>
+          <li><b>TTL per message type:</b> an OTP that is 2 minutes late is noise; drop it instead of retrying.</li>
+          <li><b>Dead-letter queue:</b> holds what could not be sent, with the reason, for alerting and replay after a fix. Alert on its growth rate.</li>
+          <li>Implement the delay with a delayed queue or a retry topic per backoff tier, not by sleeping in the worker.</li>
+        </ul>
+        <h3>Priority and per-user rate limits</h3>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  API[Notification API] -->|OTP, alerts| HQ[[Transactional queue]]
+  API -->|marketing| LQ[[Promotional queue]]
+  HQ --> HW[Reserved workers]
+  LQ --> UL{{User cap ok?}}
+  UL -->|yes| LW[Shared workers]
+  UL -->|no| DR[Drop or defer]
+  HW --> TB[Provider token bucket]
+  LW --> TB
+  TB --> PV[Provider]
+          </script>
+          <figcaption>Separate queues and reserved workers by priority, so a 50 M user campaign cannot sit in front of an OTP.</figcaption>
+        </figure>
+        <ul>
+          <li><b>Per user:</b> a cap on promotional messages (say 3 per day per channel) and quiet hours in the user's time zone; transactional messages bypass both.</li>
+          <li><b>Per provider:</b> a token bucket at the provider's agreed rate, with transactional traffic taking tokens first.</li>
+        </ul>
+        <h3>Provider failover and delivery tracking</h3>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  W[SMS worker] --> CB{{Breaker closed?}}
+  CB -->|yes| P1[Provider A]
+  CB -->|open| P2[Provider B]
+  P1 -.->|receipt webhook| WH[Webhook consumer]
+  P2 -.->|receipt webhook| WH
+  WH --> DL[(Delivery log)]
+  W --> DL
+          </script>
+          <figcaption>A circuit breaker per provider moves traffic to the secondary when error rate or latency crosses a threshold, and probes the primary before moving back.</figcaption>
+        </figure>
+        <ul>
+          <li>SMS and email have interchangeable vendors, so keep two integrated and send a little traffic to the secondary all the time. Push has no substitute: APNs and FCM are the only route to their devices, so queue and retry.</li>
+          <li><b>Failover risk:</b> a message accepted by A just before the breaker opened may be re-sent through B. This is the duplicate case above.</li>
+          <li><b>Tracking:</b> "sent" means the provider accepted it; "delivered" needs a receipt, which push gives only partially. Opens and clicks come from the client or tracked links.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="notify-tradeoffs">
+        <h2>Trade-offs and follow-ups</h2>
+        <p class="kind"><a href="#notify">Notification system</a></p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Decision</th><th>Choice</th><th>Alternative</th><th>Why</th></tr></thead>
+            <tbody>
+              <tr><td>Coupling</td><td>Queue per channel and priority</td><td>Synchronous send from the API</td><td>Isolation, burst absorption, retries</td></tr>
+              <tr><td>Guarantee</td><td>At-least-once plus dedup</td><td>At-most-once</td><td>A lost OTP is worse than a rare duplicate</td></tr>
+              <tr><td>Preferences check</td><td>At accept time, re-checked at send for delayed messages</td><td>Only at accept</td><td>Opt-outs must take effect for queued campaigns</td></tr>
+              <tr><td>Providers</td><td>Two per channel where possible</td><td>One</td><td>Vendor outages are common</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <ul>
+          <li><b>Failure mode:</b> retry storm against a degraded provider. Backoff with jitter, a breaker and a provider rate limit.</li>
+          <li><b>Failure mode:</b> a poison message crashes every worker that takes it. Cap attempts and dead-letter it.</li>
+          <li><b>Failure mode:</b> a campaign targets the wrong segment. Throttled ramp-up and a kill switch that purges the campaign's queued messages.</li>
+        </ul>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Follow-up</th><th>One-line answer</th></tr></thead>
+            <tbody>
+              <tr><td>Scheduled sends?</td><td>Store with a due time; a scheduler scans due buckets and enqueues, idempotently.</td></tr>
+              <tr><td>User has five devices?</td><td>Fan out to every valid token; use a collapse key so a newer message replaces an older one.</td></tr>
+              <tr><td>Order of notifications?</td><td>Not guaranteed across channels; within a channel partition the queue by user if order matters.</td></tr>
+              <tr><td>How do you know it works?</td><td>Per channel: accept-to-send latency, provider error rate, delivery rate, dead-letter rate.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><b>Senior signal:</b> you separate transactional from promotional traffic in the first diagram, classify errors as transient or permanent before talking about retries, and admit where a duplicate can still slip through.</p>
+      </section>
+
+      <section class="chapter part" id="feed">
+        <h2>News feed and timeline</h2>
+        <p class="kind">Part 7 of 9 &middot; fan-out and precomputed reads</p>
+        <p>Show each user recent posts from the accounts they follow. It is asked because of one decision with no free answer: do the work when a post is written, or when a feed is read, and what to do about accounts with millions of followers.</p>
+        <ul>
+          <li><a href="#feed-requirements">Requirements and scale</a></li>
+          <li><a href="#feed-api">API and data model</a></li>
+          <li><a href="#feed-design">High-level design</a></li>
+          <li><a href="#feed-deep-dives">Deep dives</a>: fan-out strategies, feed storage, ranking and cursors, media, counters, consistency</li>
+          <li><a href="#feed-tradeoffs">Trade-offs and follow-ups</a></li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="feed-requirements">
+        <h2>Requirements and scale</h2>
+        <p class="kind"><a href="#feed">News feed and timeline</a></p>
+        <ul>
+          <li><b>Functional:</b> publish a post (text plus media); follow and unfollow; load the home feed, newest or ranked, with paging; like a post and see like counts.</li>
+          <li><b>Non-functional:</b> feed load under 200 ms at p99; a new post appears for followers within a few seconds (eventual consistency is fine); feed reads stay available when the write side is degraded.</li>
+          <li><b>Out of scope:</b> ads, search, direct messages, recommending accounts the user does not follow.</li>
+        </ul>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Quantity</th><th>Arithmetic</th><th>Result (approx.)</th></tr></thead>
+            <tbody>
+              <tr><td>Users</td><td>Assumption</td><td>200 M DAU</td></tr>
+              <tr><td>Feed reads</td><td>200 M x 5 per day = 1 B / 86,400 s</td><td>11,600 per second average, 35,000 peak (3x)</td></tr>
+              <tr><td>Posts</td><td>200 M x 0.5 per day = 100 M / 86,400 s</td><td>1,160 per second</td></tr>
+              <tr><td>Fan-out writes</td><td>100 M posts x 200 followers average = 20 B per day</td><td>230,000 timeline inserts per second</td></tr>
+              <tr><td>Post storage</td><td>100 M x 1 KB per day x 365</td><td>100 GB per day, 36 TB per year</td></tr>
+              <tr><td>Media storage</td><td>20% of posts x 500 KB = 20 M x 0.5 MB</td><td>10 TB per day, in object storage</td></tr>
+              <tr><td>Timeline cache</td><td>200 M users x 500 entries x 16 bytes</td><td>1.6 TB of RAM</td></tr>
+              <tr><td>Bandwidth</td><td>11,600 x 20 posts x 1 KB</td><td>230 MB per second of JSON; media goes through the CDN</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><b>What the numbers say:</b> reads outnumber posts 10 to 1, but fan-out multiplies each post by 200, so the write side does 20 times more work than the read side. That ratio is the whole problem.</p>
+      </section>
+
+      <section class="chapter" id="feed-api">
+        <h2>API and data model</h2>
+        <p class="kind"><a href="#feed">News feed and timeline</a></p>
+        <script type="text/plain" data-lang="text" data-file="API">
+POST /v1/media                    -> {media_id, upload_url}      # presigned, direct to object store
+POST /v1/posts                    {text, media_ids[]}            -> 201 {post_id}
+GET  /v1/feed?cursor=&limit=20    -> {items[], next_cursor}
+PUT  /v1/users/{id}/follow        (DELETE to unfollow)           -> 204
+PUT  /v1/posts/{id}/like          (DELETE to unlike, idempotent) -> 204
+        </script>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+erDiagram
+  USER ||--o{ POST : writes
+  USER ||--o{ FOLLOW : "follower or followee"
+  POST ||--o{ POST_LIKE : receives
+  POST {
+    bigint post_id PK
+    bigint author_id FK
+    string body
+    string media_urls
+    timestamp created_at
+  }
+  FOLLOW {
+    bigint follower_id PK
+    bigint followee_id PK
+    timestamp created_at
+  }
+  POST_LIKE {
+    bigint post_id PK
+    bigint user_id PK
+  }
+          </script>
+          <figcaption>The follow edge is stored twice, keyed each way: "who follows X" drives fan-out, "whom does Y follow" drives pull.</figcaption>
+        </figure>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Data</th><th>Store</th><th>Reason</th></tr></thead>
+            <tbody>
+              <tr><td>Posts</td><td>Sharded KV or wide-column, keyed by a time-sortable post id</td><td>Point reads by id, huge volume, no joins</td></tr>
+              <tr><td>Follow graph</td><td>Sharded store with both directions, cached</td><td>Two access patterns, long lists</td></tr>
+              <tr><td>Timelines</td><td>Redis sorted set of post ids per user</td><td>Precomputed feed, read in one call</td></tr>
+              <tr><td>Media</td><td>Object store behind a CDN</td><td>Large immutable blobs</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="chapter" id="feed-design">
+        <h2>High-level design</h2>
+        <p class="kind"><a href="#feed">News feed and timeline</a></p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  C([Client]) --> GW[API gateway]
+  GW --> PS[Post service]
+  GW --> FS[Feed service]
+  PS --> PDB[(Post store)]
+  PS -.->|post created| Q[[Fan-out queue]]
+  Q --> FW[Fan-out workers]
+  FW --> FG[(Follow graph)]
+  FW --> TC[(Timeline cache)]
+  FS --> TC
+  FS -->|hydrate ids| PDB
+  C --> CDN[CDN]
+  CDN --> OS[(Object store)]
+          </script>
+          <figcaption>The write path (top) precomputes timelines asynchronously; the read path (Feed service) is two lookups: ids from the cache, then post bodies.</figcaption>
+        </figure>
+        <ul>
+          <li><b>Post:</b> the post service stores the post and emits an event; it answers the author without waiting for fan-out.</li>
+          <li><b>Fan-out:</b> workers read the author's followers in pages and push the post id into each follower's timeline.</li>
+          <li><b>Read:</b> the feed service takes a page of ids from the timeline cache, fetches the posts and authors (a multi-get, mostly from cache), drops deleted or blocked items, and returns them with a cursor.</li>
+          <li><b>Media:</b> clients upload directly to the object store with a presigned URL and download through the CDN; the API tier never carries the bytes.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="feed-deep-dives">
+        <h2>Deep dives</h2>
+        <p class="kind"><a href="#feed">News feed and timeline</a></p>
+        <h3>Fan-out on write, on read, or hybrid</h3>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Strategy</th><th>Write cost</th><th>Read cost</th><th>Breaks when</th></tr></thead>
+            <tbody>
+              <tr><td>Fan-out on write (push)</td><td>One insert per follower</td><td>One cache read</td><td>An account has millions of followers; work is wasted on inactive users</td></tr>
+              <tr><td>Fan-out on read (pull)</td><td>One insert</td><td>Query every followee and merge</td><td>A user follows thousands; read latency grows</td></tr>
+              <tr><td>Hybrid</td><td>Push for normal accounts, nothing for celebrities</td><td>Cache read plus a merge of a few celebrity lists</td><td>More code paths; needs a threshold (say 100,000 followers)</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+sequenceDiagram
+  participant A as Author
+  participant P as Post service
+  participant Q as Fan-out queue
+  participant W as Fan-out worker
+  participant G as Follow graph
+  participant T as Timeline cache
+  A->>P: create post
+  P-->>A: 201 post_id
+  P-)Q: post created
+  Q-)W: deliver
+  W->>G: followers of author, paged
+  G-->>W: follower ids
+  W->>T: add post_id to each timeline
+          </script>
+          <figcaption>Fan-out on write. The author gets an answer before any timeline is touched; followers see the post when the worker reaches them.</figcaption>
+        </figure>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  FS[Feed service] --> TC[(Timeline cache)]
+  FS --> FL[(Followed celebrities)]
+  FL --> CP[(Recent posts per celebrity)]
+  TC --> MG[Merge by time]
+  CP --> MG
+  MG --> RK[Rank]
+  RK --> HY[Hydrate and filter]
+  HY --> OUT([Feed page])
+          </script>
+          <figcaption>Hybrid read: the precomputed timeline is merged with the recent posts of the few celebrities this user follows.</figcaption>
+        </figure>
+        <p class="note"><b>The arithmetic that justifies hybrid:</b> one post from an account with 100 M followers is 100 M cache writes. At 100,000 writes per second that is about 17 minutes of fan-out for a single post, delaying everything behind it.</p>
+        <h3>Feed storage, ranking and cursors</h3>
+        <ul>
+          <li><b>Storage:</b> one Redis sorted set per user, member and score both the time-sortable post id; trimmed to the newest 500 or so. Store ids only, never post bodies.</li>
+          <li><b>Inactive users:</b> skip them in fan-out and rebuild the timeline by pull on their next visit. This removes a large share of the 230,000 inserts per second.</li>
+          <li><b>Ranking:</b> a common design takes a few hundred candidates from the timeline and scores them with a model using features such as recency, affinity to the author and predicted engagement. Chronological order is the fallback when the ranker is slow or down.</li>
+          <li><b>Cursor, not offset:</b> the cursor is the last post id seen (opaque to the client); the next page is "ids below the cursor". Offsets skip or repeat items because new posts shift every position.</li>
+        </ul>
+        <script type="text/plain" data-lang="text" data-file="Redis">
+ZADD feed:{user_id} <post_id> <post_id>                           # fan-out insert
+ZREMRANGEBYRANK feed:{user_id} 0 -501                             # keep the newest 500
+ZREVRANGEBYSCORE feed:{user_id} (<cursor> -inf LIMIT 0 20         # next page below the cursor
+        </script>
+        <h3>Media through a CDN</h3>
+        <ul>
+          <li>Upload: presigned URL straight to the object store; an asynchronous job makes thumbnails and renditions; the post references media by id.</li>
+          <li>Download: immutable, versioned URLs with long cache lifetimes, so the CDN serves nearly all of the 10 TB per day.</li>
+        </ul>
+        <h3>Like counters</h3>
+        <ul>
+          <li>Truth is the <code>POST_LIKE</code> row (post, user): it makes a like idempotent and answers "did I like this".</li>
+          <li>The count is a denormalised counter updated asynchronously from like events, cached, and allowed to lag by seconds.</li>
+          <li>Hot posts: buffer increments in memory and flush in batches, so one viral post does not cause thousands of writes per second to one row.</li>
+        </ul>
+        <h3>Consistency expectations</h3>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Who</th><th>Expectation</th><th>How</th></tr></thead>
+            <tbody>
+              <tr><td>Author</td><td>Sees own post at once</td><td>Insert into the author's own timeline synchronously, or merge it on the client</td></tr>
+              <tr><td>Followers</td><td>See it within seconds</td><td>Asynchronous fan-out; monitor fan-out lag</td></tr>
+              <tr><td>Everyone</td><td>Deleted posts disappear</td><td>Filter at hydrate time; lazily remove ids from timelines</td></tr>
+              <tr><td>Unfollow</td><td>No new posts from that account</td><td>Filter at read; old entries age out</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="chapter" id="feed-tradeoffs">
+        <h2>Trade-offs and follow-ups</h2>
+        <p class="kind"><a href="#feed">News feed and timeline</a></p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Decision</th><th>Choice</th><th>Alternative</th><th>Why</th></tr></thead>
+            <tbody>
+              <tr><td>Fan-out</td><td>Hybrid</td><td>Pure push or pure pull</td><td>Fast reads for most users without celebrity write storms</td></tr>
+              <tr><td>Timeline content</td><td>Post ids only</td><td>Full posts</td><td>Small, and edits or deletes need no rewrite</td></tr>
+              <tr><td>Paging</td><td>Cursor on post id</td><td>Offset</td><td>Stable under inserts</td></tr>
+              <tr><td>Counters</td><td>Asynchronous, approximate</td><td>Transactional count</td><td>Write throughput on hot posts</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <ul>
+          <li><b>Failure mode:</b> timeline cache node lost. Timelines are derived data: rebuild by pull on demand, and replicate the cache to keep rebuild load small.</li>
+          <li><b>Failure mode:</b> fan-out backlog. Feeds go stale but stay readable; scale workers, and prioritise active followers.</li>
+          <li><b>Failure mode:</b> hydrate fan-in. One feed page needs 20 posts and authors; use multi-gets and a per-request deadline, and return a partial page over an error.</li>
+        </ul>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Follow-up</th><th>One-line answer</th></tr></thead>
+            <tbody>
+              <tr><td>A user follows a new account?</td><td>Merge that account's recent posts into the timeline asynchronously.</td></tr>
+              <tr><td>Where is the celebrity threshold?</td><td>Where the fan-out time for one post exceeds the freshness target; tune from fan-out lag.</td></tr>
+              <tr><td>How do you shard the timeline cache?</td><td>By user id; every operation touches one user's key.</td></tr>
+              <tr><td>New posts while the user is scrolling?</td><td>Keep the cursor stable and show a "new posts" marker that reloads from the top.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><b>Senior signal:</b> you compute the fan-out multiplier before choosing a strategy, treat the timeline as a rebuildable cache and not a source of truth, and skip inactive users without being asked.</p>
+      </section>
+
+      <section class="chapter part" id="chat">
+        <h2>Chat and messaging</h2>
+        <p class="kind">Part 8 of 9 &middot; stateful connections, ordered delivery</p>
+        <p>Deliver messages between users in real time, in order, without loss, whether or not the recipient is online. It is asked because it is the standard stateful system: long-lived connections, routing to the right server, ordering and offline sync.</p>
+        <ul>
+          <li><a href="#chat-requirements">Requirements and scale</a></li>
+          <li><a href="#chat-api">API and data model</a></li>
+          <li><a href="#chat-design">High-level design</a></li>
+          <li><a href="#chat-deep-dives">Deep dives</a>: connection layer, 1:1 and group flows, receipts and ordering, offline delivery, presence, multi-device, encryption</li>
+          <li><a href="#chat-tradeoffs">Trade-offs and follow-ups</a></li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="chat-requirements">
+        <h2>Requirements and scale</h2>
+        <p class="kind"><a href="#chat">Chat and messaging</a></p>
+        <ul>
+          <li><b>Functional:</b> 1:1 and group chat (up to about 1,000 members); sent, delivered and read receipts; presence and last seen; delivery to offline users with a push notification; history synced across a user's devices.</li>
+          <li><b>Non-functional:</b> under 500 ms end to end at p99 when both sides are online; no acknowledged message is lost; messages in one conversation appear in the same order for everyone; 100 M concurrent connections.</li>
+          <li><b>Out of scope:</b> voice and video calls, the media pipeline (same as the feed: object store plus CDN), spam detection.</li>
+        </ul>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Quantity</th><th>Arithmetic</th><th>Result (approx.)</th></tr></thead>
+            <tbody>
+              <tr><td>Users</td><td>Assumption</td><td>500 M DAU</td></tr>
+              <tr><td>Messages</td><td>500 M x 40 per day = 20 B / 86,400 s</td><td>230,000 per second average, 700,000 peak (3x)</td></tr>
+              <tr><td>Connections</td><td>20% of DAU online at peak</td><td>100 M concurrent</td></tr>
+              <tr><td>Gateway servers</td><td>100 M / 100,000 connections per server</td><td>1,000 servers</td></tr>
+              <tr><td>Storage</td><td>20 B x 200 bytes per day x 365</td><td>4 TB per day, 1.5 PB per year before replication</td></tr>
+              <tr><td>Bandwidth</td><td>230,000 x 200 bytes</td><td>46 MB per second average, 140 MB per second peak (text only)</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><b>What the numbers say:</b> write-heavy, with reads mostly of recent messages. Connection count, not QPS, sizes the gateway tier; message volume sizes the store.</p>
+      </section>
+
+      <section class="chapter" id="chat-api">
+        <h2>API and data model</h2>
+        <p class="kind"><a href="#chat">Chat and messaging</a></p>
+        <script type="text/plain" data-lang="text" data-file="API">
+WS   /v1/connect                 authenticated; frames:
+  ->  send     {client_msg_id, conversation_id, body}
+  <-  ack      {client_msg_id, message_id, seq}
+  <-  message  {conversation_id, seq, sender_id, body, sent_at}
+  ->  receipt  {conversation_id, seq, type: "delivered" | "read"}
+GET  /v1/conversations/{id}/messages?after_seq=&limit=50      history and gap fill
+GET  /v1/conversations?updated_after=                         inbox sync
+POST /v1/conversations           {member_ids[]}               create a group
+        </script>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+erDiagram
+  CONVERSATION ||--o{ MESSAGE : contains
+  CONVERSATION ||--o{ MEMBER : has
+  MESSAGE {
+    bigint conversation_id PK
+    bigint seq PK
+    bigint sender_id
+    string client_msg_id
+    string body
+    timestamp sent_at
+  }
+  MEMBER {
+    bigint conversation_id PK
+    bigint user_id PK
+    bigint last_delivered_seq
+    bigint last_read_seq
+  }
+  CONVERSATION {
+    bigint conversation_id PK
+    string kind
+    bigint last_seq
+  }
+          </script>
+          <figcaption>Messages are partitioned by conversation and clustered by seq, so "the next 50 after seq 1200" is one sequential range read. Receipts are two integers per member, not a row per message.</figcaption>
+        </figure>
+        <ul>
+          <li><b>Store:</b> a wide-column store (Cassandra, ScyllaDB, HBase): append-heavy writes, range reads within a partition, linear scale-out. Bucket very large conversations by month so no partition grows without bound.</li>
+          <li><b>Also needed:</b> the same <code>MEMBER</code> data keyed by user (the inbox), so "my conversations, most recent first" is one query.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="chat-design">
+        <h2>High-level design</h2>
+        <p class="kind"><a href="#chat">Chat and messaging</a></p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  A([Client A]) -->|WebSocket| G1[Gateway 1]
+  B([Client B]) -->|WebSocket| G2[Gateway 2]
+  G1 --> CS[Chat service]
+  CS --> MS[(Message store)]
+  CS --> SR[(Session registry)]
+  CS -->|deliver| G2
+  CS -.->|recipient offline| PQ[[Push queue]]
+  PQ --> PN[Push service]
+  PN --> AF["APNs / FCM"]
+  G1 --> PZ[Presence service]
+  G2 --> PZ
+          </script>
+          <figcaption>Gateways only hold connections. The chat service persists first, then looks up which gateway holds the recipient and delivers through it.</figcaption>
+        </figure>
+        <ul>
+          <li><b>Connect:</b> the client opens a WebSocket to a gateway through a load balancer; the gateway authenticates it and writes user, device and gateway into the session registry.</li>
+          <li><b>Send:</b> gateway forwards to the chat service, which assigns the next seq for the conversation, persists the message, and acks the sender.</li>
+          <li><b>Deliver:</b> for each recipient device the chat service finds the gateway in the registry and pushes the message down that connection.</li>
+          <li><b>Offline:</b> no session means a push notification; the message waits in the store until the device reconnects and pulls everything after its last seq.</li>
+          <li><b>Presence:</b> gateways report heartbeats to a separate service, so presence load cannot slow messaging.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="chat-deep-dives">
+        <h2>Deep dives</h2>
+        <p class="kind"><a href="#chat">Chat and messaging</a></p>
+        <h3>Connection layer and session registry</h3>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Transport</th><th>Gain</th><th>Cost</th></tr></thead>
+            <tbody>
+              <tr><td>WebSocket</td><td>Full duplex, low overhead per message</td><td>Stateful servers, sticky connections, careful deploys</td></tr>
+              <tr><td>Long polling</td><td>Works through any proxy</td><td>A request per message, higher latency; keep as fallback</td></tr>
+              <tr><td>Server-sent events</td><td>Simple server push</td><td>One direction only; sends need separate requests</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <ul>
+          <li><b>Registry:</b> Redis, <code>session:{user_id}</code> to a map of device id to gateway id, with a TTL refreshed by heartbeats (about every 30 s).</li>
+          <li><b>Routing:</b> the chat service calls the gateway directly (RPC) or publishes to a per-gateway channel; never broadcast to all gateways.</li>
+          <li><b>Gateway dies:</b> its connections drop, clients reconnect with backoff and jitter to another gateway, registry entries are overwritten or expire. In-flight messages are safe because they were persisted before delivery.</li>
+          <li><b>Deploys:</b> drain gateways gradually; 100,000 clients reconnecting at once is a self-made thundering herd.</li>
+        </ul>
+        <h3>1:1 message flow, receipts and ordering</h3>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+sequenceDiagram
+  participant A as Client A
+  participant G1 as Gateway 1
+  participant S as Chat service
+  participant D as Message store
+  participant G2 as Gateway 2
+  participant B as Client B
+  A->>G1: send (client_msg_id)
+  G1->>S: forward
+  S->>D: persist with seq 42
+  S-->>A: ack seq 42 (sent)
+  S->>G2: deliver seq 42
+  G2->>B: message seq 42
+  B-->>S: receipt delivered 42
+  S-->>A: delivered 42
+  B-->>S: receipt read 42
+  S-->>A: read 42
+          </script>
+          <figcaption>Persist before ack, ack before deliver. The three ticks are three events: stored by the server, received by the device, seen by the user.</figcaption>
+        </figure>
+        <ul>
+          <li><b>Ordering:</b> the server assigns a per-conversation, strictly increasing <code>seq</code>. Client timestamps are untrusted and are used only for display.</li>
+          <li><b>Assigning seq:</b> route all writes for a conversation to one owner (partition by conversation id) and increment there, or use an atomic counter or conditional write per conversation. A global sequence is unnecessary and would be a bottleneck.</li>
+          <li><b>No loss, no duplicates:</b> the client retries a send with the same <code>client_msg_id</code> until acked; the server deduplicates on it. A device that sees seq 44 after 42 knows it must fetch 43.</li>
+        </ul>
+        <h3>Group message flow</h3>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+sequenceDiagram
+  participant A as Sender
+  participant S as Chat service
+  participant D as Message store
+  participant R as Session registry
+  participant G as Gateways
+  participant P as Push queue
+  A->>S: send to group
+  S->>D: persist once, seq 87
+  S-->>A: ack seq 87
+  S->>R: sessions of members
+  R-->>S: online devices and gateways
+  S->>G: deliver seq 87 to online members
+  S-)P: notify offline members
+          </script>
+          <figcaption>A group message is stored once in the conversation partition. Only the delivery fans out, and only to members who are online.</figcaption>
+        </figure>
+        <ul>
+          <li><b>Small groups:</b> fan out on send as shown.</li>
+          <li><b>Very large groups or channels:</b> stop pushing every message; send a lightweight "new activity" signal and let clients pull by <code>after_seq</code>. Read receipts become counts or are switched off.</li>
+          <li>Batch the registry lookups and group deliveries per gateway, so a 1,000 member group costs tens of calls, not a thousand.</li>
+        </ul>
+        <h3>Offline delivery, multi-device sync and presence</h3>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Topic</th><th>Design</th><th>Watch for</th></tr></thead>
+            <tbody>
+              <tr><td>Offline delivery</td><td>Message stays in the store; a push notification wakes the app; on reconnect the device pulls each changed conversation after its last seq</td><td>Push is best effort and may be dropped; correctness comes from the pull</td></tr>
+              <tr><td>Multi-device</td><td>Each device is its own session and keeps its own sync position; the sender's other devices receive the message too</td><td>Read state is per user, delivery state per device</td></tr>
+              <tr><td>Presence</td><td>Heartbeat sets a key with a short TTL; no heartbeat means offline; last seen is written on disconnect</td><td>Flapping on bad networks: delay the offline transition by a few seconds</td></tr>
+              <tr><td>Presence fan-out</td><td>Push changes only to users currently viewing that contact or chat; otherwise fetch on open</td><td>Pushing every change to every contact is quadratic</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <h3>End-to-end encryption</h3>
+        <p>With end-to-end encryption (the Signal protocol is the widely documented design), clients publish public keys through the server and encrypt each message for every recipient device, so the server stores and routes only ciphertext it cannot read. The architecture above is unchanged, but server-side search and content moderation are no longer possible, and adding a device, restoring history and group membership changes all become key management problems.</p>
+      </section>
+
+      <section class="chapter" id="chat-tradeoffs">
+        <h2>Trade-offs and follow-ups</h2>
+        <p class="kind"><a href="#chat">Chat and messaging</a></p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Decision</th><th>Choice</th><th>Alternative</th><th>Why</th></tr></thead>
+            <tbody>
+              <tr><td>Transport</td><td>WebSocket</td><td>Long polling</td><td>Latency and overhead at 100 M connections</td></tr>
+              <tr><td>Ordering</td><td>Per-conversation seq from the server</td><td>Client or wall-clock timestamps</td><td>Total order per conversation, gap detection</td></tr>
+              <tr><td>Storage</td><td>Wide-column, partition by conversation</td><td>Relational</td><td>Write volume and range reads</td></tr>
+              <tr><td>Delivery guarantee</td><td>At-least-once plus client dedup</td><td>At-most-once</td><td>Lost messages are unacceptable</td></tr>
+              <tr><td>Group storage</td><td>One copy per conversation</td><td>One copy per recipient inbox</td><td>Storage and write cost; the per-recipient copy is simpler only for tiny groups</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <ul>
+          <li><b>Failure mode:</b> stale registry entry points to a dead gateway. Delivery fails fast, the entry is removed, and the offline path (push plus pull) takes over.</li>
+          <li><b>Failure mode:</b> reconnect storm after a network blip. Jittered backoff on clients, admission control on gateways.</li>
+          <li><b>Failure mode:</b> hot conversation partition (a huge active group). Time-bucket the partition and switch the group to pull.</li>
+        </ul>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Follow-up</th><th>One-line answer</th></tr></thead>
+            <tbody>
+              <tr><td>Typing indicators?</td><td>Ephemeral events through the same connection, never persisted, dropped under load.</td></tr>
+              <tr><td>Message search?</td><td>A separate index fed asynchronously; on the device only if end-to-end encrypted.</td></tr>
+              <tr><td>Multi-region?</td><td>Users connect to the nearest region; a conversation has a home region for seq assignment, or accept per-region order with a merge rule.</td></tr>
+              <tr><td>Why not Kafka as the message store?</td><td>It suits transport between services, not per-conversation random reads over years of history.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><b>Senior signal:</b> you state the invariant "persist, then ack, then deliver", make the pull by seq the source of correctness with push as an optimisation, and separate the stateful gateway tier from the stateless logic.</p>
+      </section>
+
+      <section class="chapter part" id="typeahead">
+        <h2>Search autocomplete</h2>
+        <p class="kind">Part 9 of 9 &middot; precomputed answers, tight latency</p>
+        <p>Return the top few completions for each prefix a user types. It is asked because the read path must be nearly free, which pushes all the work into an offline index build and layers of caching.</p>
+        <ul>
+          <li><a href="#typeahead-requirements">Requirements and scale</a></li>
+          <li><a href="#typeahead-api">API and data model</a></li>
+          <li><a href="#typeahead-design">High-level design</a></li>
+          <li><a href="#typeahead-deep-dives">Deep dives</a>: trie versus precomputed top-k, building the index, serving and caching, sharding, ranking, filtering</li>
+          <li><a href="#typeahead-tradeoffs">Trade-offs and follow-ups</a></li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="typeahead-requirements">
+        <h2>Requirements and scale</h2>
+        <p class="kind"><a href="#typeahead">Search autocomplete</a></p>
+        <ul>
+          <li><b>Functional:</b> up to 8 suggestions for a prefix; ranked by popularity; trending queries appear within minutes; unsafe or blocked suggestions never shown.</li>
+          <li><b>Non-functional:</b> under 100 ms end to end at p99, under 10 ms inside the service; highly available (degrade to no suggestions, never block search); results may be minutes stale.</li>
+          <li><b>Out of scope:</b> the search results themselves, spelling correction, deep personalisation.</li>
+        </ul>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Quantity</th><th>Arithmetic</th><th>Result (approx.)</th></tr></thead>
+            <tbody>
+              <tr><td>Users</td><td>Assumption</td><td>100 M DAU</td></tr>
+              <tr><td>Searches</td><td>100 M x 10 per day</td><td>1 B per day</td></tr>
+              <tr><td>Suggest requests</td><td>1 B x 6 per search (after debounce) = 6 B / 86,400 s</td><td>70,000 per second average, 210,000 peak (3x)</td></tr>
+              <tr><td>Index size</td><td>50 M prefixes x (20 byte key + 10 x 30 bytes)</td><td>16 GB, fits in RAM on one machine</td></tr>
+              <tr><td>Query log</td><td>1 B x 100 bytes</td><td>100 GB per day</td></tr>
+              <tr><td>Bandwidth</td><td>70,000 x 500 bytes</td><td>35 MB per second average, 105 MB per second peak</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><b>What the numbers say:</b> the index is small and the request rate is large. You replicate for throughput long before you need to shard for size, and every request you answer from a cache is one the service never sees.</p>
+      </section>
+
+      <section class="chapter" id="typeahead-api">
+        <h2>API and data model</h2>
+        <p class="kind"><a href="#typeahead">Search autocomplete</a></p>
+        <script type="text/plain" data-lang="text" data-file="API">
+GET  /v1/suggest?q=<prefix>&limit=8&lang=en   -> {suggestions: [{text, score}]}
+     Cache-Control: public, max-age=300
+POST /v1/events/search  {query, ts}           -> 202        # logging, fire and forget
+POST /v1/admin/blocklist {term}               -> 204        # takes effect in minutes
+        </script>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Data</th><th>Shape</th><th>Store and reason</th></tr></thead>
+            <tbody>
+              <tr><td>Prefix index</td><td>Normalised prefix (up to 20 characters) to an ordered list of up to 10 (query, score)</td><td>Immutable, versioned files built offline and loaded into memory by the suggest service; a published snapshot is never edited</td></tr>
+              <tr><td>Query counts</td><td>Query, language, time bucket, count</td><td>Batch tables in the data lake; input to the build</td></tr>
+              <tr><td>Trending delta</td><td>Query to recent count, last few hours</td><td>Small in-memory or Redis structure fed by a stream job</td></tr>
+              <tr><td>Blocklist</td><td>Terms and patterns</td><td>Small table, pushed to builders and servers</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="chapter" id="typeahead-design">
+        <h2>High-level design</h2>
+        <p class="kind"><a href="#typeahead">Search autocomplete</a></p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  U([Browser]) --> CDN[CDN]
+  CDN --> SS[Suggest service]
+  SS --> IX[(In-memory prefix index)]
+  U -.->|search events| LG[[Query log]]
+  LG --> BA[Batch aggregator]
+  LG --> ST[Stream counter]
+  BA --> BL[Index builder]
+  BF[Blocklist] --> BL
+  BL --> SN[(Index snapshots)]
+  SN -->|load new version| IX
+  ST -->|trending delta| SS
+          </script>
+          <figcaption>Two loops: a fast serving path (top) that only reads memory, and a slow build path (bottom) that turns query logs into a new index version.</figcaption>
+        </figure>
+        <ul>
+          <li><b>Read:</b> the browser asks the CDN; on a miss the suggest service normalises the prefix, looks it up in memory, merges any trending entries, filters, and returns with a cache lifetime.</li>
+          <li><b>Log:</b> completed searches (not keystrokes) go to the query log asynchronously.</li>
+          <li><b>Batch build:</b> every hour or day, aggregate counts with time decay, drop rare and blocked queries, compute the top k for every prefix, publish a snapshot.</li>
+          <li><b>Swap:</b> servers load the new snapshot beside the old one and switch atomically; a bad build is rolled back by pointing at the previous version.</li>
+          <li><b>Streaming:</b> a stream job counts queries over a sliding window and feeds a small trending delta, so breaking topics do not wait for the next batch.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="typeahead-deep-dives">
+        <h2>Deep dives</h2>
+        <p class="kind"><a href="#typeahead">Search autocomplete</a></p>
+        <h3>Trie versus precomputed top-k per prefix</h3>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart TD
+  R((root)) --> S["s<br/>top: sql, spark, ssh"]
+  S --> SP["sp<br/>top: spark, spring"]
+  S --> SQ["sq<br/>top: sql, sqlite"]
+  SP --> SPA["spa<br/>top: spark, spark sql"]
+  SQ --> SQL["sql<br/>top: sql, sqlite, sql join"]
+          </script>
+          <figcaption>A trie with the top-k list stored at every node. A lookup walks one node per typed character and reads the list; it never explores the subtree.</figcaption>
+        </figure>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Structure</th><th>Lookup</th><th>Memory</th><th>Updates</th><th>Use when</th></tr></thead>
+            <tbody>
+              <tr><td>Plain trie, counts at leaves</td><td>Walk the prefix, then search the subtree: slow for short prefixes</td><td>Smallest</td><td>Cheap</td><td>Never for serving</td></tr>
+              <tr><td>Trie with top-k at each node</td><td>O(prefix length)</td><td>Medium; prefixes share structure</td><td>A count change touches every ancestor</td><td>In-process index on one machine</td></tr>
+              <tr><td>Hash map: prefix to top-k</td><td>O(1)</td><td>Largest; each prefix stored in full</td><td>Rebuild offline</td><td>Simple sharding and KV or CDN friendly; the usual choice</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>Both serving structures are the same idea: the answer for every prefix is computed before anyone asks. Limit prefix length (about 20) and keep only prefixes of queries above a count threshold.</p>
+        <h3>Building the index: batch plus streaming</h3>
+        <div class="scroll">
+          <table>
+            <thead><tr><th></th><th>Batch build</th><th>Streaming update</th></tr></thead>
+            <tbody>
+              <tr><td>Input</td><td>Days or weeks of query logs</td><td>The live event stream, sliding window of minutes to hours</td></tr>
+              <tr><td>Output</td><td>A complete, versioned snapshot</td><td>A small delta of trending queries</td></tr>
+              <tr><td>Freshness</td><td>Hours</td><td>Minutes</td></tr>
+              <tr><td>Strength</td><td>Simple, reproducible, easy to roll back</td><td>Catches breaking topics</td></tr>
+              <tr><td>Weakness</td><td>Stale between builds</td><td>Approximate counts, easier to game; needs stricter filtering</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <ul>
+          <li>Score with a decayed count (recent days weigh more) so last year's event does not outrank today's.</li>
+          <li>Sampling the log (1 in 10) is fine for popular queries and cuts build cost.</li>
+        </ul>
+        <h3>Serving path, caching and the latency budget</h3>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+sequenceDiagram
+  participant U as Browser
+  participant C as CDN edge
+  participant S as Suggest service
+  U->>U: debounce 100 ms, check local cache
+  U->>C: GET suggest?q=sp
+  C-->>U: cached hit, about 20 ms
+  U->>C: GET suggest?q=spark stre
+  C->>S: miss, forward
+  S->>S: memory lookup under 1 ms
+  S-->>C: 200 max-age 300
+  C-->>U: response
+          </script>
+          <figcaption>Short prefixes are few and extremely popular, so the CDN answers them. Long prefixes are rare, miss the cache and hit the service.</figcaption>
+        </figure>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Layer</th><th>What it does</th><th>Budget (approx.)</th></tr></thead>
+            <tbody>
+              <tr><td>Browser</td><td>Debounce, cancel superseded requests, cache results per prefix for the session</td><td>0 ms on a hit</td></tr>
+              <tr><td>Network to the edge</td><td>One round trip on a kept-alive connection</td><td>20 to 50 ms</td></tr>
+              <tr><td>CDN</td><td>Caches by full URL for minutes</td><td>1 to 5 ms</td></tr>
+              <tr><td>Edge to origin (miss only)</td><td>Round trip to the nearest region</td><td>10 to 30 ms</td></tr>
+              <tr><td>Suggest service</td><td>Normalise, look up, merge, filter</td><td>1 to 5 ms</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <h3>Sharding the index</h3>
+        <ul>
+          <li><b>First question:</b> does it need sharding at all? At 16 GB, no: run many identical replicas per region. Shard when languages, markets or longer prefixes push it past one machine's memory.</li>
+          <li><b>Hash of the prefix:</b> even load, and works because a lookup is an exact key match. The natural choice for the prefix map.</li>
+          <li><b>Range by leading characters:</b> needed for a real trie; ranges must be sized from the measured distribution (<code>s</code> is far busier than <code>x</code>) and kept in a shard map.</li>
+        </ul>
+        <h3>Ranking, personalisation and filtering</h3>
+        <ul>
+          <li><b>Ranking:</b> decayed frequency, optionally adjusted by click-through on the suggestion and by language or region (a separate index per market keeps responses cacheable).</li>
+          <li><b>Personalisation:</b> per-user responses cannot be shared in a CDN. Keep the global list cacheable and blend the user's own recent searches on the client.</li>
+          <li><b>Filtering at build time:</b> blocklist, classifiers for offensive or dangerous content, and a minimum number of distinct users per query so one person's private query can never be suggested.</li>
+          <li><b>Filtering at serve time:</b> a small blocklist checked on every response, so a takedown works in minutes without a rebuild; purge the CDN for the affected prefixes.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="typeahead-tradeoffs">
+        <h2>Trade-offs and follow-ups</h2>
+        <p class="kind"><a href="#typeahead">Search autocomplete</a></p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Decision</th><th>Choice</th><th>Alternative</th><th>Why</th></tr></thead>
+            <tbody>
+              <tr><td>Index</td><td>Precomputed top-k per prefix</td><td>Search a trie at query time</td><td>Constant-time reads, cacheable</td></tr>
+              <tr><td>Updates</td><td>Immutable snapshots plus a trending delta</td><td>Update the index in place per query</td><td>Simple servers, safe rollback</td></tr>
+              <tr><td>Scale-out</td><td>Replicas first, shards later</td><td>Shard from the start</td><td>The index is small; QPS is the constraint</td></tr>
+              <tr><td>Personalisation</td><td>On the client</td><td>On the server</td><td>Keeps CDN caching</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <ul>
+          <li><b>Failure mode:</b> a bad index build ships empty or offensive results. Validate the snapshot (size, sample queries), roll out to a few servers first, keep the previous version loaded.</li>
+          <li><b>Failure mode:</b> manipulation. Coordinated queries push a phrase into suggestions; count distinct users, cap per-user contribution, review fast risers.</li>
+          <li><b>Failure mode:</b> suggest service down. The search box still works; the client hides the dropdown after a short timeout.</li>
+        </ul>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Follow-up</th><th>One-line answer</th></tr></thead>
+            <tbody>
+              <tr><td>Typos and fuzzy matching?</td><td>Out of the basic design; add an edit-distance pass or a separate spelling service for prefixes with no results.</td></tr>
+              <tr><td>Matching in the middle of a phrase?</td><td>Index word-level prefixes as extra keys; costs index size.</td></tr>
+              <tr><td>Many languages?</td><td>An index per language with language-specific normalisation; the request carries the language.</td></tr>
+              <tr><td>How fresh is fresh enough?</td><td>Hourly batch covers almost all traffic; the trending delta covers news events.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><b>Senior signal:</b> you notice from the estimate that the index fits in memory and say "replicate, do not shard", put most of the latency budget on the network and caches, and treat filtering as a first-class requirement.</p>
+      </section>
+
+      <section class="chapter" id="cheat-sheet">
+        <h2>Cheat sheet</h2>
+        <p>One line per case. If you can rebuild the design from its row, you know it.</p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Case</th><th>Core idea</th><th>Key data store</th><th>Hardest deep dive</th></tr></thead>
+            <tbody>
+              <tr><td><a href="#url">URL shortener</a></td><td>A cached point lookup; keys from counter ranges, redirect with 302</td><td>Hash-sharded KV store plus Redis</td><td>Key generation without collisions or coordination per write</td></tr>
+              <tr><td><a href="#rate">Rate limiter</a></td><td>Atomic check-and-count per key at the gateway</td><td>Redis with Lua scripts</td><td>Accuracy versus a hop per request; behaviour when Redis is down</td></tr>
+              <tr><td><a href="#kv">Key-value store</a></td><td>Consistent hashing plus leaderless N / W / R quorums, repaired in the background</td><td>LSM tree on each node</td><td>Conflict resolution and the four repair mechanisms</td></tr>
+              <tr><td><a href="#id">Unique ID generator</a></td><td>Timestamp, worker id and sequence packed into 64 bits, generated locally</td><td>None (etcd only for worker leases)</td><td>Clock going backwards and duplicate worker ids</td></tr>
+              <tr><td><a href="#notify">Notification system</a></td><td>Queue per channel and priority, at-least-once with deduplication</td><td>Message queues plus a wide-column delivery log</td><td>Retries that neither duplicate nor storm; provider failover</td></tr>
+              <tr><td><a href="#feed">News feed</a></td><td>Precompute timelines by fan-out on write, pull for celebrities</td><td>Redis sorted sets of post ids</td><td>Hybrid fan-out and its threshold</td></tr>
+              <tr><td><a href="#chat">Chat</a></td><td>Persist, ack, deliver through the gateway that holds the connection; sync by per-conversation seq</td><td>Wide-column store partitioned by conversation</td><td>Ordering and gap-free delivery across devices and reconnects</td></tr>
+              <tr><td><a href="#typeahead">Search autocomplete</a></td><td>Precompute top-k for every prefix offline, serve from memory and caches</td><td>Immutable in-memory prefix index</td><td>Freshness of the index without giving up cacheability</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <ul>
+          <li><b>Patterns that repeat:</b> keep the hot path to one lookup; move work to write time or offline when reads dominate; put a queue wherever a slow or external dependency sits; treat caches and derived views as rebuildable.</li>
+          <li><b>Questions that repeat:</b> what is the hot key, what happens when the cache or queue is down, where can a duplicate appear, what changes at 10x.</li>
+        </ul>
+        <p>Next: the larger systems (storage, streaming, payments, search and more) in <a href="sd-hld-cases-2.html">HLD Case Studies: Advanced</a>.</p>
+      </section>
+
+    </div>
+  </main>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script src="../../assets/tutorial.js?v=8"></script>
+</body>
+</html>

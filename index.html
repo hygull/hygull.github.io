@@ -7,11 +7,12 @@
 <meta property="og:title" content="Rishikesh Agrawani | Learnings">
 <meta property="og:description" content="Backend engineer. Short tutorials with runnable code on Python, system design, React and Bash.">
 <meta property="og:type" content="website">
+<meta property="og:image" content="https://avatars.githubusercontent.com/u/23253178?v=4">
 <meta property="og:url" content="https://hygull.github.io/">
 <meta name="author" content="Rishikesh Agrawani">
-<meta name="description" content="Short tutorials with runnable code: React, Next.js, design to code, Python from first steps to concurrency, testing, databases and design patterns, and Bash.">
+<meta name="description" content="Short tutorials with runnable code: system design for senior interviews, Python from first steps to concurrency and design patterns, React, Next.js and Bash.">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@500;700&display=swap">
-<link rel="stylesheet" href="learnings/assets/tutorial.css?v=7">
+<link rel="stylesheet" href="learnings/assets/tutorial.css?v=8">
 </head>
 <body data-track="hub">
 
@@ -35,7 +36,7 @@
 
 <main class="hub" id="hub">
   <section class="profile" aria-label="About me">
-    <div class="avatar" aria-hidden="true">RA</div>
+    <img class="avatar" src="https://avatars.githubusercontent.com/u/23253178?v=4" alt="Rishikesh Agrawani" width="96" height="96">
     <div class="profile-text">
       <p class="eyebrow">Hi, I am</p>
       <h1>Rishikesh Agrawani</h1>
@@ -61,6 +62,7 @@
     <li><a href="#python-advanced">Python Advanced</a></li>
     <li><a href="#python-practice">Python in Practice</a></li>
     <li><a href="#python-design">Python Design</a></li>
+    <li><a href="#system-design">System Design</a></li>
     <li><a href="#bash">Command line: Bash</a></li>
   </ul>
 
@@ -602,6 +604,261 @@
     </div>
   </section>
 
+  <section class="group" id="system-design">
+    <p class="eyebrow">Interview learning path</p>
+    <h2>System Design</h2>
+    <p>Twelve tutorials for senior and staff design interviews: the foundations, the building blocks, the patterns behind them, sixteen high-level and ten low-level worked designs, and a playbook for the day. Built around diagrams and comparison tables.</p>
+
+    <div class="track-list">
+
+      <div class="track system">
+        <div>
+          <p class="step">Step 1</p>
+          <h3><a href="learnings/SystemDesign/docs/sd-foundations.html">System Design Foundations</a></h3>
+          <p class="path">learnings/SystemDesign/docs/sd-foundations.html</p>
+        </div>
+        <div>
+          <p>The interview framework, estimation, the numbers worth memorising, CAP and consistency trade-offs, and scaling a design step by step.</p>
+          <ul class="chips">
+            <li><a href="learnings/SystemDesign/docs/sd-foundations.html#part-map">The map</a></li>
+            <li><a href="learnings/SystemDesign/docs/sd-foundations.html#part-framework">The interview framework</a></li>
+            <li><a href="learnings/SystemDesign/docs/sd-foundations.html#part-estimation">Estimation</a></li>
+            <li><a href="learnings/SystemDesign/docs/sd-foundations.html#part-tradeoffs">Core trade-offs</a></li>
+            <li><a href="learnings/SystemDesign/docs/sd-foundations.html#part-scaling">Scaling a design step by step</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="track system">
+        <div>
+          <p class="step">Step 2</p>
+          <h3><a href="learnings/SystemDesign/docs/sd-building-blocks.html">Building Blocks</a></h3>
+          <p class="path">learnings/SystemDesign/docs/sd-building-blocks.html</p>
+        </div>
+        <div>
+          <p>DNS, CDN, load balancers, caching, database families, replication, sharding, consistent hashing, queues, rate limiters and ID generation.</p>
+          <ul class="chips">
+            <li><a href="learnings/SystemDesign/docs/sd-building-blocks.html#edge">The edge</a></li>
+            <li><a href="learnings/SystemDesign/docs/sd-building-blocks.html#compute">Compute</a></li>
+            <li><a href="learnings/SystemDesign/docs/sd-building-blocks.html#caching">Caching</a></li>
+            <li><a href="learnings/SystemDesign/docs/sd-building-blocks.html#storage">Storage choices</a></li>
+            <li><a href="learnings/SystemDesign/docs/sd-building-blocks.html#scaling-data">Scaling data</a></li>
+            <li><a href="learnings/SystemDesign/docs/sd-building-blocks.html#async">Asynchronous work</a></li>
+            <li><a href="learnings/SystemDesign/docs/sd-building-blocks.html#specialised">Specialised blocks</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="track system">
+        <div>
+          <p class="step">Step 3</p>
+          <h3><a href="learnings/SystemDesign/docs/sd-data-systems.html">Data Systems</a></h3>
+          <p class="path">learnings/SystemDesign/docs/sd-data-systems.html</p>
+        </div>
+        <div>
+          <p>Storage engines, indexes, isolation levels, replication and partitioning in depth, data modelling, stream processing and Kafka.</p>
+          <ul class="chips">
+            <li><a href="learnings/SystemDesign/docs/sd-data-systems.html#storage-engines">Storage engines</a></li>
+            <li><a href="learnings/SystemDesign/docs/sd-data-systems.html#indexes">Indexes and queries</a></li>
+            <li><a href="learnings/SystemDesign/docs/sd-data-systems.html#transactions">Transactions</a></li>
+            <li><a href="learnings/SystemDesign/docs/sd-data-systems.html#replication">Replication in depth</a></li>
+            <li><a href="learnings/SystemDesign/docs/sd-data-systems.html#partitioning">Partitioning in depth</a></li>
+            <li><a href="learnings/SystemDesign/docs/sd-data-systems.html#data-modelling">Data modelling</a></li>
+            <li><a href="learnings/SystemDesign/docs/sd-data-systems.html#analytics">Analytics and pipelines</a></li>
+            <li><a href="learnings/SystemDesign/docs/sd-data-systems.html#search-stores">Search and specialised stores</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="track system">
+        <div>
+          <p class="step">Step 4</p>
+          <h3><a href="learnings/SystemDesign/docs/sd-distributed-systems.html">Distributed Systems Patterns</a></h3>
+          <p class="path">learnings/SystemDesign/docs/sd-distributed-systems.html</p>
+        </div>
+        <div>
+          <p>Clocks, consensus and Raft, two-phase commit and sagas, the outbox, idempotency, delivery guarantees, circuit breakers and distributed locks.</p>
+          <ul class="chips">
+            <li><a href="learnings/SystemDesign/docs/sd-distributed-systems.html#why-hard">Why distributed is hard</a></li>
+            <li><a href="learnings/SystemDesign/docs/sd-distributed-systems.html#time-order">Time and order</a></li>
+            <li><a href="learnings/SystemDesign/docs/sd-distributed-systems.html#agreement">Agreement</a></li>
+            <li><a href="learnings/SystemDesign/docs/sd-distributed-systems.html#dist-tx">Distributed transactions</a></li>
+            <li><a href="learnings/SystemDesign/docs/sd-distributed-systems.html#messaging">Messaging correctness</a></li>
+            <li><a href="learnings/SystemDesign/docs/sd-distributed-systems.html#staying-up">Staying up</a></li>
+            <li><a href="learnings/SystemDesign/docs/sd-distributed-systems.html#coordination">Coordination patterns</a></li>
+            <li><a href="learnings/SystemDesign/docs/sd-distributed-systems.html#consistency">Consistency in practice</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="track system">
+        <div>
+          <p class="step">Step 5</p>
+          <h3><a href="learnings/SystemDesign/docs/sd-api-design.html">API and Communication Design</a></h3>
+          <p class="path">learnings/SystemDesign/docs/sd-api-design.html</p>
+        </div>
+        <div>
+          <p>REST, gRPC and GraphQL, pagination and versioning, real-time options, service-to-service calls, OAuth, JWT and API security.</p>
+          <ul class="chips">
+            <li><a href="learnings/SystemDesign/docs/sd-api-design.html#part-interview">Designing an API in an interview</a></li>
+            <li><a href="learnings/SystemDesign/docs/sd-api-design.html#part-styles">API styles</a></li>
+            <li><a href="learnings/SystemDesign/docs/sd-api-design.html#part-details">API details that get probed</a></li>
+            <li><a href="learnings/SystemDesign/docs/sd-api-design.html#part-realtime">Real-time communication</a></li>
+            <li><a href="learnings/SystemDesign/docs/sd-api-design.html#part-services">Service-to-service communication</a></li>
+            <li><a href="learnings/SystemDesign/docs/sd-api-design.html#part-security">Security on the wire</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="track system">
+        <div>
+          <p class="step">Step 6</p>
+          <h3><a href="learnings/SystemDesign/docs/sd-architecture.html">Architecture Styles</a></h3>
+          <p class="path">learnings/SystemDesign/docs/sd-architecture.html</p>
+        </div>
+        <div>
+          <p>Monolith to microservices, finding service boundaries, event-driven design, CQRS, event sourcing and multi-tenancy.</p>
+          <ul class="chips">
+            <li><a href="learnings/SystemDesign/docs/sd-architecture.html#shapes">Shapes of a system</a></li>
+            <li><a href="learnings/SystemDesign/docs/sd-architecture.html#splitting">Splitting a system</a></li>
+            <li><a href="learnings/SystemDesign/docs/sd-architecture.html#cooperating">How services cooperate</a></li>
+            <li><a href="learnings/SystemDesign/docs/sd-architecture.html#platform">Platform patterns</a></li>
+            <li><a href="learnings/SystemDesign/docs/sd-architecture.html#choosing">Choosing</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="track system">
+        <div>
+          <p class="step">Step 7</p>
+          <h3><a href="learnings/SystemDesign/docs/sd-reliability.html">Reliability and Operations</a></h3>
+          <p class="path">learnings/SystemDesign/docs/sd-reliability.html</p>
+        </div>
+        <div>
+          <p>SLOs and error budgets, designing for failure, multi-region and disaster recovery, observability, safe deployments and capacity planning.</p>
+          <ul class="chips">
+            <li><a href="learnings/SystemDesign/docs/sd-reliability.html#defining">Defining reliable</a></li>
+            <li><a href="learnings/SystemDesign/docs/sd-reliability.html#designing-failure">Designing for failure</a></li>
+            <li><a href="learnings/SystemDesign/docs/sd-reliability.html#observability">Observability</a></li>
+            <li><a href="learnings/SystemDesign/docs/sd-reliability.html#shipping">Shipping safely</a></li>
+            <li><a href="learnings/SystemDesign/docs/sd-reliability.html#capacity">Capacity and performance</a></li>
+            <li><a href="learnings/SystemDesign/docs/sd-reliability.html#operating">Operating it</a></li>
+            <li><a href="learnings/SystemDesign/docs/sd-reliability.html#interview">In the interview</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="track system">
+        <div>
+          <p class="step">Step 8</p>
+          <h3><a href="learnings/SystemDesign/docs/sd-hld-cases-1.html">HLD Case Studies: Core</a></h3>
+          <p class="path">learnings/SystemDesign/docs/sd-hld-cases-1.html</p>
+        </div>
+        <div>
+          <p>Eight worked designs: URL shortener, rate limiter, key-value store, ID generator, notifications, news feed, chat and typeahead.</p>
+          <ul class="chips">
+            <li><a href="learnings/SystemDesign/docs/sd-hld-cases-1.html#how-to-use">How to use these</a></li>
+            <li><a href="learnings/SystemDesign/docs/sd-hld-cases-1.html#url">URL shortener</a></li>
+            <li><a href="learnings/SystemDesign/docs/sd-hld-cases-1.html#rate">Rate limiter</a></li>
+            <li><a href="learnings/SystemDesign/docs/sd-hld-cases-1.html#kv">Key-value store</a></li>
+            <li><a href="learnings/SystemDesign/docs/sd-hld-cases-1.html#id">Unique ID generator</a></li>
+            <li><a href="learnings/SystemDesign/docs/sd-hld-cases-1.html#notify">Notification system</a></li>
+            <li><a href="learnings/SystemDesign/docs/sd-hld-cases-1.html#feed">News feed and timeline</a></li>
+            <li><a href="learnings/SystemDesign/docs/sd-hld-cases-1.html#chat">Chat and messaging</a></li>
+            <li><a href="learnings/SystemDesign/docs/sd-hld-cases-1.html#typeahead">Search autocomplete</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="track system">
+        <div>
+          <p class="step">Step 9</p>
+          <h3><a href="learnings/SystemDesign/docs/sd-hld-cases-2.html">HLD Case Studies: Advanced</a></h3>
+          <p class="path">learnings/SystemDesign/docs/sd-hld-cases-2.html</p>
+        </div>
+        <div>
+          <p>Eight harder designs: payments and wallet, seat booking, ride hailing, video streaming, file sync, web crawler, job scheduler and metrics.</p>
+          <ul class="chips">
+            <li><a href="learnings/SystemDesign/docs/sd-hld-cases-2.html#how-to-use">How to use these</a></li>
+            <li><a href="learnings/SystemDesign/docs/sd-hld-cases-2.html#pay">Payment system and digital wallet</a></li>
+            <li><a href="learnings/SystemDesign/docs/sd-hld-cases-2.html#book">Ticket and seat booking</a></li>
+            <li><a href="learnings/SystemDesign/docs/sd-hld-cases-2.html#ride">Ride hailing</a></li>
+            <li><a href="learnings/SystemDesign/docs/sd-hld-cases-2.html#video">Video streaming platform</a></li>
+            <li><a href="learnings/SystemDesign/docs/sd-hld-cases-2.html#drive">File sync and storage</a></li>
+            <li><a href="learnings/SystemDesign/docs/sd-hld-cases-2.html#crawl">Web crawler</a></li>
+            <li><a href="learnings/SystemDesign/docs/sd-hld-cases-2.html#sched">Distributed job scheduler</a></li>
+            <li><a href="learnings/SystemDesign/docs/sd-hld-cases-2.html#metrics">Metrics, monitoring and ad-click aggregation</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="track system">
+        <div>
+          <p class="step">Step 10</p>
+          <h3><a href="learnings/SystemDesign/docs/sd-lld.html">Low-Level Design</a></h3>
+          <p class="path">learnings/SystemDesign/docs/sd-lld.html</p>
+        </div>
+        <div>
+          <p>The low-level design method, reading UML, modelling decisions, the patterns that come up, concurrency and a machine-coding playbook.</p>
+          <ul class="chips">
+            <li><a href="learnings/SystemDesign/docs/sd-lld.html#round">What an LLD round is</a></li>
+            <li><a href="learnings/SystemDesign/docs/sd-lld.html#method">The method</a></li>
+            <li><a href="learnings/SystemDesign/docs/sd-lld.html#uml">Reading and drawing UML</a></li>
+            <li><a href="learnings/SystemDesign/docs/sd-lld.html#modelling">Modelling decisions</a></li>
+            <li><a href="learnings/SystemDesign/docs/sd-lld.html#patterns">Patterns that actually come up</a></li>
+            <li><a href="learnings/SystemDesign/docs/sd-lld.html#concurrency">Concurrency in LLD</a></li>
+            <li><a href="learnings/SystemDesign/docs/sd-lld.html#playbook">Machine-coding playbook</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="track system">
+        <div>
+          <p class="step">Step 11</p>
+          <h3><a href="learnings/SystemDesign/docs/sd-lld-cases.html">LLD Case Studies</a></h3>
+          <p class="path">learnings/SystemDesign/docs/sd-lld-cases.html</p>
+        </div>
+        <div>
+          <p>Ten designs with class diagrams and runnable Python: parking lot, LRU cache, elevator, vending machine, Splitwise, movie booking and more.</p>
+          <ul class="chips">
+            <li><a href="learnings/SystemDesign/docs/sd-lld-cases.html#how-to">How to use these</a></li>
+            <li><a href="learnings/SystemDesign/docs/sd-lld-cases.html#parking">Parking lot</a></li>
+            <li><a href="learnings/SystemDesign/docs/sd-lld-cases.html#lru">LRU cache, then LFU</a></li>
+            <li><a href="learnings/SystemDesign/docs/sd-lld-cases.html#elevator">Elevator system</a></li>
+            <li><a href="learnings/SystemDesign/docs/sd-lld-cases.html#vending">Vending machine</a></li>
+            <li><a href="learnings/SystemDesign/docs/sd-lld-cases.html#split">Expense sharing</a></li>
+            <li><a href="learnings/SystemDesign/docs/sd-lld-cases.html#movie">Movie ticket booking</a></li>
+            <li><a href="learnings/SystemDesign/docs/sd-lld-cases.html#limiter">Rate limiter library</a></li>
+            <li><a href="learnings/SystemDesign/docs/sd-lld-cases.html#logger">Logging framework</a></li>
+            <li><a href="learnings/SystemDesign/docs/sd-lld-cases.html#game">Tic-tac-toe</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="track system">
+        <div>
+          <p class="step">Step 12</p>
+          <h3><a href="learnings/SystemDesign/docs/sd-interview-playbook.html">Senior Interview Playbook</a></h3>
+          <p class="path">learnings/SystemDesign/docs/sd-interview-playbook.html</p>
+        </div>
+        <div>
+          <p>How senior loops are scored, running the session, a question bank, common mistakes and a six-week study plan.</p>
+          <ul class="chips">
+            <li><a href="learnings/SystemDesign/docs/sd-interview-playbook.html#part-loops">How senior loops work</a></li>
+            <li><a href="learnings/SystemDesign/docs/sd-interview-playbook.html#part-scoring">What interviewers score</a></li>
+            <li><a href="learnings/SystemDesign/docs/sd-interview-playbook.html#part-session">Running the session</a></li>
+            <li><a href="learnings/SystemDesign/docs/sd-interview-playbook.html#part-bank">Question bank</a></li>
+            <li><a href="learnings/SystemDesign/docs/sd-interview-playbook.html#part-deepdive">Deep-dive menu</a></li>
+            <li><a href="learnings/SystemDesign/docs/sd-interview-playbook.html#part-mistakes">Common mistakes</a></li>
+            <li><a href="learnings/SystemDesign/docs/sd-interview-playbook.html#part-project">Project deep dive and behavioural</a></li>
+            <li><a href="learnings/SystemDesign/docs/sd-interview-playbook.html#part-study">Study plan</a></li>
+          </ul>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
   <section class="group" id="bash">
     <p class="eyebrow">Command line</p>
     <h2>Bash</h2>
@@ -633,6 +890,6 @@
   </section>
 </main>
 
-<script src="learnings/assets/tutorial.js?v=7"></script>
+<script src="learnings/assets/tutorial.js?v=8"></script>
 </body>
 </html>

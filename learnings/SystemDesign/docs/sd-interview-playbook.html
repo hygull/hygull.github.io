@@ -1,0 +1,921 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Senior Interview Playbook</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@500;700&display=swap">
+<link rel="stylesheet" href="../../assets/tutorial.css?v=8">
+</head>
+<body data-track="system">
+
+<header class="topbar">
+  <div class="topbar-in">
+    <a class="brand" href="../../../index.html">Learnings</a>
+    <nav class="tracks" aria-label="Paths">
+      <a href="../../../index.html#system-design" aria-current="true">System Design</a>
+      <a href="../../../archive.html">Archive</a>
+    </nav>
+    <div class="tools">
+      <button class="btn" id="menu" type="button" aria-expanded="false">Chapters</button>
+      <input id="q" type="search" placeholder="Search chapters" aria-label="Search chapters">
+      <button class="btn" id="theme" type="button">Dark mode</button>
+    </div>
+  </div>
+</header>
+
+<div class="shell">
+  <aside class="side">
+    <p class="side-label">Interview Playbook</p>
+    <nav id="toc" aria-label="Chapters"></nav>
+  </aside>
+
+  <main>
+    <div class="page-head">
+      <p class="eyebrow">System design, part 12 of 12</p>
+      <h1>Senior Interview Playbook</h1>
+      <p class="lead">How senior and staff backend loops are usually run and scored, how to drive an HLD or LLD round minute by minute, which questions come up and what each one really tests, where to steer the deep dive, and a six-week plan over this path. The 45-minute framework, estimation tables and core trade-offs are in <a href="sd-foundations.html">System Design Foundations</a>; this page assumes them.</p>
+    </div>
+
+    <div class="chapters">
+
+      <!-- Part 1 -->
+      <section class="chapter part" id="part-loops">
+        <h2>How senior loops work</h2>
+        <p class="kind">Part 1 of 8 &middot; the rounds and the bar at each level</p>
+        <p>Loops differ by company and change over time, so treat this as the typical shape and ask your recruiter for the exact list of rounds before you prepare.</p>
+        <ul>
+          <li><a href="#loop-shape">Typical loop composition</a></li>
+          <li><a href="#level-bar">Mid vs senior vs staff</a></li>
+          <li><a href="#debrief">How feedback becomes a decision</a></li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="loop-shape">
+        <h2>Typical loop composition</h2>
+        <p class="kind"><a href="#part-loops">How senior loops work</a></p>
+        <p>A common senior backend loop is one or two screens followed by four to six onsite (or virtual onsite) rounds. Design carries more weight as the level rises: at staff, a weak design round is rarely offset by strong coding.</p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  PS([Screens]) --> C[Coding x1-2]
+  PS --> H[HLD x1-2]
+  PS --> L[LLD or<br/>machine coding]
+  PS --> B[Behavioural]
+  PS --> P[Project<br/>deep dive]
+  C --> D[Debrief]
+  H --> D
+  L --> D
+  B --> D
+  P --> D
+  D --> LV{{Hire and level}}
+          </script>
+          <figcaption>The onsite rounds are scored independently and merged in a debrief; the level decision is made there, not in any single round.</figcaption>
+        </figure>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Round</th><th>Typical length</th><th>What it assesses</th><th>Weight at senior / staff</th></tr></thead>
+            <tbody>
+              <tr><td>Coding (DSA)</td><td>45 to 60 min</td><td>Problem solving, clean correct code, complexity, testing</td><td>Gate: must pass; rarely decides the level</td></tr>
+              <tr><td>HLD (system design)</td><td>45 to 60 min</td><td>Scoping, architecture, depth, trade-offs, scale and failure</td><td>Often the main levelling signal; staff loops may have two</td></tr>
+              <tr><td>LLD / machine coding</td><td>45 to 120 min</td><td>Object modelling, patterns, extensibility, working code, concurrency</td><td>Common for backend roles at many companies, especially product companies in India</td></tr>
+              <tr><td>Behavioural / leadership</td><td>45 to 60 min</td><td>Ownership, conflict, influence, mentoring, delivery under ambiguity</td><td>High; at staff it often carries equal weight with design</td></tr>
+              <tr><td>Project or domain deep dive</td><td>45 to 60 min</td><td>Real depth on a system you built; judgement; honesty about trade-offs</td><td>Sometimes; more common at staff and for specialist roles</td></tr>
+              <tr><td>Hiring manager</td><td>30 to 45 min</td><td>Team fit, motivation, scope you have owned</td><td>Varies; can include a light design or behavioural part</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><b>Interview tip:</b> ask the recruiter three things: which rounds, whether LLD means "class diagram" or "running code", and the target level. Each changes what you practise.</p>
+      </section>
+
+      <section class="chapter" id="level-bar">
+        <h2>Mid vs senior vs staff</h2>
+        <p class="kind"><a href="#part-loops">How senior loops work</a></p>
+        <p>The same question is asked at every level; the bar moves. The difference is less about knowing more components and more about scope, initiative and judgement.</p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  M[Mid<br/>a component works] --> S[Senior<br/>a system works<br/>and fails well]
+  S --> ST[Staff<br/>systems fit the org<br/>and evolve]
+          </script>
+          <figcaption>Each level widens the unit of design: a component, then a whole system with its failure modes, then several systems over time and across teams.</figcaption>
+        </figure>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Dimension</th><th>Mid-level</th><th>Senior</th><th>Staff</th></tr></thead>
+            <tbody>
+              <tr><td>Scope</td><td>Designs the boxes asked for</td><td>Designs the end-to-end system, including data, APIs, failure and operations</td><td>Places the system among others: ownership boundaries, migration path, platform reuse</td></tr>
+              <tr><td>Ambiguity</td><td>Waits for requirements or asks many unfocused questions</td><td>Asks the few questions that change the design, assumes the rest out loud</td><td>Reframes the problem: "the real requirement is X, so Y is out of scope"</td></tr>
+              <tr><td>Depth</td><td>Correct at the box level</td><td>Implementation depth in 1 to 2 areas (schema, algorithm, protocol)</td><td>Depth where the risk is, plus second-order effects (cost, team load, evolution)</td></tr>
+              <tr><td>Trade-offs</td><td>Names one option</td><td>Compares 2 options with gain, cost and the condition that would flip the choice</td><td>Ties trade-offs to business and organisational constraints; knows when to defer a decision</td></tr>
+              <tr><td>Driving</td><td>Follows the interviewer</td><td>Drives the agenda, checkpoints, manages time</td><td>Drives and adapts; treats the interviewer as a stakeholder</td></tr>
+              <tr><td>Failure and ops</td><td>Mentions replication</td><td>Detection, blast radius, degradation, recovery, rollout</td><td>SLOs, on-call cost, incident history, safe evolution of schemas and APIs</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><b>Senior signal:</b> you finish a decision without being asked "why?". The "why", the cost and the alternative come in the same sentence as the choice.</p>
+      </section>
+
+      <section class="chapter" id="debrief">
+        <h2>How feedback becomes a decision</h2>
+        <p class="kind"><a href="#part-loops">How senior loops work</a></p>
+        <p>A common process: each interviewer writes notes against a rubric and a hire / no-hire recommendation with a level, then a debrief or hiring committee reads them together. Evidence in the notes counts; impressions do not.</p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+sequenceDiagram
+  participant C as Candidate
+  participant I as Interviewer
+  participant H as Debrief
+  C->>I: says and draws things
+  I->>I: notes quotes and decisions
+  I->>H: rubric scores, level, evidence
+  H->>H: look for consistent signal
+  H-->>C: offer at a level, or no
+          </script>
+          <figcaption>The interviewer can only report what you said or drew. A good idea you did not voice does not exist in the debrief.</figcaption>
+        </figure>
+        <ul>
+          <li>Consistency matters: four "lean hire at senior" often beats two "strong hire" plus two "no hire".</li>
+          <li>Down-levelling is a common outcome: a pass at senior with staff-level coding but mid-level design scope.</li>
+          <li>Make evidence easy to write down: say the decision, the reason and the cost as one sentence the interviewer can quote.</li>
+        </ul>
+      </section>
+
+      <!-- Part 2 -->
+      <section class="chapter part" id="part-scoring">
+        <h2>What interviewers score</h2>
+        <p class="kind">Part 2 of 8 &middot; the rubric and how points are lost</p>
+        <p>Rubrics differ in wording but cover the same eight dimensions. Know them, and make sure each one gets at least one clear piece of evidence during the round.</p>
+        <ul>
+          <li><a href="#rubric">The design rubric</a></li>
+          <li><a href="#signal-map">Where each signal is earned</a></li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="rubric">
+        <h2>The design rubric</h2>
+        <p class="kind"><a href="#part-scoring">What interviewers score</a></p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Dimension</th><th>What "strong" looks like</th><th>Commonest way to lose points</th></tr></thead>
+            <tbody>
+              <tr><td>Problem exploration</td><td>3 to 5 functional and non-functional requirements in 5 minutes; explicit out-of-scope list; asks the one question that changes the design (consistency, scale, latency)</td><td>Starting to draw at minute 1, or 12 minutes of questions with no decisions</td></tr>
+              <tr><td>High-level design</td><td>A working end-to-end path for every core use case; each box justified by a requirement</td><td>Boxes with no data flow; a favourite stack drawn before the requirements</td></tr>
+              <tr><td>Depth in 1 to 2 areas</td><td>Schema with keys and indexes, an algorithm, a protocol or a consistency mechanism taken to implementation level</td><td>Breadth only: everything mentioned, nothing explained</td></tr>
+              <tr><td>Trade-offs</td><td>Two options compared on the axis that matters, with the condition that would change the choice</td><td>"It depends" with no answer, or one option presented as obvious</td></tr>
+              <tr><td>Scalability and failure</td><td>Finds hot keys and SPOFs unprompted; describes degradation and recovery, not only redundancy</td><td>"Add more servers" and "replicate it" as the only answers</td></tr>
+              <tr><td>Communication</td><td>Signposts ("two parts: write path, then read path"), checkpoints, concise</td><td>Monologue for 10 minutes; ignoring the interviewer's hints</td></tr>
+              <tr><td>Estimation</td><td>Few numbers, each ending in a design consequence</td><td>No numbers at all, or 5 minutes of arithmetic with no conclusion</td></tr>
+              <tr><td>Operational maturity</td><td>Metrics and alerts that matter, safe rollout, backfills, migrations, on-call cost</td><td>A design that cannot be deployed, observed or migrated</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><b>Senior signal:</b> operational maturity is where nine years of experience shows most cheaply. One sentence on how you would roll it out and what alert would wake you up is often more convincing than another component.</p>
+      </section>
+
+      <section class="chapter" id="signal-map">
+        <h2>Where each signal is earned</h2>
+        <p class="kind"><a href="#part-scoring">What interviewers score</a></p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  subgraph Phase["Session phase"]
+    direction TB
+    P1[Scoping]
+    P2[Estimate]
+    P3[Diagram]
+    P4[Deep dive]
+    P5[Failures]
+  end
+  subgraph Score["Rubric"]
+    direction TB
+    S1[Exploration]
+    S2[Estimation]
+    S3[High-level]
+    S4[Depth and trade-offs]
+    S5[Scale and ops]
+  end
+  P1 --> S1
+  P2 --> S2
+  P3 --> S3
+  P4 --> S4
+  P5 --> S5
+          </script>
+          <figcaption>Each phase feeds mainly one rubric line. Running out of time before the failure phase leaves a whole dimension empty; communication is scored across all of them.</figcaption>
+        </figure>
+        <ul>
+          <li>If the interviewer takes over a phase (for example "skip estimates"), that dimension is not lost; say your assumed scale in one sentence and move on.</li>
+          <li>Plan to reach failures and scale with at least 5 minutes left; it is the dimension most often left blank.</li>
+        </ul>
+      </section>
+
+      <!-- Part 3 -->
+      <section class="chapter part" id="part-session">
+        <h2>Running the session</h2>
+        <p class="kind">Part 3 of 8 &middot; time plans, phrasing, follow-ups and decision charts</p>
+        <p>The step-by-step framework and its outputs are in <a href="sd-foundations.html">System Design Foundations</a>. This part is about control: who speaks when, what to check with the interviewer, and how to answer the standard follow-ups.</p>
+        <ul>
+          <li><a href="#hld-minutes">HLD round, minute by minute</a></li>
+          <li><a href="#lld-minutes">LLD and machine coding, minute by minute</a></li>
+          <li><a href="#driving">Driving: assume, checkpoint, propose, deepen</a></li>
+          <li><a href="#tradeoff-phrasing">Trade-off phrasing templates</a></li>
+          <li><a href="#what-if-fails">"What if this fails?"</a></li>
+          <li><a href="#scale-100x">"Scale it 100x"</a></li>
+          <li><a href="#drawing-order">Drawing order on the whiteboard</a></li>
+          <li><a href="#when-stuck">When you are stuck</a></li>
+          <li><a href="#choose-db">Flowchart: choosing a database</a></li>
+          <li><a href="#choose-async">Flowchart: sync vs async, queue vs stream</a></li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="hld-minutes">
+        <h2>HLD round, minute by minute</h2>
+        <p class="kind"><a href="#part-session">Running the session</a></p>
+        <p>The same plan for a 45- and a 60-minute slot. The extra 15 minutes go to a second deep dive and to failures, not to a longer opening. The right-hand column is the checkpoint you say out loud.</p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>45 min</th><th>60 min</th><th>You drive</th><th>Checkpoint with the interviewer</th></tr></thead>
+            <tbody>
+              <tr><td>0 to 5</td><td>0 to 6</td><td>Requirements and out-of-scope list</td><td>"These are the core use cases; anything you want added or dropped?"</td></tr>
+              <tr><td>5 to 9</td><td>6 to 10</td><td>Scale numbers, one design consequence</td><td>"So it is read-heavy at about 50k reads/s; I'll optimise for that."</td></tr>
+              <tr><td>9 to 15</td><td>10 to 17</td><td>API and data model, briefly</td><td>"Good enough to move to the architecture?"</td></tr>
+              <tr><td>15 to 25</td><td>17 to 30</td><td>Diagram; walk the write path then the read path</td><td>"This works end to end. Where would you like me to go deep?"</td></tr>
+              <tr><td>25 to 37</td><td>30 to 48</td><td>One deep dive (two in 60 min)</td><td>"I'd pick X because it is the riskiest part; or would you prefer Y?"</td></tr>
+              <tr><td>37 to 42</td><td>48 to 56</td><td>Failures, hot spots, scale-up</td><td>"Let me walk through what breaks first."</td></tr>
+              <tr><td>42 to 45</td><td>56 to 60</td><td>Recap against requirements; next steps</td><td>Leave the last 2 to 3 minutes for their questions if they ask.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+sequenceDiagram
+  participant C as Candidate
+  participant I as Interviewer
+  C->>I: scope and assumptions
+  I-->>C: confirm or correct
+  C->>I: numbers, then API and data
+  C->>I: end-to-end diagram
+  C->>I: offer two deep-dive options
+  I-->>C: picks one, or redirects
+  C->>I: deep dive, then failures
+  I-->>C: follow-up probes
+  C->>I: recap against requirements
+          </script>
+          <figcaption>Four explicit hand-backs to the interviewer. Between them the candidate drives; the interviewer's replies are where the hints are.</figcaption>
+        </figure>
+      </section>
+
+      <section class="chapter" id="lld-minutes">
+        <h2>LLD and machine coding, minute by minute</h2>
+        <p class="kind"><a href="#part-session">Running the session</a></p>
+        <p>Two variants: a 45-minute LLD discussion (class diagram, key methods, maybe pseudo-code) and a 90-minute machine-coding round (running code, often with a demo and an extension). Detail on modelling is in <a href="sd-lld.html">Low-Level Design</a>.</p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>LLD 45 min</th><th>Machine coding 90 min</th><th>Do</th><th>Avoid</th></tr></thead>
+            <tbody>
+              <tr><td>0 to 5</td><td>0 to 8</td><td>Requirements, actors, use cases; agree the 3 to 4 that must work</td><td>Building every feature in the prompt</td></tr>
+              <tr><td>5 to 15</td><td>8 to 20</td><td>Entities, relationships, interfaces; name the 1 to 2 patterns and why</td><td>Patterns for their own sake</td></tr>
+              <tr><td>15 to 35</td><td>20 to 65</td><td>Core classes and the main flow; code the happy path end to end first</td><td>Perfecting one class while the flow does not run</td></tr>
+              <tr><td>35 to 40</td><td>65 to 75</td><td>Edge cases, validation, concurrency (locks, atomic updates)</td><td>Ignoring two users booking the same seat</td></tr>
+              <tr><td>40 to 45</td><td>75 to 90</td><td>Demo or walkthrough; show one extension needs a new class, not edits</td><td>Leaving no time to run it</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  R[Use cases] --> E[Entities]
+  E --> I[Interfaces]
+  I --> HP[Happy path<br/>runs]
+  HP --> EC[Edge cases<br/>and locks]
+  EC --> X[Extension<br/>demo]
+  HP -.->|time short| X
+          </script>
+          <figcaption>Working code first. If time runs short, skip from the happy path straight to explaining how you would extend it.</figcaption>
+        </figure>
+        <ul>
+          <li>Keep storage in memory behind a repository interface; say you would swap it for a database.</li>
+          <li>Write a small driver (main or test) early so the code runs at every step.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="driving">
+        <h2>Driving: assume, checkpoint, propose, deepen</h2>
+        <p class="kind"><a href="#part-session">Running the session</a></p>
+        <p>Driving means the interviewer never has to ask "what next?". Use the same small loop at every step: state an assumption, propose a concrete option, check in, then deepen or switch.</p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  A[State assumption] --> P[Propose option<br/>with reason]
+  P --> K{{Checkpoint}}
+  K -->|agreed| D[Deepen]
+  K -->|pushback| R[Revise or defend]
+  R --> P
+  D --> A
+          </script>
+          <figcaption>Each pass through the loop leaves a decision on the board. Pushback is information, not failure: revise or defend with a reason.</figcaption>
+        </figure>
+        <ul>
+          <li><b>Assume out loud:</b> "I'll assume 10M DAU and that a few seconds of staleness on counts is fine."</li>
+          <li><b>Signpost:</b> "Three things to cover: the write path, the read path, then the hot-key problem."</li>
+          <li><b>Checkpoint briefly:</b> "Does that match what you had in mind?" every 5 to 8 minutes, not after every sentence.</li>
+          <li><b>Propose, do not ask open questions:</b> "I'd use X. Shall I go on?" beats "What database should I use?".</li>
+          <li><b>Take hints:</b> a question like "how would this behave if one user had 50M followers?" is a direction, not small talk.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="tradeoff-phrasing">
+        <h2>Trade-off phrasing templates</h2>
+        <p class="kind"><a href="#part-session">Running the session</a></p>
+        <p>The core template: <b>"I'd choose X because ..., the cost is ..., I'd revisit if ..."</b>. The third clause is what separates senior from mid-level: it shows you know the boundary of your own decision.</p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Situation</th><th>Template</th><th>Example</th></tr></thead>
+            <tbody>
+              <tr><td>Making a choice</td><td>I'd choose X because R; the cost is C; I'd revisit if T.</td><td>"Fan-out on write, because reads outnumber writes 100:1; the cost is write amplification for big accounts; I'd revisit for users above about 100k followers."</td></tr>
+              <tr><td>Rejecting an option</td><td>Y would also work, but it pays C for a benefit we do not need.</td><td>"Multi-leader would give local writes in each region, but we have no regional write requirement, and conflicts are expensive."</td></tr>
+              <tr><td>Starting simple</td><td>Start with X; switch to Y when metric M passes N.</td><td>"One Postgres primary; shard by user_id when writes pass about 5k/s or data passes a few TB."</td></tr>
+              <tr><td>Uncertainty</td><td>It depends on A; if A, then X; otherwise Y. Which is closer?</td><td>"If balances must never be stale, a leader read; if seconds are fine, a replica. Which do you need?"</td></tr>
+              <tr><td>Per-operation split</td><td>For operation 1, X; for operation 2, Y.</td><td>"Seat reservation is strongly consistent; seat-map browsing is cached and may lag a few seconds."</td></tr>
+              <tr><td>Accepting pushback</td><td>Good point: that breaks assumption A. Then I'd change to Y, which costs C.</td><td>"Right, ordering per chat matters; I'd partition the stream by chat_id."</td></tr>
+              <tr><td>Holding a position</td><td>I considered that; I still prefer X because R, unless T.</td><td>"I still prefer a queue here because consumers do not need replay, unless we add analytics consumers."</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><b>Interview tip:</b> avoid "it depends" as an ending. It is fine as a beginning only if the next words name what it depends on and what you would pick for each case.</p>
+      </section>
+
+      <section class="chapter" id="what-if-fails">
+        <h2>"What if this fails?"</h2>
+        <p class="kind"><a href="#part-session">Running the session</a></p>
+        <p>Answer in a fixed order so nothing is missed: how it is detected, what the blast radius is, what users see, how it recovers, whether data is lost, and how recurrence is prevented. Mechanisms are in <a href="sd-reliability.html">Reliability and Operations</a>.</p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart TD
+  subgraph During["During the incident"]
+    direction LR
+    F([Component fails]) --> D[Detect<br/>health check, alert]
+    D --> B[Blast radius<br/>who is affected]
+    B --> G[Degrade<br/>fallback, shed load]
+  end
+  subgraph After["Restore and learn"]
+    direction LR
+    R[Recover<br/>failover, restart] --> L[Data loss?<br/>RPO and RTO]
+    L --> P[Prevent<br/>fix and test]
+  end
+  During --> After
+          </script>
+          <figcaption>Six steps in one breath. Most candidates stop at "recover"; degradation and data loss are where the senior signal is.</figcaption>
+        </figure>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Component lost</th><th>A strong first answer</th></tr></thead>
+            <tbody>
+              <tr><td>Cache cluster</td><td>Database sees the full read load: protect it with request coalescing, rate limits and a warm-up path; serve stale where allowed</td></tr>
+              <tr><td>Primary database</td><td>Promote a replica (seconds to a minute); async replication may lose the last writes; writes fail fast meanwhile; idempotency keys make client retries safe</td></tr>
+              <tr><td>Queue or broker</td><td>Producers buffer or fail fast; replicated broker keeps acknowledged messages; consumers are idempotent so redelivery is safe</td></tr>
+              <tr><td>Downstream dependency</td><td>Timeout, bounded retries with jitter, circuit breaker, fallback response; never let it exhaust your threads</td></tr>
+              <tr><td>Whole availability zone</td><td>Instances spread over 3 AZs with headroom to lose one; quorum stores keep a majority</td></tr>
+              <tr><td>A bad deploy</td><td>Canary, automatic rollback on error-rate SLO breach, feature flag to switch off</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="chapter" id="scale-100x">
+        <h2>"Scale it 100x"</h2>
+        <p class="kind"><a href="#part-session">Running the session</a></p>
+        <p>Do not add boxes at random. Multiply the numbers, find the first resource to hit its limit, fix that, and repeat. Say which parts of the design do not change.</p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  N[Multiply the<br/>numbers] --> F[First limit hit]
+  F --> X[Fix it]
+  X --> Q{{Next limit<br/>within 100x?}}
+  Q -->|yes| F
+  Q -->|no| S[State what<br/>stays the same]
+          </script>
+          <figcaption>An iterative bottleneck hunt. The interviewer is checking that you re-derive limits, not that you know a bigger architecture by heart.</figcaption>
+        </figure>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Multiplier</th><th>What usually breaks</th><th>Typical change</th></tr></thead>
+            <tbody>
+              <tr><td>10x</td><td>App CPU, database reads, connection counts</td><td>More stateless instances, replicas, a cache, connection pooling</td></tr>
+              <tr><td>100x</td><td>Database writes and size, hot keys, fan-out cost, single-broker throughput</td><td>Sharding, hot-key splitting, async fan-out, partitioned streams, precomputation</td></tr>
+              <tr><td>1000x</td><td>One region, cost, operational toil, global coordination</td><td>Multi-region, cell-based architecture, tiered storage, automation; avoid any global lock or counter</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><b>Senior signal:</b> mention cost. At 100x, storage and egress bills are often the real constraint, and tiering cold data or compressing is a design change, not an afterthought.</p>
+      </section>
+
+      <section class="chapter" id="drawing-order">
+        <h2>Drawing order on the whiteboard</h2>
+        <p class="kind"><a href="#part-session">Running the session</a></p>
+        <p>Draw left to right in the order a request travels, then add the asynchronous and caching layers once the basic path works. The board then reads like the walkthrough you give.</p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  C(["1 Client"]) --> E["2 Edge: DNS, CDN, LB"]
+  E --> S["3 Services"]
+  S --> D[("4 Stores")]
+  S -.->|"5 async"| Q[["5 Queue"]]
+  Q --> W["6 Workers"]
+  W --> D
+  S --> K[("7 Cache")]
+          </script>
+          <figcaption>Numbers are the order to draw. Client, edge, services and stores first; async and caching only after the synchronous path is traced.</figcaption>
+        </figure>
+        <ol>
+          <li>Clients and edge, services, stores: the minimum end-to-end path.</li>
+          <li>Trace the write path with arrows, then the read path; label arrows with the call, not with protocol trivia.</li>
+          <li>Add queues and workers for anything the user does not wait for.</li>
+          <li>Add caches and replicas where your numbers said reads dominate.</li>
+          <li>Annotate key numbers next to the boxes (QPS, size) and the data model next to the stores.</li>
+        </ol>
+        <p class="note"><b>Interview tip:</b> in a virtual round, use a simple tool you have practised with. Boxes and arrows drawn quickly beat a pretty diagram finished at minute 30.</p>
+      </section>
+
+      <section class="chapter" id="when-stuck">
+        <h2>When you are stuck</h2>
+        <p class="kind"><a href="#part-session">Running the session</a></p>
+        <p>Silence is the expensive part, not being stuck. Narrate and fall back to something that is known to work.</p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart TD
+  S([Stuck]) --> T[Say so,<br/>think aloud]
+  T --> RQ{{Requirement<br/>clear?}}
+  RQ -->|no| ASK[Ask one<br/>targeted question]
+  RQ -->|yes| SM[Simplest design<br/>that works]
+  ASK --> SM
+  SM --> BN[Find its<br/>bottleneck]
+  BN --> OP[Two options<br/>pick one]
+          </script>
+          <figcaption>Fall back to the naive design and improve it. A correct simple version followed by a reasoned improvement scores well.</figcaption>
+        </figure>
+        <ul>
+          <li>"Let me first do the simple version: one service and one table. Then I'll fix what breaks."</li>
+          <li>"I haven't used X in production; my understanding is ..., which matters here because ..." Honest and still useful.</li>
+          <li>If you made a mistake earlier, say so and correct it. Self-correction is a positive signal.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="choose-db">
+        <h2>Flowchart: choosing a database</h2>
+        <p class="kind"><a href="#part-session">Running the session</a></p>
+        <p>Start from the access pattern and the invariants, never from the product. Comparison detail is in <a href="sd-data-systems.html">Data Systems</a>.</p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart TD
+  A{{Invariants across<br/>rows or entities?}} -->|yes| B{{Fits one primary<br/>for 2 to 3 years?}}
+  B -->|yes| SQL[(Relational)]
+  B -->|no| DSQL[(Distributed or<br/>sharded SQL)]
+  A -->|no| C{{Main access<br/>pattern?}}
+  C -->|"key lookups, huge scale"| KV[("Key-value /<br/>wide-column")]
+  C -->|nested documents| DOC[(Document store)]
+  C -->|text search| SE[(Search index)]
+  C -->|time-ordered metrics| TS[(Time-series)]
+  C -->|large files| OS[(Object storage)]
+          </script>
+          <figcaption>Transactions and invariants push to SQL first. Search and caches are almost always secondary copies fed from the source of truth, not the source itself.</figcaption>
+        </figure>
+        <ul>
+          <li>Polyglot is normal: a relational source of truth plus a search index plus a cache, kept in sync through change data capture or events.</li>
+          <li>Say the shard or partition key in the same breath as the store: it is the choice that is hard to undo.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="choose-async">
+        <h2>Flowchart: sync vs async, queue vs stream</h2>
+        <p class="kind"><a href="#part-session">Running the session</a></p>
+        <p>Synchronous only for what the caller must wait for. Behind the async boundary, a work queue distributes tasks; a log or stream keeps an ordered, replayable history for many consumers. Detail in <a href="sd-building-blocks.html">Building Blocks</a> and <a href="sd-api-design.html">API and Communication Design</a>.</p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart TD
+  A{{Caller needs<br/>the result now?}} -->|yes| B{{Fits the<br/>latency budget?}}
+  B -->|yes| S[Sync call<br/>timeout, retries]
+  B -->|no| J["202 + async job<br/>poll or callback"]
+  A -->|no| C{{Many consumers<br/>or replay?}}
+  C -->|yes| ST[[Log / stream]]
+  C -->|no| Q[[Work queue]]
+  ST --> O{{Order per key?}}
+  O -->|yes| P[Partition by key]
+          </script>
+          <figcaption>Two questions decide sync vs async; a third picks queue (task distribution, per-message ack) vs stream (retained log, independent consumer offsets).</figcaption>
+        </figure>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>&nbsp;</th><th>Work queue (RabbitMQ / SQS-like)</th><th>Log / stream (Kafka-like)</th></tr></thead>
+            <tbody>
+              <tr><td>Message after consumption</td><td>Deleted once acknowledged</td><td>Retained for a period; consumers track offsets</td></tr>
+              <tr><td>Consumers</td><td>Competing workers share the work</td><td>Many independent consumer groups each see everything</td></tr>
+              <tr><td>Ordering</td><td>Weak or per-group (FIFO variants)</td><td>Strict within a partition</td></tr>
+              <tr><td>Good for</td><td>Jobs, emails, retries with delay, dead-lettering</td><td>Event sourcing, CDC, analytics fan-out, replay after a bug</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Part 4 -->
+      <section class="chapter part" id="part-bank">
+        <h2>Question bank</h2>
+        <p class="kind">Part 4 of 8 &middot; the most asked questions and what each really tests</p>
+        <p>Most questions are one of a handful of core problems wearing a product name. Recognise the core problem and you know where the deep dive will go.</p>
+        <ul>
+          <li><a href="#question-families">Question families</a></li>
+          <li><a href="#hld-bank">HLD questions</a></li>
+          <li><a href="#lld-bank">LLD questions</a></li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="question-families">
+        <h2>Question families</h2>
+        <p class="kind"><a href="#part-bank">Question bank</a></p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  F1[Fan-out and<br/>delivery] --> Q1[Feed, chat,<br/>notifications]
+  F2[Counting and<br/>limits] --> Q2[Rate limiter,<br/>ad clicks, metrics]
+  F3[Contention and<br/>correctness] --> Q3[Payments, tickets,<br/>wallet]
+  F4[Storage and<br/>partitioning] --> Q4[KV store, URL<br/>shortener, file sync]
+  F5[Spatial and<br/>real-time] --> Q5[Ride hailing,<br/>typeahead]
+  F6[Pipelines and<br/>scheduling] --> Q6[Crawler, video,<br/>job scheduler]
+          </script>
+          <figcaption>Six families cover nearly all the common HLD prompts. Practise one per family deeply before practising breadth.</figcaption>
+        </figure>
+      </section>
+
+      <section class="chapter" id="hld-bank">
+        <h2>HLD questions</h2>
+        <p class="kind"><a href="#part-bank">Question bank</a></p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Question</th><th>What it is really testing</th><th>Worked on</th></tr></thead>
+            <tbody>
+              <tr><td>URL shortener</td><td>Key generation without collisions; read-heavy caching; redirect latency</td><td><a href="sd-hld-cases-1.html">HLD Cases: Core</a></td></tr>
+              <tr><td>Rate limiter</td><td>Algorithm choice (token bucket, sliding window); atomic counters in a shared store; fail-open vs fail-closed</td><td><a href="sd-hld-cases-1.html">HLD Cases: Core</a></td></tr>
+              <tr><td>Key-value store</td><td>Partitioning with consistent hashing; replication and quorums; failure detection and repair</td><td><a href="sd-hld-cases-1.html">HLD Cases: Core</a></td></tr>
+              <tr><td>Unique ID generator</td><td>Coordination-free uniqueness; time ordering; clock skew</td><td><a href="sd-hld-cases-1.html">HLD Cases: Core</a></td></tr>
+              <tr><td>Notification system</td><td>Fan-out through queues; per-channel providers and retries; dedup and user preferences</td><td><a href="sd-hld-cases-1.html">HLD Cases: Core</a></td></tr>
+              <tr><td>News feed</td><td>Fan-out on write vs read; celebrity hybrid; feed storage and ranking hook</td><td><a href="sd-hld-cases-1.html">HLD Cases: Core</a></td></tr>
+              <tr><td>Chat / messaging</td><td>Stateful connection gateways; per-conversation ordering; delivery receipts and offline sync</td><td><a href="sd-hld-cases-1.html">HLD Cases: Core</a></td></tr>
+              <tr><td>Typeahead / autocomplete</td><td>Prefix structures and precomputed top-k; update pipeline; latency at the edge</td><td><a href="sd-hld-cases-1.html">HLD Cases: Core</a></td></tr>
+              <tr><td>Payment system / wallet</td><td>Idempotency; double-entry ledger; reconciliation and exactly-once effects across external providers</td><td><a href="sd-hld-cases-2.html">HLD Cases: Advanced</a></td></tr>
+              <tr><td>Ticket booking</td><td>Contention on the same seat; holds with expiry; fairness under flash-sale load</td><td><a href="sd-hld-cases-2.html">HLD Cases: Advanced</a></td></tr>
+              <tr><td>Ride hailing</td><td>Geo indexing of moving objects; high-rate location writes; matching and trip state machine</td><td><a href="sd-hld-cases-2.html">HLD Cases: Advanced</a></td></tr>
+              <tr><td>Video streaming</td><td>Upload and transcoding pipeline; adaptive bitrate; CDN cost and placement</td><td><a href="sd-hld-cases-2.html">HLD Cases: Advanced</a></td></tr>
+              <tr><td>File sync (Dropbox-like)</td><td>Chunking and dedup; metadata vs blob separation; conflict handling across devices</td><td><a href="sd-hld-cases-2.html">HLD Cases: Advanced</a></td></tr>
+              <tr><td>Web crawler</td><td>URL frontier with politeness; dedup at scale; fault-tolerant distributed workers</td><td><a href="sd-hld-cases-2.html">HLD Cases: Advanced</a></td></tr>
+              <tr><td>Distributed job scheduler</td><td>Exactly-once triggering in practice (leases, idempotent jobs); time-bucketed storage; retries</td><td><a href="sd-hld-cases-2.html">HLD Cases: Advanced</a></td></tr>
+              <tr><td>Metrics / ad-click aggregation</td><td>Stream windowing and late events; pre-aggregation; reconciliation with a batch path</td><td><a href="sd-hld-cases-2.html">HLD Cases: Advanced</a></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><b>Interview tip:</b> if you have practised a question, do not recite the remembered answer. Interviewers often change one requirement mid-way precisely to see whether you re-derive.</p>
+      </section>
+
+      <section class="chapter" id="lld-bank">
+        <h2>LLD questions</h2>
+        <p class="kind"><a href="#part-bank">Question bank</a></p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Question</th><th>What it is really testing</th><th>Worked on</th></tr></thead>
+            <tbody>
+              <tr><td>Parking lot</td><td>Entity modelling; strategy for spot allocation and pricing; concurrent allocation</td><td><a href="sd-lld-cases.html">LLD Case Studies</a></td></tr>
+              <tr><td>LRU cache</td><td>Hash map plus doubly linked list for O(1); thread safety; eviction policy as an interface</td><td><a href="sd-lld-cases.html">LLD Case Studies</a></td></tr>
+              <tr><td>Elevator</td><td>State machine per car; scheduling strategy; handling concurrent requests</td><td><a href="sd-lld-cases.html">LLD Case Studies</a></td></tr>
+              <tr><td>Vending machine</td><td>State pattern; invalid transitions; money handling and refunds</td><td><a href="sd-lld-cases.html">LLD Case Studies</a></td></tr>
+              <tr><td>Splitwise</td><td>Split strategies (equal, exact, percent); balance simplification; money as integers</td><td><a href="sd-lld-cases.html">LLD Case Studies</a></td></tr>
+              <tr><td>Movie ticket booking</td><td>Seat locking with expiry; avoiding double booking; booking state transitions</td><td><a href="sd-lld-cases.html">LLD Case Studies</a></td></tr>
+              <tr><td>Rate limiter library</td><td>Pluggable algorithms behind one interface; per-key state; thread-safe counters and time source injection</td><td><a href="sd-lld-cases.html">LLD Case Studies</a></td></tr>
+              <tr><td>Logging framework</td><td>Chain of responsibility for levels; pluggable sinks and formatters; async buffering</td><td><a href="sd-lld-cases.html">LLD Case Studies</a></td></tr>
+              <tr><td>Tic-tac-toe / snake and ladder</td><td>Clean game loop; O(1) win check; extensible rules and players</td><td><a href="sd-lld-cases.html">LLD Case Studies</a></td></tr>
+              <tr><td>In-memory pub-sub</td><td>Observer; per-subscriber offsets; delivery on separate threads without blocking publishers</td><td><a href="sd-lld-cases.html">LLD Case Studies</a></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  ST[State machine] --> E1[Elevator, vending,<br/>booking]
+  SG[Strategy] --> E2[Parking, Splitwise,<br/>rate limiter]
+  OB[Observer] --> E3[Pub-sub,<br/>logging sinks]
+  LK[Locking] --> E4[Tickets, parking,<br/>LRU cache]
+          </script>
+          <figcaption>Four ideas recur across the LLD bank. Name the one the question hinges on early; it decides your class structure.</figcaption>
+        </figure>
+      </section>
+
+      <!-- Part 5 -->
+      <section class="chapter part" id="part-deepdive">
+        <h2>Deep-dive menu</h2>
+        <p class="kind">Part 5 of 8 &middot; steer the deep dive to ground you know</p>
+        <p>The interviewer usually lets you propose the deep dive. Offer two options where the system's risk actually lies, with your preferred one first, and make sure it is one you can take to implementation depth.</p>
+        <ul>
+          <li><a href="#deep-dive-menu">What to deep-dive, by system type</a></li>
+          <li><a href="#steering">How to steer</a></li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="deep-dive-menu">
+        <h2>What to deep-dive, by system type</h2>
+        <p class="kind"><a href="#part-deepdive">Deep-dive menu</a></p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>If the system is ...</th><th>Steer the deep dive to</th><th>What to show</th><th>Prepare from</th></tr></thead>
+            <tbody>
+              <tr><td>Read-heavy</td><td>Caching strategy and read models</td><td>Cache-aside vs write-through, invalidation, stampede protection, hot keys, precomputed views</td><td><a href="sd-building-blocks.html">Building Blocks</a></td></tr>
+              <tr><td>Write-heavy</td><td>Partitioning and the write path</td><td>Shard key choice, LSM storage, batching, backpressure, rebalancing</td><td><a href="sd-data-systems.html">Data Systems</a></td></tr>
+              <tr><td>Real-time</td><td>Connection layer and delivery</td><td>WebSocket gateways, presence, ordering per conversation, reconnect and catch-up</td><td><a href="sd-api-design.html">API and Communication Design</a></td></tr>
+              <tr><td>Financial</td><td>Correctness under failure</td><td>Idempotency keys, ledger model, transactions or sagas, outbox, reconciliation</td><td><a href="sd-distributed-systems.html">Distributed Systems Patterns</a></td></tr>
+              <tr><td>Geo / location</td><td>Spatial index and update rate</td><td>Geohash or quadtree cells, in-memory location store, sharding by region</td><td><a href="sd-data-systems.html">Data Systems</a></td></tr>
+              <tr><td>Media</td><td>Upload and delivery pipeline</td><td>Pre-signed uploads, chunking, async transcoding DAG, CDN and storage tiering</td><td><a href="sd-architecture.html">Architecture Styles</a>, <a href="sd-building-blocks.html">Building Blocks</a></td></tr>
+              <tr><td>Search</td><td>Indexing pipeline and query path</td><td>Inverted index, CDC into the index, sharding and replicas, freshness vs cost</td><td><a href="sd-data-systems.html">Data Systems</a></td></tr>
+              <tr><td>Any, with strict SLOs</td><td>Failure handling and operations</td><td>Timeouts, retries with budgets, circuit breakers, load shedding, rollout and alerting</td><td><a href="sd-reliability.html">Reliability and Operations</a></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><b>Senior signal:</b> pick the area that is genuinely the riskiest for this system, then justify it: "the hard part of a wallet is not throughput, it is never applying a debit twice".</p>
+      </section>
+
+      <section class="chapter" id="steering">
+        <h2>How to steer</h2>
+        <p class="kind"><a href="#part-deepdive">Deep-dive menu</a></p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+sequenceDiagram
+  participant C as Candidate
+  participant I as Interviewer
+  C->>I: two risks, A and B, prefer A
+  alt interviewer agrees
+    I-->>C: go with A
+    C->>I: schema, algorithm, failure cases
+  else interviewer picks B
+    I-->>C: I'd rather see B
+    C->>I: B, using the same depth checklist
+  end
+  C->>I: tie back to the main diagram
+          </script>
+          <figcaption>Offer a choice you are happy with either way. If they choose the other one, they wanted to probe it; go there without hesitation.</figcaption>
+        </figure>
+        <ul>
+          <li>Depth checklist for any area: data model and keys, the algorithm or protocol, concurrency, the failure case, one number.</li>
+          <li>Prepare two "home ground" deep dives from your own experience (for example caching and idempotent payments) and practise steering towards them when they fit.</li>
+        </ul>
+      </section>
+
+      <!-- Part 6 -->
+      <section class="chapter part" id="part-mistakes">
+        <h2>Common mistakes</h2>
+        <p class="kind">Part 6 of 8 &middot; the ones experienced candidates make</p>
+        <p>Experienced engineers rarely fail on knowledge. They fail on habits that work at the job and hurt in a 45-minute round.</p>
+        <ul>
+          <li><a href="#mistakes">Mistakes and their fixes</a></li>
+          <li><a href="#component-filter">The component filter</a></li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="mistakes">
+        <h2>Mistakes and their fixes</h2>
+        <p class="kind"><a href="#part-mistakes">Common mistakes</a></p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Mistake</th><th>What it looks like</th><th>Why experienced people do it</th><th>Fix</th></tr></thead>
+            <tbody>
+              <tr><td>Jumping to a favourite stack</td><td>"Kafka, Cassandra, Redis" drawn before requirements</td><td>It is what worked at their company</td><td>Requirements and access patterns first; name the product only after the property you need</td></tr>
+              <tr><td>Over-engineering</td><td>Microservices, multi-region and sharding for 1k QPS</td><td>Wanting to show breadth</td><td>Start simple; state the trigger for each upgrade</td></tr>
+              <tr><td>No numbers</td><td>"It's a lot of traffic, so we cache"</td><td>Capacity planning is done by another team at work</td><td>Two or three numbers, each ending in a consequence</td></tr>
+              <tr><td>Ignoring failure and operations</td><td>Happy path only; no metrics, rollout or migration</td><td>Treating it as a whiteboard puzzle</td><td>Reserve 5 minutes; use the <a href="#what-if-fails">failure sequence</a></td></tr>
+              <tr><td>Monologuing</td><td>10 minutes of talk without a question</td><td>Used to presenting to their own team</td><td>Checkpoint every 5 to 8 minutes; watch for hints</td></tr>
+              <tr><td>Not prioritising</td><td>Equal time on login, profile and the hard part</td><td>Completeness habits from real projects</td><td>Name the hard part out loud and spend the time there</td></tr>
+              <tr><td>Arguing on pushback</td><td>Defending a choice the interviewer has broken</td><td>Seniority pride</td><td>"Good point; that changes X, so I'd do Y"</td></tr>
+              <tr><td>Hand-waving in the deep dive</td><td>"We'd use consistent hashing" with no detail</td><td>Knowing the term, not the mechanism</td><td>Explain one level deeper than the buzzword: virtual nodes, rebalancing, what moves</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="chapter" id="component-filter">
+        <h2>The component filter</h2>
+        <p class="kind"><a href="#part-mistakes">Common mistakes</a></p>
+        <p>Before adding any box, run it through two questions. This single habit fixes both over-engineering and favourite-stack answers.</p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  N([New component]) --> R{{Which requirement<br/>forces it?}}
+  R -->|none| X[Leave it out]
+  R -->|named| M{{Does a number<br/>justify it now?}}
+  M -->|yes| A[Add it]
+  M -->|not yet| T[Mention as<br/>a later step]
+          </script>
+          <figcaption>Every box needs a requirement and a number. "Later step with a trigger" is a strong answer in itself.</figcaption>
+        </figure>
+      </section>
+
+      <!-- Part 7 -->
+      <section class="chapter part" id="part-project">
+        <h2>Project deep dive and behavioural</h2>
+        <p class="kind">Part 7 of 8 &middot; your own system and your own stories</p>
+        <p>These rounds reward preparation more than any other: you choose the material in advance. Prepare one system to present and eight to ten stories.</p>
+        <ul>
+          <li><a href="#project-structure">Presenting your own system</a></li>
+          <li><a href="#project-diagram">The one-diagram template</a></li>
+          <li><a href="#star">STAR, briefly</a></li>
+          <li><a href="#stories">Stories to prepare</a></li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="project-structure">
+        <h2>Presenting your own system</h2>
+        <p class="kind"><a href="#part-project">Project deep dive and behavioural</a></p>
+        <p>Pick a system where you made the key decisions, it ran in production, and you can discuss what went wrong. Present it in six beats, about 10 minutes, then expect 30 minutes of probing.</p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart TD
+  subgraph Setup["Set the scene: 2 min"]
+    direction LR
+    C[Context] --> K[Constraints]
+  end
+  subgraph Core["Your judgement: 8 min"]
+    direction LR
+    D[Your decisions] --> T[Trade-offs] --> O[Outcome<br/>with numbers] --> W[What you<br/>would change]
+  end
+  Setup --> Core
+          </script>
+          <figcaption>The last beat is the one most candidates skip and the one interviewers value most: it shows judgement that outlived the project.</figcaption>
+        </figure>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Beat</th><th>Say</th><th>Time</th></tr></thead>
+            <tbody>
+              <tr><td>Context</td><td>Business problem, users, scale, team size, your role</td><td>1 min</td></tr>
+              <tr><td>Constraints</td><td>Latency, consistency, deadline, legacy, budget, team skills</td><td>1 min</td></tr>
+              <tr><td>Your decisions</td><td>2 to 3 decisions you drove, with the alternatives you rejected; use "I" for yours, "we" for the team's</td><td>3 min</td></tr>
+              <tr><td>Trade-offs</td><td>What each decision cost, and how you mitigated it</td><td>2 min</td></tr>
+              <tr><td>Outcome</td><td>Measured results: p99, cost, incidents, adoption, delivery date</td><td>1 min</td></tr>
+              <tr><td>What you would change</td><td>One or two honest corrections and why</td><td>1 min</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><b>Interview tip:</b> expect "why not X?" for every major decision and "what was the hardest bug or incident?". Prepare answers for both; vagueness here reads as not having owned it.</p>
+      </section>
+
+      <section class="chapter" id="project-diagram">
+        <h2>The one-diagram template</h2>
+        <p class="kind"><a href="#part-project">Project deep dive and behavioural</a></p>
+        <p>Practise drawing your system in under three minutes, in this shape: your part in the middle, its neighbours around it, and the one change you drove marked.</p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  U([Callers]) --> G[Entry point]
+  subgraph Mine["What you owned"]
+    G --> S[Core service]
+    S --> D[(Main store)]
+    S -.->|async| Q[[Queue]]
+    Q --> W[Workers]
+  end
+  W --> X[Downstream teams]
+  S --> EXT[External dependency]
+          </script>
+          <figcaption>Draw the boundary of your ownership explicitly. Interviewers probe the edges: contracts with other teams, the external dependency and what happened when it failed.</figcaption>
+        </figure>
+        <ul>
+          <li>Annotate two or three numbers on it: request rate, data size, latency target.</li>
+          <li>Mark the component you changed and be ready to draw its internals as a second level.</li>
+          <li>Remove anything confidential; describe the shape, not the employer's internal names.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="star">
+        <h2>STAR, briefly</h2>
+        <p class="kind"><a href="#part-project">Project deep dive and behavioural</a></p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Letter</th><th>Content</th><th>Share of the answer</th><th>Senior twist</th></tr></thead>
+            <tbody>
+              <tr><td>S: Situation</td><td>Context in two sentences</td><td>About 10%</td><td>Make the stakes clear: who was affected, how much</td></tr>
+              <tr><td>T: Task</td><td>Your responsibility</td><td>About 10%</td><td>Show you took it on, not that it was assigned</td></tr>
+              <tr><td>A: Action</td><td>What you did, step by step</td><td>About 60%</td><td>Influence, trade-offs, how you brought others along</td></tr>
+              <tr><td>R: Result</td><td>Measured outcome</td><td>About 20%</td><td>Numbers, plus what you learned or would do differently</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>Keep each story to about 2 to 3 minutes and stop; the follow-up questions are where the evaluation happens.</p>
+      </section>
+
+      <section class="chapter" id="stories">
+        <h2>Stories to prepare</h2>
+        <p class="kind"><a href="#part-project">Project deep dive and behavioural</a></p>
+        <p>One story can cover several themes. Map 8 to 10 stories to this list so each theme has at least one.</p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Theme</th><th>Typical prompt</th><th>What they look for</th></tr></thead>
+            <tbody>
+              <tr><td>Hardest technical problem</td><td>"The most complex system you built"</td><td>Depth, and that you were the one who solved it</td></tr>
+              <tr><td>Production incident</td><td>"A time something broke badly"</td><td>Calm triage, ownership, blameless follow-up, prevention</td></tr>
+              <tr><td>Disagreement</td><td>"You disagreed with a peer or manager"</td><td>Data over opinion; disagree and commit</td></tr>
+              <tr><td>Influence without authority</td><td>"You changed another team's direction"</td><td>Building consensus, writing proposals, patience</td></tr>
+              <tr><td>Ambiguity</td><td>"A project with unclear requirements"</td><td>Framing the problem, reducing risk early</td></tr>
+              <tr><td>Failure or mistake</td><td>"A decision that turned out wrong"</td><td>Honesty, what you changed afterwards</td></tr>
+              <tr><td>Prioritisation</td><td>"Too much to do, what did you drop?"</td><td>Saying no with reasons; impact over activity</td></tr>
+              <tr><td>Mentoring and raising the bar</td><td>"How you grew someone or the team"</td><td>Specific people, specific results</td></tr>
+              <tr><td>Speed vs quality</td><td>"You shipped under a hard deadline"</td><td>Conscious technical debt, with a plan to repay it</td></tr>
+              <tr><td>Large migration</td><td>"You moved a system without downtime"</td><td>Phasing, dual writes or shadow traffic, rollback plan</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Part 8 -->
+      <section class="chapter part" id="part-study">
+        <h2>Study plan</h2>
+        <p class="kind">Part 8 of 8 &middot; six weeks over the twelve pages, then the last week</p>
+        <p>About 8 to 10 hours a week. Reading is less than half of it; the rest is drawing designs against a timer and mock interviews.</p>
+        <ul>
+          <li><a href="#six-weeks">The six-week plan</a></li>
+          <li><a href="#final-week">Final-week checklist</a></li>
+          <li><a href="#cheat-sheet">Cheat sheet</a></li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="six-weeks">
+        <h2>The six-week plan</h2>
+        <p class="kind"><a href="#part-study">Study plan</a></p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  W1[Week 1<br/>Basics] --> W2[Week 2<br/>Data]
+  W2 --> W3[Week 3<br/>APIs, ops]
+  W3 --> W4[Week 4<br/>Core cases]
+  W4 --> W5[Week 5<br/>Advanced cases]
+  W5 --> W6[Week 6<br/>Mocks]
+          </script>
+          <figcaption>Toolkit first (weeks 1 to 3), then case studies with HLD and LLD in parallel (weeks 4 and 5), then rehearsal.</figcaption>
+        </figure>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Week</th><th>Pages</th><th>Practice</th><th>Done when</th></tr></thead>
+            <tbody>
+              <tr><td>1</td><td><a href="sd-foundations.html">1 Foundations</a>, <a href="sd-building-blocks.html">2 Building Blocks</a></td><td>Estimation drills; draw the scaling steps from memory</td><td>You can size any prompt in 4 minutes</td></tr>
+              <tr><td>2</td><td><a href="sd-data-systems.html">3 Data Systems</a>, <a href="sd-distributed-systems.html">4 Distributed Systems Patterns</a></td><td>For 5 products, pick a store and a shard key and defend them</td><td>You can explain replication, quorums and idempotency without notes</td></tr>
+              <tr><td>3</td><td><a href="sd-api-design.html">5 API Design</a>, <a href="sd-architecture.html">6 Architecture Styles</a>, <a href="sd-reliability.html">7 Reliability</a></td><td>Write the API for 3 systems; answer "what if this fails" for each component</td><td>Failure answers follow the six-step order</td></tr>
+              <tr><td>4</td><td><a href="sd-hld-cases-1.html">8 HLD Cases: Core</a>, <a href="sd-lld.html">10 Low-Level Design</a></td><td>4 timed HLDs (45 min each); 2 class diagrams</td><td>End-to-end design by minute 25, every time</td></tr>
+              <tr><td>5</td><td><a href="sd-hld-cases-2.html">9 HLD Cases: Advanced</a>, <a href="sd-lld-cases.html">11 LLD Cases</a></td><td>4 timed HLDs; 2 machine-coding rounds with running code in 90 min</td><td>Code runs and extends cleanly within the time</td></tr>
+              <tr><td>6</td><td>12 this page; revisit weak pages</td><td>3 to 4 mock interviews with a peer; project deep dive rehearsed out loud; stories mapped</td><td>Mock feedback has no new themes</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><b>Interview tip:</b> record one mock (with permission) and watch it. Monologues, missing checkpoints and unexplained boxes are obvious on replay and invisible in the moment.</p>
+      </section>
+
+      <section class="chapter" id="final-week">
+        <h2>Final-week checklist</h2>
+        <p class="kind"><a href="#part-study">Study plan</a></p>
+        <ul>
+          <li>Rounds, lengths and level confirmed with the recruiter; LLD format (diagram or running code) known.</li>
+          <li>Drawing tool chosen and practised; for machine coding, IDE and language set up with a project template that runs.</li>
+          <li>One timed HLD per day, a different family each day (<a href="#question-families">question families</a>).</li>
+          <li>The <a href="#tradeoff-phrasing">trade-off template</a> and the <a href="#what-if-fails">failure sequence</a> said out loud until automatic.</li>
+          <li>Project deep dive: one diagram, six beats, two "why not X" answers, one incident.</li>
+          <li>8 to 10 STAR stories mapped to the themes; each under 3 minutes.</li>
+          <li>Key numbers from <a href="sd-foundations.html">Foundations</a> reviewed once; no new topics after two days before.</li>
+          <li>Questions for each interviewer prepared (team, on-call, how design decisions get made).</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="cheat-sheet">
+        <h2>Cheat sheet</h2>
+        <p class="kind"><a href="#part-study">Study plan</a></p>
+        <p>One page to read before the round. Full number tables are in <a href="sd-foundations.html">System Design Foundations</a>.</p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Topic</th><th>Remember</th></tr></thead>
+            <tbody>
+              <tr><td>Numbers (approx.)</td><td>Day = 10^5 s; 1M/day = about 10/s; RAM 100 ns, SSD 100 us, DC hop 0.5 ms, cross-continent 100+ ms; app node about 1k rps, SQL about 10k reads/s, Redis-like about 100k ops/s; 99.99% = 53 min/year</td></tr>
+              <tr><td>Session control</td><td>Assume out loud, propose, checkpoint every 5 to 8 min, offer two deep-dive options, reserve 5 min for failures</td></tr>
+              <tr><td>Trade-off sentence</td><td>I'd choose X because ..., the cost is ..., I'd revisit if ...</td></tr>
+              <tr><td>Failure answer</td><td>Detect, blast radius, degrade, recover, data loss, prevent</td></tr>
+              <tr><td>Scale 100x</td><td>Multiply numbers, first limit, fix, repeat; mention cost; say what stays the same</td></tr>
+              <tr><td>Database</td><td>Invariants: SQL (shard or distributed SQL when outgrown). Else by access pattern: KV / wide-column, document, search, time-series, object storage</td></tr>
+              <tr><td>Async</td><td>Sync only if the caller must wait; queue for tasks; stream for many consumers, replay, per-key order</td></tr>
+              <tr><td>Read-heavy</td><td>Cache, replicas, CDN, precomputed read models</td></tr>
+              <tr><td>Write-heavy</td><td>Append, batch, partition, LSM, backpressure</td></tr>
+              <tr><td>Correctness</td><td>Idempotency keys, outbox, ledger, sagas, reconciliation</td></tr>
+              <tr><td>LLD</td><td>Use cases, entities, interfaces, happy path running, edge cases and locks, extension demo</td></tr>
+              <tr><td>Behavioural</td><td>STAR, 60% action, numbers in the result, what you would change</td></tr>
+              <tr><td>Avoid</td><td>Favourite stack first, over-engineering, no numbers, no failures, monologue, equal time on everything</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>That is the end of the path: start again from <a href="sd-foundations.html">System Design Foundations</a> or return to the <a href="../../../index.html#system-design">System Design index</a>.</p>
+      </section>
+
+    </div>
+  </main>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script src="../../assets/tutorial.js?v=8"></script>
+</body>
+</html>

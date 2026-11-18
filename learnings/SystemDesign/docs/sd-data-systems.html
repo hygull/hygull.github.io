@@ -1,0 +1,1617 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Data Systems</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@500;700&display=swap">
+<link rel="stylesheet" href="../../assets/tutorial.css?v=8">
+</head>
+<body data-track="system">
+
+<header class="topbar">
+  <div class="topbar-in">
+    <a class="brand" href="../../../index.html">Learnings</a>
+    <nav class="tracks" aria-label="Paths">
+      <a href="../../../index.html#system-design" aria-current="true">System Design</a>
+      <a href="../../../archive.html">Archive</a>
+    </nav>
+    <div class="tools">
+      <button class="btn" id="menu" type="button" aria-expanded="false">Chapters</button>
+      <input id="q" type="search" placeholder="Search chapters" aria-label="Search chapters">
+      <button class="btn" id="theme" type="button">Dark mode</button>
+    </div>
+  </div>
+</header>
+
+<div class="shell">
+  <aside class="side">
+    <p class="side-label">Data Systems</p>
+    <nav id="toc" aria-label="Chapters"></nav>
+  </aside>
+
+  <main>
+    <div class="page-head">
+      <p class="eyebrow">System design, part 3 of 12</p>
+      <h1>Data Systems</h1>
+      <p class="lead">The depth behind "which database, and why". <a href="sd-building-blocks.html">Building Blocks</a> introduced databases, replication and sharding as boxes on a diagram. This page opens the boxes: how engines store data, what an index and an isolation level really guarantee, how replicas and partitions behave under failure, how to model data, and how analytics, streams and search fit around the primary store. Product behaviour is described at the level that is widely documented; details vary by version, so check the manual before you quote one as fact.</p>
+    </div>
+
+    <div class="chapters">
+
+      <!-- ===================== PART 1 ===================== -->
+      <section class="chapter part" id="storage-engines">
+        <h2>Storage engines</h2>
+        <p class="kind">Part 1 of 8 &middot; how a database puts bytes on disk</p>
+        <p>Almost every store is a write-ahead log plus one of two on-disk structures: a B-tree (update in place, read-optimised) or an LSM-tree (append and merge, write-optimised). Knowing which one sits under a product explains most of its performance behaviour.</p>
+        <ul>
+          <li><a href="#wal">Write-ahead log</a>: durability before anything else</li>
+          <li><a href="#btree">B-tree</a>: pages updated in place</li>
+          <li><a href="#lsm">LSM-tree</a>: memtable, SSTables, compaction</li>
+          <li><a href="#btree-vs-lsm">B-tree vs LSM-tree</a>: the comparison table</li>
+          <li><a href="#row-vs-column">Row store vs column store</a>: why analytics uses columns</li>
+          <li><a href="#in-memory">In-memory stores and persistence</a>: snapshot vs append-only log</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="wal">
+        <h2>Write-ahead log</h2>
+        <p class="kind"><a href="#storage-engines">Storage engines</a></p>
+        <p>Rule: a change is appended to a sequential log and flushed to disk <b>before</b> the commit is acknowledged; the data files are updated later. Sequential appends are cheap, random page writes are not, so the log buys durability without paying for random I/O on the commit path.</p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+sequenceDiagram
+  participant C as Client
+  participant E as Engine
+  participant W as WAL on disk
+  participant P as Data files
+  C->>E: COMMIT
+  E->>W: append record and fsync
+  E-->>C: committed
+  E-->>P: write dirty pages later (checkpoint)
+  Note over W,P: After a crash, replay the WAL from the last checkpoint
+          </script>
+          <figcaption>The commit waits only for the log flush. Data files catch up in the background and are rebuilt from the log after a crash.</figcaption>
+        </figure>
+        <ul>
+          <li><b>Group commit:</b> many transactions share one fsync, which is how a single disk reaches thousands of commits per second.</li>
+          <li><b>Durability knob:</b> fsync on every commit (safe, slower) vs fsync every N ms (faster, can lose the last window on power loss). Most products expose this setting; know which one your design assumes.</li>
+          <li><b>Second life:</b> the same log feeds replication and change data capture (see <a href="#replication-logs">Replication logs</a> and <a href="#cdc-outbox">CDC and outbox</a>).</li>
+        </ul>
+        <p class="note"><b>Failure mode:</b> "committed" means "in the log on this machine's disk". If the disk dies before a replica has the record, the write is gone unless replication is synchronous.</p>
+      </section>
+
+      <section class="chapter" id="btree">
+        <h2>B-tree</h2>
+        <p class="kind"><a href="#storage-engines">Storage engines</a></p>
+        <p>A balanced tree of fixed-size pages (commonly 4 to 16 KB). Interior pages hold keys and child pointers; leaves hold the rows or pointers to them, linked for range scans. A write finds the leaf and overwrites the page in place.</p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart TD
+  R["Root page<br/>keys 100, 200"] --> I1["Interior<br/>keys 30, 60"]
+  R --> I2["Interior<br/>keys 130, 160"]
+  R --> I3["Interior<br/>keys 230, 260"]
+  I1 --> L1["Leaf<br/>1 to 29"]
+  I1 --> L2["Leaf<br/>30 to 59"]
+  I1 --> L3["Leaf<br/>60 to 99"]
+          </script>
+          <figcaption>A lookup walks root to leaf, three page reads here. Each leaf also points to its right-hand neighbour, so a range scan continues along the leaves without going back up.</figcaption>
+        </figure>
+        <ul>
+          <li><b>Depth:</b> with a branching factor in the hundreds, 3 to 4 levels cover hundreds of millions to billions of keys. The top levels stay cached, so a point read costs roughly one disk read (order of magnitude).</li>
+          <li><b>Writes:</b> each change goes to the WAL and later rewrites a whole page, even for a one-byte change. A full page splits in two and the parent is updated.</li>
+          <li><b>Costs:</b> random I/O on write, fragmentation (pages are typically partly empty), and random-key inserts (for example random UUID primary keys) touch pages all over the tree.</li>
+          <li><b>Used by:</b> PostgreSQL, MySQL InnoDB, SQL Server, Oracle, SQLite and most relational engines.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="lsm">
+        <h2>LSM-tree</h2>
+        <p class="kind"><a href="#storage-engines">Storage engines</a></p>
+        <p>Log-structured merge tree: never update in place. Writes go to the WAL and a sorted in-memory table (memtable); a full memtable is flushed as an immutable sorted file (SSTable); background compaction merges files and drops overwritten and deleted entries.</p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  W([Write]) --> WAL[WAL append]
+  W --> M["Memtable<br/>sorted, in RAM"]
+  M -->|flush when full| L0[(L0 SSTables)]
+  L0 -->|compaction| L1[(L1 SSTables)]
+  L1 -->|compaction| L2[(L2 SSTables)]
+          </script>
+          <figcaption>The write path is two sequential operations: a log append and a memory insert. All disk writes are sequential.</figcaption>
+        </figure>
+        <p>A read checks the memtable, then SSTables from newest to oldest. A <b>Bloom filter</b> per SSTable answers "definitely not here" or "maybe here", so most files are skipped without a disk read.</p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  R([Read key]) --> M[Memtable]
+  M -->|miss| B{{Bloom filter}}
+  B -->|definitely absent| S[Skip this SSTable]
+  B -->|maybe present| I[Sparse index]
+  I --> D[(Data block)]
+  S --> N[Next older SSTable]
+          </script>
+          <figcaption>The Bloom filter is checked in memory per SSTable; only a "maybe" costs a disk read.</figcaption>
+        </figure>
+        <ul>
+          <li><b>Bloom filter numbers:</b> about 10 bits per key gives roughly a 1% false-positive rate. No false negatives. It helps point lookups, not range scans.</li>
+          <li><b>Deletes</b> are writes of a tombstone; space is reclaimed only when compaction drops it. Many tombstones in a scanned range slow reads.</li>
+          <li><b>Compaction strategy:</b> size-tiered (cheaper writes, more space and more files per read) vs levelled (better reads and space, more rewriting).</li>
+          <li><b>Used by:</b> RocksDB, LevelDB, Cassandra, HBase, ScyllaDB; RocksDB is embedded in many other systems.</li>
+        </ul>
+        <p class="note"><b>Failure mode:</b> if writes outpace compaction, files pile up, reads slow down and the engine eventually stalls or throttles writes. Compaction also competes with foreground traffic for disk, which shows up as p99 spikes.</p>
+      </section>
+
+      <section class="chapter" id="btree-vs-lsm">
+        <h2>B-tree vs LSM-tree</h2>
+        <p class="kind"><a href="#storage-engines">Storage engines</a></p>
+        <p>Use a B-tree engine for read-heavy and transactional workloads with predictable latency. Use an LSM engine when sustained write volume or storage cost dominates.</p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Aspect</th><th>B-tree</th><th>LSM-tree</th></tr></thead>
+            <tbody>
+              <tr><td>Write path</td><td>WAL, then overwrite a page in place (random I/O)</td><td>WAL plus memtable; sequential flush and merge</td></tr>
+              <tr><td>Write amplification</td><td>Whole page rewritten per change, plus WAL</td><td>Each record rewritten several times by compaction; roughly 10x or more with levelled compaction, less with size-tiered (workload dependent)</td></tr>
+              <tr><td>Read path</td><td>One root-to-leaf walk; each key lives in one place</td><td>Memtable plus several SSTables; Bloom filters and block cache hide most of it</td></tr>
+              <tr><td>Range scans</td><td>Follow linked leaves</td><td>Merge across levels</td></tr>
+              <tr><td>Space</td><td>Fragmentation, partly filled pages</td><td>Compresses well; temporary overhead during compaction, stale versions until merged</td></tr>
+              <tr><td>Latency profile</td><td>Steadier</td><td>Higher write throughput, compaction can hurt tail latency</td></tr>
+              <tr><td>Transactions</td><td>Natural fit for row locks on a single copy of each key</td><td>Possible, but built on top (snapshots, sequence numbers)</td></tr>
+              <tr><td>Typical products</td><td>PostgreSQL, MySQL InnoDB, SQL Server, Oracle</td><td>RocksDB, Cassandra, HBase, ScyllaDB, LevelDB</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><b>Senior signal:</b> say "it depends on the workload, and I would measure" and then name the three amplifications you are trading: write, read and space. You can tune any two at the cost of the third.</p>
+      </section>
+
+      <section class="chapter" id="row-vs-column">
+        <h2>Row store vs column store</h2>
+        <p class="kind"><a href="#storage-engines">Storage engines</a></p>
+        <p>A row store keeps all columns of a row together: ideal for "fetch or update one entity". A column store keeps each column together: ideal for "aggregate a few columns over billions of rows".</p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  Q1(["Fetch order 2"]) --> R2
+  subgraph Row["Row store"]
+    R1["1, Asha, IN, 250"]
+    R2["2, Ben, US, 900"]
+    R3["3, Chen, SG, 120"]
+  end
+  R2 ~~~ C2
+  subgraph Col["Column store"]
+    C1["id: 1, 2, 3"]
+    C2["name: Asha, Ben, Chen"]
+    C3["country: IN, US, SG"]
+    C4["amount: 250, 900, 120"]
+  end
+  C4 --- Q2(["SUM of amount"])
+          </script>
+          <figcaption>Same table, two layouts. The point read touches one contiguous row; the aggregate touches one contiguous column and never reads names or countries.</figcaption>
+        </figure>
+        <ul>
+          <li><b>Why columns win for analytics:</b> read only the needed columns; similar values sit together so compression is strong (dictionary, run-length, delta); min/max statistics per block let the engine skip blocks; vectorised execution processes a batch of values per CPU step.</li>
+          <li><b>What you pay:</b> single-row writes and updates are expensive, so column stores ingest in batches and often treat files as immutable.</li>
+          <li><b>Products:</b> Parquet and ORC (file formats), ClickHouse, BigQuery, Snowflake, Redshift, DuckDB.</li>
+        </ul>
+        <p class="note"><b>Naming trap:</b> "wide-column" stores such as Cassandra and HBase are <b>not</b> column stores. They are row-oriented LSM stores with flexible columns per row.</p>
+      </section>
+
+      <section class="chapter" id="in-memory">
+        <h2>In-memory stores and persistence</h2>
+        <p class="kind"><a href="#storage-engines">Storage engines</a></p>
+        <p>In-memory stores (Redis, Memcached) are fast because they avoid disk on the read path and use simple data structures, not because RAM is magic. Sub-millisecond operations are normal; the network round trip usually dominates. The question an interviewer asks next is "what happens on restart?".</p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Option</th><th>How</th><th>Data lost on crash</th><th>Cost</th></tr></thead>
+            <tbody>
+              <tr><td>None</td><td>Pure cache (Memcached)</td><td>Everything; cold cache on restart</td><td>Nothing</td></tr>
+              <tr><td>Snapshot</td><td>Periodic point-in-time dump of the dataset (Redis RDB, via fork and copy-on-write)</td><td>Everything since the last snapshot (minutes)</td><td>Fork and memory spike on large datasets; compact file, fast restart</td></tr>
+              <tr><td>Append-only log</td><td>Log every write command (Redis AOF); fsync always, every second, or left to the OS</td><td>About one second with the per-second setting; none of the acknowledged writes with fsync always</td><td>Larger file, needs rewriting, slower restart; fsync always costs throughput</td></tr>
+              <tr><td>Both</td><td>Snapshot plus log tail</td><td>As the log setting</td><td>Both costs; common production choice</td></tr>
+              <tr><td>Replication</td><td>Replica in another zone</td><td>The async replication window</td><td>More machines</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><b>Trade-off:</b> persistence makes a cache restart warm; it does not make it a system of record. If losing the data is unacceptable, write to a durable database first and treat the in-memory copy as derived.</p>
+      </section>
+
+      <!-- ===================== PART 2 ===================== -->
+      <section class="chapter part" id="indexes">
+        <h2>Indexes and queries</h2>
+        <p class="kind">Part 2 of 8 &middot; making reads cheap without making writes expensive</p>
+        <p>An index is a second, sorted copy of some columns that the database must keep in step with every write. Every index is a read-versus-write trade.</p>
+        <ul>
+          <li><a href="#index-kinds">Primary, secondary, clustered</a>: where the row actually lives</li>
+          <li><a href="#composite-indexes">Composite and covering indexes</a>: the leftmost-prefix rule</li>
+          <li><a href="#index-costs">When an index hurts</a>: write cost and low selectivity</li>
+          <li><a href="#query-plans">Reading a query plan</a>: what to look for</li>
+          <li><a href="#index-types">Index types</a>: hash, B-tree, inverted, geospatial</li>
+          <li><a href="#n-plus-one">The N+1 query problem</a></li>
+          <li><a href="#pagination">Pagination</a>: offset vs keyset</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="index-kinds">
+        <h2>Primary, secondary, clustered</h2>
+        <p class="kind"><a href="#indexes">Indexes and queries</a></p>
+        <ul>
+          <li><b>Primary index:</b> on the primary key; unique, one per table. <b>Secondary index:</b> on any other column(s); may be non-unique.</li>
+          <li><b>Clustered index:</b> the table <b>is</b> the index; leaf pages hold the full rows in key order. Only one per table.</li>
+          <li><b>Non-clustered index:</b> leaves hold a pointer to the row (a physical location, or the primary key).</li>
+        </ul>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart TD
+  subgraph Clustered["Clustered: InnoDB style"]
+    S1["Secondary index<br/>email to primary key"] --> P1["Primary key B-tree<br/>leaves hold the rows"]
+  end
+  subgraph Heap["Heap: PostgreSQL style"]
+    S2["Secondary index<br/>email to row location"] --> H[(Heap pages)]
+    P2["Primary key index<br/>id to row location"] --> H
+  end
+          </script>
+          <figcaption>In a clustered table a secondary lookup is two tree walks (index, then primary key). In a heap table every index points straight at the row.</figcaption>
+        </figure>
+        <ul>
+          <li><b>Clustered consequences:</b> range scans on the primary key are fast and sequential; the primary key is copied into every secondary index, so keep it short; random keys cause page splits, so prefer time-ordered keys (auto-increment, or a time-sortable ID).</li>
+          <li><b>Heap consequences:</b> no key-order locality for free; an update that moves a row may need index entries updated too.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="composite-indexes">
+        <h2>Composite and covering indexes</h2>
+        <p class="kind"><a href="#indexes">Indexes and queries</a></p>
+        <p>A composite index on <code>(a, b, c)</code> is sorted by <code>a</code>, then <code>b</code> within equal <code>a</code>, then <code>c</code>. <b>Leftmost-prefix rule:</b> it can be used efficiently for conditions on <code>a</code>, on <code>a, b</code>, or on <code>a, b, c</code>, but not for <code>b</code> alone.</p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Query on index (user_id, status, created_at)</th><th>Index use</th></tr></thead>
+            <tbody>
+              <tr><td><code>WHERE user_id = 7</code></td><td>Yes, prefix</td></tr>
+              <tr><td><code>WHERE user_id = 7 AND status = 'PAID' ORDER BY created_at DESC</code></td><td>Yes, and the sort comes free from index order</td></tr>
+              <tr><td><code>WHERE user_id = 7 AND created_at &gt; ?</code></td><td>Seeks on user_id only; created_at is filtered while scanning that range</td></tr>
+              <tr><td><code>WHERE status = 'PAID'</code></td><td>No efficient seek; the leading column is missing</td></tr>
+              <tr><td><code>WHERE user_id = 7 AND created_at &gt; ? AND status = 'PAID'</code> on index (user_id, created_at, status)</td><td>Seek stops being precise after the range column; status is only a filter</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <ul>
+          <li><b>Column order rule of thumb:</b> equality columns first, then the range or sort column, then extra columns you only want to read.</li>
+          <li><b>Covering index:</b> the index contains every column the query needs, so the engine answers from the index alone (an "index-only scan") and skips the row fetch. Some engines let you add non-key columns for this (<code>INCLUDE</code>).</li>
+          <li>One composite index usually beats several single-column indexes that the planner would have to combine.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="index-costs">
+        <h2>When an index hurts</h2>
+        <p class="kind"><a href="#indexes">Indexes and queries</a></p>
+        <ul>
+          <li><b>Write cost:</b> every insert, delete, and update of an indexed column must maintain every affected index. Five indexes means roughly six structures written per insert. Indexes also take memory and disk, and compete with data for the buffer cache.</li>
+          <li><b>Low selectivity:</b> an index on <code>status</code> with three values, or a boolean, returns a large fraction of the table. Fetching that many rows through an index is random I/O, so the planner prefers a sequential scan. Fix with a composite index, or a partial index on the rare value (for example only <code>status = 'PENDING'</code>).</li>
+          <li><b>Not usable:</b> wrapping the column in a function (<code>WHERE lower(email) = ?</code> without an expression index), implicit type casts, and leading wildcards (<code>LIKE '%abc'</code>) defeat a B-tree index.</li>
+          <li><b>Unused indexes:</b> pure cost. Review index usage statistics and drop them.</li>
+          <li><b>Building one:</b> creating an index on a large live table is a long, I/O-heavy operation; use the online or concurrent build option and expect replica lag.</li>
+        </ul>
+        <p class="note"><b>Interview tip:</b> when you add an index in a design, say which query it serves and what it costs on the write path. "Index on (user_id, created_at) for the feed query; writes are 500/s so the extra index is affordable."</p>
+      </section>
+
+      <section class="chapter" id="query-plans">
+        <h2>Reading a query plan</h2>
+        <p class="kind"><a href="#indexes">Indexes and queries</a></p>
+        <p>A plan is a tree; rows flow from the leaves (table and index accesses) up through joins, sorts and aggregates. <code>EXPLAIN</code> shows the estimate; the "analyze" variant runs the query and shows actual rows and time. The output below is illustrative, in PostgreSQL's style.</p>
+        <script type="text/plain" data-lang="text" data-file="EXPLAIN ANALYZE (illustrative)" data-norun>
+Limit  (rows=20)                                   actual time=0.4 ms
+  -> Nested Loop                                   actual rows=20
+       -> Index Scan using orders_user_created_idx on orders
+            Index Cond: (user_id = 7)              estimated rows=25, actual rows=20
+       -> Index Scan using users_pkey on users
+            Index Cond: (id = orders.user_id)      loops=20
+        </script>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Look for</th><th>What it tells you</th></tr></thead>
+            <tbody>
+              <tr><td>Access method</td><td>Sequential (full) scan on a big table for a selective query means a missing or unusable index. A full scan for a query returning most of the table is correct.</td></tr>
+              <tr><td>Estimated vs actual rows</td><td>A large mismatch (10x or more) means stale statistics or correlated columns; the planner then picks the wrong join method.</td></tr>
+              <tr><td>Join method</td><td>Nested loop: good when the outer side is small and the inner side is indexed. Hash join: large unsorted inputs, equality joins. Merge join: both inputs already sorted.</td></tr>
+              <tr><td>Rows removed by filter</td><td>Many rows read and then discarded means the index is not selective enough for this predicate.</td></tr>
+              <tr><td>Sort or hash spilling to disk</td><td>The operation did not fit in working memory; add an index that provides the order, or reduce the row set earlier.</td></tr>
+              <tr><td>Loops</td><td>An inner node executed thousands of times is the N+1 pattern inside one query.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="chapter" id="index-types">
+        <h2>Index types</h2>
+        <p class="kind"><a href="#indexes">Indexes and queries</a></p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Type</th><th>Structure</th><th>Good for</th><th>Cannot do</th><th>Seen in</th></tr></thead>
+            <tbody>
+              <tr><td>B-tree</td><td>Sorted balanced tree</td><td>Equality, ranges, prefix match, ORDER BY</td><td>Full-text, suffix match, multi-dimensional proximity</td><td>Default in relational databases</td></tr>
+              <tr><td>Hash</td><td>Hash table from key to location</td><td>Exact-match lookups, O(1) on average</td><td>Ranges, ordering, prefix</td><td>Key-value stores, hash indexes, hash joins</td></tr>
+              <tr><td>Inverted</td><td>Term to sorted list of document ids</td><td>Full-text search, "contains" on arrays and JSON</td><td>Cheap updates; ordering by arbitrary columns</td><td>Lucene, Elasticsearch, PostgreSQL GIN</td></tr>
+              <tr><td>Geospatial</td><td>R-tree, or a space-filling curve (geohash, S2, H3 cells) stored in a B-tree</td><td>"Within radius", bounding box, nearest neighbours</td><td>Anything non-spatial</td><td>PostGIS (GiST), MongoDB 2dsphere, Redis GEO</td></tr>
+              <tr><td>Bitmap</td><td>One bitmap per distinct value</td><td>Combining low-cardinality filters in analytics</td><td>High write rates</td><td>Column stores, warehouses</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><b>Interview tip:</b> for "find drivers near me", say how the two dimensions become indexable: map latitude and longitude to a cell id (geohash or similar), index the cell id, query the cell and its neighbours, then filter by exact distance.</p>
+      </section>
+
+      <section class="chapter" id="n-plus-one">
+        <h2>The N+1 query problem</h2>
+        <p class="kind"><a href="#indexes">Indexes and queries</a></p>
+        <p>One query fetches N parents, then the code runs one more query per parent for its children: N+1 round trips. Each query is fast; the page is slow. At about 1 ms per round trip, 200 items cost 200 ms of pure waiting.</p>
+        <script type="text/plain" data-lang="text" data-file="SQL" data-norun>
+-- N+1: 1 query for orders, then one per order
+SELECT * FROM orders WHERE user_id = 7;            -- returns 50 orders
+SELECT * FROM order_items WHERE order_id = 1001;   -- repeated 50 times
+
+-- Fix A: one join
+SELECT o.*, i.* FROM orders o JOIN order_items i ON i.order_id = o.id WHERE o.user_id = 7;
+
+-- Fix B: two queries, batched by key (what ORM "eager loading" and dataloaders do)
+SELECT * FROM orders WHERE user_id = 7;
+SELECT * FROM order_items WHERE order_id IN (1001, 1002, ...);
+        </script>
+        <ul>
+          <li>Usually created by lazy loading in an ORM or by a GraphQL resolver per field; the fix is eager loading or a batching loader.</li>
+          <li>The same shape exists across services: a loop of single-item RPCs. Offer a batch endpoint.</li>
+          <li>Detect it by counting queries per request in tests or tracing, not by looking at slow-query logs (no single query is slow).</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="pagination">
+        <h2>Pagination</h2>
+        <p class="kind"><a href="#indexes">Indexes and queries</a></p>
+        <p>Use keyset (cursor) pagination for feeds, timelines and any large or changing list. Use offset only for small result sets where "jump to page 37" matters.</p>
+        <script type="text/plain" data-lang="text" data-file="SQL" data-norun>
+-- Offset: the database must produce and discard 100000 rows first
+SELECT * FROM posts ORDER BY created_at DESC, id DESC LIMIT 20 OFFSET 100000;
+
+-- Keyset: seek straight to the position using the index (created_at, id)
+SELECT * FROM posts
+WHERE (created_at, id) < (:last_created_at, :last_id)
+ORDER BY created_at DESC, id DESC
+LIMIT 20;
+        </script>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Aspect</th><th>Offset</th><th>Keyset / cursor</th></tr></thead>
+            <tbody>
+              <tr><td>Cost of page k</td><td>Grows with the offset: reads offset + limit rows</td><td>Constant: one index seek plus limit rows</td></tr>
+              <tr><td>Concurrent inserts</td><td>Rows shift; items are skipped or shown twice</td><td>Stable relative to the cursor</td></tr>
+              <tr><td>Jump to arbitrary page</td><td>Yes</td><td>No, only next and previous</td></tr>
+              <tr><td>Requirements</td><td>None</td><td>A unique, indexed sort key; add id as a tie-breaker</td></tr>
+              <tr><td>API shape</td><td><code>?page=3&amp;size=20</code></td><td><code>?after=opaque_cursor&amp;limit=20</code></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <ul>
+          <li>Make the cursor opaque (encode the last sort key values) so you can change the scheme later.</li>
+          <li>Do not return an exact total count on large lists; counting is a full scan. Return "has more", or an estimate.</li>
+          <li>In partitioned stores offset is worse: each shard must return offset + limit rows to the coordinator.</li>
+        </ul>
+      </section>
+
+      <!-- ===================== PART 3 ===================== -->
+      <section class="chapter part" id="transactions">
+        <h2>Transactions</h2>
+        <p class="kind">Part 3 of 8 &middot; what the database promises when writes overlap</p>
+        <p>Most correctness bugs in a design come from concurrent transactions, not from crashes. This part is the model; exact behaviour of each isolation level differs by product, so treat the tables as the general picture and verify against the engine you name.</p>
+        <ul>
+          <li><a href="#acid">ACID, precisely</a></li>
+          <li><a href="#isolation-levels">Isolation levels and anomalies</a>: the table</li>
+          <li><a href="#mvcc">MVCC</a>: readers do not block writers</li>
+          <li><a href="#lost-update">Lost update</a>: the bank example</li>
+          <li><a href="#write-skew">Write skew</a>: the booking example</li>
+          <li><a href="#locking">Optimistic vs pessimistic locking</a></li>
+          <li><a href="#deadlocks">Deadlocks</a></li>
+          <li><a href="#safe-debit">A safe balance debit</a>: atomic conditional update</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="acid">
+        <h2>ACID, precisely</h2>
+        <p class="kind"><a href="#transactions">Transactions</a></p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Letter</th><th>Precise meaning</th><th>Mechanism</th><th>Common misreading</th></tr></thead>
+            <tbody>
+              <tr><td><b>A</b>tomicity</td><td>All of the transaction's writes take effect, or none do, even on a crash</td><td>Undo information, WAL, rollback</td><td>It is about abort, not about concurrency</td></tr>
+              <tr><td><b>C</b>onsistency</td><td>Each transaction moves the data from one state that satisfies the declared invariants to another</td><td>Constraints, plus correct application logic</td><td>Not the C in CAP (which means linearizability). Largely the application's job</td></tr>
+              <tr><td><b>I</b>solation</td><td>Concurrent transactions behave as if they ran in some serial order, to the degree the chosen level provides</td><td>Locks, MVCC, conflict detection</td><td>The default level is usually weaker than serializable</td></tr>
+              <tr><td><b>D</b>urability</td><td>Once commit is acknowledged, the data survives a crash of this node</td><td>WAL flush, replication</td><td>It does not cover disk loss unless a replica has the write</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><b>Senior signal:</b> "ACID" on a product page tells you little. Ask which isolation level is the default, and whether a transaction can span more than one partition.</p>
+      </section>
+
+      <section class="chapter" id="isolation-levels">
+        <h2>Isolation levels and anomalies</h2>
+        <p class="kind"><a href="#transactions">Transactions</a></p>
+        <p>The anomalies first, then which level admits which.</p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Anomaly</th><th>What happens</th></tr></thead>
+            <tbody>
+              <tr><td>Dirty read</td><td>You read another transaction's uncommitted write, which may later roll back</td></tr>
+              <tr><td>Non-repeatable read</td><td>You read the same row twice in one transaction and get different committed values</td></tr>
+              <tr><td>Phantom</td><td>You run the same predicate query twice and the set of matching rows changes (rows inserted or deleted by others)</td></tr>
+              <tr><td>Lost update</td><td>Two transactions read a value, both compute a new one, and the second write silently overwrites the first</td></tr>
+              <tr><td>Write skew</td><td>Two transactions read overlapping data, each writes a <b>different</b> row, and together they break an invariant neither breaks alone</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Level (general model)</th><th>Dirty read</th><th>Non-repeatable read</th><th>Phantom</th><th>Lost update</th><th>Write skew</th></tr></thead>
+            <tbody>
+              <tr><td>Read uncommitted</td><td>Possible</td><td>Possible</td><td>Possible</td><td>Possible</td><td>Possible</td></tr>
+              <tr><td>Read committed</td><td>Prevented</td><td>Possible</td><td>Possible</td><td>Possible</td><td>Possible</td></tr>
+              <tr><td>Repeatable read (SQL standard)</td><td>Prevented</td><td>Prevented</td><td>Possible per the standard</td><td>Implementation dependent</td><td>Implementation dependent</td></tr>
+              <tr><td>Snapshot isolation</td><td>Prevented</td><td>Prevented</td><td>Not seen by snapshot reads</td><td>Prevented where the engine detects write-write conflicts (first committer wins)</td><td><b>Possible</b></td></tr>
+              <tr><td>Serializable</td><td>Prevented</td><td>Prevented</td><td>Prevented</td><td>Prevented</td><td>Prevented</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p><b>Names differ by product.</b> The SQL standard defines levels by three anomalies only, and does not mention snapshot isolation, so vendors mapped their implementations onto the standard names differently. Widely documented examples (verify for your version):</p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Product</th><th>Default</th><th>Worth knowing</th></tr></thead>
+            <tbody>
+              <tr><td>PostgreSQL</td><td>Read committed</td><td>Its "repeatable read" is snapshot isolation: a concurrent update of the same row aborts with a serialization error, write skew is still possible. Its "serializable" is serializable snapshot isolation (optimistic; be ready to retry). Read uncommitted behaves as read committed.</td></tr>
+              <tr><td>MySQL InnoDB</td><td>Repeatable read</td><td>Plain reads use a consistent snapshot; locking reads and writes use row and gap locks, which block many phantoms. A read-then-write with a plain <code>SELECT</code> can still lose an update, because no write conflict is detected.</td></tr>
+              <tr><td>Oracle</td><td>Read committed</td><td>Its "serializable" is snapshot isolation, so write skew is possible.</td></tr>
+              <tr><td>SQL Server</td><td>Read committed</td><td>Offers lock-based repeatable read and serializable, and a separate snapshot level.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <ul>
+          <li><b>How serializable is implemented:</b> actual serial execution on one thread (fast only for short in-memory transactions), two-phase locking (readers and writers block each other), or serializable snapshot isolation (run optimistically, abort on detected dependency cycles).</li>
+          <li><b>Cost:</b> stronger levels mean more blocking or more aborts. The application must retry aborted transactions.</li>
+        </ul>
+        <p class="note"><b>Interview tip:</b> do not say "I will use repeatable read to fix it". Name the anomaly (lost update, write skew), then the mechanism that prevents it in your chosen database: an atomic update, a row lock, a constraint, or true serializable.</p>
+      </section>
+
+      <section class="chapter" id="mvcc">
+        <h2>MVCC</h2>
+        <p class="kind"><a href="#transactions">Transactions</a></p>
+        <p>Multi-version concurrency control: a write creates a new version of the row instead of overwriting it. Each transaction reads the versions that were committed as of its snapshot. Result: <b>readers never block writers and writers never block readers</b>; only writers to the same row conflict.</p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  subgraph Chain["Versions of row 42"]
+    V1["balance 100<br/>created by tx 90<br/>superseded by tx 105"] --> V2["balance 70<br/>created by tx 105"]
+  end
+  T1(["Tx 100<br/>snapshot taken before 105 committed"]) -->|sees| V1
+  T2(["Tx 110<br/>snapshot taken after 105 committed"]) -->|sees| V2
+          </script>
+          <figcaption>Two transactions read the same row at the same moment and each sees the version valid for its own snapshot.</figcaption>
+        </figure>
+        <ul>
+          <li><b>Snapshot scope:</b> per statement gives read committed; per transaction gives snapshot isolation.</li>
+          <li><b>Garbage:</b> old versions must be cleaned up once no snapshot can see them (PostgreSQL vacuum, InnoDB purge of undo logs).</li>
+          <li><b>Failure mode:</b> one long-running transaction (a forgotten session, a slow analytics query, a stuck replica slot) pins old versions, so tables bloat and queries slow down. Keep OLTP transactions short and run analytics elsewhere.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="lost-update">
+        <h2>Lost update</h2>
+        <p class="kind"><a href="#transactions">Transactions</a></p>
+        <p>The read-modify-write race. Account 42 has 1000. A debit of 500 and a debit of 300 arrive together; the application reads the balance, subtracts in code and writes the result.</p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+sequenceDiagram
+  participant A as Tx A (debit 500)
+  participant D as Database
+  participant B as Tx B (debit 300)
+  A->>D: SELECT balance, gets 1000
+  B->>D: SELECT balance, gets 1000
+  A->>D: UPDATE balance = 500, COMMIT
+  B->>D: UPDATE balance = 700, COMMIT
+  Note over D: Final balance 700. Expected 200. The 500 debit is lost
+          </script>
+          <figcaption>Both transactions commit successfully and the money is wrong; read committed allows this.</figcaption>
+        </figure>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Fix</th><th>How</th><th>Note</th></tr></thead>
+            <tbody>
+              <tr><td>Atomic update</td><td><code>UPDATE ... SET balance = balance - 500</code></td><td>Best when the new value can be computed in SQL; see <a href="#safe-debit">a safe balance debit</a></td></tr>
+              <tr><td>Explicit lock</td><td><code>SELECT ... FOR UPDATE</code>, then write</td><td>Needed when logic must run in the application between read and write</td></tr>
+              <tr><td>Compare-and-set</td><td><code>UPDATE ... WHERE version = :seen</code>; retry if 0 rows</td><td>Optimistic; works across a user's think time</td></tr>
+              <tr><td>Automatic detection</td><td>Snapshot isolation that aborts the second writer</td><td>Engine specific; the application must retry</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="chapter" id="write-skew">
+        <h2>Write skew</h2>
+        <p class="kind"><a href="#transactions">Transactions</a></p>
+        <p>Pattern: check a condition with a query, then write a row that changes the result of that query, while another transaction does the same. Booking example: two users book room 12 for 10:00 to 11:00 at the same time.</p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+sequenceDiagram
+  participant A as Tx A
+  participant D as Database
+  participant B as Tx B
+  A->>D: SELECT count of bookings for room 12 at 10.00, gets 0
+  B->>D: SELECT count of bookings for room 12 at 10.00, gets 0
+  A->>D: INSERT booking for Asha, COMMIT
+  B->>D: INSERT booking for Ben, COMMIT
+  Note over D: Room 12 is double-booked. No row was written twice
+          </script>
+          <figcaption>The two transactions write different rows, so there is no write-write conflict for snapshot isolation to detect, and no existing row to lock.</figcaption>
+        </figure>
+        <p>Bank variant: a customer may overdraw one account as long as savings + current stays at or above zero. Two withdrawals, one from each account, each check the sum on its own snapshot, each pass, and together they push the sum below zero.</p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Fix</th><th>How</th><th>Trade-off</th></tr></thead>
+            <tbody>
+              <tr><td>Constraint</td><td>Unique index on (room_id, slot), or an exclusion constraint on overlapping time ranges where the engine supports one</td><td>Cheapest and safest; needs the invariant to be expressible as a constraint</td></tr>
+              <tr><td>Lock a parent row</td><td><code>SELECT ... FROM rooms WHERE id = 12 FOR UPDATE</code> before checking (materialising the conflict)</td><td>Serialises bookings per room; simple and portable</td></tr>
+              <tr><td>True serializable</td><td>Run at a serializable level and retry on abort</td><td>General; costs aborts or blocking under contention</td></tr>
+              <tr><td>Single writer</td><td>Route all bookings for a room through one queue partition or actor</td><td>No database locks; adds latency and a moving part</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><b>Interview tip:</b> any "check then insert" in your design (seat booking, username claim, inventory reserve, coupon redemption) should trigger this discussion before the interviewer raises it.</p>
+      </section>
+
+      <section class="chapter" id="locking">
+        <h2>Optimistic vs pessimistic locking</h2>
+        <p class="kind"><a href="#transactions">Transactions</a></p>
+        <script type="text/plain" data-lang="text" data-file="SQL" data-norun>
+-- Pessimistic: take the lock first, others wait
+BEGIN;
+SELECT qty FROM inventory WHERE sku = 'A1' FOR UPDATE;
+UPDATE inventory SET qty = qty - 1 WHERE sku = 'A1';
+COMMIT;
+
+-- Optimistic: no lock, detect the conflict at write time
+SELECT qty, version FROM inventory WHERE sku = 'A1';        -- qty 5, version 17
+UPDATE inventory SET qty = 4, version = 18
+WHERE sku = 'A1' AND version = 17;                          -- 0 rows updated = someone else won, re-read and retry
+        </script>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Aspect</th><th>Pessimistic (SELECT FOR UPDATE)</th><th>Optimistic (version column / compare-and-set)</th></tr></thead>
+            <tbody>
+              <tr><td>Assumption</td><td>Conflicts are likely</td><td>Conflicts are rare</td></tr>
+              <tr><td>On conflict</td><td>The second transaction waits</td><td>The second write fails and must retry</td></tr>
+              <tr><td>Wins when</td><td>High contention on the same rows (flash sale stock, a hot counter); retry storms would waste more work than waiting</td><td>Low contention; long gaps between read and write (a user editing a form); no open transaction across a network call</td></tr>
+              <tr><td>Risks</td><td>Deadlocks, lock waits, connections held while blocked</td><td>Starvation and wasted work under contention</td></tr>
+              <tr><td>Beyond one database</td><td>Does not extend to HTTP APIs or stores without transactions</td><td>Maps directly to ETags / <code>If-Match</code> and to conditional writes in key-value stores</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <ul>
+          <li>Keep locked sections short: no network calls or user interaction while holding a row lock.</li>
+          <li><code>FOR UPDATE SKIP LOCKED</code> (where supported) turns a table into a simple job queue: each worker takes rows nobody else holds.</li>
+          <li>Optimistic retries need a cap and jittered backoff.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="deadlocks">
+        <h2>Deadlocks</h2>
+        <p class="kind"><a href="#transactions">Transactions</a></p>
+        <p>Two transactions each hold a lock the other needs. Neither can proceed. Classic case: transfer A to B and transfer B to A at the same moment, each locking its source account first.</p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  A([Tx A]) -->|holds| R1[Account 1 row]
+  B([Tx B]) -->|holds| R2[Account 2 row]
+  A -.->|waits for| R2
+  B -.->|waits for| R1
+          </script>
+          <figcaption>A cycle in the waits-for graph. The database detects it and aborts one transaction as the victim.</figcaption>
+        </figure>
+        <ul>
+          <li><b>Prevent:</b> acquire locks in a consistent global order (always lock the lower account id first); keep transactions short; touch as few rows as possible.</li>
+          <li><b>Survive:</b> the victim gets an error; retry the whole transaction. A lock wait timeout bounds the damage where detection is not available.</li>
+          <li><b>Hidden sources:</b> gap and range locks, foreign key checks, and bulk updates touching rows in different orders.</li>
+          <li>Across services there is no detector: use timeouts, and avoid holding a resource while calling another service.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="safe-debit">
+        <h2>A safe balance debit</h2>
+        <p class="kind"><a href="#transactions">Transactions</a></p>
+        <p>Put the check and the change in one statement. The row lock taken by the <code>UPDATE</code> makes the condition and the write atomic, at any isolation level from read committed up.</p>
+        <script type="text/plain" data-lang="text" data-file="SQL" data-norun>
+BEGIN;
+
+UPDATE accounts
+SET    balance_minor = balance_minor - 50000
+WHERE  id = 42 AND balance_minor >= 50000;
+-- rows affected = 1 : debited
+-- rows affected = 0 : insufficient funds (or no such account); ROLLBACK and reject
+
+INSERT INTO ledger_entries (account_id, transfer_id, amount_minor)
+VALUES (42, :transfer_id, -50000);            -- transfer_id is unique: a retry cannot debit twice
+
+COMMIT;
+        </script>
+        <ul>
+          <li><b>Never</b> read the balance into the application, compare, and then write an absolute value.</li>
+          <li>A <code>CHECK (balance_minor &gt;= 0)</code> constraint is a cheap second line of defence.</li>
+          <li><b>Idempotency:</b> the unique transfer id (or idempotency key) makes a client retry safe; the duplicate insert fails and the whole transaction rolls back.</li>
+          <li><b>Transfers:</b> debit and credit in one transaction, locking accounts in id order. If the accounts live in different databases you need the saga or two-phase patterns from <a href="sd-distributed-systems.html">Distributed Systems Patterns</a>.</li>
+          <li>The same idea in a key-value store is a conditional write: "set balance = balance - x if balance &gt;= x".</li>
+        </ul>
+      </section>
+
+      <!-- ===================== PART 4 ===================== -->
+      <section class="chapter part" id="replication">
+        <h2>Replication in depth</h2>
+        <p class="kind">Part 4 of 8 &middot; several copies, and what each one may show you</p>
+        <p>Replication gives availability, read scaling and geographic locality. The price is that copies can disagree, for a moment or for longer. The design question is always "who accepts writes, and what does a reader see?".</p>
+        <ul>
+          <li><a href="#replication-topologies">Single-leader, multi-leader, leaderless</a></li>
+          <li><a href="#replication-logs">Replication logs</a>: statement, WAL shipping, logical</li>
+          <li><a href="#replication-lag">Lag anomalies and fixes</a></li>
+          <li><a href="#quorums">Quorum reads and writes</a></li>
+          <li><a href="#quorum-repair">Sloppy quorums and repair</a></li>
+          <li><a href="#conflict-resolution">Conflict resolution</a>: LWW, version vectors, CRDTs</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="replication-topologies">
+        <h2>Single-leader, multi-leader, leaderless</h2>
+        <p class="kind"><a href="#replication">Replication in depth</a></p>
+        <p>Default to single-leader. Move to multi-leader only for multi-region writes or offline clients, and to leaderless when write availability matters more than simple consistency.</p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  subgraph SL["Single-leader"]
+    L1[Leader] --> F1[Follower]
+    L1 --> F2[Follower]
+  end
+  subgraph ML["Multi-leader"]
+    A1[Leader A] <-->|async| A2[Leader B]
+  end
+  subgraph LL["Leaderless"]
+    C([Client]) --> N1[Node 1]
+    C --> N2[Node 2]
+    C --> N3[Node 3]
+  end
+          </script>
+          <figcaption>Where a write may land: one node, one node per region, or any replica of the key.</figcaption>
+        </figure>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Aspect</th><th>Single-leader</th><th>Multi-leader</th><th>Leaderless</th></tr></thead>
+            <tbody>
+              <tr><td>Write path</td><td>All writes to one leader, which streams changes to followers</td><td>Each leader accepts writes and replicates to the others asynchronously</td><td>Client or coordinator sends each write to all N replicas and waits for W acks</td></tr>
+              <tr><td>Conflict handling</td><td>None: the leader orders all writes</td><td>Required: concurrent writes to the same item on different leaders</td><td>Required: concurrent writes and missed writes; resolved on read or in the background</td></tr>
+              <tr><td>Failover</td><td>Detect failure, promote a follower, repoint clients. Risks: lost unreplicated writes, split brain</td><td>Other leaders keep accepting writes; no promotion needed</td><td>No failover: other replicas keep serving while quorum holds</td></tr>
+              <tr><td>Consistency you get</td><td>Strong on the leader; followers lag unless replication is synchronous</td><td>Eventual; conflicts possible</td><td>Eventual, tunable per request with R and W</td></tr>
+              <tr><td>Use when</td><td>Most OLTP systems</td><td>Active-active regions, offline-first and collaborative apps</td><td>High write availability, simple key-based access</td></tr>
+              <tr><td>Examples</td><td>PostgreSQL, MySQL, MongoDB replica sets</td><td>Multi-region active-active setups, CouchDB-style sync</td><td>Dynamo-style stores: Cassandra, Riak, ScyllaDB</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <ul>
+          <li><b>Sync vs async followers:</b> fully synchronous means one slow follower stalls all writes; fully asynchronous means failover can lose acknowledged writes. A common middle is semi-synchronous: one follower must confirm, the rest are async.</li>
+          <li><b>Split brain:</b> two nodes both believe they are leader and both accept writes. Prevent with a majority-based election and fencing tokens (covered in <a href="sd-distributed-systems.html">Distributed Systems Patterns</a>).</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="replication-logs">
+        <h2>Replication logs</h2>
+        <p class="kind"><a href="#replication">Replication in depth</a></p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Type</th><th>What is shipped</th><th>Strength</th><th>Weakness</th></tr></thead>
+            <tbody>
+              <tr><td>Statement-based</td><td>The SQL text</td><td>Compact</td><td>Non-deterministic statements (<code>NOW()</code>, <code>RAND()</code>, auto-increment under concurrency, triggers) can make replicas diverge</td></tr>
+              <tr><td>WAL shipping (physical)</td><td>The engine's byte-level log records</td><td>Exact copy, low overhead, simple</td><td>Tied to the storage format: replicas generally need the same major version; cannot replicate a subset or feed other systems easily</td></tr>
+              <tr><td>Logical (row-based)</td><td>Row-level changes: inserted, updated, deleted values</td><td>Decoupled from storage format: cross-version upgrades, selective replication, and the feed for change data capture</td><td>More verbose; schema changes need care</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>Examples: PostgreSQL streaming replication is physical and it also offers logical replication; MySQL's binlog supports statement, row and mixed formats, with row-based the modern default.</p>
+      </section>
+
+      <section class="chapter" id="replication-lag">
+        <h2>Lag anomalies and fixes</h2>
+        <p class="kind"><a href="#replication">Replication in depth</a></p>
+        <p>With asynchronous followers, a read from a follower can be behind the leader. Lag is usually well under a second and can grow to seconds or minutes under load, long transactions or network trouble.</p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+sequenceDiagram
+  participant U as User
+  participant L as Leader
+  participant F as Follower
+  U->>L: POST comment
+  L-->>U: 201 Created
+  L-->>F: replicate (still in flight)
+  U->>F: GET comments
+  F-->>U: list without the new comment
+  Note over U,F: The user thinks the write was lost
+          </script>
+          <figcaption>The read-your-writes violation: the write succeeded but the next read hit a replica that had not caught up.</figcaption>
+        </figure>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Guarantee</th><th>Anomaly without it</th><th>Fixes</th></tr></thead>
+            <tbody>
+              <tr><td>Read-your-writes</td><td>You do not see your own update</td><td>Read your own data from the leader; pin a user to the leader for a short window after a write; or send the write's log position and wait until the replica has reached it</td></tr>
+              <tr><td>Monotonic reads</td><td>Time goes backwards: a refresh shows older data because it hit a more-lagged replica</td><td>Route each user to the same replica (hash of user id); or track the last-seen position and refuse older replicas</td></tr>
+              <tr><td>Consistent prefix</td><td>Effects appear before causes: a reply is visible before the question</td><td>Keep causally related writes in the same partition so they are applied in order; or track causal dependencies explicitly</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><b>Senior signal:</b> when you add read replicas, say which reads may be stale and which may not. "Profile and timeline reads go to replicas; the page right after an edit, and anything in a checkout flow, reads from the leader."</p>
+      </section>
+
+      <section class="chapter" id="quorums">
+        <h2>Quorum reads and writes</h2>
+        <p class="kind"><a href="#replication">Replication in depth</a></p>
+        <p>Leaderless stores keep N replicas per key. A write succeeds when W replicas acknowledge; a read queries R replicas and takes the newest version. If <b>W + R &gt; N</b>, every read set overlaps every write set in at least one replica.</p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  W([Writer]) -->|write v2, ack| N1[("Node 1<br/>has v2")]
+  W -->|write v2, ack| N2[("Node 2<br/>has v2")]
+  W -.->|write lost| N3[("Node 3<br/>still v1")]
+  R([Reader]) -->|read| N2
+  R -->|read| N3
+          </script>
+          <figcaption>N = 3, W = 2, R = 2. The reader's two replicas include node 2, so it sees v2, returns it, and can repair node 3.</figcaption>
+        </figure>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>N, W, R</th><th>Behaviour</th></tr></thead>
+            <tbody>
+              <tr><td>3, 2, 2</td><td>The usual balance: tolerates one replica down for both reads and writes</td></tr>
+              <tr><td>3, 3, 1</td><td>Fast reads; any replica down blocks writes</td></tr>
+              <tr><td>3, 1, 3</td><td>Fast writes; any replica down blocks consistent reads</td></tr>
+              <tr><td>3, 1, 1</td><td>Fastest and most available; W + R is not greater than N, so stale reads are expected</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><b>Trade-off:</b> W + R &gt; N is not linearizability. Concurrent writes, a write that reached fewer than W replicas and was reported as failed but not rolled back, sloppy quorums, and replicas restored from older data can all still produce stale or surprising reads.</p>
+      </section>
+
+      <section class="chapter" id="quorum-repair">
+        <h2>Sloppy quorums and repair</h2>
+        <p class="kind"><a href="#replication">Replication in depth</a></p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Mechanism</th><th>What it does</th><th>Catch</th></tr></thead>
+            <tbody>
+              <tr><td>Sloppy quorum</td><td>If some of a key's home replicas are unreachable, accept the write on other healthy nodes so W can still be met</td><td>Higher write availability, but the overlap guarantee is gone until the data is handed back</td></tr>
+              <tr><td>Hinted handoff</td><td>The stand-in node stores the write with a hint naming the intended replica and forwards it when that replica returns</td><td>Hints are kept for a limited time; a long outage needs full repair</td></tr>
+              <tr><td>Read repair</td><td>A read that sees differing versions writes the newest back to stale replicas</td><td>Only fixes keys that are read</td></tr>
+              <tr><td>Anti-entropy</td><td>A background process compares replicas (commonly with Merkle trees, so only differing ranges are exchanged) and copies missing data</td><td>Costs I/O; if it is not run within the tombstone retention period, deleted data can reappear</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>These mechanisms come from the Dynamo paper and appear, with variations, in Cassandra, Riak and similar stores.</p>
+      </section>
+
+      <section class="chapter" id="conflict-resolution">
+        <h2>Conflict resolution</h2>
+        <p class="kind"><a href="#replication">Replication in depth</a></p>
+        <p>Multi-leader and leaderless systems accept concurrent writes to the same key. Something must decide the outcome.</p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Approach</th><th>How</th><th>What you pay</th></tr></thead>
+            <tbody>
+              <tr><td>Last-write-wins (LWW)</td><td>Attach a timestamp to each write; the highest wins, the rest are discarded</td><td><b>Silent data loss.</b> Concurrent writes are dropped, and clock skew can make an older write beat a newer one. Acceptable for caches and immutable or write-once keys</td></tr>
+              <tr><td>Version vectors</td><td>Keep a counter per replica with each value; comparing vectors shows whether one version descends from the other or they are concurrent</td><td>Detects conflicts without losing data, but then hands the concurrent versions ("siblings") to the application to merge</td></tr>
+              <tr><td>Application merge</td><td>Domain logic: union the two carts, keep both edits, ask the user</td><td>Code per data type; deletes need tombstones or removed items come back</td></tr>
+              <tr><td>CRDTs</td><td>Data types whose merge is built in and always converges</td><td>See below</td></tr>
+              <tr><td>Avoid the conflict</td><td>Route all writes for a given record to one leader or region</td><td>Loses write availability for that record when its home is down</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p><b>CRDTs, honestly:</b> conflict-free replicated data types (counters, sets, maps, sequences for text) are designed so that replicas which have received the same updates converge to the same state, in any delivery order, with no coordination. That guarantee is convergence, not correctness of intent: the merged result is deterministic but may not be what either user wanted, and invariants that span values ("balance never below zero", "seat sold once") cannot be enforced by a CRDT alone. They also carry metadata that grows and needs garbage collection. They fit collaborative editing, presence, likes and counters; they do not replace transactions.</p>
+      </section>
+
+      <!-- ===================== PART 5 ===================== -->
+      <section class="chapter part" id="partitioning">
+        <h2>Partitioning in depth</h2>
+        <p class="kind">Part 5 of 8 &middot; what changes once data is split</p>
+        <p><a href="sd-building-blocks.html">Building Blocks</a> covered why to shard, hash vs range keys and consistent hashing. This part covers what comes next: moving data when the cluster changes, finding the right node, indexing across partitions, and skew.</p>
+        <ul>
+          <li><a href="#rebalancing">Rebalancing strategies</a></li>
+          <li><a href="#request-routing">Request routing</a></li>
+          <li><a href="#partitioned-indexes">Secondary indexes: local vs global</a></li>
+          <li><a href="#hot-keys">Hot keys and skew</a></li>
+          <li><a href="#cross-partition">Cross-partition transactions</a></li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="rebalancing">
+        <h2>Rebalancing strategies</h2>
+        <p class="kind"><a href="#partitioning">Partitioning in depth</a></p>
+        <p>Goal: when nodes are added or removed, move as little data as possible, keep serving traffic, and end with even load. <code>hash(key) mod N</code> fails the first goal: changing N moves almost every key.</p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Strategy</th><th>How</th><th>Gain</th><th>Pay</th><th>Seen in</th></tr></thead>
+            <tbody>
+              <tr><td>Fixed number of partitions</td><td>Create many more partitions than nodes up front (for example 1024 for 10 nodes). A new node takes whole partitions from the others; keys never change partition</td><td>Simple; only whole partitions move</td><td>The count is hard to change later: too few limits growth, too many adds overhead</td><td>Redis Cluster (16384 slots), Elasticsearch shards, Riak, Couchbase</td></tr>
+              <tr><td>Dynamic splitting</td><td>A partition that grows past a size threshold splits in two; small ones can merge</td><td>Partition count follows data volume; works for range partitioning</td><td>A new empty table starts as one partition (a hotspot) unless pre-split</td><td>HBase, MongoDB chunks, range-partitioned SQL systems</td></tr>
+              <tr><td>Proportional to nodes</td><td>A fixed number of partitions (virtual nodes) per node; a new node picks ranges to split and takes half of each</td><td>Partition size stays stable as the cluster grows</td><td>Random splits can be uneven; needs hash partitioning</td><td>Cassandra virtual nodes</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <ul>
+          <li><b>Throttle the move:</b> rebalancing competes with live traffic for disk and network; it runs for hours on large clusters.</li>
+          <li><b>Automatic vs manual:</b> fully automatic rebalancing plus automatic failure detection can cascade: a slow node is declared dead, its data is moved, and the extra load slows more nodes. Many operators keep a human approval step.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="request-routing">
+        <h2>Request routing</h2>
+        <p class="kind"><a href="#partitioning">Partitioning in depth</a></p>
+        <p>Something must know which node owns a key right now, and learn quickly when that changes. Three places to put that knowledge:</p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  subgraph A["1. Any node, then forward"]
+    C1([Client]) --> X1[Any node]
+    X1 -->|forward or redirect| O1[Owner node]
+  end
+  subgraph B["2. Routing tier"]
+    C2([Client]) --> RT[Router]
+    RT --> O2[Owner node]
+  end
+  subgraph D["3. Partition-aware client"]
+    C3([Client with map]) --> O3[Owner node]
+  end
+  ZK[(Coordination service)] -.->|partition map| RT
+  ZK -.->|partition map| C3
+          </script>
+          <figcaption>The partition map lives in the nodes themselves (1), in a router (2) or in the client (3); a coordination service or gossip keeps it current.</figcaption>
+        </figure>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Approach</th><th>Gain</th><th>Pay</th><th>Seen in</th></tr></thead>
+            <tbody>
+              <tr><td>Any node forwards or redirects</td><td>Simple clients, no extra tier</td><td>Possible extra hop; nodes must share the map (gossip)</td><td>Cassandra (coordinator node), Redis Cluster (MOVED redirect)</td></tr>
+              <tr><td>Routing tier</td><td>Thin clients; routing logic changes in one place</td><td>Extra hop and a tier to scale and keep available</td><td>MongoDB mongos, proxy-based sharding layers</td></tr>
+              <tr><td>Partition-aware client</td><td>No extra hop</td><td>Smarter client library in every language; stale maps must be refreshed</td><td>Kafka clients, cluster-aware Redis and Cassandra drivers</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>The map's source of truth is either a <b>coordination service</b> (ZooKeeper, etcd, or a built-in consensus group) that nodes register with and routers watch, or a <b>gossip</b> protocol among the nodes. A coordination service gives one authoritative answer; gossip avoids the dependency but converges eventually.</p>
+      </section>
+
+      <section class="chapter" id="partitioned-indexes">
+        <h2>Secondary indexes: local vs global</h2>
+        <p class="kind"><a href="#partitioning">Partitioning in depth</a></p>
+        <p>Data is partitioned by primary key. A query on another attribute ("all red cars") does not know which partition to ask.</p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  Q1(["Local: find colour red"]) -->|scatter| P0["Partition 0<br/>data + its own index"]
+  Q1 -->|scatter| P1["Partition 1<br/>data + its own index"]
+  Q2(["Global: find colour red"]) -->|one lookup| G["Global index<br/>partitioned by colour"]
+  P0 -.->|index update| G
+  P1 -.->|index update| G
+          </script>
+          <figcaption>Local indexes make the read fan out to every partition; a global index makes each write fan out to the index instead.</figcaption>
+        </figure>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Aspect</th><th>Local (document-partitioned)</th><th>Global (term-partitioned)</th></tr></thead>
+            <tbody>
+              <tr><td>Write</td><td>One partition: data and index together, atomically</td><td>Data partition plus one or more index partitions; usually updated asynchronously</td></tr>
+              <tr><td>Read by indexed attribute</td><td>Scatter-gather across all partitions; latency follows the slowest partition</td><td>One index partition, then fetch the rows</td></tr>
+              <tr><td>Consistency</td><td>Index always matches the data in its partition</td><td>Often eventually consistent with the base data</td></tr>
+              <tr><td>Seen in</td><td>MongoDB, Cassandra, Elasticsearch</td><td>DynamoDB global secondary indexes</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><b>Interview tip:</b> if the query can include the partition key ("red cars <b>for this dealer</b>"), a local index is enough and there is no scatter. Design the access path so that it usually can.</p>
+      </section>
+
+      <section class="chapter" id="hot-keys">
+        <h2>Hot keys and skew</h2>
+        <p class="kind"><a href="#partitioning">Partitioning in depth</a></p>
+        <p>Hashing spreads keys evenly; it does not spread <b>load</b> evenly when one key receives a large share of traffic (a celebrity account, a viral post, a huge tenant, today's date as a key).</p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Cause</th><th>Fix</th><th>Cost</th></tr></thead>
+            <tbody>
+              <tr><td>One key read very often</td><td>Cache it (in process and in a shared cache); add replicas for that partition</td><td>Staleness</td></tr>
+              <tr><td>One key written very often</td><td>Salt the key: append a suffix 0 to k-1 so writes spread over k partitions</td><td>Reads must query k keys and merge; needs bookkeeping of which keys are salted</td></tr>
+              <tr><td>Hot counter (likes, views)</td><td>Buffer and batch increments; sharded counters summed on read; approximate counts</td><td>Slightly stale or approximate value</td></tr>
+              <tr><td>Monotonic key with range partitioning (timestamp, auto-increment)</td><td>Lead the key with something else (tenant, device, hash prefix), keep time second</td><td>Global time-range scans now fan out</td></tr>
+              <tr><td>One huge tenant</td><td>Give it a dedicated partition or cluster; route by a tenant directory</td><td>Special-case operations</td></tr>
+              <tr><td>Partition too large (unbounded rows under one key)</td><td>Add a time bucket to the partition key</td><td>Queries spanning buckets do several reads</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><b>Senior signal:</b> ask "what is the distribution of the partition key?" before choosing it. Detect hot partitions with per-partition metrics; averages across the cluster hide them.</p>
+      </section>
+
+      <section class="chapter" id="cross-partition">
+        <h2>Cross-partition transactions</h2>
+        <p class="kind"><a href="#partitioning">Partitioning in depth</a></p>
+        <ul>
+          <li><b>First choice: avoid them.</b> Pick the partition key so that everything one transaction touches lives together (all of a user's orders, all rows of one tenant). Single-partition transactions stay cheap and strongly consistent.</li>
+          <li><b>When you cannot:</b> the options are two-phase commit (atomic, but blocking and slower), sagas with compensating actions (available, but only eventually consistent and visible in intermediate states), or a distributed SQL database that runs consensus and two-phase commit internally and charges you in latency.</li>
+          <li>Cross-partition <b>reads</b> (joins, aggregates) are scatter-gather; move them to a derived store built for the query (a search index or a warehouse).</li>
+        </ul>
+        <p>The mechanics, failure cases and when each applies are in <a href="sd-distributed-systems.html">Distributed Systems Patterns</a>.</p>
+      </section>
+
+      <!-- ===================== PART 6 ===================== -->
+      <section class="chapter part" id="data-modelling">
+        <h2>Data modelling</h2>
+        <p class="kind">Part 6 of 8 &middot; shaping data for the queries you will run</p>
+        <p>In a relational database you model the entities and let queries be flexible. In key-value, wide-column and document stores you start from the list of access patterns and build the keys to serve them.</p>
+        <ul>
+          <li><a href="#normalisation">Normalisation vs denormalisation</a></li>
+          <li><a href="#access-patterns">Modelling for access patterns</a>: partition key + sort key</li>
+          <li><a href="#document-model">Document model trade-offs</a></li>
+          <li><a href="#time-series">Time-series modelling</a></li>
+          <li><a href="#schema-evolution">Schema evolution</a></li>
+          <li><a href="#ledgers">Money, ledgers, audit and soft delete</a></li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="normalisation">
+        <h2>Normalisation vs denormalisation</h2>
+        <p class="kind"><a href="#data-modelling">Data modelling</a></p>
+        <p>Start normalised. Denormalise a specific read path when you have measured (or can argue from numbers) that the join or aggregation is the bottleneck, and say how the copy is kept in step.</p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Aspect</th><th>Normalised</th><th>Denormalised</th></tr></thead>
+            <tbody>
+              <tr><td>Idea</td><td>Each fact stored once; reference by id</td><td>Copy or precompute data where it is read</td></tr>
+              <tr><td>Writes</td><td>One place to update; cheap; no update anomalies</td><td>Every copy must be updated: fan-out, possible inconsistency</td></tr>
+              <tr><td>Reads</td><td>Joins at read time</td><td>One lookup; predictable latency</td></tr>
+              <tr><td>Storage</td><td>Smaller</td><td>Larger</td></tr>
+              <tr><td>Flexibility</td><td>New queries are easy</td><td>Shaped for known queries; new ones may need a backfill</td></tr>
+              <tr><td>Fits</td><td>OLTP with varied queries, strong integrity needs</td><td>Read-heavy paths, stores without joins, feeds, counters, search documents</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <ul>
+          <li><b>Common denormalisations:</b> a counter column (<code>like_count</code>), a copied display field (author name on a post), a precomputed feed, a materialised view.</li>
+          <li><b>Keeping copies in step:</b> same transaction (simple, same database only), asynchronous via change data capture or events (scales, eventually consistent), or periodic rebuild. Always keep a way to recompute from the source of truth.</li>
+          <li>Copy values that rarely change (a product name at order time is in fact the correct historical record); avoid copying values that change often.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="access-patterns">
+        <h2>Modelling for access patterns</h2>
+        <p class="kind"><a href="#data-modelling">Data modelling</a></p>
+        <p>In stores such as DynamoDB and Cassandra the <b>partition key</b> decides which node holds an item and the <b>sort key</b> (clustering key) orders items inside the partition. An efficient query names one partition key and a range of sort keys. There are no joins, so each access pattern gets a key design.</p>
+        <p>Worked example: chat messages.</p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Access pattern</th><th>Key design</th></tr></thead>
+            <tbody>
+              <tr><td>Latest 50 messages in a conversation; older pages on scroll</td><td>Table <code>messages</code>: partition key <code>conversation_id</code>, sort key <code>message_id</code> (time-sortable), read descending with a limit</td></tr>
+              <tr><td>A user's conversations, most recent first</td><td>Table <code>user_conversations</code>: partition key <code>user_id</code>, sort key <code>last_activity_at</code>; rewritten on each new message</td></tr>
+              <tr><td>Fetch one message by id</td><td>Same <code>messages</code> table when the caller knows the conversation; otherwise a lookup table or index</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  Q(["Query: conversation 77<br/>newest first, limit 50"]) --> K["Partition<br/>conversation_id 77"]
+  K --> M3["message_id 1003<br/>newest"]
+  M3 --> M2["message_id 1002"]
+  M2 --> M1["message_id 1001<br/>oldest"]
+  K2["Partition<br/>conversation_id 78"] --> M9["message_id 1004"]
+          </script>
+          <figcaption>One partition holds one conversation, already sorted. The query is a single-node sequential read; other conversations are never touched.</figcaption>
+        </figure>
+        <ul>
+          <li><b>Partition size:</b> a conversation with millions of messages makes one huge partition. Add a bucket: partition key <code>(conversation_id, month)</code>.</li>
+          <li><b>Single-table style (DynamoDB):</b> store several entity types in one table with generic keys, for example <code>PK = USER#7</code> with <code>SK = PROFILE</code> and <code>SK = ORDER#2026-11-02#9001</code>, so "user with recent orders" is one query. It is efficient and opaque: easy to get wrong, hard to query ad hoc.</li>
+          <li><b>Orders by user and by id:</b> base table keyed by <code>order_id</code>, plus a second table or global index keyed by <code>(user_id, created_at)</code>. Two access patterns, two key designs, written together.</li>
+        </ul>
+        <p class="note"><b>Trade-off:</b> you get predictable single-digit-millisecond reads at any scale for the patterns you designed for, and you give up ad hoc queries. A new access pattern usually means a new table or index and a backfill.</p>
+      </section>
+
+      <section class="chapter" id="document-model">
+        <h2>Document model trade-offs</h2>
+        <p class="kind"><a href="#data-modelling">Data modelling</a></p>
+        <p>Use documents when the data is a self-contained aggregate that is loaded and saved as a whole (a product with its variants, a user profile with settings, a form submission). Avoid when entities are shared and heavily cross-referenced.</p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Gain</th><th>Pay</th></tr></thead>
+            <tbody>
+              <tr><td>Locality: one read returns the whole aggregate, no joins</td><td>Many-to-many relationships need references and application-side joins, or duplication</td></tr>
+              <tr><td>Flexible schema; fields vary per document</td><td>The schema still exists, in the code that reads it ("schema on read"); old shapes must be handled forever or migrated</td></tr>
+              <tr><td>Maps directly to objects in code</td><td>Updating a small part may rewrite a large document; documents have size limits (16 MB in MongoDB)</td></tr>
+              <tr><td>Atomic single-document updates</td><td>Multi-document transactions exist in several products but cost more and are not the path the store is optimised for</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <ul>
+          <li><b>Embed</b> what is owned by the parent, bounded in size, and read with it (order lines in an order).</li>
+          <li><b>Reference</b> what is shared, unbounded, or updated independently (the comments on a viral post, the customer on an order).</li>
+          <li>Relational databases with JSON columns cover much of this ground; "relational core, JSON for the flexible edge" is a reasonable default.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="time-series">
+        <h2>Time-series modelling</h2>
+        <p class="kind"><a href="#data-modelling">Data modelling</a></p>
+        <p>Metrics, sensor readings, prices, events: append-only, arriving roughly in time order, read by time range, valuable when recent and bulky when old.</p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Technique</th><th>What</th><th>Why</th></tr></thead>
+            <tbody>
+              <tr><td>Bucketing</td><td>Partition by series and time bucket: key <code>(sensor_id, day)</code>, sort by timestamp</td><td>Bounds partition size; a range query touches a known, small set of buckets; avoids one hot "now" partition across all series</td></tr>
+              <tr><td>Downsampling</td><td>Roll raw points up into 1-minute, 1-hour, 1-day aggregates (min, max, sum, count, percentile sketches)</td><td>Long-range queries read thousands of points instead of billions</td></tr>
+              <tr><td>Retention</td><td>Raw for days, minute rollups for months, hourly for years; expire by TTL or by dropping whole time partitions</td><td>Dropping a partition is nearly free; row-by-row deletes are not</td></tr>
+              <tr><td>Compression</td><td>Delta and delta-of-delta encoding for timestamps, XOR-style encoding for values, columnar layout</td><td>Neighbouring points are similar; order-of-magnitude size reductions are typical</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <ul>
+          <li><b>Cardinality</b> is the scaling limit: the number of distinct series (metric x every label combination). A label such as user id or request id multiplies it and can overwhelm a metrics store.</li>
+          <li>Store sum and count, not averages, so rollups can be combined correctly. Percentiles cannot be averaged; keep a sketch or histogram.</li>
+          <li>Products: Prometheus, InfluxDB, TimescaleDB, or Cassandra and ClickHouse with a bucketed schema.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="schema-evolution">
+        <h2>Schema evolution</h2>
+        <p class="kind"><a href="#data-modelling">Data modelling</a></p>
+        <p>During a rolling deploy old and new code run together, and stored data and queued messages outlive the code that wrote them. So every change must be compatible in both directions.</p>
+        <ul>
+          <li><b>Backward compatible:</b> new code can read data written by old code.</li>
+          <li><b>Forward compatible:</b> old code can read data written by new code (it must ignore what it does not know, and not destroy it when writing back).</li>
+        </ul>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Change</th><th>Protobuf-style (numbered fields)</th><th>Avro-style (writer and reader schemas)</th></tr></thead>
+            <tbody>
+              <tr><td>Add a field</td><td>Safe with a new field number; old readers skip unknown numbers</td><td>Safe if the new field has a default</td></tr>
+              <tr><td>Remove a field</td><td>Safe if it was optional; reserve the number and never reuse it</td><td>Safe if the removed field had a default</td></tr>
+              <tr><td>Rename a field</td><td>Safe on the wire (the number is the identity); breaks JSON mappings</td><td>Needs an alias; names are the identity</td></tr>
+              <tr><td>Change a type</td><td>Only a few compatible widenings; otherwise add a new field</td><td>Only defined promotions (for example int to long)</td></tr>
+              <tr><td>Add a required field</td><td colspan="2">Breaking in both. Avoid "required"; validate in the application</td></tr>
+              <tr><td>Add an enum value</td><td colspan="2">Old readers see an unknown value; they need a defined fallback</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <ul>
+          <li><b>Schema registry:</b> producers register schemas and the registry rejects incompatible changes before they reach a topic.</li>
+          <li><b>Database migrations use the same idea, as expand and contract:</b> add the new column (nullable), write to both, backfill, switch reads, stop writing the old one, drop it. Each step is deployable and reversible on its own.</li>
+          <li>Text formats (JSON) have the same rules without the tooling: only add optional fields, never change meaning, tolerate unknown fields.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="ledgers">
+        <h2>Money, ledgers, audit and soft delete</h2>
+        <p class="kind"><a href="#data-modelling">Data modelling</a></p>
+        <p>For money, the record of what happened is the source of truth and the balance is derived from it.</p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+erDiagram
+  ACCOUNT ||--o{ LEDGER_ENTRY : has
+  TRANSFER ||--|{ LEDGER_ENTRY : posts
+  ACCOUNT {
+    bigint id PK
+    string currency
+    bigint balance_minor
+  }
+  TRANSFER {
+    bigint id PK
+    string idempotency_key UK
+    string status
+  }
+  LEDGER_ENTRY {
+    bigint id PK
+    bigint account_id FK
+    bigint transfer_id FK
+    bigint amount_minor
+    timestamp created_at
+  }
+          </script>
+          <figcaption>Entries are only ever inserted. A transfer posts at least two entries that sum to zero; the account balance is a cached total of its entries.</figcaption>
+        </figure>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Practice</th><th>Rule</th><th>Why</th></tr></thead>
+            <tbody>
+              <tr><td>Money as integers</td><td>Store minor units (paise, cents) in a 64-bit integer with a currency code; or use a fixed-point decimal type. Never binary floating point</td><td>0.1 + 0.2 is not 0.3 in floating point; errors accumulate. Minor-unit exponent varies by currency (0 for JPY, 2 for INR and USD, 3 for KWD)</td></tr>
+              <tr><td>Append-only ledger</td><td>Never update or delete an entry; correct a mistake with a reversing entry</td><td>Complete history, auditability, reconciliation; balance = sum of entries can always be re-derived</td></tr>
+              <tr><td>Double entry</td><td>Every movement debits one account and credits another; entries of a transfer sum to zero</td><td>Money cannot appear or vanish; an imbalance is a detectable bug</td></tr>
+              <tr><td>Audit trail</td><td>Record who changed what, when, and the before and after values, in an append-only table or stream (triggers, CDC, or application events)</td><td>Compliance and debugging; keep it out of reach of the code paths it audits</td></tr>
+              <tr><td>Soft delete</td><td>Set <code>deleted_at</code> instead of removing the row</td><td>Undo, references stay valid, history kept</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <ul>
+          <li><b>Soft delete costs:</b> every query must filter on <code>deleted_at IS NULL</code> (use views or partial indexes); unique constraints must exclude deleted rows; tables grow. It does not satisfy a legal erasure request: personal data then needs real deletion or anonymisation.</li>
+          <li>Rounding happens once, at a defined point (for example when splitting a bill), with the remainder assigned explicitly so the parts still sum to the total.</li>
+        </ul>
+      </section>
+
+      <!-- ===================== PART 7 ===================== -->
+      <section class="chapter part" id="analytics">
+        <h2>Analytics and pipelines</h2>
+        <p class="kind">Part 7 of 8 &middot; moving data out of the transactional store</p>
+        <p>The primary database serves requests. Reports, dashboards, search, machine learning features and other services need the same data in other shapes. This part covers where that data goes and how it gets there.</p>
+        <ul>
+          <li><a href="#oltp-olap">OLTP vs OLAP</a></li>
+          <li><a href="#warehouse-lake">Warehouse, lake, lakehouse</a>, and ETL vs ELT</li>
+          <li><a href="#batch-stream">Batch vs stream</a>, lambda vs kappa</li>
+          <li><a href="#stream-concepts">Stream processing concepts</a>: time, windows, watermarks</li>
+          <li><a href="#exactly-once">Exactly-once, stated carefully</a></li>
+          <li><a href="#cdc-outbox">CDC and the outbox pattern</a></li>
+          <li><a href="#kafka-model">Kafka: the log model</a></li>
+          <li><a href="#kafka-durability">Kafka: replication and acks</a></li>
+          <li><a href="#kafka-fast">Kafka: compaction and why it is fast</a></li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="oltp-olap">
+        <h2>OLTP vs OLAP</h2>
+        <p class="kind"><a href="#analytics">Analytics and pipelines</a></p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Aspect</th><th>OLTP (transaction processing)</th><th>OLAP (analytical processing)</th></tr></thead>
+            <tbody>
+              <tr><td>Query shape</td><td>Read or write a few rows by key</td><td>Scan and aggregate millions to billions of rows, few columns</td></tr>
+              <tr><td>Users</td><td>End users through the application</td><td>Analysts, dashboards, batch jobs</td></tr>
+              <tr><td>Volume and latency</td><td>Thousands of queries per second, milliseconds each</td><td>Few queries, seconds to minutes each</td></tr>
+              <tr><td>Data</td><td>Current state</td><td>History of events over time</td></tr>
+              <tr><td>Storage</td><td>Row-oriented, indexed</td><td>Column-oriented, compressed, partitioned by time</td></tr>
+              <tr><td>Schema</td><td>Normalised</td><td>Star schema: a large fact table plus dimension tables; often wide and denormalised</td></tr>
+              <tr><td>Bottleneck</td><td>Disk seeks, lock contention</td><td>Scan throughput, memory for joins and aggregates</td></tr>
+              <tr><td>Products</td><td>PostgreSQL, MySQL, DynamoDB</td><td>BigQuery, Snowflake, Redshift, ClickHouse</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><b>Failure mode:</b> running analytics on the primary. One large scan evicts the hot pages from the cache, holds a snapshot open for minutes and degrades every user request. A read replica is the first step; a separate analytical store is the answer.</p>
+      </section>
+
+      <section class="chapter" id="warehouse-lake">
+        <h2>Warehouse, lake, lakehouse</h2>
+        <p class="kind"><a href="#analytics">Analytics and pipelines</a></p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Aspect</th><th>Data warehouse</th><th>Data lake</th><th>Lakehouse</th></tr></thead>
+            <tbody>
+              <tr><td>Stores</td><td>Structured, modelled tables</td><td>Any files: raw logs, JSON, Parquet, images</td><td>Open-format files (Parquet) plus a table layer</td></tr>
+              <tr><td>Schema</td><td>On write: enforced at load</td><td>On read: interpreted by the query</td><td>Enforced by the table format, with evolution</td></tr>
+              <tr><td>Storage and compute</td><td>Managed together or separated, by the vendor's engine</td><td>Cheap object storage; bring your own engine</td><td>Object storage; several engines over the same tables</td></tr>
+              <tr><td>Guarantees</td><td>ACID tables, fast SQL</td><td>None by itself; risk of an unusable "data swamp"</td><td>ACID commits, snapshots and time travel over files</td></tr>
+              <tr><td>Best for</td><td>BI and reporting</td><td>Raw retention, data science, ML training data</td><td>One copy serving both BI and ML</td></tr>
+              <tr><td>Examples</td><td>Snowflake, BigQuery, Redshift</td><td>Files on S3, GCS or HDFS</td><td>Delta Lake, Apache Iceberg, Apache Hudi</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <h3>ETL vs ELT</h3>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Aspect</th><th>ETL: extract, transform, load</th><th>ELT: extract, load, transform</th></tr></thead>
+            <tbody>
+              <tr><td>Where transformation runs</td><td>In a pipeline, before loading</td><td>Inside the warehouse or lake, with SQL, after loading raw data</td></tr>
+              <tr><td>Raw data kept</td><td>Often not</td><td>Yes: transformations can be re-run when logic changes</td></tr>
+              <tr><td>Fits</td><td>Sensitive data that must be masked before landing; constrained targets</td><td>Cheap storage and elastic compute; the common modern default</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="chapter" id="batch-stream">
+        <h2>Batch vs stream</h2>
+        <p class="kind"><a href="#analytics">Analytics and pipelines</a></p>
+        <p>Use batch unless the business needs the answer in seconds. Streaming buys freshness and pays in operational complexity.</p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Aspect</th><th>Batch</th><th>Stream</th></tr></thead>
+            <tbody>
+              <tr><td>Input</td><td>Bounded: yesterday's files</td><td>Unbounded: events as they arrive</td></tr>
+              <tr><td>Result latency</td><td>Minutes to hours</td><td>Milliseconds to seconds</td></tr>
+              <tr><td>Complexity</td><td>Lower: re-run the job to fix anything</td><td>Higher: state, ordering, late data, always-on operations</td></tr>
+              <tr><td>Fault handling</td><td>Retry the job or the failed task</td><td>Checkpoints and replay from the log</td></tr>
+              <tr><td>Uses</td><td>Reports, billing runs, model training, backfills</td><td>Fraud detection, alerting, live dashboards, keeping derived stores fresh</td></tr>
+              <tr><td>Tools</td><td>Spark, warehouse SQL, scheduled jobs</td><td>Flink, Kafka Streams, Spark Structured Streaming</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <h3>Lambda architecture</h3>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  E[[Event log]] --> B[Batch layer]
+  B --> BV[(Batch views)]
+  E --> S[Speed layer]
+  S --> RV[(Recent views)]
+  BV --> Q[Query merges both]
+  RV --> Q
+          </script>
+          <figcaption>Two pipelines over the same events: batch is complete and slow, speed is fresh and approximate; the query layer merges them.</figcaption>
+        </figure>
+        <h3>Kappa architecture</h3>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  E[[Replayable log]] --> S1[Stream job v1]
+  S1 --> V1[(Serving view)]
+  E -.->|replay from start| S2[Stream job v2]
+  S2 -.-> V2[(New view, then switch)]
+          </script>
+          <figcaption>One streaming pipeline. To change the logic, run a new version over the retained log from the start and switch readers when it catches up.</figcaption>
+        </figure>
+        <ul>
+          <li><b>Lambda:</b> gain a simple, trusted batch result that corrects the stream; pay with two codebases that must compute the same thing.</li>
+          <li><b>Kappa:</b> gain one codebase; pay with long log retention (or a tiered archive) and a stream processor that can reprocess history fast enough.</li>
+          <li>Many teams land in between: streaming for freshness plus a periodic batch reconciliation for correctness.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="stream-concepts">
+        <h2>Stream processing concepts</h2>
+        <p class="kind"><a href="#analytics">Analytics and pipelines</a></p>
+        <ul>
+          <li><b>Event time:</b> when the event happened, stamped at the source. <b>Processing time:</b> when the processor sees it. They differ by network delay, retries, and by hours when a phone was offline.</li>
+          <li>Use event time for anything that must be correct and reproducible (billing, analytics). Processing time is simpler and acceptable for monitoring the pipeline itself.</li>
+        </ul>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Window</th><th>Definition</th><th>An event belongs to</th><th>Example</th></tr></thead>
+            <tbody>
+              <tr><td>Tumbling</td><td>Fixed size, no overlap: [10:00, 10:05), [10:05, 10:10)</td><td>Exactly one window</td><td>Requests per 5 minutes</td></tr>
+              <tr><td>Sliding (hopping)</td><td>Fixed size, advances by a smaller step: 5-minute window every 1 minute</td><td>Several windows</td><td>Moving average, rate limiting</td></tr>
+              <tr><td>Session</td><td>Grows while events keep arriving; closes after a gap of inactivity (for example 30 minutes)</td><td>One session per key; no fixed size</td><td>User visits</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+sequenceDiagram
+  participant S as Source
+  participant P as Processor
+  participant O as Output
+  S->>P: event stamped 10.03
+  S->>P: event stamped 10.04
+  S->>P: watermark 10.05
+  P->>O: emit window 10.00 to 10.05
+  S->>P: late event stamped 10.02
+  Note over P,O: Late. Drop it, update the result, or send to a side output
+          </script>
+          <figcaption>A watermark is the processor's estimate that no more events older than that time will arrive; it is what lets an event-time window close.</figcaption>
+        </figure>
+        <ul>
+          <li><b>Watermark trade-off:</b> an aggressive watermark gives fast results and more late events; a conservative one gives complete results later. It is a heuristic, so late data always needs a policy.</li>
+          <li><b>Late data policies:</b> drop and count it; allow a lateness period during which the window result is updated and re-emitted (downstream must accept corrections); or route it to a side output for batch repair.</li>
+          <li><b>State:</b> windows, joins and aggregations hold state per key. It lives in a local store, is checkpointed to durable storage, and must be bounded by a TTL.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="exactly-once">
+        <h2>Exactly-once, stated carefully</h2>
+        <p class="kind"><a href="#analytics">Analytics and pipelines</a></p>
+        <p>No system delivers a message over a network exactly once; messages are redelivered after failures. What stream processors offer is <b>exactly-once effect on state</b>: after a failure and replay, the results are the same as if each event had been processed once.</p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Scope</th><th>How it is achieved</th><th>Holds when</th></tr></thead>
+            <tbody>
+              <tr><td>Processor's internal state</td><td>Periodic consistent checkpoints of state together with input offsets; on failure, restore the checkpoint and replay from those offsets (Flink's approach)</td><td>The source is replayable</td></tr>
+              <tr><td>Kafka in, Kafka out</td><td>Idempotent producer (sequence numbers remove duplicate sends) plus transactions that commit the output records and the consumed offsets atomically</td><td>Downstream consumers read only committed records</td></tr>
+              <tr><td>External sink (database, API, email)</td><td>Not automatic. Either a transactional sink tied to the checkpoint (two-phase commit) or idempotent writes: upsert by a deterministic key, or a deduplication table of processed event ids</td><td>You build it</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><b>Senior signal:</b> say "at-least-once delivery plus idempotent processing gives effectively-once results" and then show where the idempotency key comes from. A side effect such as sending an email or charging a card cannot be rolled back by a checkpoint.</p>
+      </section>
+
+      <section class="chapter" id="cdc-outbox">
+        <h2>CDC and the outbox pattern</h2>
+        <p class="kind"><a href="#analytics">Analytics and pipelines</a></p>
+        <p>Both solve the <b>dual-write problem</b>: writing to the database and then to a broker (or cache, or index) as two separate steps means a crash between them leaves the two permanently different.</p>
+        <h3>Change data capture</h3>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  A[Application] -->|writes| DB[(Primary DB)]
+  DB -->|replication log| C[CDC connector]
+  C --> K[[Change topic]]
+  K --> S[Search index]
+  K --> CA[Cache]
+  K --> W[Warehouse]
+          </script>
+          <figcaption>The application writes once. Everything downstream is derived from the database's own log, in commit order.</figcaption>
+        </figure>
+        <ul>
+          <li>A connector (Debezium is the common open-source one) reads the logical replication log and emits one event per row change.</li>
+          <li><b>Gain:</b> no application changes, nothing missed, ordered per row. <b>Pay:</b> events expose table structure (a schema change is a contract change), delivery is at-least-once, and a stalled connector makes the database retain log files until the disk fills.</li>
+        </ul>
+        <h3>Transactional outbox</h3>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  S[Order service] -->|one local transaction| O[orders row]
+  S -->|same transaction| X[outbox row]
+  X -->|relay or CDC| K[[Broker]]
+  K --> C1[Payment service]
+  K --> C2[Notification service]
+          </script>
+          <figcaption>The business row and the event row commit together or not at all; a relay then publishes outbox rows to the broker.</figcaption>
+        </figure>
+        <ul>
+          <li><b>Gain:</b> the event is a deliberate, versioned contract rather than a table image, and it cannot be lost or published for a rolled-back change.</li>
+          <li><b>Pay:</b> an extra table and a relay (a poller, or CDC on the outbox table); delivery is at-least-once, so consumers must be idempotent.</li>
+        </ul>
+        <p>Idempotent consumers, ordering and the inbox side are covered in <a href="sd-distributed-systems.html">Distributed Systems Patterns</a>.</p>
+      </section>
+
+      <section class="chapter" id="kafka-model">
+        <h2>Kafka: the log model</h2>
+        <p class="kind"><a href="#analytics">Analytics and pipelines</a></p>
+        <p>Kafka is a distributed, replicated, append-only log. Consumers do not remove messages; they track a position and can re-read.</p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  P([Producer]) -->|hash of key| T0
+  subgraph T["Topic orders"]
+    T0[["Partition 0"]]
+    T1[["Partition 1"]]
+    T2[["Partition 2"]]
+  end
+  subgraph G["Consumer group billing"]
+    C1[Consumer 1]
+    C2[Consumer 2]
+  end
+  T0 --> C1
+  T1 --> C1
+  T2 --> C2
+          </script>
+          <figcaption>Within a group each partition is read by exactly one consumer, so partitions are the unit of both ordering and parallelism.</figcaption>
+        </figure>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Term</th><th>Meaning</th><th>Consequence</th></tr></thead>
+            <tbody>
+              <tr><td>Topic</td><td>A named stream of records</td><td>Split into partitions</td></tr>
+              <tr><td>Partition</td><td>One ordered, append-only log on disk</td><td>Ordering is guaranteed <b>within</b> a partition only</td></tr>
+              <tr><td>Key</td><td>Chooses the partition (hash of key)</td><td>Same key, same partition, in order. Changing the partition count changes the mapping for new records</td></tr>
+              <tr><td>Offset</td><td>Position of a record in its partition</td><td>A consumer's progress is one number per partition; rewind it to replay</td></tr>
+              <tr><td>Consumer group</td><td>Consumers sharing a group id divide the partitions among themselves</td><td>Max useful consumers in a group = partition count. Different groups each get every record (pub/sub)</td></tr>
+              <tr><td>Rebalance</td><td>Partitions reassigned when a consumer joins or leaves</td><td>Processing pauses briefly; uncommitted work is redone by the new owner</td></tr>
+              <tr><td>Retention</td><td>Records kept by time or size, regardless of consumption</td><td>Replay and new consumers are possible until retention expires</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <ul>
+          <li><b>Offset commit order decides the guarantee:</b> process then commit gives at-least-once (duplicates after a crash); commit then process gives at-most-once (loss after a crash).</li>
+          <li><b>Consumer lag</b> (latest offset minus committed offset) is the key health metric.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="kafka-durability">
+        <h2>Kafka: replication and acks</h2>
+        <p class="kind"><a href="#analytics">Analytics and pipelines</a></p>
+        <p>Each partition has one leader and follower replicas on other brokers. The <b>in-sync replicas (ISR)</b> are the replicas that are caught up with the leader. A record is <b>committed</b> once every in-sync replica has it, and consumers only see committed records.</p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+sequenceDiagram
+  participant P as Producer
+  participant L as Leader
+  participant F1 as Follower 1 (in sync)
+  participant F2 as Follower 2 (in sync)
+  P->>L: produce batch, acks=all
+  L->>L: append to local log
+  F1->>L: fetch
+  F2->>L: fetch
+  Note over L,F2: All in-sync replicas have the batch, high watermark advances
+  L-->>P: ack with offset
+          </script>
+          <figcaption>With acks=all the producer's acknowledgement waits for the in-sync followers, which pull from the leader.</figcaption>
+        </figure>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Producer acks</th><th>Leader replies when</th><th>Can lose data when</th><th>Latency</th></tr></thead>
+            <tbody>
+              <tr><td><code>acks=0</code></td><td>It does not; the producer does not wait</td><td>Any broker or network failure</td><td>Lowest</td></tr>
+              <tr><td><code>acks=1</code></td><td>The leader has written the record</td><td>The leader fails before followers copy it</td><td>Low</td></tr>
+              <tr><td><code>acks=all</code></td><td>All current in-sync replicas have it</td><td>All in-sync replicas fail together; or the ISR has shrunk to the leader alone and <code>min.insync.replicas</code> is 1</td><td>Highest: waits for the slowest in-sync follower</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <ul>
+          <li><b>Common durable setting:</b> replication factor 3, <code>min.insync.replicas=2</code>, <code>acks=all</code>. Tolerates one broker down with no loss and no unavailability; with two down, writes are rejected rather than accepted unsafely.</li>
+          <li><b>Unclean leader election</b> (letting an out-of-sync replica become leader) trades committed data for availability; keep it off for data you cannot lose.</li>
+          <li><b>Idempotent producer</b> removes duplicates caused by producer retries and preserves order within a partition.</li>
+        </ul>
+        <p class="note"><b>Trade-off:</b> durability vs latency vs availability, per topic. Clickstream can take <code>acks=1</code>; payments events cannot.</p>
+      </section>
+
+      <section class="chapter" id="kafka-fast">
+        <h2>Kafka: compaction and why it is fast</h2>
+        <p class="kind"><a href="#analytics">Analytics and pipelines</a></p>
+        <p><b>Log compaction</b> is an alternative retention policy: instead of deleting by age, keep at least the latest record for each key. A record with a null value (a tombstone) deletes the key. A compacted topic is therefore a durable, replayable table of "current value per key", used for changelogs, CDC snapshots and state restoration.</p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Reason it is fast</th><th>What it means</th></tr></thead>
+            <tbody>
+              <tr><td>Sequential I/O</td><td>Appends to the end of a file and reads in order. Sequential disk throughput is hundreds of MB/s even on spinning disks; random access is orders of magnitude slower</td></tr>
+              <tr><td>OS page cache</td><td>The broker relies on the kernel's file cache rather than its own; recent data is served from memory</td></tr>
+              <tr><td>Batching</td><td>Producers group records into batches, brokers store and replicate batches, consumers fetch batches: fewer network round trips and system calls. Batches are compressed as a unit</td></tr>
+              <tr><td>Zero-copy</td><td>Bytes go from the page cache to the network socket inside the kernel (sendfile), without being copied through the broker process. Not applicable to connections encrypted with TLS</td></tr>
+              <tr><td>Simple broker</td><td>No per-message acknowledgement state or per-consumer queues; a consumer is an offset</td></tr>
+              <tr><td>Partitioning</td><td>Scale out by adding partitions and brokers</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <ul>
+          <li>Order-of-magnitude capacity: a well-provisioned cluster handles hundreds of thousands to millions of small messages per second; measure for your message size and acks setting.</li>
+          <li><b>What you pay for the log model:</b> no per-message routing or priority, one slow or failing message blocks its partition (use a retry or dead-letter topic), and more partitions mean more open files, longer recovery and slower rebalances.</li>
+        </ul>
+      </section>
+
+      <!-- ===================== PART 8 ===================== -->
+      <section class="chapter part" id="search-stores">
+        <h2>Search and specialised stores</h2>
+        <p class="kind">Part 8 of 8 &middot; derived stores built for one kind of query</p>
+        <p>These stores answer questions the primary database answers badly. They are fed from the source of truth and can be rebuilt from it.</p>
+        <ul>
+          <li><a href="#inverted-index">Inverted index and relevance</a></li>
+          <li><a href="#search-cluster">Search clusters</a>: shards, replicas, and why not your source of truth</li>
+          <li><a href="#vector-graph">Vector search and graph databases</a></li>
+          <li><a href="#caches-as-data">Caches as data systems</a></li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="inverted-index">
+        <h2>Inverted index and relevance</h2>
+        <p class="kind"><a href="#search-stores">Search and specialised stores</a></p>
+        <p>An inverted index maps each term to the sorted list of documents that contain it (a postings list). A query looks up its terms and intersects or unions the lists.</p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  D1["Doc 1: Red Cars"] --> A[Analyser]
+  D2["Doc 2: Fast red car"] --> A
+  A --> T1["red: docs 1, 2"]
+  A --> T2["car: docs 1, 2"]
+  A --> T3["fast: doc 2"]
+  Q(["Query: fast cars"]) -->|same analyser| T2
+  Q --> T3
+          </script>
+          <figcaption>"Cars" and "car" meet at the same term because the same analyser runs at index time and at query time.</figcaption>
+        </figure>
+        <ul>
+          <li><b>Analyser</b> = character filters (strip HTML), a tokenizer (split into words), token filters (lowercase, stop words, stemming, synonyms). It decides what can match; a wrong analyser is the usual cause of "search does not find it".</li>
+          <li>Text fields are analysed; keyword fields are indexed as exact values for filters, sorting and aggregations.</li>
+          <li>Index files (segments) are immutable; an update is a delete plus a new document, and background merges reclaim space, much like LSM compaction.</li>
+        </ul>
+        <p><b>Relevance scoring:</b> results are ranked, not just matched. The standard baseline, BM25, scores a document higher when a query term appears more often in it (with diminishing returns), when the term is rare across the whole collection, and when the document is short relative to the average. Production ranking then adds field boosts (title over body), business signals such as popularity, recency or distance, and often a second-stage learned re-ranker over the top few hundred results.</p>
+      </section>
+
+      <section class="chapter" id="search-cluster">
+        <h2>Search clusters</h2>
+        <p class="kind"><a href="#search-stores">Search and specialised stores</a></p>
+        <p>Elasticsearch-style layout: an index is split into primary shards (each one a Lucene index), and each primary has replica shards on other nodes. A search is scatter-gather: the coordinating node queries one copy of every shard, merges the top results and fetches the documents.</p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  C([Client]) --> CO[Coordinating node]
+  subgraph N1["Node A"]
+    P0[Primary shard 0]
+    R1[Replica shard 1]
+  end
+  subgraph N2["Node B"]
+    P1[Primary shard 1]
+    R0[Replica shard 0]
+  end
+  CO -->|query| P0
+  CO -->|query| P1
+  P0 -.->|replicate| R0
+  P1 -.->|replicate| R1
+          </script>
+          <figcaption>A primary and its replica never share a node. A query needs one copy of each shard; replicas add read capacity and survive a node loss.</figcaption>
+        </figure>
+        <ul>
+          <li><b>Shard count</b> is chosen when the index is created; changing it means a split or a reindex. A common sizing guideline is tens of GB per shard; too many small shards waste memory and slow the cluster.</li>
+          <li><b>Routing:</b> a document goes to <code>hash(routing key) mod primary shards</code>; a custom routing key (tenant id) keeps a tenant's query on one shard.</li>
+          <li><b>Near real time:</b> a new document becomes searchable after the next refresh (about one second by default), not immediately.</li>
+          <li><b>Deep pagination</b> is expensive for the same reason as offset: every shard must return offset + limit hits. Use a search-after cursor.</li>
+        </ul>
+        <p><b>Why it is not your source of truth:</b> writes are searchable only after a refresh; there are no multi-document transactions or foreign-key style constraints; changing how a field is analysed requires reindexing everything; and the system is tuned for search throughput rather than for transactional guarantees. Keep the authoritative copy in the primary database, feed the index asynchronously (CDC or outbox), and keep the ability to rebuild it from scratch.</p>
+        <p class="note"><b>Failure mode:</b> dual writes from the application to the database and the index drift apart over time. Feed the index from the database's change stream and run a periodic reconciliation.</p>
+      </section>
+
+      <section class="chapter" id="vector-graph">
+        <h2>Vector search and graph databases</h2>
+        <p class="kind"><a href="#search-stores">Search and specialised stores</a></p>
+        <h3>Vector search</h3>
+        <p>A model turns text, images or other items into embeddings (vectors of a few hundred to a few thousand numbers) such that similar items lie close together, and a query becomes "find the nearest vectors to this one". Exact nearest-neighbour search is a full scan, so vector indexes use approximate methods (graph-based such as HNSW, or cluster-based such as IVF) that trade a small, tunable loss of recall for large gains in speed and memory. Result quality depends on the embedding model at least as much as on the index, and most real systems combine vector similarity with keyword matching and metadata filters (hybrid search) rather than relying on vectors alone.</p>
+        <h3>Graph databases</h3>
+        <p>Use a graph database when the relationships are the query: variable-depth traversals and path finding such as friends of friends, fraud rings sharing devices and cards, permission inheritance, or dependency impact.</p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Question</th><th>Relational</th><th>Graph</th></tr></thead>
+            <tbody>
+              <tr><td>Fixed, shallow joins (order with its items)</td><td>Natural and fast</td><td>No advantage</td></tr>
+              <tr><td>Traversal of unknown depth, shortest path</td><td>Recursive queries; cost grows with each hop's join</td><td>Each hop follows stored adjacency; cost follows the part of the graph visited</td></tr>
+              <tr><td>Aggregates over all rows</td><td>Strong</td><td>Weak</td></tr>
+              <tr><td>Horizontal scaling</td><td>Well understood</td><td>Hard: any partitioning cuts edges, and "supernodes" with millions of edges are hot spots</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>Examples: Neo4j, Amazon Neptune, JanusGraph. Many "social graph" features at scale are served from adjacency lists in a key-value or relational store plus caches, because the common query is only one or two hops.</p>
+      </section>
+
+      <section class="chapter" id="caches-as-data">
+        <h2>Caches as data systems</h2>
+        <p class="kind"><a href="#search-stores">Search and specialised stores</a></p>
+        <p>A cache is a derived store too, with the same questions: who writes it, how stale may it be, and how is it rebuilt. Everything on this page about replication, partitioning and hot keys applies to a Redis cluster as much as to a database.</p>
+        <ul>
+          <li>Treat cached data as disposable; the design must be correct, only slower, with an empty cache.</li>
+          <li>The same change stream that feeds search can invalidate or refresh cache entries.</li>
+        </ul>
+        <p>Cache-aside, write-through, eviction, stampedes and invalidation are covered in <a href="sd-building-blocks.html">Building Blocks</a>.</p>
+      </section>
+
+      <!-- ===================== CHEAT SHEET ===================== -->
+      <section class="chapter" id="cheat-sheet">
+        <h2>Cheat sheet</h2>
+        <h3>Workload to store</h3>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Workload</th><th>Store</th><th>Why</th><th>Watch out for</th></tr></thead>
+            <tbody>
+              <tr><td>Transactions, relations, varied queries (orders, payments, accounts)</td><td>Relational: PostgreSQL, MySQL</td><td>ACID, joins, constraints, mature tooling</td><td>Single-leader write ceiling; sharding is manual; default isolation is not serializable</td></tr>
+              <tr><td>Relational at global scale with strong consistency</td><td>Distributed SQL: Spanner, CockroachDB</td><td>Horizontal scale with transactions</td><td>Higher write latency (consensus per write); cost; key design still matters</td></tr>
+              <tr><td>Huge key-based read/write volume, known access patterns</td><td>Key-value / wide-column: DynamoDB, Cassandra</td><td>Predictable latency at any size, high write throughput, multi-region</td><td>No joins or ad hoc queries; hot partitions; eventual consistency by default</td></tr>
+              <tr><td>Self-contained aggregates with a flexible shape</td><td>Document: MongoDB</td><td>One read per aggregate, schema flexibility</td><td>Many-to-many relations; unbounded arrays; schema lives in code</td></tr>
+              <tr><td>Hot data, counters, sessions, rate limits, leaderboards</td><td>In-memory: Redis</td><td>Sub-millisecond, rich data structures</td><td>Memory cost; persistence and failover can lose recent writes</td></tr>
+              <tr><td>Full-text and faceted search</td><td>Search engine: Elasticsearch, OpenSearch</td><td>Inverted index, relevance ranking, aggregations</td><td>Near real time; not a source of truth; reindex on mapping change</td></tr>
+              <tr><td>Reports and aggregates over history</td><td>Columnar warehouse: BigQuery, Snowflake, ClickHouse</td><td>Column scans, compression, elastic compute</td><td>Not for point lookups or frequent single-row updates; data arrives with delay</td></tr>
+              <tr><td>Metrics and sensor data</td><td>Time-series: Prometheus, InfluxDB, TimescaleDB</td><td>Time-bucketed storage, compression, rollups, retention</td><td>Series cardinality</td></tr>
+              <tr><td>Event transport, replay, decoupling</td><td>Log: Kafka</td><td>Durable ordered log, many independent consumers</td><td>Ordering per partition only; at-least-once by default; not a query store</td></tr>
+              <tr><td>Files, images, video, backups</td><td>Object storage: S3-style</td><td>Cheap, durable, effectively unlimited</td><td>No partial updates or queries; keep metadata in a database</td></tr>
+              <tr><td>Deep relationship traversals</td><td>Graph: Neo4j, Neptune</td><td>Hops follow stored adjacency</td><td>Hard to shard; supernodes</td></tr>
+              <tr><td>Similarity over embeddings</td><td>Vector index (dedicated, or an extension of an existing store)</td><td>Approximate nearest-neighbour search</td><td>Recall is approximate; filtering and freshness; re-embedding on model change</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <h3>Isolation levels, quick view</h3>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Level</th><th>Still possible (general model)</th><th>Typical mechanism</th><th>Remember</th></tr></thead>
+            <tbody>
+              <tr><td>Read uncommitted</td><td>Everything, including dirty reads</td><td>No read protection</td><td>Rarely useful; some engines silently give read committed</td></tr>
+              <tr><td>Read committed</td><td>Non-repeatable read, phantom, lost update, write skew</td><td>Snapshot per statement, or short read locks</td><td>The default in PostgreSQL, Oracle and SQL Server</td></tr>
+              <tr><td>Repeatable read</td><td>Phantom per the standard; lost update and write skew depend on the engine</td><td>Long read locks, or a per-transaction snapshot</td><td>The name means different things: snapshot isolation in PostgreSQL; snapshot reads plus gap locks in MySQL InnoDB (its default)</td></tr>
+              <tr><td>Snapshot isolation</td><td>Write skew</td><td>MVCC snapshot per transaction, first committer wins on write conflicts</td><td>Called "serializable" in Oracle and "repeatable read" in PostgreSQL</td></tr>
+              <tr><td>Serializable</td><td>None</td><td>Two-phase locking, serializable snapshot isolation, or serial execution</td><td>Expect blocking or aborts; the application must retry</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <h3>One-line rules</h3>
+        <ul>
+          <li>B-tree for reads and transactions; LSM for write volume; columns for analytics.</li>
+          <li>Index: equality columns, then range or sort column; every index is paid for on write.</li>
+          <li>Keyset pagination for large lists; batch to remove N+1.</li>
+          <li>Name the anomaly, then the mechanism: atomic conditional update, row lock, constraint, or serializable.</li>
+          <li>Replicas lag: decide which reads may be stale. W + R &gt; N overlaps, it does not linearize.</li>
+          <li>Last-write-wins loses data; say so when you choose it.</li>
+          <li>Choose the partition key from the access pattern and its load distribution; keep transactions inside one partition.</li>
+          <li>Money: integer minor units, append-only double-entry ledger, idempotency key on every movement.</li>
+          <li>One source of truth; search, cache and warehouse are derived from its change log and rebuildable.</li>
+          <li>Streams: at-least-once delivery plus idempotent consumers; event time with watermarks; order only within a partition.</li>
+        </ul>
+        <p>Next: how several nodes agree, order events and survive partial failure, in <a href="sd-distributed-systems.html">Distributed Systems Patterns</a>.</p>
+      </section>
+
+    </div>
+  </main>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script src="../../assets/tutorial.js?v=8"></script>
+</body>
+</html>

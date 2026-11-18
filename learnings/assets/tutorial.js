@@ -130,7 +130,12 @@
       var wait = fonts && fonts.load
         ? Promise.all([fonts.load('400 14px "Inter"'), fonts.load('600 14px "Inter"'), fonts.ready])
         : Promise.resolve();
-      wait.then(renderDiagrams, renderDiagrams);
+      /* never wait on fonts for more than 1.5 s: a blocked or slow font request must not leave diagrams blank */
+      var done = false;
+      var go = function () { if (!done) { done = true; renderDiagrams(); } };
+      /* if the timer won, the boxes were sized with the fallback font: draw once more when the real font arrives */
+      wait.then(function () { if (done) renderDiagrams(); else go(); }, go);
+      setTimeout(go, 1500);
     };
     tag.onerror = function () {
       mermaidState = "failed";

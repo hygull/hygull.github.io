@@ -1,0 +1,1820 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Low-Level Design</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@500;700&display=swap">
+<link rel="stylesheet" href="../../assets/tutorial.css?v=8">
+</head>
+<body data-track="system">
+
+<header class="topbar">
+  <div class="topbar-in">
+    <a class="brand" href="../../../index.html">Learnings</a>
+    <nav class="tracks" aria-label="Paths">
+      <a href="../../../index.html#system-design" aria-current="true">System Design</a>
+      <a href="../../../archive.html">Archive</a>
+    </nav>
+    <div class="tools">
+      <button class="btn" id="menu" type="button" aria-expanded="false">Chapters</button>
+      <input id="q" type="search" placeholder="Search chapters" aria-label="Search chapters">
+      <button class="btn" id="theme" type="button">Dark mode</button>
+    </div>
+  </div>
+</header>
+
+<div class="shell">
+  <aside class="side">
+    <p class="side-label">Low-Level Design</p>
+    <nav id="toc" aria-label="Chapters"></nav>
+  </aside>
+
+  <main>
+    <div class="page-head">
+      <p class="eyebrow">System design, part 10 of 12</p>
+      <h1>Low-Level Design</h1>
+      <p class="lead">Low-level design (LLD) is the class-level design of one component: its objects, their responsibilities, the interfaces between them and the code that proves it works. This page gives a repeatable method, the UML you need to read and draw, the modelling decisions that separate senior answers, the patterns and concurrency questions that actually come up, and a playbook for machine-coding rounds. All code is Python 3.9, standard library only. SOLID is covered in <a href="../../Python/docs/design-principles.html">Design Principles</a> and the 23 patterns in <a href="../../Python/docs/design-patterns.html">Design Patterns</a>, so they are linked here, not repeated.</p>
+    </div>
+
+    <div class="chapters">
+
+      <section class="chapter part" id="round">
+        <h2>What an LLD round is</h2>
+        <p class="kind">Part 1 of 7 &middot; scope, formats, scoring</p>
+        <p>An LLD round asks you to turn a paragraph of requirements into classes with clear responsibilities, and often into working code. It is judged on modelling and code quality, not on scale.</p>
+        <ul>
+          <li><a href="#hld-vs-lld">HLD vs LLD</a>: what changes between the two rounds</li>
+          <li><a href="#formats">The two formats</a>: design discussion and machine coding</li>
+          <li><a href="#scoring">How it is scored</a>: the rubric interviewers fill in</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="hld-vs-lld">
+        <h2>HLD vs LLD</h2>
+        <p class="kind"><a href="#round">What an LLD round is</a></p>
+        <p>High-level design decides which boxes exist and how they talk over the network. Low-level design opens one box and decides its classes.</p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Aspect</th><th>HLD</th><th>LLD</th></tr></thead>
+            <tbody>
+              <tr><td>Scope</td><td>Whole system: services, stores, queues, regions</td><td>One service or library: classes, interfaces, methods</td></tr>
+              <tr><td>Unit of design</td><td>Process or data store</td><td>Class, function, in-memory data structure</td></tr>
+              <tr><td>Artefacts</td><td>Architecture diagram, API list, data model, capacity numbers</td><td>Class diagram, sequence or state diagram, interfaces, code</td></tr>
+              <tr><td>Main forces</td><td>Scale, availability, consistency, cost</td><td>Change: which requirement is likely to vary next</td></tr>
+              <tr><td>Concurrency means</td><td>Replicas, partitions, distributed transactions</td><td>Threads, locks, atomic check-then-act inside one process</td></tr>
+              <tr><td>What is evaluated</td><td>Trade-offs, bottlenecks, failure handling</td><td>Modelling, extensibility, readability, correctness</td></tr>
+              <tr><td>Typical prompt</td><td>"Design a ticket booking platform"</td><td>"Design the classes for seat booking and make double booking impossible"</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><b>Senior signal:</b> say which level you are at. If the prompt is "design a parking lot", ask whether the interviewer wants classes and code, or a multi-site system with sensors and payments; the answer changes everything you draw.</p>
+      </section>
+
+      <section class="chapter" id="formats">
+        <h2>The two formats</h2>
+        <p class="kind"><a href="#round">What an LLD round is</a></p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th></th><th>Design discussion</th><th>Machine coding</th></tr></thead>
+            <tbody>
+              <tr><td>Length</td><td>45 to 60 minutes</td><td>60 to 90 minutes of coding, often plus a 20 to 30 minute review</td></tr>
+              <tr><td>Output</td><td>Class diagram, key method signatures, one walked use case</td><td>Code that runs: a demo or test proving each requirement</td></tr>
+              <tr><td>Medium</td><td>Whiteboard or shared document</td><td>Your own editor, or a shared pad with a run button</td></tr>
+              <tr><td>Depth</td><td>Broad: every entity named, a few methods written out</td><td>Narrow: the core flows fully working, the rest stubbed behind interfaces</td></tr>
+              <tr><td>Storage and I/O</td><td>Discussed</td><td>In memory; input from a driver function or a command loop</td></tr>
+              <tr><td>Common failure</td><td>A diagram of nouns with no behaviour</td><td>Half of everything, nothing runnable at the bell</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><b>Interview tip:</b> in machine coding, a small design that runs beats a large design that does not. Get one end-to-end flow printing output in the first 25 minutes, then widen.</p>
+      </section>
+
+      <section class="chapter" id="scoring">
+        <h2>How it is scored</h2>
+        <p class="kind"><a href="#round">What an LLD round is</a></p>
+        <p>Rubrics differ by company, but the same dimensions recur. Order below is roughly by weight in machine coding.</p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Dimension</th><th>Earns the mark</th><th>Loses it</th></tr></thead>
+            <tbody>
+              <tr><td>Correctness</td><td>Every stated requirement demonstrably works</td><td>Crashes on the demo input; requirements silently skipped</td></tr>
+              <tr><td>Modelling</td><td>Entities match the domain; each class has one job; state lives where the rules are</td><td>One god class; dictionaries of dictionaries; data classes with all logic in a manager</td></tr>
+              <tr><td>Extensibility</td><td>A new pricing rule or vehicle type is a new class, not an edit to five <code>if</code> chains</td><td><code>if kind == "car"</code> spread across the code</td></tr>
+              <tr><td>Readability</td><td>Intention-revealing names, short methods, type hints</td><td><code>mgr</code>, <code>data2</code>, 80-line methods</td></tr>
+              <tr><td>Patterns, with restraint</td><td>A pattern only where a variation point exists, and you can name what varies</td><td>Factory, Singleton and Observer added to a 100-line program</td></tr>
+              <tr><td>Edge cases and errors</td><td>Invalid input and rule violations raise named domain errors</td><td>Returning <code>None</code> or <code>-1</code>; bare <code>except</code></td></tr>
+              <tr><td>Concurrency</td><td>Shared state identified; check-then-act made atomic; you can explain why</td><td>"Python has a GIL, so it is fine"</td></tr>
+              <tr><td>Tests</td><td>A few fast tests of the core rule and one failure path</td><td>None, or only a happy-path print</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="chapter part" id="method">
+        <h2>The method</h2>
+        <p class="kind">Part 2 of 7 &middot; ten steps, one worked example</p>
+        <p>A fixed sequence stops you from coding too early and from diagramming too long. Each step below produces a visible artefact, worked on one small problem: a library lending desk.</p>
+        <ul>
+          <li><a href="#method-steps">The ten steps and the time budget</a></li>
+          <li><a href="#step-requirements">Steps 1 and 2</a>: requirements, scope, use cases</li>
+          <li><a href="#step-entities">Steps 3 and 4</a>: entities, behaviours, relationships</li>
+          <li><a href="#step-class-diagram">Steps 5 and 6</a>: class diagram and key interfaces</li>
+          <li><a href="#step-sequence">Step 7</a>: walk one use case</li>
+          <li><a href="#step-skeleton">The runnable skeleton</a></li>
+          <li><a href="#step-harden">Steps 8 to 10</a>: patterns, concurrency and edges, extensions</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="method-steps">
+        <h2>The ten steps and the time budget</h2>
+        <p class="kind"><a href="#method">The method</a></p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart TD
+  subgraph U["Understand"]
+    direction LR
+    A[1 Clarify scope] --> B[2 Use cases]
+  end
+  subgraph M["Model"]
+    direction LR
+    C[3 Entities and verbs] --> D[4 Relationships] --> E[5 Class diagram] --> F[6 Key interfaces]
+  end
+  subgraph H["Prove and harden"]
+    direction LR
+    G[7 Walk a use case] --> I[8 Patterns] --> J[9 Concurrency and edges] --> K[10 Extensions]
+  end
+  U --> M --> H
+          </script>
+          <figcaption>Three phases. Patterns come at step 8, after the model exists, never at step 1.</figcaption>
+        </figure>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Step</th><th>Artefact</th><th>45 min discussion</th><th>90 min machine coding</th></tr></thead>
+            <tbody>
+              <tr><td>1. Clarify requirements and scope</td><td>In-scope and out-of-scope lists</td><td>5</td><td>5</td></tr>
+              <tr><td>2. Use cases and actors</td><td>Numbered use-case list</td><td>3</td><td>3</td></tr>
+              <tr><td>3. Entities (nouns) and behaviours (verbs)</td><td>Entity table</td><td>5</td><td>4</td></tr>
+              <tr><td>4. Relationships</td><td>Has-a, is-a, uses, with multiplicity</td><td>3</td><td>2</td></tr>
+              <tr><td>5. Class diagram</td><td>Diagram with key members only</td><td>8</td><td>3 (a sketch)</td></tr>
+              <tr><td>6. Key interfaces and APIs</td><td>Public method signatures</td><td>5</td><td>3</td></tr>
+              <tr><td>7. Walk one use case</td><td>Sequence diagram, or running code</td><td>6</td><td>50 (the code)</td></tr>
+              <tr><td>8. Patterns at variation points</td><td>Named variation point and interface</td><td>4</td><td>5</td></tr>
+              <tr><td>9. Concurrency, errors, edge cases</td><td>Lock placement, domain exceptions</td><td>4</td><td>10 (with tests)</td></tr>
+              <tr><td>10. Extensions</td><td>"To add X, I add class Y"</td><td>2</td><td>5</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><b>Interview tip:</b> minutes are approximate. The fixed rule is the order: no class before a use case needs it, no pattern before something varies.</p>
+      </section>
+
+      <section class="chapter" id="step-requirements">
+        <h2>Steps 1 and 2: requirements and use cases</h2>
+        <p class="kind"><a href="#method">The method</a></p>
+        <p>The prompt: "Design a library lending desk." Ask until the scope fits the time, then write it down so the interviewer can correct it.</p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Question to ask</th><th>Answer assumed here</th></tr></thead>
+            <tbody>
+              <tr><td>Several copies of one title?</td><td>Yes; a loan is for a physical copy</td></tr>
+              <tr><td>Limit on loans per member?</td><td>Yes, per member, default 2</td></tr>
+              <tr><td>Loan period and fines?</td><td>14 days; flat fine per late day</td></tr>
+              <tr><td>Reservations, search, payments, multiple branches?</td><td>Out of scope; keep the design open to reservations</td></tr>
+              <tr><td>Concurrent desks?</td><td>Possibly two counters: lending one copy must be atomic</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <script type="text/plain" data-lang="text" data-file="use-cases" data-norun>
+Actors: Librarian (drives the desk), Member (borrows)
+
+UC1  Librarian adds a copy of a book to the catalogue
+UC2  Member borrows an available copy           -> loan with a due date
+UC3  Borrow is refused: copy on loan, or member at the loan limit
+UC4  Member returns a copy                      -> fine if late
+Out of scope: reservations, search, payments, branches, persistence
+        </script>
+        <p class="note"><b>Senior signal:</b> state what you are cutting and why. "I will leave reservations out, but lending goes through one method so a reservation check can be added there" shows scope control without closing the design.</p>
+      </section>
+
+      <section class="chapter" id="step-entities">
+        <h2>Steps 3 and 4: entities, behaviours, relationships</h2>
+        <p class="kind"><a href="#method">The method</a></p>
+        <p>Underline the nouns in the use cases to find candidate classes and the verbs to find methods. Then give every verb exactly one owner: the class that holds the data the rule needs.</p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Noun</th><th>Kind</th><th>Knows</th><th>Does (verbs it owns)</th></tr></thead>
+            <tbody>
+              <tr><td><code>Book</code></td><td>Value object</td><td>ISBN, title</td><td>Nothing; it is a description</td></tr>
+              <tr><td><code>Copy</code></td><td>Entity</td><td>Copy id, its book, status</td><td><code>check_out</code>, <code>check_in</code></td></tr>
+              <tr><td><code>Member</code></td><td>Entity</td><td>Member id, name, loan limit</td><td>Nothing yet</td></tr>
+              <tr><td><code>Loan</code></td><td>Entity</td><td>Copy, member, due date, return date</td><td><code>fine</code></td></tr>
+              <tr><td><code>CopyStatus</code></td><td>Enum</td><td>Available, on loan</td><td></td></tr>
+              <tr><td><code>LendingDesk</code></td><td>Service</td><td>Copies, open loans</td><td><code>lend</code>, <code>give_back</code>: rules that span several entities</td></tr>
+              <tr><td>Librarian</td><td>Actor only</td><td></td><td>Not a class: nothing in scope depends on who is at the desk</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <ul>
+          <li><b>Relationships:</b> a desk has many copies; a copy describes one book, a book has many copies; a loan links one copy and one member; a member has zero to <code>max_loans</code> open loans.</li>
+          <li><b>Not every noun is a class.</b> "Fine" is a number computed by <code>Loan</code>; "due date" is a field.</li>
+          <li><b>Not every class is a noun in the prompt.</b> The service that coordinates a use case (<code>LendingDesk</code>) usually is not.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="step-class-diagram">
+        <h2>Steps 5 and 6: class diagram and key interfaces</h2>
+        <p class="kind"><a href="#method">The method</a></p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+classDiagram
+  class LendingDesk {
+    +add_copy(copy)
+    +lend(copy_id, member, today) Loan
+    +give_back(copy_id, today) int
+  }
+  class Copy {
+    +copy_id: str
+    +status: CopyStatus
+    +check_out()
+    +check_in()
+  }
+  class Book {
+    +isbn: str
+    +title: str
+  }
+  class Member {
+    +member_id: str
+    +max_loans: int
+  }
+  class Loan {
+    +due: date
+    +fine(per_day) int
+  }
+  LendingDesk "1" o-- "many" Copy
+  LendingDesk "1" *-- "many" Loan
+  Copy "many" --> "1" Book
+  Loan --> "1" Copy
+  Loan --> "1" Member
+          </script>
+          <figcaption>Key members only. The desk owns loans (composition) but only holds copies (aggregation); a loan points at its copy and member.</figcaption>
+        </figure>
+        <p>The public interface is three methods. Write the signatures and the errors before any body:</p>
+        <script type="text/plain" data-lang="text" data-file="interfaces" data-norun>
+LendingDesk.add_copy(copy: Copy) -> None
+LendingDesk.lend(copy_id: str, member: Member, today: date) -> Loan
+    raises CopyUnavailable, LoanLimitReached
+LendingDesk.give_back(copy_id: str, today: date) -> int      # fine in paise
+        </script>
+        <p class="note"><b>Interview tip:</b> <code>today</code> is a parameter, not <code>date.today()</code> inside the method. Passing time in makes the fine rule testable and the demo deterministic.</p>
+      </section>
+
+      <section class="chapter" id="step-sequence">
+        <h2>Step 7: walk one use case</h2>
+        <p class="kind"><a href="#method">The method</a></p>
+        <p>Trace the most important use case through the diagram. Every message must be a method you listed; a message with no owner is a missing class or method.</p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+sequenceDiagram
+  actor L as Librarian
+  participant D as LendingDesk
+  participant C as Copy
+  participant N as Loan
+  L->>D: lend(C1, member, today)
+  D->>D: count open loans of member
+  alt at the limit
+    D-->>L: LoanLimitReached
+  else below the limit
+    D->>C: check_out()
+    alt copy on loan
+      C-->>D: CopyUnavailable
+      D-->>L: CopyUnavailable
+    else available
+      C-->>D: ok
+      D->>N: create with due date
+      D-->>L: Loan
+    end
+  end
+          </script>
+          <figcaption>UC2 and UC3 in one diagram. The copy guards its own status; the desk owns the rule that spans member and loans.</figcaption>
+        </figure>
+      </section>
+
+      <section class="chapter" id="step-skeleton">
+        <h2>The runnable skeleton</h2>
+        <p class="kind"><a href="#method">The method</a></p>
+        <p>The diagram translated one to one. In a machine-coding round this is the 25-minute checkpoint: the main flow and one refusal both run.</p>
+        <script type="text/plain" data-lang="py" data-file="lending_desk.py">
+from dataclasses import dataclass
+from datetime import date, timedelta
+from enum import Enum
+from typing import Optional
+
+
+class CopyStatus(Enum):
+    AVAILABLE = "available"
+    ON_LOAN = "on_loan"
+
+
+class LendingError(Exception):
+    """Base class for every rule the desk can refuse on."""
+
+
+class CopyUnavailable(LendingError):
+    pass
+
+
+class LoanLimitReached(LendingError):
+    pass
+
+
+@dataclass(frozen=True)
+class Book:                               # value object: equal when the fields are equal
+    isbn: str
+    title: str
+
+
+@dataclass
+class Copy:                               # entity: two copies of one book are different things
+    copy_id: str
+    book: Book
+    status: CopyStatus = CopyStatus.AVAILABLE
+
+    def check_out(self) -> None:
+        if self.status is not CopyStatus.AVAILABLE:
+            raise CopyUnavailable(f"{self.copy_id} is on loan")
+        self.status = CopyStatus.ON_LOAN
+
+    def check_in(self) -> None:
+        self.status = CopyStatus.AVAILABLE
+
+
+@dataclass
+class Member:
+    member_id: str
+    name: str
+    max_loans: int = 2
+
+
+@dataclass
+class Loan:
+    copy: Copy
+    member: Member
+    due: date
+    returned_on: Optional[date] = None
+
+    def fine(self, per_day: int) -> int:
+        days_late = (self.returned_on - self.due).days
+        return max(days_late, 0) * per_day
+
+
+class LendingDesk:
+    LOAN_DAYS = 14
+    FINE_PER_DAY = 500                    # paise
+
+    def __init__(self) -> None:
+        self._copies: dict[str, Copy] = {}
+        self._open_loans: dict[str, Loan] = {}        # copy_id -> loan
+
+    def add_copy(self, copy: Copy) -> None:
+        self._copies[copy.copy_id] = copy
+
+    def lend(self, copy_id: str, member: Member, today: date) -> Loan:
+        held = sum(1 for loan in self._open_loans.values() if loan.member is member)
+        if held >= member.max_loans:
+            raise LoanLimitReached(f"{member.name} already holds {held}")
+        copy = self._copies[copy_id]
+        copy.check_out()
+        loan = Loan(copy, member, due=today + timedelta(days=self.LOAN_DAYS))
+        self._open_loans[copy_id] = loan
+        return loan
+
+    def give_back(self, copy_id: str, today: date) -> int:
+        loan = self._open_loans.pop(copy_id)
+        loan.returned_on = today
+        loan.copy.check_in()
+        return loan.fine(self.FINE_PER_DAY)
+
+
+desk = LendingDesk()
+sicp = Book("9780262510875", "Structure and Interpretation of Computer Programs")
+for copy_id in ("C1", "C2"):
+    desk.add_copy(Copy(copy_id, sicp))
+sandhya = Member("M1", "Sandhya Agrawani")
+hemkesh = Member("M2", "Hemkesh Agrawani", max_loans=1)
+
+loan = desk.lend("C1", sandhya, today=date(2026, 3, 1))
+print(loan.due)                                        # 2026-03-15
+try:
+    desk.lend("C1", hemkesh, today=date(2026, 3, 2))
+except LendingError as err:
+    print(type(err).__name__, "-", err)                # CopyUnavailable - C1 is on loan
+desk.lend("C2", hemkesh, today=date(2026, 3, 2))
+print(desk.give_back("C1", today=date(2026, 3, 18)))   # 1500
+try:
+    desk.lend("C1", hemkesh, today=date(2026, 3, 19))
+except LendingError as err:
+    print(type(err).__name__, "-", err)                # LoanLimitReached - Hemkesh Agrawani already holds 1
+        </script>
+      </section>
+
+      <section class="chapter" id="step-harden">
+        <h2>Steps 8 to 10: patterns, edges, extensions</h2>
+        <p class="kind"><a href="#method">The method</a></p>
+        <p>With a working model, look for what will vary, what can go wrong and what the interviewer will add next.</p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Step</th><th>Question</th><th>Lending desk answer</th></tr></thead>
+            <tbody>
+              <tr><td>8. Patterns</td><td>What varies independently of the rest?</td><td>Fine rules per member type: a <code>FinePolicy</code> interface (<a href="../../Python/docs/design-patterns.html#strategy">Strategy</a>). "Notify when a copy returns": <a href="../../Python/docs/design-patterns.html#observer">Observer</a>, only if asked</td></tr>
+              <tr><td>9. Concurrency</td><td>Which state is shared, which steps must be atomic?</td><td><code>lend</code> reads the loan count, then changes the copy: one lock around the whole method (see <a href="#thread-safe-class">Making a class thread-safe</a>)</td></tr>
+              <tr><td>9. Errors and edges</td><td>What input breaks an invariant?</td><td>Unknown copy id, returning a copy that is not on loan, same member borrowing twice: each a named <code>LendingError</code></td></tr>
+              <tr><td>10. Extensions</td><td>What is the next requirement, and what changes?</td><td>Reservations: a new <code>RESERVED</code> status and a queue per book, checked inside <code>lend</code>. Persistence: put <code>_copies</code> and <code>_open_loans</code> behind repositories (see <a href="#layers">Service, repository, strategy</a>)</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><b>Senior signal:</b> answer an extension with the size of the change: "one new class and one line in <code>lend</code>". If the honest answer is "edits in six places", say which abstraction you would introduce first.</p>
+      </section>
+
+      <section class="chapter part" id="uml">
+        <h2>Reading and drawing UML</h2>
+        <p class="kind">Part 3 of 7 &middot; just enough notation</p>
+        <p>You need three diagram types: class (structure), sequence (one flow over time) and state (one object's lifecycle). Interviewers care that the arrows mean something, not that the notation is perfect.</p>
+        <ul>
+          <li><a href="#uml-class">The class box</a>: members and visibility</li>
+          <li><a href="#uml-relationships">Relationships</a>: six arrows and multiplicity</li>
+          <li><a href="#uml-abstract">Abstract classes and interfaces</a>: ABC and Protocol</li>
+          <li><a href="#uml-sequence">Sequence diagrams</a></li>
+          <li><a href="#uml-state">State diagrams</a>, and when to draw one</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="uml-class">
+        <h2>The class box</h2>
+        <p class="kind"><a href="#uml">Reading and drawing UML</a></p>
+        <p>Three compartments: name, attributes, operations. Show only the members that explain the design.</p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+classDiagram
+  class Account {
+    +account_id: int
+    -balance: int
+    #history: list~Entry~
+    +deposit(amount)
+    +withdraw(amount)
+    -check_limit(amount) bool
+    +open(owner)$ Account
+  }
+  class Shape {
+    <<abstract>>
+    +area()* float
+  }
+          </script>
+          <figcaption>Left: visibility markers, a generic type, a static factory (underlined). Right: an abstract class with an abstract operation (italic).</figcaption>
+        </figure>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Marker</th><th>Meaning</th><th>Python convention</th></tr></thead>
+            <tbody>
+              <tr><td><code>+</code></td><td>Public</td><td><code>name</code></td></tr>
+              <tr><td><code>#</code></td><td>Protected: the class and its subclasses</td><td><code>_name</code> (by agreement only)</td></tr>
+              <tr><td><code>-</code></td><td>Private</td><td><code>_name</code>; <code>__name</code> mangles the name, it does not enforce privacy</td></tr>
+              <tr><td>Underlined</td><td>Static or class-level member</td><td><code>@staticmethod</code>, <code>@classmethod</code>, class attribute</td></tr>
+              <tr><td>Italic, <code>&lt;&lt;abstract&gt;&gt;</code></td><td>Abstract class or operation</td><td><code>ABC</code> with <code>@abstractmethod</code></td></tr>
+              <tr><td><code>&lt;&lt;interface&gt;&gt;</code></td><td>Operations only, no state</td><td><code>Protocol</code>, or an <code>ABC</code> with only abstract methods</td></tr>
+              <tr><td><code>&lt;&lt;enumeration&gt;&gt;</code></td><td>Fixed set of values</td><td><code>Enum</code></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="chapter" id="uml-relationships">
+        <h2>Relationships</h2>
+        <p class="kind"><a href="#uml">Reading and drawing UML</a></p>
+        <p>Six arrows, from weakest coupling to strongest. When unsure between two, draw the weaker one.</p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Relationship</th><th>Drawn as</th><th>Means</th><th>In Python</th><th>Example</th></tr></thead>
+            <tbody>
+              <tr><td>Dependency</td><td>Dashed line, open arrow</td><td>Uses it briefly: a parameter, a local, a return type</td><td>Argument or local variable</td><td><code>LendingDesk.lend</code> takes a <code>Member</code></td></tr>
+              <tr><td>Association</td><td>Solid line, open arrow</td><td>Holds a lasting reference; neither owns the other</td><td>Attribute pointing at another object</td><td><code>Loan</code> to <code>Member</code></td></tr>
+              <tr><td>Aggregation</td><td>Hollow diamond at the whole</td><td>Whole and parts, but parts outlive the whole and may be shared</td><td>Attribute holding objects created elsewhere</td><td><code>Team</code> and <code>Player</code></td></tr>
+              <tr><td>Composition</td><td>Filled diamond at the whole</td><td>Parts are created by, owned by and die with the whole</td><td>Attribute holding objects the whole creates</td><td><code>Order</code> and <code>OrderLine</code></td></tr>
+              <tr><td>Inheritance</td><td>Solid line, hollow triangle at the parent</td><td>Is-a: the child reuses and specialises the parent</td><td><code>class Car(Vehicle)</code></td><td><code>Vehicle</code> and <code>Car</code></td></tr>
+              <tr><td>Realisation</td><td>Dashed line, hollow triangle at the interface</td><td>Implements a contract; no code inherited</td><td>Subclass of an <code>ABC</code>, or matches a <code>Protocol</code></td><td><code>PricingStrategy</code> and <code>HourlyPricing</code></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+classDiagram
+  direction LR
+  class Team
+  class Player
+  class Order
+  class OrderLine
+  Team "1" o-- "0..*" Player : aggregation
+  Order "1" *-- "1..*" OrderLine : composition
+          </script>
+          <figcaption>Diamond at the whole. Delete the team and the players remain; delete the order and its lines go with it.</figcaption>
+        </figure>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+classDiagram
+  direction LR
+  class Vehicle {
+    <<abstract>>
+  }
+  class Car
+  class PricingStrategy {
+    <<interface>>
+    +fee(minutes) int
+  }
+  class HourlyPricing
+  Vehicle <|-- Car : inheritance
+  PricingStrategy <|.. HourlyPricing : realisation
+          </script>
+          <figcaption>Triangle at the general type. Solid line inherits code; dashed line only promises the interface.</figcaption>
+        </figure>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+classDiagram
+  direction LR
+  class Loan
+  class Member
+  class LendingDesk
+  class Clock
+  Loan "0..*" --> "1" Member : association
+  LendingDesk ..> Clock : dependency
+          </script>
+          <figcaption>Open arrows show who knows whom. Solid: stored in a field. Dashed: only used in passing.</figcaption>
+        </figure>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Multiplicity</th><th>Reads as</th><th>Field type in Python</th></tr></thead>
+            <tbody>
+              <tr><td><code>1</code></td><td>Exactly one</td><td><code>Member</code></td></tr>
+              <tr><td><code>0..1</code></td><td>Optional</td><td><code>Optional[Member]</code></td></tr>
+              <tr><td><code>0..*</code> or <code>*</code></td><td>Any number</td><td><code>list[Loan]</code>, <code>dict[str, Loan]</code></td></tr>
+              <tr><td><code>1..*</code></td><td>At least one</td><td><code>list[OrderLine]</code> plus a check in the constructor</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><b>Interview tip:</b> the aggregation versus composition question is really "who creates it and who deletes it". Answer that in words and nobody will check the diamond.</p>
+      </section>
+
+      <section class="chapter" id="uml-abstract">
+        <h2>Abstract classes and interfaces</h2>
+        <p class="kind"><a href="#uml">Reading and drawing UML</a></p>
+        <p>Python has two ways to write the contract. Use an <code>ABC</code> when implementations share code or you want instantiation of an incomplete class to fail early; use a <code>Protocol</code> when you only need "anything with these methods", including classes you do not own.</p>
+        <script type="text/plain" data-lang="py" data-file="contracts.py">
+from abc import ABC, abstractmethod
+from typing import Protocol
+
+
+class Notifier(ABC):                      # nominal: implementations must inherit
+    @abstractmethod
+    def send(self, to: str, text: str) -> str: ...
+
+
+class EmailNotifier(Notifier):
+    def send(self, to: str, text: str) -> str:
+        return f"email to {to}: {text}"
+
+
+class Clock(Protocol):                    # structural: anything with now() fits
+    def now(self) -> float: ...
+
+
+class FixedClock:                         # no inheritance needed
+    def __init__(self, at: float) -> None:
+        self.at = at
+
+    def now(self) -> float:
+        return self.at
+
+
+def stamp(clock: Clock) -> str:
+    return f"t={clock.now():.0f}"
+
+
+print(EmailNotifier().send("sandhya", "book due"))     # email to sandhya: book due
+print(stamp(FixedClock(1700.0)))                       # t=1700
+try:
+    Notifier()
+except TypeError as err:
+    print("abstract" in str(err))                      # True
+        </script>
+        <div class="scroll">
+          <table>
+            <thead><tr><th></th><th><code>ABC</code></th><th><code>Protocol</code></th></tr></thead>
+            <tbody>
+              <tr><td>Typing</td><td>Nominal: must subclass</td><td>Structural: must have the methods</td></tr>
+              <tr><td>Checked</td><td>At instantiation (runtime) and by type checkers</td><td>By type checkers only, unless <code>@runtime_checkable</code></td></tr>
+              <tr><td>Shared code</td><td>Yes: concrete methods, template methods</td><td>Not its purpose</td></tr>
+              <tr><td>Best for</td><td>Families you own: <code>State</code>, <code>Sink</code>, <code>Vehicle</code></td><td>Ports to the outside: <code>Clock</code>, <code>Repository</code>, <code>PaymentGateway</code></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="chapter" id="uml-sequence">
+        <h2>Sequence diagrams</h2>
+        <p class="kind"><a href="#uml">Reading and drawing UML</a></p>
+        <p>One use case, time flowing down. Use it to prove that every responsibility has an owner and to show ordering that matters (lock, check, write, unlock).</p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+sequenceDiagram
+  actor U as User
+  participant S as BookingService
+  participant R as SeatRepository
+  participant P as PaymentGateway
+  U->>S: book(show, seat)
+  S->>R: hold(seat, user)
+  R-->>S: held
+  S->>P: charge(amount)
+  alt payment ok
+    P-->>S: receipt
+    S->>R: confirm(seat)
+    S-->>U: Booking
+  else declined
+    P-->>S: declined
+    S->>R: release(seat)
+    S-->>U: PaymentFailed
+  end
+          </script>
+          <figcaption>Solid arrow: call. Dashed arrow: return. The alt box is an if / else; a loop box repeats.</figcaption>
+        </figure>
+        <ul>
+          <li>Participants are objects or interfaces from your class diagram, in call order left to right.</li>
+          <li>Keep it to one scenario and about 10 messages; draw a second diagram for the failure path if the alt boxes nest more than two deep.</li>
+          <li>Skip getters and constructors. Show the messages that carry a decision.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="uml-state">
+        <h2>State diagrams</h2>
+        <p class="kind"><a href="#uml">Reading and drawing UML</a></p>
+        <p>One object, its states and the events that move it between them. Anything not drawn is an illegal transition, which is exactly what the code must reject.</p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+stateDiagram-v2
+  direction LR
+  [*] --> Created
+  Created --> Paid: pay
+  Created --> Cancelled: cancel
+  Paid --> Shipped: ship
+  Paid --> Refunded: cancel
+  Shipped --> Delivered: deliver
+  Delivered --> [*]
+  Cancelled --> [*]
+  Refunded --> [*]
+          </script>
+          <figcaption>An order. The same event (cancel) means different things in different states; there is no arrow out of Shipped for cancel.</figcaption>
+        </figure>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Draw a state diagram when</th><th>Skip it when</th></tr></thead>
+            <tbody>
+              <tr><td>An entity has three or more states and operations are legal only in some</td><td>The "state" is one boolean (<code>is_free</code>)</td></tr>
+              <tr><td>The prompt says lifecycle, workflow, machine, status, or "cannot X after Y"</td><td>The object is a value or a pure calculation</td></tr>
+              <tr><td>You are about to write <code>if status == ...</code> in several methods</td><td>Transitions are a straight line with no branches</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>Implementation scales with size: an <code>Enum</code> plus a table of allowed transitions for small machines; the <a href="../../Python/docs/design-patterns.html#state">State pattern</a> when behaviour, not just legality, differs per state.</p>
+        <script type="text/plain" data-lang="py" data-file="transitions.py">
+from enum import Enum
+
+
+class Status(Enum):
+    CREATED = "created"
+    PAID = "paid"
+    SHIPPED = "shipped"
+    CANCELLED = "cancelled"
+
+
+ALLOWED = {
+    Status.CREATED: {Status.PAID, Status.CANCELLED},
+    Status.PAID: {Status.SHIPPED, Status.CANCELLED},
+    Status.SHIPPED: set(),
+    Status.CANCELLED: set(),
+}
+
+
+class Order:
+    def __init__(self) -> None:
+        self.status = Status.CREATED
+
+    def move_to(self, target: Status) -> None:
+        if target not in ALLOWED[self.status]:
+            raise ValueError(f"cannot go from {self.status.value} to {target.value}")
+        self.status = target
+
+
+order = Order()
+order.move_to(Status.PAID)
+order.move_to(Status.SHIPPED)
+print(order.status.value)                 # shipped
+try:
+    order.move_to(Status.CANCELLED)
+except ValueError as err:
+    print(err)                            # cannot go from shipped to cancelled
+        </script>
+      </section>
+
+      <section class="chapter part" id="modelling">
+        <h2>Modelling decisions</h2>
+        <p class="kind">Part 4 of 7 &middot; where the marks are</p>
+        <p>Most LLD problems are decided by a handful of recurring choices: what has identity, where a rule lives, and where the seams go.</p>
+        <ul>
+          <li><a href="#entity-value">Entities, value objects, enums, money</a></li>
+          <li><a href="#composition">Composition over inheritance</a></li>
+          <li><a href="#behaviour">Where behaviour lives</a>: tell, don't ask</li>
+          <li><a href="#interfaces-di">Interfaces and dependency injection</a></li>
+          <li><a href="#layers">Service, repository, strategy</a>: the split that fits most problems</li>
+          <li><a href="#errors">Domain exceptions</a></li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="entity-value">
+        <h2>Entities, value objects, enums, money</h2>
+        <p class="kind"><a href="#modelling">Modelling decisions</a></p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th></th><th>Entity</th><th>Value object</th></tr></thead>
+            <tbody>
+              <tr><td>Equal when</td><td>Same identity (id), whatever the fields say</td><td>All fields equal</td></tr>
+              <tr><td>Mutable</td><td>Yes: it has a lifecycle</td><td>No: replace it, never edit it</td></tr>
+              <tr><td>Python</td><td><code>@dataclass(eq=False)</code> or compare by id</td><td><code>@dataclass(frozen=True)</code>: equality and hashing for free</td></tr>
+              <tr><td>Examples</td><td>Account, Order, Seat, Ticket, Vehicle in the lot</td><td>Money, Address, DateRange, Position, Book description</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <ul>
+          <li><b>Ids:</b> integers or opaque strings generated in one place (a repository or a counter). Never use a display name as an id.</li>
+          <li><b>Enums for fixed sets:</b> statuses, kinds, directions. A bare string like <code>"car"</code> is a typo waiting to happen and cannot be listed.</li>
+          <li><b>Money as integers</b> in the minor unit (paise, cents) with a currency. Floats cannot represent 0.1 exactly.</li>
+          <li><b>Immutability</b> by default for anything shared between objects or threads; it removes a whole class of bugs.</li>
+        </ul>
+        <script type="text/plain" data-lang="py" data-file="identity.py">
+from dataclasses import dataclass, field
+from enum import Enum
+from itertools import count
+
+
+class Currency(Enum):
+    INR = "INR"
+    USD = "USD"
+
+
+@dataclass(frozen=True)
+class Money:                              # value object
+    minor: int                            # paise or cents, never a float
+    currency: Currency = Currency.INR
+
+    def __add__(self, other: "Money") -> "Money":
+        if other.currency is not self.currency:
+            raise ValueError("currency mismatch")
+        return Money(self.minor + other.minor, self.currency)
+
+    def __str__(self) -> str:
+        return f"{self.currency.value} {self.minor // 100}.{self.minor % 100:02d}"
+
+
+_account_ids = count(1)
+
+
+@dataclass(eq=False)                      # entity: equal only to itself
+class Account:
+    owner: str
+    balance: Money = Money(0)
+    account_id: int = field(default_factory=lambda: next(_account_ids))
+
+
+first = Account("Rishikesh Agrawani")
+second = Account("Rishikesh Agrawani")
+print(Money(1050) == Money(1050))                         # True
+print(first == second, first.account_id, second.account_id)   # False 1 2
+print(Money(1999) + Money(1))                             # INR 20.00
+print(0.1 + 0.2 == 0.3, 10 + 20 == 30)                    # False True
+try:
+    Money(5).minor = 6
+except AttributeError as err:
+    print(type(err).__name__)                             # FrozenInstanceError
+        </script>
+      </section>
+
+      <section class="chapter" id="composition">
+        <h2>Composition over inheritance</h2>
+        <p class="kind"><a href="#modelling">Modelling decisions</a></p>
+        <p>Inherit only for a true is-a that will stay one-dimensional. When two things vary independently (loan length and fine rule; vehicle type and pricing), subclasses multiply; composed parts add.</p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+classDiagram
+  direction LR
+  class Member {
+    +loan_days: int
+    +fine_policy: FinePolicy
+  }
+  class FinePolicy {
+    <<interface>>
+    +fine(days_late) int
+  }
+  class PerDayFine
+  class CappedFine
+  Member o-- FinePolicy
+  FinePolicy <|.. PerDayFine
+  FinePolicy <|.. CappedFine
+  CappedFine o-- FinePolicy : wraps
+          </script>
+          <figcaption>No StudentMember, StaffMember, CappedStudentMember. A member is configured with parts, and parts can wrap parts.</figcaption>
+        </figure>
+        <script type="text/plain" data-lang="py" data-file="composition.py">
+from dataclasses import dataclass
+from typing import Protocol
+
+
+class FinePolicy(Protocol):
+    def fine(self, days_late: int) -> int: ...
+
+
+@dataclass(frozen=True)
+class PerDayFine:
+    per_day: int
+
+    def fine(self, days_late: int) -> int:
+        return max(days_late, 0) * self.per_day
+
+
+@dataclass(frozen=True)
+class CappedFine:
+    inner: FinePolicy
+    cap: int
+
+    def fine(self, days_late: int) -> int:
+        return min(self.inner.fine(days_late), self.cap)
+
+
+@dataclass
+class Member:
+    name: str
+    loan_days: int
+    fine_policy: FinePolicy
+
+
+student = Member("Malinikesh Agrawani", 14, CappedFine(PerDayFine(500), cap=2000))
+staff = Member("Subhash Agrawani", 30, PerDayFine(0))
+print(student.fine_policy.fine(10))       # 2000
+print(staff.fine_policy.fine(10))         # 0
+        </script>
+        <p class="note"><b>Trade-off:</b> composition costs one more object and one more constructor argument. Inheritance is still right for a shallow, stable hierarchy where children share real code, such as the states of one machine.</p>
+      </section>
+
+      <section class="chapter" id="behaviour">
+        <h2>Where behaviour lives</h2>
+        <p class="kind"><a href="#modelling">Modelling decisions</a></p>
+        <p><b>Tell, don't ask:</b> do not pull data out of an object, decide, and push the result back. Tell the object what you want; the rule sits next to the data it protects.</p>
+        <script type="text/plain" data-lang="py" data-file="tell_dont_ask.py">
+class InsufficientBalance(Exception):
+    pass
+
+
+class Wallet:
+    def __init__(self, paise: int) -> None:
+        self._paise = paise
+
+    @property
+    def balance(self) -> int:
+        return self._paise
+
+    def pay(self, amount: int) -> None:   # the invariant is enforced in one place
+        if amount > self._paise:
+            raise InsufficientBalance(f"balance {self._paise}, asked {amount}")
+        self._paise -= amount
+
+
+# Ask style, repeated (and forgotten) in every caller:
+#     if wallet.paise >= amount:
+#         wallet.paise -= amount
+wallet = Wallet(500)
+wallet.pay(200)
+print(wallet.balance)                     # 300
+try:
+    wallet.pay(900)
+except InsufficientBalance as err:
+    print(err)                            # balance 300, asked 900
+        </script>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Smell</th><th>Looks like</th><th>Fix</th></tr></thead>
+            <tbody>
+              <tr><td>Anaemic model</td><td>Classes with only fields; every rule in <code>XManager</code></td><td>Move each rule to the class whose fields it reads</td></tr>
+              <tr><td>God class</td><td><code>ParkingLot</code> that parks, prices, prints and persists</td><td>Split by reason to change: pricing, storage, allocation</td></tr>
+              <tr><td>Feature envy</td><td>A method that mostly touches another object's fields</td><td>Move the method to that object</td></tr>
+              <tr><td>Type switch</td><td><code>if kind == A ... elif kind == B</code> in several places</td><td>Polymorphism: one interface, one class per kind</td></tr>
+              <tr><td>Primitive obsession</td><td><code>dict</code> and <code>str</code> for everything</td><td>Small value objects and enums</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>Rule of thumb for placement: a rule about <b>one</b> entity goes in that entity; a rule that needs <b>several</b> entities or a repository goes in a service. See <a href="../../Python/docs/design-principles.html">Design Principles</a> for single responsibility and the rest of SOLID.</p>
+      </section>
+
+      <section class="chapter" id="interfaces-di">
+        <h2>Interfaces and dependency injection</h2>
+        <p class="kind"><a href="#modelling">Modelling decisions</a></p>
+        <p>Put an interface exactly where something varies or where the outside world begins (time, randomness, storage, payment, notification). Then pass the implementation in through the constructor instead of creating it inside.</p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  M["main or test"] -->|builds and injects| S[OrderService]
+  S --> R{{OrderRepository}}
+  S --> P{{PricingStrategy}}
+  S --> C{{Clock}}
+  R -.-> R1[In-memory]
+  R -.-> R2[SQL]
+  P -.-> P1[ListPrice]
+  P -.-> P2[PercentOff]
+  C -.-> C1[System clock]
+  C -.-> C2[Fixed clock]
+          </script>
+          <figcaption>The service depends only on interfaces (hexagons). Only the composition root, main or a test, knows the concrete classes.</figcaption>
+        </figure>
+        <ul>
+          <li><b>Gain:</b> tests swap in a fake clock or in-memory store; a new variant is a new class; no hidden globals.</li>
+          <li><b>Pay:</b> more constructor arguments and one place that wires everything. That is the right place for wiring.</li>
+          <li><b>Do not</b> add an interface with a single implementation and no test double "for the future"; add it when the second implementation appears.</li>
+        </ul>
+        <p class="note"><b>Senior signal:</b> inject the clock and the random source. "How do you test the expiry?" has a one-line answer when <code>now</code> is a dependency.</p>
+      </section>
+
+      <section class="chapter" id="layers">
+        <h2>Service, repository, strategy</h2>
+        <p class="kind"><a href="#modelling">Modelling decisions</a></p>
+        <p>This split fits most machine-coding problems: <b>entities</b> hold state and their own rules, a <b>repository</b> stores and finds them, a <b>strategy</b> holds the rule that varies, and a <b>service</b> runs one use case by coordinating the three.</p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+classDiagram
+  class OrderService {
+    +place(customer, base) Order
+    +cancel(order_id) Order
+  }
+  class OrderRepository {
+    <<interface>>
+    +next_id() int
+    +save(order)
+    +get(order_id) Order
+  }
+  class PricingStrategy {
+    <<interface>>
+    +price(base) int
+  }
+  class Order {
+    +status: OrderStatus
+    +cancel()
+  }
+  class InMemoryOrderRepository
+  class PercentOff
+  OrderService --> OrderRepository
+  OrderService --> PricingStrategy
+  OrderService ..> Order
+  OrderRepository <|.. InMemoryOrderRepository
+  PricingStrategy <|.. PercentOff
+          </script>
+          <figcaption>Arrows point from the service to interfaces. Storage and pricing can each change without touching the service or the entity.</figcaption>
+        </figure>
+        <script type="text/plain" data-lang="py" data-file="layers.py">
+from dataclasses import dataclass
+from enum import Enum
+from typing import Protocol
+
+
+class OrderStatus(Enum):
+    PLACED = "placed"
+    CANCELLED = "cancelled"
+
+
+class DomainError(Exception):
+    pass
+
+
+class OrderNotFound(DomainError):
+    pass
+
+
+class InvalidTransition(DomainError):
+    pass
+
+
+@dataclass
+class Order:                                         # entity: state and its own rule
+    order_id: int
+    customer: str
+    amount: int                                      # paise
+    status: OrderStatus = OrderStatus.PLACED
+
+    def cancel(self) -> None:
+        if self.status is OrderStatus.CANCELLED:
+            raise InvalidTransition(f"order {self.order_id} is already cancelled")
+        self.status = OrderStatus.CANCELLED
+
+
+class OrderRepository(Protocol):                     # port to storage
+    def next_id(self) -> int: ...
+    def save(self, order: Order) -> None: ...
+    def get(self, order_id: int) -> Order: ...
+
+
+class InMemoryOrderRepository:
+    def __init__(self) -> None:
+        self._orders: dict[int, Order] = {}
+
+    def next_id(self) -> int:
+        return len(self._orders) + 1
+
+    def save(self, order: Order) -> None:
+        self._orders[order.order_id] = order
+
+    def get(self, order_id: int) -> Order:
+        try:
+            return self._orders[order_id]
+        except KeyError:
+            raise OrderNotFound(f"no order {order_id}") from None
+
+
+class PricingStrategy(Protocol):                     # the rule that varies
+    def price(self, base: int) -> int: ...
+
+
+@dataclass(frozen=True)
+class PercentOff:
+    percent: int
+
+    def price(self, base: int) -> int:
+        return base * (100 - self.percent) // 100
+
+
+class OrderService:                                  # one method per use case
+    def __init__(self, orders: OrderRepository, pricing: PricingStrategy) -> None:
+        self._orders = orders
+        self._pricing = pricing
+
+    def place(self, customer: str, base: int) -> Order:
+        order = Order(self._orders.next_id(), customer, self._pricing.price(base))
+        self._orders.save(order)
+        return order
+
+    def cancel(self, order_id: int) -> Order:
+        order = self._orders.get(order_id)
+        order.cancel()
+        self._orders.save(order)
+        return order
+
+
+service = OrderService(InMemoryOrderRepository(), PercentOff(10))
+order = service.place("Sandhya Agrawani", 50_000)
+print(order.order_id, order.amount, order.status.value)    # 1 45000 placed
+print(service.cancel(1).status.value)                      # cancelled
+try:
+    service.cancel(1)
+except DomainError as err:
+    print(type(err).__name__, "-", err)                    # InvalidTransition - order 1 is already cancelled
+try:
+    service.cancel(9)
+except DomainError as err:
+    print(type(err).__name__, "-", err)                    # OrderNotFound - no order 9
+        </script>
+        <p class="note"><b>Interview tip:</b> in a 90-minute round, skip the repository interface if there is one store and no test double; keep the class. The seam is the class boundary, the <code>Protocol</code> is a one-minute addition later.</p>
+      </section>
+
+      <section class="chapter" id="errors">
+        <h2>Domain exceptions</h2>
+        <p class="kind"><a href="#modelling">Modelling decisions</a></p>
+        <p>A rule violation is an exception named in the language of the domain, under one base class per module. Callers catch the base; tests assert the specific class.</p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Do</th><th>Avoid</th></tr></thead>
+            <tbody>
+              <tr><td><code>class SeatUnavailable(BookingError)</code> with a message naming the seat</td><td><code>return None</code>, <code>return -1</code>, <code>return False, "msg"</code></td></tr>
+              <tr><td>Validate at the boundary (constructor, service method), then trust the object</td><td>Re-validating the same thing in every method</td></tr>
+              <tr><td>Raise before mutating, so a failed call changes nothing</td><td>Half-applied operations</td></tr>
+              <tr><td>Translate lookups: <code>KeyError</code> becomes <code>OrderNotFound</code></td><td>Leaking <code>KeyError</code> or <code>IndexError</code> to the caller</td></tr>
+              <tr><td>Catch <code>DomainError</code> once, at the command loop or API edge</td><td><code>except Exception: pass</code></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>A return value is still right for an expected, frequent "no": <code>RateLimiter.allow()</code> returns <code>False</code>; a cache <code>get</code> returns a default.</p>
+      </section>
+
+      <section class="chapter part" id="patterns">
+        <h2>Patterns that actually come up</h2>
+        <p class="kind">Part 5 of 7 &middot; needs first, names second</p>
+        <p>Nine patterns cover almost every LLD question. Recognise the need, then reach for the name; the mechanics are on the <a href="../../Python/docs/design-patterns.html">Design Patterns</a> page.</p>
+        <ul>
+          <li><a href="#pattern-map">Need to pattern map</a></li>
+          <li><a href="#pattern-overuse">Pattern overuse</a>: the warning list</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="pattern-map">
+        <h2>Need to pattern map</h2>
+        <p class="kind"><a href="#patterns">Patterns that actually come up</a></p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Recurring need</th><th>Pattern</th><th>Where it shows up</th><th>Python shortcut</th></tr></thead>
+            <tbody>
+              <tr><td>Interchangeable algorithms</td><td><a href="../../Python/docs/design-patterns.html#strategy">Strategy</a></td><td>Pricing, fees, split rules, matching, elevator scheduling, eviction</td><td>Pass a function when there is one method and no state</td></tr>
+              <tr><td>Behaviour depends on state</td><td><a href="../../Python/docs/design-patterns.html#state">State</a></td><td>Vending machine, order, elevator car, ATM session</td><td>Enum plus transition table for small machines</td></tr>
+              <tr><td>Notify others of a change</td><td><a href="../../Python/docs/design-patterns.html#observer">Observer</a></td><td>Price alerts, booking confirmations, pub-sub, cache invalidation</td><td>A list of callables</td></tr>
+              <tr><td>Create the right variant</td><td><a href="../../Python/docs/design-patterns.html#factory">Factory</a></td><td>Vehicle or spot from a type code, limiter from config, piece from a symbol</td><td>A dict from key to class</td></tr>
+              <tr><td>Create a family that belongs together</td><td><a href="../../Python/docs/design-patterns.html#abstract-factory">Abstract Factory</a></td><td>Per-region tax plus invoice format; rarely needed in 90 minutes</td><td></td></tr>
+              <tr><td>Assemble something with many optional parts</td><td><a href="../../Python/docs/design-patterns.html#builder">Builder</a></td><td>Pizza or meal orders, query or request objects</td><td>Keyword arguments and dataclass defaults usually suffice</td></tr>
+              <tr><td>One shared instance</td><td><a href="../../Python/docs/design-patterns.html#singleton">Singleton</a></td><td>Config, registry, logger root, connection pool</td><td>Create one in main and inject it; a module-level object</td></tr>
+              <tr><td>Undo, redo, queued or logged actions</td><td><a href="../../Python/docs/design-patterns.html#command">Command</a></td><td>Text editor, job scheduler, bank transactions, game moves</td><td>A dataclass with <code>execute</code> and <code>undo</code></td></tr>
+              <tr><td>Add responsibilities without subclassing</td><td><a href="../../Python/docs/design-patterns.html#decorator">Decorator</a></td><td>Toppings, capped or discounted pricing, caching or retrying wrappers</td><td>A wrapper class with the same interface</td></tr>
+              <tr><td>Tree of parts and wholes</td><td><a href="../../Python/docs/design-patterns.html#composite">Composite</a></td><td>File system, org chart, menu, nested expense groups</td><td></td></tr>
+              <tr><td>Request passes through a pipeline</td><td><a href="../../Python/docs/design-patterns.html#chain">Chain of Responsibility</a></td><td>Log filters, validation, approval levels, ATM note dispensing, middleware</td><td>A list of handlers run in order</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><b>Why prefer injection over Singleton:</b> a global instance hides the dependency, shares state between tests and makes a second instance (per tenant, per test) impossible. "There is one" is a wiring decision; make one in main and pass it in.</p>
+      </section>
+
+      <section class="chapter" id="pattern-overuse">
+        <h2>Pattern overuse</h2>
+        <p class="kind"><a href="#patterns">Patterns that actually come up</a></p>
+        <p>A pattern is justified by a variation point you can name. Without one it is indirection that costs reading time and marks.</p>
+        <ul>
+          <li><b>Strategy with one strategy.</b> Write the method; extract the interface when the second rule arrives, and say so.</li>
+          <li><b>Factory that only calls a constructor.</b> A factory earns its place when the caller holds a key (string, enum, config), not a class.</li>
+          <li><b>Singleton for convenience.</b> If it is there to avoid passing an argument, pass the argument.</li>
+          <li><b>Observer for one known listener.</b> A direct call is easier to follow and to debug.</li>
+          <li><b>State pattern for two states.</b> A boolean or an enum check is clearer.</li>
+          <li><b>Builder for three fields.</b> Use keyword arguments.</li>
+          <li><b>Deep inheritance to share two lines.</b> Share a helper or compose.</li>
+          <li><b>Naming classes after patterns</b> (<code>ParkingStrategyFactoryManager</code>) instead of after the domain (<code>HourlyPricing</code>).</li>
+        </ul>
+        <p class="note"><b>Interview tip:</b> name the pattern after you have described the need: "pricing varies by lot, so it sits behind an interface; that is Strategy". Leading with the name sounds like pattern matching.</p>
+      </section>
+
+      <section class="chapter part" id="concurrency">
+        <h2>Concurrency in LLD</h2>
+        <p class="kind">Part 6 of 7 &middot; shared state inside one process</p>
+        <p>The LLD concurrency question is always the same: which objects are shared between threads, and which sequences of steps on them must not interleave. Mechanics of threads, locks and queues in Python are in <a href="../../Python/docs/python-concurrency.html">Python Concurrency</a>.</p>
+        <ul>
+          <li><a href="#shared-state">Where shared state lives</a></li>
+          <li><a href="#thread-safe-class">Making a class thread-safe</a>: atomic check-then-act</li>
+          <li><a href="#lock-ordering">Lock ordering</a>: two objects, no deadlock</li>
+          <li><a href="#optimistic">Optimistic versioning and idempotent operations</a></li>
+          <li><a href="#safe-singleton">Thread-safe singletons and caches</a></li>
+          <li><a href="#blocking-queue">Bounded blocking queue</a>: producer and consumer</li>
+          <li><a href="#is-it-thread-safe">"Is this thread-safe?"</a>: what to say</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="shared-state">
+        <h2>Where shared state lives</h2>
+        <p class="kind"><a href="#concurrency">Concurrency in LLD</a></p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Kind of object</th><th>Shared between threads?</th><th>What to do</th></tr></thead>
+            <tbody>
+              <tr><td>Value objects, frozen dataclasses, enums</td><td>Yes, safely</td><td>Nothing: immutable</td></tr>
+              <tr><td>Request-scoped objects (a command, a DTO)</td><td>No</td><td>Nothing: confined to one thread</td></tr>
+              <tr><td>Repositories, inventories, seat maps, caches, counters</td><td>Yes, and mutable</td><td>Guard with a lock, or use a thread-safe structure</td></tr>
+              <tr><td>Services holding only injected dependencies</td><td>Yes, but stateless</td><td>Safe if what they call is safe; the invariant may still span calls</td></tr>
+              <tr><td>Singletons, registries, lazy initialisers</td><td>Yes</td><td>Safe creation and safe mutation are two separate questions</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+sequenceDiagram
+  participant A as Thread A
+  participant I as Inventory
+  participant B as Thread B
+  A->>I: read stock
+  I-->>A: 1
+  B->>I: read stock
+  I-->>B: 1
+  A->>I: write stock = 0
+  B->>I: write stock = 0
+  Note over A,B: Two sales, one item. Each step was "safe", the sequence was not.
+          </script>
+          <figcaption>The race in every booking problem: check-then-act. The fix is to make the check and the act one indivisible step.</figcaption>
+        </figure>
+        <p class="note"><b>Failure mode:</b> the GIL makes single bytecode operations atomic, not your method. <code>if stock &gt; 0: stock -= 1</code> can be interleaved between the test and the write, and <code>stock -= 1</code> itself is a read, a subtract and a store.</p>
+      </section>
+
+      <section class="chapter" id="thread-safe-class">
+        <h2>Making a class thread-safe</h2>
+        <p class="kind"><a href="#concurrency">Concurrency in LLD</a></p>
+        <p>Give the object that owns the invariant one private lock, take it in every method that reads or writes the guarded fields, and keep the whole check-then-act inside it.</p>
+        <script type="text/plain" data-lang="py" data-file="reserve.py">
+import threading
+
+
+class SoldOut(Exception):
+    pass
+
+
+class Inventory:
+    def __init__(self, stock: int) -> None:
+        self._stock = stock
+        self._lock = threading.Lock()
+
+    def reserve(self, quantity: int = 1) -> None:
+        with self._lock:                  # the check and the act are one step
+            if self._stock < quantity:
+                raise SoldOut("not enough stock")
+            self._stock -= quantity
+
+    @property
+    def stock(self) -> int:
+        with self._lock:
+            return self._stock
+
+
+BUYERS = 50
+inventory = Inventory(stock=10)
+start = threading.Barrier(BUYERS)         # release every buyer at the same moment
+won = [False] * BUYERS                    # one slot per thread, no sharing
+
+
+def buyer(slot: int) -> None:
+    start.wait()
+    try:
+        inventory.reserve()
+        won[slot] = True
+    except SoldOut:
+        pass
+
+
+threads = [threading.Thread(target=buyer, args=(slot,)) for slot in range(BUYERS)]
+for thread in threads:
+    thread.start()
+for thread in threads:
+    thread.join()
+print(won.count(True), won.count(False), inventory.stock)   # 10 40 0
+        </script>
+        <ul>
+          <li><b>Deterministic by construction:</b> which ten buyers win varies from run to run; that exactly ten win does not. Assert the invariant, not the interleaving.</li>
+          <li><b>Lock granularity:</b> one lock per object is the default. A lock per seat or per key raises throughput and brings ordering problems; a single global lock is correct and often good enough to state first.</li>
+          <li><b>Never</b> call out (payment, callbacks, I/O) while holding the lock; hold it for memory operations only.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="lock-ordering">
+        <h2>Lock ordering</h2>
+        <p class="kind"><a href="#concurrency">Concurrency in LLD</a></p>
+        <p>An operation on two objects needs both locks. If two threads take them in opposite orders, each holds one and waits for the other forever. Always acquire in one global order, for example by id.</p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  subgraph Deadlock
+    T1[Transfer A to B] -->|holds| LA[Lock A]
+    T1 -.->|waits for| LB[Lock B]
+    T2[Transfer B to A] -->|holds| LB
+    T2 -.->|waits for| LA
+  end
+  subgraph Ordered
+    T3[Transfer A to B] -->|1| OA[Lock A]
+    T3 -->|2| OB[Lock B]
+    T4[Transfer B to A] -->|1| OA
+    T4 -->|2| OB
+  end
+          </script>
+          <figcaption>Left: a cycle of holds and waits. Right: both transfers take A before B, so no cycle can form.</figcaption>
+        </figure>
+        <script type="text/plain" data-lang="py" data-file="lock_order.py">
+import threading
+
+
+class Account:
+    def __init__(self, account_id: int, balance: int) -> None:
+        self.account_id = account_id
+        self.balance = balance
+        self.lock = threading.Lock()
+
+
+def transfer(source: Account, target: Account, amount: int) -> None:
+    first, second = sorted((source, target), key=lambda account: account.account_id)
+    with first.lock, second.lock:         # same order whichever way the money flows
+        if source.balance < amount:
+            raise ValueError("insufficient funds")
+        source.balance -= amount
+        target.balance += amount
+
+
+a, b = Account(1, 1000), Account(2, 1000)
+threads = [threading.Thread(target=transfer, args=route)
+           for _ in range(200) for route in ((a, b, 1), (b, a, 1))]
+for thread in threads:
+    thread.start()
+for thread in threads:
+    thread.join()
+print(a.balance, b.balance, a.balance + b.balance)    # 1000 1000 2000
+        </script>
+        <p class="note"><b>Interview tip:</b> other valid answers are one coarse lock over both accounts, or <code>lock.acquire(timeout=...)</code> with back-off and retry. State the ordering rule first; it is the one with no failure path.</p>
+      </section>
+
+      <section class="chapter" id="optimistic">
+        <h2>Optimistic versioning and idempotent operations</h2>
+        <p class="kind"><a href="#concurrency">Concurrency in LLD</a></p>
+        <p>A lock is pessimistic: it blocks others while you work. The optimistic alternative lets everyone read, and makes the write conditional on the version read; the loser re-reads and retries or reports the conflict. Use it when conflicts are rare or the work between read and write is slow (user think time, a remote call).</p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+sequenceDiagram
+  participant A as Rishikesh
+  participant S as SeatStore
+  participant B as Sandhya
+  A->>S: read A1
+  S-->>A: free, version 0
+  B->>S: read A1
+  S-->>B: free, version 0
+  A->>S: write holder=Rishikesh if version is 0
+  S-->>A: ok, version 1
+  B->>S: write holder=Sandhya if version is 0
+  S-->>B: StaleWrite
+          </script>
+          <figcaption>Compare-and-set. Only the comparison and the write are atomic; nobody waits on a lock while a user decides.</figcaption>
+        </figure>
+        <script type="text/plain" data-lang="py" data-file="optimistic.py">
+import threading
+from dataclasses import dataclass, replace
+
+
+class StaleWrite(Exception):
+    pass
+
+
+@dataclass(frozen=True)
+class Seat:
+    seat_id: str
+    holder: str = ""
+    version: int = 0
+
+
+class SeatStore:
+    def __init__(self) -> None:
+        self._rows: dict[str, Seat] = {}
+        self._lock = threading.Lock()
+
+    def read(self, seat_id: str) -> Seat:
+        with self._lock:
+            return self._rows.get(seat_id, Seat(seat_id))
+
+    def write(self, seat: Seat) -> Seat:
+        with self._lock:                  # compare and set, nothing else
+            current = self._rows.get(seat.seat_id, Seat(seat.seat_id))
+            if current.version != seat.version:
+                raise StaleWrite(f"{seat.seat_id} changed since version {seat.version}")
+            saved = replace(seat, version=seat.version + 1)
+            self._rows[seat.seat_id] = saved
+            return saved
+
+
+class Payments:
+    def __init__(self) -> None:
+        self._receipts: dict[str, str] = {}
+
+    def charge(self, request_id: str, paise: int) -> str:
+        if request_id not in self._receipts:          # a retry gets the first answer back
+            self._receipts[request_id] = f"receipt-{len(self._receipts) + 1} for {paise}"
+        return self._receipts[request_id]
+
+
+store = SeatStore()
+seen_by_rishikesh = store.read("A1")
+seen_by_sandhya = store.read("A1")
+print(store.write(replace(seen_by_rishikesh, holder="Rishikesh")).version)   # 1
+try:
+    store.write(replace(seen_by_sandhya, holder="Sandhya"))
+except StaleWrite as err:
+    print(err)                                        # A1 changed since version 0
+print(store.read("A1").holder)                        # Rishikesh
+
+payments = Payments()
+print(payments.charge("req-7", 45_000))               # receipt-1 for 45000
+print(payments.charge("req-7", 45_000))               # receipt-1 for 45000
+        </script>
+        <ul>
+          <li><b>Idempotent:</b> doing it twice has the same effect as once. Needed wherever a caller may retry: payments, confirmations, message handlers.</li>
+          <li>Make it so with a caller-supplied request id remembered with the result, or by designing the operation as "set to X" instead of "add X".</li>
+          <li>Under threads, the "seen before?" check and the insert are themselves a check-then-act and need the lock.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="safe-singleton">
+        <h2>Thread-safe singletons and caches</h2>
+        <p class="kind"><a href="#concurrency">Concurrency in LLD</a></p>
+        <p>Lazy creation is a check-then-act on "does it exist yet". Simplest correct answer in Python: create the instance at import time or in main. If it must be lazy, lock the creation and re-check inside the lock.</p>
+        <script type="text/plain" data-lang="py" data-file="once.py">
+import threading
+from typing import Callable, Optional
+
+
+class Registry:
+    _instance: Optional["Registry"] = None
+    _guard = threading.Lock()
+
+    @classmethod
+    def instance(cls) -> "Registry":
+        if cls._instance is None:                 # fast path without the lock
+            with cls._guard:
+                if cls._instance is None:         # re-check: another thread may have won
+                    cls._instance = cls()
+        return cls._instance
+
+
+class LoadingCache:
+    """Each key is loaded once, even when many threads ask together."""
+
+    def __init__(self, loader: Callable[[str], str]) -> None:
+        self._loader = loader
+        self._values: dict[str, str] = {}
+        self._lock = threading.Lock()
+
+    def get(self, key: str) -> str:
+        with self._lock:
+            if key not in self._values:
+                self._values[key] = self._loader(key)
+            return self._values[key]
+
+
+loads: list[str] = []
+
+
+def slow_lookup(key: str) -> str:
+    loads.append(key)
+    return key.upper()
+
+
+cache = LoadingCache(slow_lookup)
+registries: list[Registry] = []
+
+
+def worker() -> None:
+    registries.append(Registry.instance())
+    cache.get("inr")
+
+
+threads = [threading.Thread(target=worker) for _ in range(20)]
+for thread in threads:
+    thread.start()
+for thread in threads:
+    thread.join()
+print(len({id(registry) for registry in registries}), loads)   # 1 ['inr']
+        </script>
+        <ul>
+          <li><b>Trade-off:</b> this cache holds one lock while loading, so loads of different keys queue behind each other. A lock per key (or a stored future per key) fixes that at the cost of more code; say it, write it only if asked.</li>
+          <li><code>functools.lru_cache</code> keeps its own structure consistent under threads, but two threads that miss together may both run the function.</li>
+          <li>A bounded cache also needs eviction to be inside the same lock as the insert; see the LRU case in <a href="sd-lld-cases.html">LLD Case Studies</a>.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="blocking-queue">
+        <h2>Bounded blocking queue</h2>
+        <p class="kind"><a href="#concurrency">Concurrency in LLD</a></p>
+        <p>The classic coordination problem: producers must wait when the queue is full, consumers when it is empty. One lock, two conditions.</p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  P1[Producer] -->|"put, waits if full"| Q[["Bounded queue"]]
+  P2[Producer] --> Q
+  Q -->|"get, waits if empty"| C1[Consumer]
+  Q --> C2[Consumer]
+          </script>
+          <figcaption>The bound is the point: a full queue slows producers down (backpressure) instead of growing without limit.</figcaption>
+        </figure>
+        <script type="text/plain" data-lang="py" data-file="bounded_queue.py">
+import threading
+from collections import deque
+from typing import Any
+
+
+class BoundedQueue:
+    def __init__(self, capacity: int) -> None:
+        self._items: deque = deque()
+        self._capacity = capacity
+        lock = threading.Lock()
+        self._not_full = threading.Condition(lock)
+        self._not_empty = threading.Condition(lock)
+
+    def put(self, item: Any) -> None:
+        with self._not_full:
+            while len(self._items) >= self._capacity:    # while, not if: re-check on wake-up
+                self._not_full.wait()
+            self._items.append(item)
+            self._not_empty.notify()
+
+    def get(self) -> Any:
+        with self._not_empty:
+            while not self._items:
+                self._not_empty.wait()
+            item = self._items.popleft()
+            self._not_full.notify()
+            return item
+
+
+STOP = object()
+jobs = BoundedQueue(capacity=2)
+squares: list[int] = []
+
+
+def producer() -> None:
+    for number in range(1, 6):
+        jobs.put(number)
+    jobs.put(STOP)
+
+
+def consumer() -> None:
+    while (job := jobs.get()) is not STOP:
+        squares.append(job * job)
+
+
+threads = [threading.Thread(target=producer), threading.Thread(target=consumer)]
+for thread in threads:
+    thread.start()
+for thread in threads:
+    thread.join()
+print(squares)                            # [1, 4, 9, 16, 25]
+        </script>
+        <p class="note"><b>Interview tip:</b> in real code this is <code>queue.Queue(maxsize=n)</code>. Write it by hand only when asked, and mention the three details that get probed: <code>while</code> around <code>wait</code>, both conditions on the same lock, and how consumers are told to stop.</p>
+      </section>
+
+      <section class="chapter" id="is-it-thread-safe">
+        <h2>"Is this thread-safe?"</h2>
+        <p class="kind"><a href="#concurrency">Concurrency in LLD</a></p>
+        <p>Do not answer yes or no. Answer in four sentences:</p>
+        <ol>
+          <li><b>What is shared:</b> "The seat map and the holds dictionary are shared; requests and bookings are per call."</li>
+          <li><b>What invariant is at risk:</b> "A seat must have at most one holder; that is a check-then-act."</li>
+          <li><b>What protects it:</b> "One lock in <code>Show</code> around the check and the write; nothing slow happens inside it."</li>
+          <li><b>What it costs and the next step:</b> "All bookings for a show serialise. If that is too coarse: a lock per seat taken in seat-id order, or optimistic versions."</li>
+        </ol>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Tool</th><th>Use when</th><th>Watch for</th></tr></thead>
+            <tbody>
+              <tr><td>Immutability, confinement</td><td>Always first</td><td>Nothing; this is the free option</td></tr>
+              <tr><td>One lock per object</td><td>Invariant inside one object</td><td>Holding it across I/O or callbacks</td></tr>
+              <tr><td>Ordered locks</td><td>Invariant across two or more objects</td><td>A code path that takes them in another order</td></tr>
+              <tr><td><code>RLock</code></td><td>A locked method calls another locked method on the same object</td><td>Hides tangled call graphs; restructure if you can</td></tr>
+              <tr><td>Optimistic version</td><td>Rare conflicts, slow work between read and write</td><td>Retry storms under contention</td></tr>
+              <tr><td>Queue with one worker</td><td>All mutations can be serialised through one thread</td><td>Latency; backpressure when the queue fills</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><b>Senior signal:</b> say where the same invariant is enforced once there is more than one process: a unique constraint or conditional write in the database, not the in-process lock. Data Systems and Distributed Systems Patterns cover that level (<a href="sd-data-systems.html">Data Systems</a>, <a href="sd-distributed-systems.html">Distributed Systems Patterns</a>).</p>
+      </section>
+
+      <section class="chapter part" id="playbook">
+        <h2>Machine-coding playbook</h2>
+        <p class="kind">Part 7 of 7 &middot; 90 minutes, working code</p>
+        <p>The round rewards a runnable core with clean seams. Decide the layout and the order before typing.</p>
+        <ul>
+          <li><a href="#layout">File and module layout</a></li>
+          <li><a href="#order">Order of implementation</a></li>
+          <li><a href="#command-loop">An input-driven command loop</a></li>
+          <li><a href="#fast-tests">A few tests, fast</a></li>
+          <li><a href="#cut-list">What to cut, and the pre-submit checklist</a></li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="layout">
+        <h2>File and module layout</h2>
+        <p class="kind"><a href="#playbook">Machine-coding playbook</a></p>
+        <script type="text/plain" data-lang="text" data-file="layout" data-norun>
+parking/
+  models.py          entities, value objects, enums          (no imports from below)
+  errors.py          ParkingError and its subclasses
+  strategies.py      Pricing, SpotFinder interfaces + implementations
+  repositories.py    InMemoryTicketRepository
+  services.py        ParkingService: one public method per use case
+  main.py            wiring + demo or command loop            (the only file that knows concrete classes)
+  test_parking.py    5 to 8 unittest cases
+        </script>
+        <ul>
+          <li>Dependencies point one way: <code>main</code> to <code>services</code> to <code>strategies</code> and <code>repositories</code> to <code>models</code>. Models import nothing of yours.</li>
+          <li>If the platform allows one file only, keep the same order top to bottom with a comment banner per section.</li>
+          <li>Do not create a package per class. Five to seven files is the right size for 90 minutes.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="order">
+        <h2>Order of implementation</h2>
+        <p class="kind"><a href="#playbook">Machine-coding playbook</a></p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  A[Models and enums] --> B[Errors]
+  B --> C[Repository in memory]
+  C --> D[Service: one use case]
+  D --> E[Driver prints output]
+  E --> F[Next use case]
+  F --> D
+  E --> G[Strategies and edges]
+  G --> H[Tests]
+  H --> I[Read through and tidy]
+          </script>
+          <figcaption>Build a thin vertical slice that runs, then loop: one use case at a time through service and driver.</figcaption>
+        </figure>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Minute</th><th>You should have</th></tr></thead>
+            <tbody>
+              <tr><td>10</td><td>Requirements written as comments; entity list; public method signatures</td></tr>
+              <tr><td>25</td><td>Models, in-memory store, first use case running from <code>main</code></td></tr>
+              <tr><td>55</td><td>All required use cases running on the happy path</td></tr>
+              <tr><td>70</td><td>Variation point behind an interface; domain errors; one failure path demonstrated</td></tr>
+              <tr><td>82</td><td>Three to six tests passing</td></tr>
+              <tr><td>90</td><td>Dead code removed, names fixed, demo output matches the prompt</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="chapter" id="command-loop">
+        <h2>An input-driven command loop</h2>
+        <p class="kind"><a href="#playbook">Machine-coding playbook</a></p>
+        <p>Many prompts give input as lines of commands. Keep parsing in one thin class that maps a command name to a handler, catches domain errors, and never contains business rules.</p>
+        <script type="text/plain" data-lang="py" data-file="command_loop.py">
+from typing import Callable, Iterable
+
+
+class WalletError(Exception):
+    pass
+
+
+class WalletService:
+    def __init__(self) -> None:
+        self._balances: dict[str, int] = {}
+
+    def add(self, user: str, amount: int) -> int:
+        self._balances[user] = self._balances.get(user, 0) + amount
+        return self._balances[user]
+
+    def pay(self, payer: str, payee: str, amount: int) -> None:
+        if self._balances.get(payer, 0) < amount:
+            raise WalletError(f"{payer} cannot pay {amount}")
+        self._balances[payer] -= amount
+        self.add(payee, amount)
+
+    def balance(self, user: str) -> int:
+        return self._balances.get(user, 0)
+
+
+class CommandLine:
+    def __init__(self, wallets: WalletService) -> None:
+        self._wallets = wallets
+        self._handlers: dict[str, Callable[..., str]] = {
+            "ADD": self._add,
+            "PAY": self._pay,
+            "SHOW": self._show,
+        }
+
+    def execute(self, line: str) -> str:
+        name, *args = line.split()
+        handler = self._handlers.get(name.upper())
+        if handler is None:
+            return f"ERROR unknown command {name}"
+        try:
+            return handler(*args)
+        except (WalletError, ValueError, TypeError) as err:   # bad input must not end the loop
+            return f"ERROR {err}"
+
+    def _add(self, user: str, amount: str) -> str:
+        return f"{user} has {self._wallets.add(user, int(amount))}"
+
+    def _pay(self, payer: str, payee: str, amount: str) -> str:
+        self._wallets.pay(payer, payee, int(amount))
+        return f"{payer} paid {payee} {amount}"
+
+    def _show(self, user: str) -> str:
+        return f"{user} has {self._wallets.balance(user)}"
+
+
+def run(cli: CommandLine, lines: Iterable[str]) -> list[str]:
+    return [cli.execute(line) for line in lines if line.strip()]
+
+
+script = ["ADD rishikesh 500", "PAY rishikesh sandhya 200", "PAY sandhya hemkesh 900", "FLY away"]
+output = run(CommandLine(WalletService()), script)    # in the round: run(cli, sys.stdin)
+print(output[0])                          # rishikesh has 500
+print(output[1])                          # rishikesh paid sandhya 200
+print(output[2])                          # ERROR sandhya cannot pay 900
+print(output[3])                          # ERROR unknown command FLY
+        </script>
+        <p class="note"><b>Interview tip:</b> the service never sees a string that needs parsing and never prints. That one boundary is what lets you test the rules without the loop, and swap the loop for an HTTP handler in the follow-up.</p>
+      </section>
+
+      <section class="chapter" id="fast-tests">
+        <h2>A few tests, fast</h2>
+        <p class="kind"><a href="#playbook">Machine-coding playbook</a></p>
+        <p>Use <code>unittest</code>: it is always installed. Test the core rule, one boundary and one failure; five tests in five minutes is the target.</p>
+        <script type="text/plain" data-lang="py" data-file="test_inventory.py">
+import unittest
+
+
+class SoldOut(Exception):
+    pass
+
+
+class Inventory:
+    def __init__(self, stock: int) -> None:
+        self.stock = stock
+
+    def reserve(self, quantity: int) -> None:
+        if quantity > self.stock:
+            raise SoldOut(f"only {self.stock} left")
+        self.stock -= quantity
+
+
+class InventoryTest(unittest.TestCase):
+    def setUp(self) -> None:
+        self.inventory = Inventory(stock=3)
+
+    def test_reserve_reduces_stock(self) -> None:
+        self.inventory.reserve(2)
+        self.assertEqual(self.inventory.stock, 1)
+
+    def test_can_reserve_the_last_unit(self) -> None:
+        self.inventory.reserve(3)
+        self.assertEqual(self.inventory.stock, 0)
+
+    def test_overselling_is_refused_and_changes_nothing(self) -> None:
+        with self.assertRaises(SoldOut):
+            self.inventory.reserve(4)
+        self.assertEqual(self.inventory.stock, 3)
+
+
+outcome = unittest.main(exit=False, verbosity=0).result
+print(outcome.testsRun, len(outcome.failures), len(outcome.errors))   # 3 0 0
+        </script>
+        <ul>
+          <li>Name tests as sentences about behaviour; the list of names is your requirements checklist.</li>
+          <li>Inject the clock, the random source and the store so no test sleeps or depends on order.</li>
+          <li>For concurrency, assert the invariant after joining all threads, as in <a href="#thread-safe-class">Making a class thread-safe</a>.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="cut-list">
+        <h2>What to cut, and the pre-submit checklist</h2>
+        <p class="kind"><a href="#playbook">Machine-coding playbook</a></p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Short of time? Cut in this order</th><th>Never cut</th></tr></thead>
+            <tbody>
+              <tr><td>1. Optional requirements (say which, in a comment)</td><td>A demo that runs without errors</td></tr>
+              <tr><td>2. Second and third strategy implementations (keep the interface and one)</td><td>The core use case, end to end</td></tr>
+              <tr><td>3. Input parsing niceties; hard-code a driver instead</td><td>Entities with behaviour, not dictionaries</td></tr>
+              <tr><td>4. Repository interfaces (keep the classes)</td><td>One failure path with a named exception</td></tr>
+              <tr><td>5. Thread safety in code (explain where the lock goes)</td><td>Readable names</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p><b>Pre-submit checklist</b></p>
+        <ul>
+          <li>Runs from a clean start with one command; output matches the prompt's format exactly.</li>
+          <li>Every stated requirement is visible in the demo or a test; anything skipped is listed.</li>
+          <li>No dead code, commented-out blocks, debug prints or unused imports.</li>
+          <li>No <code>if kind == ...</code> chain that the stated extension would have to edit.</li>
+          <li>No magic numbers: limits, rates and durations are named constants or constructor arguments.</li>
+          <li>Errors are domain exceptions; nothing returns <code>None</code> to mean failure.</li>
+          <li>Time, randomness and storage are injected; tests do not sleep.</li>
+          <li>You can say in one sentence each: what is shared between threads, and what you would add next.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="cheat-sheet">
+        <h2>Cheat sheet</h2>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Topic</th><th>Remember</th></tr></thead>
+            <tbody>
+              <tr><td>Order of work</td><td>Scope, use cases, entities and verbs, relationships, class diagram, interfaces, walk a flow, patterns, concurrency and edges, extensions</td></tr>
+              <tr><td>Entity vs value</td><td>Identity and lifecycle vs equal-by-fields and frozen</td></tr>
+              <tr><td>Placement of rules</td><td>One entity: in the entity. Several entities or storage: in a service. Varies: behind a strategy</td></tr>
+              <tr><td>Arrows</td><td>Dashed open: uses. Solid open: holds. Hollow diamond: has, shared. Filled diamond: owns. Hollow triangle solid: is-a. Hollow triangle dashed: implements</td></tr>
+              <tr><td>Diagram choice</td><td>Class for structure, sequence for one flow, state for a lifecycle with three or more states</td></tr>
+              <tr><td>Interfaces</td><td>At variation points and at the edge of the process: clock, random, store, gateway. <code>ABC</code> for families you own, <code>Protocol</code> for ports</td></tr>
+              <tr><td>Patterns</td><td>Strategy, State, Observer, Factory, Builder, Command, Decorator, Composite, Chain. Name the variation point first</td></tr>
+              <tr><td>Data</td><td>Enums for fixed sets, integer minor units for money, generated ids, frozen dataclasses for values</td></tr>
+              <tr><td>Errors</td><td>One base exception per module, specific subclasses, raise before mutating</td></tr>
+              <tr><td>Thread safety</td><td>Find shared mutable state; make check-then-act atomic; one lock per owner; order multiple locks; no I/O under a lock</td></tr>
+              <tr><td>Alternatives to a lock</td><td>Immutability, confinement, optimistic version, single-writer queue, idempotent operations</td></tr>
+              <tr><td>Machine coding</td><td>Runnable slice by minute 25; models, store, service, driver, tests; cut breadth before quality</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>Next: ten designs worked through with this method in <a href="sd-lld-cases.html">LLD Case Studies</a>.</p>
+      </section>
+
+    </div>
+  </main>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script src="../../assets/tutorial.js?v=8"></script>
+</body>
+</html>
