@@ -168,6 +168,28 @@
   }, { passive: true });
   syncTopBtn();
 
+  /* Landing page sidebar: highlight the path the reader is currently in
+     (the last group whose heading has passed a line 30% down the window) */
+  var hubLinks = Array.prototype.slice.call(document.querySelectorAll("#hub-nav a"));
+  var hubSections = hubLinks.map(function (a) { return document.getElementById(a.getAttribute("href").slice(1)); });
+  if (hubLinks.length) {
+    var pathTicking = false;
+    var syncPath = function () {
+      pathTicking = false;
+      var line = window.innerHeight * 0.3;
+      var current = -1;
+      hubSections.forEach(function (section, i) {
+        if (section && section.getBoundingClientRect().top <= line) current = i;
+      });
+      hubLinks.forEach(function (a, i) { a.classList.toggle("active", i === current); });
+    };
+    window.addEventListener("scroll", function () {
+      if (!pathTicking) { pathTicking = true; (window.requestAnimationFrame || setTimeout)(syncPath); }
+    }, { passive: true });
+    window.addEventListener("resize", syncPath);
+    syncPath();
+  }
+
   /* Hub layout switch: list, grid or cards, remembered per browser */
   var hub = document.getElementById("hub");
   var viewBtns = Array.prototype.slice.call(document.querySelectorAll("[data-set-view]"));
