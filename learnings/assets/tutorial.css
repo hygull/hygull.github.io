@@ -459,7 +459,25 @@ th { font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; color: 
 #hub-nav a:hover { color: var(--fg); }
 #hub-nav a.active { color: var(--fg); border-left-color: var(--fg); font-weight: 600; }
 #hub-nav .count { font-variant-numeric: tabular-nums; font-size: 12.5px; font-weight: 400; color: var(--muted); }
+#hub-nav .nav-label { margin: 16px 0 6px; font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
 .hub.has-side .jump { display: none; }
+
+/* Planned tutorials: listed so the roadmap is visible, not yet links */
+.badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border: 1px dashed var(--muted);
+  border-radius: 999px;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.track.todo h3 { color: var(--muted); }
+.track.todo p { color: var(--muted); }
+.hub[data-view="grid"] .track.todo, .hub[data-view="card"] .track.todo { border-style: dashed; background: transparent; border-top-color: var(--line); }
+.hub[data-view="card"] .track.todo { border-top-width: 1px; }
+.hub[data-view="grid"] .track.todo:hover { border-color: var(--line); }
 @media (max-width: 900px) {
   .hub-shell { grid-template-columns: minmax(0, 1fr); gap: 0; }
   .hub-side { display: none; }
