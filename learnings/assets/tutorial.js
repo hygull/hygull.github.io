@@ -145,6 +145,16 @@
   }
   drawDiagrams();
 
+  /* Years of experience: <span data-years-since="YYYY-MM-DD">N</span> shows whole years since that date, so it never goes stale */
+  Array.prototype.forEach.call(document.querySelectorAll("[data-years-since]"), function (el) {
+    var parts = el.getAttribute("data-years-since").split("-").map(Number);
+    if (parts.length !== 3 || parts.some(isNaN)) return;
+    var now = new Date();
+    var years = now.getFullYear() - parts[0];
+    if (now.getMonth() + 1 < parts[1] || (now.getMonth() + 1 === parts[1] && now.getDate() < parts[2])) years -= 1;
+    if (years >= 0) el.textContent = String(years);
+  });
+
   /* Back to top: a floating button that appears once the reader has scrolled about a screen down */
   var topBtn = document.createElement("button");
   topBtn.type = "button";
