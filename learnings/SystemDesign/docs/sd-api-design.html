@@ -1,0 +1,1569 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>API and Communication Design</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@500;700&display=swap">
+<link rel="stylesheet" href="../../assets/tutorial.css?v=8">
+</head>
+<body data-track="system">
+
+<header class="topbar">
+  <div class="topbar-in">
+    <a class="brand" href="../../../index.html">Learnings</a>
+    <nav class="tracks" aria-label="Paths">
+      <a href="../../../index.html#system-design" aria-current="true">System Design</a>
+      <a href="../../../archive.html">Archive</a>
+    </nav>
+    <div class="tools">
+      <button class="btn" id="menu" type="button" aria-expanded="false">Chapters</button>
+      <input id="q" type="search" placeholder="Search chapters" aria-label="Search chapters">
+      <button class="btn" id="theme" type="button">Dark mode</button>
+    </div>
+  </div>
+</header>
+
+<div class="shell">
+  <aside class="side">
+    <p class="side-label">API design</p>
+    <nav id="toc" aria-label="Chapters"></nav>
+  </aside>
+
+  <main>
+    <div class="page-head">
+      <p class="eyebrow">System design, part 5 of 12</p>
+      <h1>API and Communication Design</h1>
+      <p class="lead">The "API" step of a design interview, and everything that travels over it: how to get from requirements to endpoints in two minutes, which style and transport to pick, the details interviewers probe (pagination, idempotency, versioning, webhooks), real-time delivery, service-to-service calls, and the security that sits on every one of them. For hands-on code see <a href="../../Python/docs/python-web-apis.html">Web APIs with FastAPI</a>. Numbers are approximate, order of magnitude only.</p>
+    </div>
+
+    <div class="chapters">
+
+      <section class="chapter part" id="part-interview">
+        <h2>Designing an API in an interview</h2>
+        <p class="kind">Part 1 of 6 &middot; from requirements to endpoints</p>
+        <p>The API step is a contract, not a catalogue. Spend about two minutes, write 4 to 6 calls that cover the core use cases, and let them drive the data model and the high-level design that follow.</p>
+        <ul>
+          <li><a href="#two-minute-api">Requirements to endpoints in two minutes</a></li>
+          <li><a href="#transfer-api">Worked example: a bank-transfer API</a></li>
+          <li><a href="#resource-modelling">Naming and resource modelling</a></li>
+          <li><a href="#status-codes">Choosing status codes</a></li>
+          <li><a href="#error-format">Error format</a></li>
+          <li><a href="#interviewer-signals">What interviewers look for</a></li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="two-minute-api">
+        <h2>Requirements to endpoints in two minutes</h2>
+        <p class="kind"><a href="#part-interview">Designing an API in an interview</a></p>
+        <p>Turn each functional requirement into a noun and a verb, then write one line per call. Stop when the core flows are covered.</p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  R[Requirements] --> N[Resources]
+  N --> O[Operations]
+  O --> P[Request / response]
+  P --> E[Errors]
+  E --> X[Cross-cutting]
+          </script>
+          <figcaption>Five passes over the same list. Each pass adds one column, so you never stare at a blank board.</figcaption>
+        </figure>
+        <ul>
+          <li><b>Resources:</b> the things users create and read (account, transfer, message). They usually become your tables too.</li>
+          <li><b>Operations:</b> one line each, <code>METHOD /path</code>. Only the calls the requirements need.</li>
+          <li><b>Request / response:</b> the 3 to 5 fields that matter. Identity comes from the token, never from the body.</li>
+          <li><b>Errors:</b> name the two or three that are specific to the domain (insufficient funds, duplicate request).</li>
+          <li><b>Cross-cutting:</b> say once, in one sentence: "all calls are authenticated, writes take an idempotency key, lists are cursor-paginated".</li>
+        </ul>
+        <p class="note"><b>Interview tip:</b> say which style you are using and why in one breath ("REST over HTTPS for the public API, gRPC between services"), then move on. Do not design every CRUD endpoint.</p>
+      </section>
+
+      <section class="chapter" id="transfer-api">
+        <h2>Worked example: a bank-transfer API</h2>
+        <p class="kind"><a href="#part-interview">Designing an API in an interview</a></p>
+        <p>Requirements: move money between accounts, see a transfer's status, list an account's history. This is the whole API sketch you would write on the board.</p>
+        <script type="text/plain" data-lang="text" data-file="Transfer API">
+POST /v1/transfers                       Idempotency-Key: 7f3c...   (required)
+  body  { from_account, to_account, amount: { value: 150000, currency: "INR" }, note }
+  201   { id: "tr_9x", status: "pending", created_at }      Location: /v1/transfers/tr_9x
+  errs  400 invalid_amount | 403 not_account_owner | 409 idempotency_conflict
+        422 insufficient_funds | 429 rate_limited
+
+GET /v1/transfers/{id}
+  200   { id, status: pending | settled | failed, failure_reason, amount, created_at }
+
+GET /v1/accounts/{id}/transfers?status=settled&limit=50&cursor=...
+  200   { data: [...], next_cursor: "eyJ..." }
+
+GET /v1/accounts/{id}/balance
+  200   { available, ledger, currency, as_of }
+
+POST /v1/transfers/{id}/cancel            (action as a sub-resource, only while pending)
+  200   { id, status: "cancelled" } | 409 already_settled
+
+Notes: caller identity comes from the access token, not the body.
+       Amounts are integers in minor units (paise), never floats.
+       Transfers are immutable once settled. A correction is a new reversing transfer.
+        </script>
+        <ul>
+          <li>The create call returns <code>pending</code>: settlement is asynchronous, so the status resource is part of the contract from the start.</li>
+          <li>The idempotency key is required, not optional: a retried payment is the first thing an interviewer will ask about. See <a href="#idempotency">Idempotency for writes</a>.</li>
+          <li><code>available</code> vs <code>ledger</code> balance signals you know holds and pending entries exist.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="resource-modelling">
+        <h2>Naming and resource modelling</h2>
+        <p class="kind"><a href="#part-interview">Designing an API in an interview</a></p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Rule</th><th>Do</th><th>Avoid</th></tr></thead>
+            <tbody>
+              <tr><td>Plural nouns, verbs come from the method</td><td><code>POST /transfers</code></td><td><code>POST /createTransfer</code></td></tr>
+              <tr><td>Nest only for true ownership, one level deep</td><td><code>/accounts/{id}/transfers</code></td><td><code>/users/1/accounts/2/transfers/3/entries</code></td></tr>
+              <tr><td>Actions that are not CRUD become sub-resources or new resources</td><td><code>POST /transfers/{id}/cancel</code>, or <code>POST /refunds</code></td><td><code>PATCH status=cancelled</code> with hidden side effects</td></tr>
+              <tr><td>Opaque, non-guessable ids with a type prefix</td><td><code>tr_9xK2...</code></td><td>Auto-increment integers (enumerable, leak volume)</td></tr>
+              <tr><td>One casing, one time format, one money format</td><td><code>snake_case</code>, RFC 3339 UTC, minor units + currency</td><td>Mixed casing, local times, floats</td></tr>
+              <tr><td>The API is not the schema</td><td>Model the client's use case</td><td>Exposing tables and join keys one to one</td></tr>
+              <tr><td>GET never changes state</td><td>Safe, cacheable reads</td><td><code>GET /transfers/{id}/cancel</code></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><b>Senior signal:</b> model the state machine as a resource (<code>pending -&gt; settled | failed</code>) instead of a boolean. Async reality then fits the API without a breaking change later.</p>
+      </section>
+
+      <section class="chapter" id="status-codes">
+        <h2>Choosing status codes</h2>
+        <p class="kind"><a href="#part-interview">Designing an API in an interview</a></p>
+        <p>The status code is for machines (retry or not, cache or not); the body is for developers. The key split: 4xx means "do not retry unchanged", 5xx means "retry may help".</p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Code</th><th>Use when</th><th>Client should</th></tr></thead>
+            <tbody>
+              <tr><td>200 OK</td><td>Read or update succeeded, body returned</td><td>Proceed</td></tr>
+              <tr><td>201 Created</td><td>Resource created; send <code>Location</code></td><td>Proceed</td></tr>
+              <tr><td>202 Accepted</td><td>Work queued, not done; return a status URL</td><td>Poll or wait for a webhook</td></tr>
+              <tr><td>204 No Content</td><td>Success with no body (delete)</td><td>Proceed</td></tr>
+              <tr><td>304 Not Modified</td><td>Conditional GET, client copy is current</td><td>Use cached copy</td></tr>
+              <tr><td>400 Bad Request</td><td>Malformed or invalid input</td><td>Fix the request</td></tr>
+              <tr><td>401 Unauthorized</td><td>Missing or invalid credentials</td><td>Authenticate, refresh token</td></tr>
+              <tr><td>403 Forbidden</td><td>Authenticated but not allowed</td><td>Do not retry</td></tr>
+              <tr><td>404 Not Found</td><td>No such resource (also used to hide resources the caller may not see)</td><td>Do not retry</td></tr>
+              <tr><td>409 Conflict</td><td>State conflict: duplicate, concurrent edit, wrong state</td><td>Re-read, then decide</td></tr>
+              <tr><td>412 Precondition Failed</td><td><code>If-Match</code> ETag no longer matches</td><td>Re-read, reapply, retry</td></tr>
+              <tr><td>422 Unprocessable</td><td>Well-formed but violates a business rule</td><td>Fix the request</td></tr>
+              <tr><td>429 Too Many Requests</td><td>Rate limit or quota hit; send <code>Retry-After</code></td><td>Back off, then retry</td></tr>
+              <tr><td>500 Internal Error</td><td>Unhandled server fault</td><td>Retry with backoff if idempotent</td></tr>
+              <tr><td>502 / 504</td><td>Gateway got a bad response / no response in time from upstream</td><td>Retry with backoff if idempotent</td></tr>
+              <tr><td>503 Unavailable</td><td>Overloaded or shedding load; send <code>Retry-After</code></td><td>Back off, then retry</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><b>Failure mode:</b> returning 200 with <code>{"error": ...}</code> in the body. Proxies, retries, alerting and client libraries all key off the status line, so every one of them now misbehaves.</p>
+      </section>
+
+      <section class="chapter" id="error-format">
+        <h2>Error format</h2>
+        <p class="kind"><a href="#part-interview">Designing an API in an interview</a></p>
+        <p>One error shape for the whole API. A common standard is Problem Details (RFC 9457, media type <code>application/problem+json</code>); a house format is fine if it carries the same things.</p>
+        <script type="text/plain" data-lang="json" data-file="422 response">
+{
+  "type": "https://api.example.com/errors/insufficient-funds",
+  "title": "Insufficient funds",
+  "status": 422,
+  "code": "insufficient_funds",
+  "detail": "Available balance is lower than the transfer amount.",
+  "request_id": "req_8Zk1",
+  "errors": [ { "field": "amount.value", "reason": "exceeds_available_balance" } ]
+}
+        </script>
+        <ul>
+          <li><b>Stable machine code</b> (<code>insufficient_funds</code>) that clients branch on; the human text can change freely.</li>
+          <li><b>Request id</b> echoed in a header and the body, the join key into logs and traces.</li>
+          <li><b>Field-level list</b> for validation errors, so a form can show all problems at once.</li>
+          <li><b>No internals:</b> no stack traces, SQL, hostnames, or "user exists" hints on login and reset endpoints.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="interviewer-signals">
+        <h2>What interviewers look for</h2>
+        <p class="kind"><a href="#part-interview">Designing an API in an interview</a></p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Topic</th><th>Mid-level answer</th><th>Senior answer</th></tr></thead>
+            <tbody>
+              <tr><td>Scope</td><td>Lists every CRUD endpoint</td><td>4 to 6 calls tied to the requirements, then moves on</td></tr>
+              <tr><td>Writes</td><td><code>POST</code> and hope</td><td>Idempotency key, defined behaviour on retry and timeout</td></tr>
+              <tr><td>Lists</td><td><code>?page=3</code></td><td>Cursor, max page size, stable sort key</td></tr>
+              <tr><td>Slow work</td><td>Blocks the request</td><td>202 + status resource, or webhook</td></tr>
+              <tr><td>Identity</td><td><code>user_id</code> in the body</td><td>From the token; object-level authorization on every call</td></tr>
+              <tr><td>Evolution</td><td>"We will add v2"</td><td>Additive changes, tolerant readers, deprecation policy</td></tr>
+              <tr><td>Failure</td><td>Happy path only</td><td>Timeouts, partial failure, what the client sees and does</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><b>Interview tip:</b> the API is where you prove the system is usable under failure. For each write, be ready to answer "the client timed out, what now?".</p>
+      </section>
+
+      <section class="chapter part" id="part-styles">
+        <h2>API styles</h2>
+        <p class="kind">Part 2 of 6 &middot; REST, gRPC, GraphQL, streaming and the HTTP versions underneath</p>
+        <p>The style follows from who the caller is (browser, mobile app, partner, another service) and the shape of the traffic (request / response, streams, many views of one graph). Most real systems use two or three of them.</p>
+        <ul>
+          <li><a href="#style-comparison">REST vs gRPC vs GraphQL vs WebSocket</a></li>
+          <li><a href="#rest-constraints">REST constraints that matter</a></li>
+          <li><a href="#grpc">gRPC and Protocol Buffers</a></li>
+          <li><a href="#graphql">GraphQL</a></li>
+          <li><a href="#choosing-style">When each is the right answer</a></li>
+          <li><a href="#http-versions">HTTP/1.1 vs HTTP/2 vs HTTP/3</a></li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="style-comparison">
+        <h2>REST vs gRPC vs GraphQL vs WebSocket</h2>
+        <p class="kind"><a href="#part-styles">API styles</a></p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th></th><th>REST</th><th>gRPC</th><th>GraphQL</th><th>WebSocket / streaming</th></tr></thead>
+            <tbody>
+              <tr><td><b>Transport</b></td><td>HTTP/1.1 or newer</td><td>HTTP/2 (HTTP/3 emerging)</td><td>HTTP, usually one POST endpoint</td><td>TCP after an HTTP upgrade</td></tr>
+              <tr><td><b>Schema</b></td><td>Optional (OpenAPI)</td><td>Required (<code>.proto</code>), code generated</td><td>Required (typed schema), introspectable</td><td>None built in; you define messages</td></tr>
+              <tr><td><b>Payload</b></td><td>JSON text</td><td>Protobuf binary</td><td>JSON, shaped by the query</td><td>Text or binary frames</td></tr>
+              <tr><td><b>Streaming</b></td><td>No (SSE or chunking as add-ons)</td><td>Client, server and bidirectional</td><td>Subscriptions, over WebSocket or SSE</td><td>Full duplex, native</td></tr>
+              <tr><td><b>Caching</b></td><td>Native HTTP caching, CDN-friendly</td><td>None at the HTTP layer</td><td>Hard: POST, per-query shape; needs persisted queries</td><td>None</td></tr>
+              <tr><td><b>Browser support</b></td><td>Native</td><td>Needs gRPC-Web and a proxy</td><td>Native (it is HTTP + JSON)</td><td>Native</td></tr>
+              <tr><td><b>Best for</b></td><td>Public and partner APIs, CRUD, cacheable reads</td><td>Service-to-service, low latency, polyglot back ends</td><td>Many clients with different view needs over one graph</td><td>Chat, live updates, collaboration, games</td></tr>
+              <tr><td><b>You pay</b></td><td>Over- and under-fetching, chatty clients</td><td>Opaque on the wire, weaker browser and tooling reach</td><td>Query cost control, caching, N+1 resolvers</td><td>Stateful connections to scale and route</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="chapter" id="rest-constraints">
+        <h2>REST constraints that matter</h2>
+        <p class="kind"><a href="#part-styles">API styles</a></p>
+        <p>Nobody is asked to recite Fielding. These are the constraints that change the design.</p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Constraint</th><th>Meaning in practice</th><th>What it buys</th></tr></thead>
+            <tbody>
+              <tr><td>Stateless</td><td>Each request carries everything needed (token, cursor); no server-side conversation state</td><td>Any instance can serve any request: horizontal scaling, simple failover</td></tr>
+              <tr><td>Uniform interface</td><td>Resources named by URL, standard methods and status codes</td><td>Generic clients, proxies, gateways and caches work without custom code</td></tr>
+              <tr><td>Cacheable</td><td>Responses declare cacheability (<code>Cache-Control</code>, <code>ETag</code>)</td><td>CDN and browser offload for reads</td></tr>
+              <tr><td>Layered</td><td>Client cannot tell whether it talks to origin, gateway or CDN</td><td>You can insert load balancers, WAF, gateways freely</td></tr>
+              <tr><td>Method semantics</td><td>GET safe; PUT and DELETE idempotent; POST neither</td><td>Intermediaries and clients know what is safe to retry</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><b>Trade-off:</b> HATEOAS (links that drive the client) is rarely implemented fully. Returning a few links (<code>next</code>, <code>status_url</code>) gets most of the value.</p>
+      </section>
+
+      <section class="chapter" id="grpc">
+        <h2>gRPC and Protocol Buffers</h2>
+        <p class="kind"><a href="#part-styles">API styles</a></p>
+        <p>An RPC framework: a <code>.proto</code> contract generates typed clients and servers in many languages; calls run as HTTP/2 streams with binary Protobuf payloads. Use it inside the data centre; keep REST or GraphQL at the edge.</p>
+        <script type="text/plain" data-lang="text" data-file="ledger.proto">
+service Ledger {
+  rpc GetBalance (BalanceRequest) returns (Balance);                  // unary
+  rpc WatchEntries (WatchRequest) returns (stream Entry);             // server streaming
+  rpc UploadEntries (stream Entry) returns (UploadSummary);           // client streaming
+  rpc Reconcile (stream Entry) returns (stream Mismatch);             // bidirectional
+}
+message Balance {
+  string account_id = 1;      // field numbers are the wire contract: never reuse or renumber
+  int64  available  = 2;
+  string currency   = 3;
+  reserved 4;                 // a deleted field's number stays reserved
+}
+        </script>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+sequenceDiagram
+  participant C as Client stub
+  participant S as Server
+  Note over C,S: One HTTP/2 connection
+  C->>S: Unary: request
+  S-->>C: response + status
+  C->>S: Server streaming: request
+  S-->>C: message 1
+  S-->>C: message 2 ... then status
+  C->>S: Bidirectional: message a
+  S-->>C: message x
+  C->>S: message b
+  S-->>C: message y, then status
+          </script>
+          <figcaption>All modes share one connection. Each call is its own stream, so a slow call does not block the others at the HTTP layer.</figcaption>
+        </figure>
+        <ul>
+          <li><b>Why it suits service-to-service:</b> compact payloads (often several times smaller than JSON), generated typed stubs, multiplexing on long-lived connections, streaming, and first-class <b>deadlines</b> and cancellation that propagate down the call chain.</li>
+          <li><b>Schema evolution:</b> add fields with new numbers; unknown fields are ignored by old readers. Never change a field's type or number.</li>
+          <li><b>Failure mode:</b> a layer 4 load balancer pins a long-lived HTTP/2 connection to one backend, so load never rebalances. Use layer 7 (per-request) balancing or client-side balancing; see Building Blocks.</li>
+          <li><b>You pay:</b> not human-readable, no HTTP caching, browsers need gRPC-Web through a proxy.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="graphql">
+        <h2>GraphQL</h2>
+        <p class="kind"><a href="#part-styles">API styles</a></p>
+        <p>The client sends a query naming exactly the fields it wants across a typed graph; one round trip replaces several REST calls. It fixes <b>over-fetching</b> (fat responses a mobile client throws away) and <b>under-fetching</b> (call 1 for the list, then N calls for details).</p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+sequenceDiagram
+  participant Q as GraphQL server
+  participant L as DataLoader
+  participant D as Database
+  Note over Q,D: Naive resolvers: 1 + N queries
+  Q->>D: SELECT 50 transfers
+  Q->>D: SELECT account 1
+  Q->>D: SELECT account 2 ... 50 times
+  Note over Q,D: With DataLoader: 2 queries
+  Q->>D: SELECT 50 transfers
+  Q->>L: load(1), load(2) ... load(50)
+  L->>D: SELECT accounts WHERE id IN (1..50)
+  D-->>L: rows
+  L-->>Q: one account per resolver
+          </script>
+          <figcaption>The N+1 problem: a per-field resolver runs once per parent row. A dataloader collects the keys within one tick, issues one batched query and caches per request.</figcaption>
+        </figure>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Where it hurts</th><th>Why</th><th>Mitigation</th></tr></thead>
+            <tbody>
+              <tr><td>HTTP caching</td><td>One endpoint, POST, a different shape per query</td><td>Persisted queries (hash sent with GET), client-side normalised cache, per-field cache hints</td></tr>
+              <tr><td>Rate limiting</td><td>One request can cost 1 or 10,000 database reads</td><td>Query cost analysis, depth and complexity limits, limit by cost not by request count</td></tr>
+              <tr><td>Abuse</td><td>Deeply nested or aliased queries</td><td>Depth limit, timeout, allowlist of persisted queries for first-party clients</td></tr>
+              <tr><td>Authorization</td><td>Many paths reach the same object</td><td>Enforce in the data layer per object and field, not per query</td></tr>
+              <tr><td>Observability</td><td>Everything is <code>POST /graphql</code> with 200</td><td>Metrics per operation name and per resolver</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="chapter" id="choosing-style">
+        <h2>When each is the right answer</h2>
+        <p class="kind"><a href="#part-styles">API styles</a></p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart TD
+  A{{Who calls it?}} -->|Internal service| G[gRPC]
+  A -->|Third parties| R[REST + OpenAPI]
+  A -->|Own web and mobile apps| B{{Many screens over one graph?}}
+  B -->|Yes| Q[GraphQL or BFF]
+  B -->|No| R
+  R --> P{{Server must push?}}
+  Q --> P
+  P -->|One way| S[Add SSE]
+  P -->|Two way, low latency| W[Add WebSocket]
+          </script>
+          <figcaption>Pick by caller first, then add a push channel only for the flows that need it. Styles combine: REST for commands plus WebSocket for live updates is the usual chat design.</figcaption>
+        </figure>
+        <ul>
+          <li><b>REST:</b> the default for anything public. Everyone can call it, debug it with curl, and cache it.</li>
+          <li><b>gRPC:</b> internal calls where latency, typing and streaming matter and you control both ends.</li>
+          <li><b>GraphQL:</b> product APIs with many client teams and fast-changing views. Avoid for simple CRUD, public partner APIs and file transfer.</li>
+          <li><b>WebSocket / SSE:</b> only where the server must speak first. See <a href="#part-realtime">Real-time communication</a>.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="http-versions">
+        <h2>HTTP/1.1 vs HTTP/2 vs HTTP/3</h2>
+        <p class="kind"><a href="#part-styles">API styles</a></p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th></th><th>HTTP/1.1</th><th>HTTP/2</th><th>HTTP/3</th></tr></thead>
+            <tbody>
+              <tr><td><b>Transport</b></td><td>TCP (+ TLS)</td><td>TCP (+ TLS in practice)</td><td>QUIC over UDP, TLS 1.3 built in</td></tr>
+              <tr><td><b>Framing</b></td><td>Text</td><td>Binary frames</td><td>Binary frames</td></tr>
+              <tr><td><b>Multiplexing</b></td><td>No: one request at a time per connection, browsers open about 6 per origin</td><td>Many streams on one connection</td><td>Many streams on one connection</td></tr>
+              <tr><td><b>Head-of-line blocking</b></td><td>At the HTTP layer</td><td>Gone at HTTP, still at TCP: one lost packet stalls every stream</td><td>Gone: loss stalls only the stream it belongs to</td></tr>
+              <tr><td><b>Header compression</b></td><td>None</td><td>HPACK</td><td>QPACK</td></tr>
+              <tr><td><b>Connection setup</b></td><td>TCP + TLS: 2 to 3 round trips</td><td>Same as 1.1</td><td>1 round trip, 0-RTT on resumption</td></tr>
+              <tr><td><b>Network change</b></td><td>Connection breaks</td><td>Connection breaks</td><td>Connection id survives a Wi-Fi to mobile switch</td></tr>
+              <tr><td><b>Typical use</b></td><td>Legacy, simple internal calls</td><td>Default for web and gRPC</td><td>Edge to client on lossy mobile networks</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart TD
+  subgraph H2["HTTP/2 on TCP"]
+    direction LR
+    A1[Streams A, B, C] --> T[One ordered TCP byte stream] --> X[Packet of B lost: A, B and C all wait]
+  end
+  subgraph H3["HTTP/3 on QUIC"]
+    direction LR
+    A2[Streams A, B, C] --> U[Independent QUIC streams over UDP] --> Y[Packet of B lost: only B waits]
+  end
+  H2 ~~~ H3
+          </script>
+          <figcaption>TCP delivers bytes in order, so HTTP/2 inherits its head-of-line blocking. QUIC tracks loss per stream.</figcaption>
+        </figure>
+        <p class="note"><b>Interview tip:</b> the usual deployment is HTTP/3 or HTTP/2 from client to edge, and HTTP/2 or HTTP/1.1 with keep-alive from edge to origin. 0-RTT data can be replayed, so allow it only for idempotent requests.</p>
+      </section>
+
+      <section class="chapter part" id="part-details">
+        <h2>API details that get probed</h2>
+        <p class="kind">Part 3 of 6 &middot; the follow-up questions</p>
+        <p>After the endpoint list, interviewers pick one or two of these and dig. Each has a default answer worth knowing cold.</p>
+        <ul>
+          <li><a href="#pagination">Pagination</a>, <a href="#filtering-sorting">filtering and sorting</a></li>
+          <li><a href="#versioning">Versioning and backward compatibility</a></li>
+          <li><a href="#idempotency">Idempotency for writes</a>, <a href="#partial-updates">partial updates</a></li>
+          <li><a href="#long-running">Bulk and long-running operations</a>, <a href="#webhooks">webhooks</a></li>
+          <li><a href="#api-rate-limits">Rate limits and quotas</a>, <a href="#http-caching">HTTP caching</a>, <a href="#compression">compression and payload size</a></li>
+          <li><a href="#gateway-bff">API gateway and Backend-for-Frontend</a>, <a href="#contract-first">contract-first design</a></li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="pagination">
+        <h2>Pagination</h2>
+        <p class="kind"><a href="#part-details">API details that get probed</a></p>
+        <p>Default to cursor (keyset) pagination for anything large or changing. Offset is acceptable only for small, mostly static lists that need "jump to page N".</p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th></th><th>Offset: <code>?limit=50&amp;offset=100000</code></th><th>Cursor / keyset: <code>?limit=50&amp;cursor=...</code></th></tr></thead>
+            <tbody>
+              <tr><td>Query</td><td><code>ORDER BY created_at DESC LIMIT 50 OFFSET 100000</code></td><td><code>WHERE (created_at, id) &lt; (:t, :id) ORDER BY created_at DESC, id DESC LIMIT 50</code></td></tr>
+              <tr><td>Cost of a deep page</td><td>Scans and discards 100,000 rows: O(offset)</td><td>Index seek: O(page size), the same at any depth</td></tr>
+              <tr><td>Rows inserted while paging</td><td>Items shift: duplicates or skipped rows</td><td>Stable: continues from the last key seen</td></tr>
+              <tr><td>Jump to page N, total count</td><td>Yes</td><td>No (next / previous only)</td></tr>
+              <tr><td>Sharded data</td><td>Each shard must return offset + limit rows</td><td>Each shard seeks from the key, results are merged</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <script type="text/plain" data-lang="json" data-file="Cursor page">
+{
+  "data": [ { "id": "tr_9x", "created_at": "2026-11-17T09:30:00Z" } ],
+  "next_cursor": "eyJ0IjoiMjAyNi0xMS0xN1QwOTozMDowMFoiLCJpZCI6InRyXzl4In0",
+  "has_more": true
+}
+        </script>
+        <ul>
+          <li>The cursor is the last row's sort key, base64-encoded and <b>opaque</b> (sign or encrypt it if clients must not forge it). Opaque means you can change the scheme later.</li>
+          <li>The sort key must be <b>unique and immutable</b>: add <code>id</code> as a tie-breaker to a timestamp.</li>
+          <li>Enforce a maximum <code>limit</code> (say 100) on the server. Skip <code>total_count</code> unless required: it is a full scan.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="filtering-sorting">
+        <h2>Filtering and sorting</h2>
+        <p class="kind"><a href="#part-details">API details that get probed</a></p>
+        <script type="text/plain" data-lang="text" data-file="Query parameters">
+GET /v1/accounts/{id}/transfers?status=settled&created_after=2026-11-01T00:00:00Z
+                               &sort=-created_at&fields=id,amount,status&limit=50
+        </script>
+        <ul>
+          <li><b>Allowlist</b> the filterable and sortable fields: every one needs a supporting index. Arbitrary filters are an accidental full table scan and a denial-of-service vector.</li>
+          <li>Simple equality and ranges as query parameters; complex search belongs in a dedicated <code>POST /search</code> backed by a search index, not in the primary store.</li>
+          <li><code>fields=</code> (sparse fieldsets) trims payloads without adopting GraphQL.</li>
+          <li>A cursor is only valid for the filter and sort it was issued with: encode them in the cursor or reject a mismatch.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="versioning">
+        <h2>Versioning and backward compatibility</h2>
+        <p class="kind"><a href="#part-details">API details that get probed</a></p>
+        <p>The best version is no new version: evolve additively and reserve a major version for a real break.</p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Strategy</th><th>Looks like</th><th>Gain</th><th>Pay</th></tr></thead>
+            <tbody>
+              <tr><td>URL path</td><td><code>/v1/transfers</code></td><td>Obvious, easy to route, log and cache</td><td>Coarse: a new version copies the whole surface</td></tr>
+              <tr><td>Header / media type</td><td><code>Accept: application/vnd.bank.v2+json</code> or <code>API-Version: 2026-11-01</code></td><td>Clean URLs, per-client date pinning</td><td>Invisible in links and logs, harder to test and cache (<code>Vary</code>)</td></tr>
+              <tr><td>Additive evolution</td><td>No version change; new optional fields and endpoints</td><td>No migration for clients</td><td>Discipline; old fields live for a long time</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Backward compatible (safe)</th><th>Breaking (needs a new version)</th></tr></thead>
+            <tbody>
+              <tr><td>Add an optional request field with a default</td><td>Add a required request field</td></tr>
+              <tr><td>Add a response field</td><td>Remove or rename a field, change its type or meaning</td></tr>
+              <tr><td>Add an endpoint or an optional query parameter</td><td>Change a URL, a default, or a status code</td></tr>
+              <tr><td>Relax a validation rule</td><td>Tighten a validation rule</td></tr>
+              <tr><td>Add an enum value, <b>only if</b> clients were told to tolerate unknown values</td><td>Add an enum value clients switch on exhaustively</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><b>Senior signal:</b> state the policy, not just the mechanism: tolerant readers (ignore unknown fields), expand then contract for renames, a published deprecation window with <code>Deprecation</code> and <code>Sunset</code> headers, and usage metrics per version so you know when removal is safe.</p>
+      </section>
+
+      <section class="chapter" id="idempotency">
+        <h2>Idempotency for writes</h2>
+        <p class="kind"><a href="#part-details">API details that get probed</a></p>
+        <p>A client that times out cannot know whether the write happened. Retries are therefore mandatory, and the server must make a repeated request have the effect of one.</p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Method</th><th>Safe (no state change)</th><th>Idempotent</th><th>Retry blindly?</th></tr></thead>
+            <tbody>
+              <tr><td>GET, HEAD, OPTIONS</td><td>Yes</td><td>Yes</td><td>Yes</td></tr>
+              <tr><td>PUT (full replace)</td><td>No</td><td>Yes</td><td>Yes</td></tr>
+              <tr><td>DELETE</td><td>No</td><td>Yes (second call may return 404)</td><td>Yes</td></tr>
+              <tr><td>PATCH</td><td>No</td><td>Depends: "set x = 5" yes, "x += 5" no</td><td>Only with a key or <code>If-Match</code></td></tr>
+              <tr><td>POST</td><td>No</td><td>No</td><td>Only with an idempotency key</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+sequenceDiagram
+  participant C as Client
+  participant S as Transfer service
+  participant D as Database
+  C->>S: POST /transfers, key k1
+  S->>D: one txn: INSERT key k1 + transfer
+  D-->>S: committed
+  S--xC: 201 (response lost)
+  Note over C: Timeout: retry, same key
+  C->>S: POST /transfers, key k1
+  S->>D: INSERT key k1
+  D-->>S: unique violation
+  S->>D: read stored response
+  S-->>C: 201, same body
+          </script>
+          <figcaption>The retry creates no second transfer. The key (unique column, sent as the <code>Idempotency-Key</code> header) and the business write commit in the same transaction, so "key seen" and "money moved" can never disagree.</figcaption>
+        </figure>
+        <ul>
+          <li><b>Key:</b> a client-generated UUID per logical operation, scoped to the caller, kept for a window (commonly 24 hours).</li>
+          <li><b>Same key, different body:</b> store a request hash and reject the mismatch (422 or 409). <b>Same key, still in flight:</b> return 409 or wait, never run twice.</li>
+          <li><b>Natural keys</b> work too: a unique constraint on <code>(merchant_id, order_id)</code> is an idempotency key the business already has.</li>
+          <li>Retry only on timeouts, connection errors, 429 and 5xx, with exponential backoff and jitter. Retry storms are covered in Distributed Systems Patterns.</li>
+        </ul>
+        <p class="note"><b>Failure mode:</b> checking the key in a cache first and writing later. Two concurrent retries both miss and both execute. The uniqueness check must be atomic with the write.</p>
+      </section>
+
+      <section class="chapter" id="partial-updates">
+        <h2>Partial updates: PUT vs PATCH</h2>
+        <p class="kind"><a href="#part-details">API details that get probed</a></p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th></th><th>PUT</th><th>PATCH</th></tr></thead>
+            <tbody>
+              <tr><td>Semantics</td><td>Replace the whole resource</td><td>Change only the fields sent</td></tr>
+              <tr><td>Missing field means</td><td>Reset to default or null</td><td>Leave unchanged</td></tr>
+              <tr><td>Idempotent</td><td>Yes</td><td>Not guaranteed</td></tr>
+              <tr><td>Formats</td><td>Full representation</td><td>JSON Merge Patch (RFC 7386, simple, <code>null</code> deletes) or JSON Patch (RFC 6902, list of operations)</td></tr>
+              <tr><td>Risk</td><td>An old client wipes fields it does not know about</td><td>Ambiguity between "absent" and "null"</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <ul>
+          <li>Default to PATCH with merge-patch semantics for user-edited resources.</li>
+          <li>Prevent lost updates with optimistic concurrency: the client sends <code>If-Match: "etag"</code>, the server returns 412 if the resource changed. See <a href="#http-caching">HTTP caching</a>.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="long-running">
+        <h2>Bulk and long-running operations</h2>
+        <p class="kind"><a href="#part-details">API details that get probed</a></p>
+        <p>Anything that can exceed a few seconds (export, video transcode, bulk import, settlement) should not hold a request open. Accept the job, return a status resource, finish in the background.</p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+sequenceDiagram
+  participant C as Client
+  participant A as API
+  participant Q as Queue
+  participant W as Worker
+  C->>A: POST /exports
+  A->>Q: enqueue job j7
+  A-->>C: 202 Accepted, Location /jobs/j7
+  Q->>W: job j7
+  C->>A: GET /jobs/j7
+  A-->>C: 200 running, progress 40, Retry-After 5
+  W->>A: mark j7 done, result in object store
+  C->>A: GET /jobs/j7
+  A-->>C: 200 succeeded, result_url (signed, expiring)
+          </script>
+          <figcaption>The job is a resource with its own state machine: queued, running, succeeded, failed, cancelled. Polling can be replaced by a webhook or SSE.</figcaption>
+        </figure>
+        <ul>
+          <li><b>Bulk writes:</b> cap the batch size, and choose all-or-nothing (one transaction) or partial success with a per-item result list (an overall 200 or 207 plus item-level statuses). Say which.</li>
+          <li>Give each item its own idempotency key or client id so a retried batch does not double-apply.</li>
+          <li><b>Large uploads</b> bypass the API: hand out a pre-signed object-store URL, with multipart / resumable upload for big files.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="webhooks">
+        <h2>Webhooks</h2>
+        <p class="kind"><a href="#part-details">API details that get probed</a></p>
+        <p>A webhook is your API calling the customer's: an HTTP POST per event to a URL they registered. It replaces polling, and it makes you a client of an unreliable server you do not control.</p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+sequenceDiagram
+  participant P as Provider
+  participant R as Receiver endpoint
+  participant J as Receiver queue
+  P->>R: POST event evt_1 (signature, timestamp)
+  R->>R: verify HMAC, check timestamp, dedupe evt_1
+  R->>J: enqueue
+  R-->>P: 200 within a few seconds
+  P->>R: POST event evt_2
+  R--xP: timeout or 5xx
+  Note over P: Retry with backoff for hours to days, then dead-letter
+  P->>R: POST event evt_2 (same id)
+  R-->>P: 200
+          </script>
+          <figcaption>Delivery is at-least-once: the receiver acknowledges fast, processes asynchronously and dedupes on the event id.</figcaption>
+        </figure>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Concern</th><th>Design</th></tr></thead>
+            <tbody>
+              <tr><td>Signing</td><td>HMAC-SHA256 over <code>timestamp + "." + raw_body</code> with a per-endpoint secret, sent in a header; receiver compares in constant time. Support two active secrets for rotation.</td></tr>
+              <tr><td>Replay protection</td><td>Reject timestamps outside a tolerance (about 5 minutes) and event ids already seen.</td></tr>
+              <tr><td>Retries</td><td>Exponential backoff with jitter over hours to days; then a dead-letter state, an alert, and auto-disable of endpoints that keep failing.</td></tr>
+              <tr><td>Ordering</td><td>Not guaranteed. Include a sequence number or <code>updated_at</code>; or send thin events ("transfer tr_9x changed") and let the receiver fetch current state.</td></tr>
+              <tr><td>Recovery</td><td>A <code>GET /events?after=</code> API so receivers can reconcile after an outage, plus manual redelivery.</td></tr>
+              <tr><td>Provider safety</td><td>Sender-side SSRF protection (block private address ranges), per-endpoint timeouts and concurrency so one slow customer cannot stall the rest.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="chapter" id="api-rate-limits">
+        <h2>Rate limits and quotas</h2>
+        <p class="kind"><a href="#part-details">API details that get probed</a></p>
+        <p>From the API's side, a limit is part of the contract: documented, visible in headers, and answered with a clear 429. The algorithms (token bucket, sliding window) are in Building Blocks.</p>
+        <script type="text/plain" data-lang="text" data-file="429 response">
+HTTP/1.1 429 Too Many Requests
+Retry-After: 12
+RateLimit-Limit: 100
+RateLimit-Remaining: 0
+RateLimit-Reset: 12
+Content-Type: application/problem+json
+
+{ "code": "rate_limited", "detail": "100 requests per minute per API key." }
+        </script>
+        <div class="scroll">
+          <table>
+            <thead><tr><th></th><th>Rate limit</th><th>Quota</th></tr></thead>
+            <tbody>
+              <tr><td>Window</td><td>Seconds to minutes</td><td>Day or month</td></tr>
+              <tr><td>Purpose</td><td>Protect the service, smooth bursts</td><td>Enforce the plan, bill, cap cost</td></tr>
+              <tr><td>Key</td><td>API key, user, IP, endpoint</td><td>Account or tenant</td></tr>
+              <tr><td>On breach</td><td>429 + <code>Retry-After</code></td><td>429 or 403 with an upgrade message</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <ul>
+          <li>Limit on several dimensions: per key, per tenant, per endpoint class (a search costs more than a read), and a global ceiling.</li>
+          <li>Header names vary: <code>X-RateLimit-*</code> is the long-standing convention, <code>RateLimit-*</code> the IETF draft. <code>Retry-After</code> is the one clients actually obey.</li>
+          <li>429 means "you sent too much"; 503 means "we are overloaded". Both are retryable, with backoff and jitter.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="http-caching">
+        <h2>HTTP caching: ETag, Cache-Control, conditional requests</h2>
+        <p class="kind"><a href="#part-details">API details that get probed</a></p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+sequenceDiagram
+  participant C as Client or CDN
+  participant S as API
+  C->>S: GET /accounts/42
+  S-->>C: 200, ETag "v7", Cache-Control max-age=60
+  Note over C: Within 60s: served from cache, no request
+  C->>S: GET /accounts/42, If-None-Match "v7"
+  S-->>C: 304 Not Modified (no body)
+  C->>S: PATCH /accounts/42, If-Match "v7"
+  S-->>C: 412 Precondition Failed (now "v8")
+          </script>
+          <figcaption>One validator, two uses: <code>If-None-Match</code> saves bytes on reads, <code>If-Match</code> prevents lost updates on writes.</figcaption>
+        </figure>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Directive</th><th>Meaning</th><th>Use for</th></tr></thead>
+            <tbody>
+              <tr><td><code>max-age=60</code></td><td>Fresh for 60 s in any cache</td><td>Public, slowly changing reads</td></tr>
+              <tr><td><code>s-maxage=300</code></td><td>Overrides max-age for shared caches (CDN)</td><td>Longer edge TTL than browser TTL</td></tr>
+              <tr><td><code>private</code></td><td>Browser may cache, shared caches must not</td><td>Per-user responses</td></tr>
+              <tr><td><code>no-cache</code></td><td>Store, but revalidate before every use</td><td>Must be current, cheap 304s</td></tr>
+              <tr><td><code>no-store</code></td><td>Never store</td><td>Balances, tokens, PII</td></tr>
+              <tr><td><code>stale-while-revalidate=30</code></td><td>Serve stale while refreshing in the background</td><td>Hiding origin latency</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><b>Failure mode:</b> a shared cache storing an authenticated response and serving it to another user. Mark per-user responses <code>private</code> or <code>no-store</code>, and set <code>Vary</code> for anything that changes with a request header.</p>
+      </section>
+
+      <section class="chapter" id="compression">
+        <h2>Compression and payload size</h2>
+        <p class="kind"><a href="#part-details">API details that get probed</a></p>
+        <ul>
+          <li><b>Negotiate:</b> the client sends <code>Accept-Encoding: br, gzip</code>, the server answers with <code>Content-Encoding</code>. JSON typically shrinks by 70 to 90 percent.</li>
+          <li><b>Skip</b> tiny bodies (under about 1 KB, where the overhead outweighs the gain) and already-compressed media. Compression costs CPU; do it at the edge where possible.</li>
+          <li><b>Shrink before you compress:</b> pagination, sparse fieldsets, no embedded blobs (return a URL), a binary format for internal hops.</li>
+          <li><b>Cap sizes:</b> a maximum request body (413 beyond it), a maximum page size, a maximum decompressed size to stop decompression bombs.</li>
+          <li>On mobile networks the payload size often dominates latency; that is the argument for field selection and for HTTP/2 or 3 header compression.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="gateway-bff">
+        <h2>API gateway and Backend-for-Frontend</h2>
+        <p class="kind"><a href="#part-details">API details that get probed</a></p>
+        <p>A gateway is the single entry point that handles what every API needs. A Backend-for-Frontend (BFF) is a thin per-client API that shapes and aggregates data for one kind of front end.</p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  W([Web app]) --> G[API gateway]
+  M([Mobile app]) --> G
+  P([Partner]) --> G
+  G --> BW[Web BFF]
+  G --> BM[Mobile BFF]
+  G --> PA[Public API]
+  BW --> S1[Accounts]
+  BW --> S2[Transfers]
+  BM --> S1
+  BM --> S2
+  PA --> S2
+  PA --> S3[Notifications]
+          </script>
+          <figcaption>Gateway: cross-cutting concerns, once. BFF: client-specific composition, owned by the client team. Services stay generic.</figcaption>
+        </figure>
+        <div class="scroll">
+          <table>
+            <thead><tr><th></th><th>API gateway</th><th>BFF</th></tr></thead>
+            <tbody>
+              <tr><td>Does</td><td>TLS termination, authentication, rate limiting, routing, request ids, logging, canary routing</td><td>Aggregates several service calls, trims and reshapes payloads, handles client-specific flows</td></tr>
+              <tr><td>Owned by</td><td>Platform team</td><td>The front-end team it serves</td></tr>
+              <tr><td>Avoid</td><td>Business logic in the gateway; a single shared gateway config that every team must edit</td><td>Duplicated domain logic across BFFs; one BFF per screen</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><b>Trade-off:</b> the gateway is an extra hop (about a millisecond or a few) and a shared failure point, so it must be stateless, horizontally scaled and deployed per zone.</p>
+      </section>
+
+      <section class="chapter" id="contract-first">
+        <h2>Contract-first design and SDKs</h2>
+        <p class="kind"><a href="#part-details">API details that get probed</a></p>
+        <p>Write the contract (OpenAPI for REST, <code>.proto</code> for gRPC, the schema for GraphQL) before the code, review it like code, and generate server stubs, client SDKs, docs, mocks and a breaking-change check in CI from that one file.</p>
+      </section>
+
+      <section class="chapter part" id="part-realtime">
+        <h2>Real-time communication</h2>
+        <p class="kind">Part 4 of 6 &middot; getting data to the client without being asked</p>
+        <p>HTTP is client-initiated. Every real-time technique is a way around that, trading simplicity for latency and connection state.</p>
+        <ul>
+          <li><a href="#realtime-comparison">Polling, SSE, WebSocket and WebRTC compared</a></li>
+          <li><a href="#polling">Short polling and long polling</a></li>
+          <li><a href="#sse-websocket">Server-Sent Events and WebSocket</a></li>
+          <li><a href="#scaling-websockets">Scaling WebSocket connections</a></li>
+          <li><a href="#push-notifications">Push notifications</a></li>
+          <li><a href="#choosing-realtime">Choosing among them</a></li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="realtime-comparison">
+        <h2>Polling, SSE, WebSocket and WebRTC compared</h2>
+        <p class="kind"><a href="#part-realtime">Real-time communication</a></p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th></th><th>Short polling</th><th>Long polling</th><th>Server-Sent Events</th><th>WebSocket</th><th>WebRTC</th></tr></thead>
+            <tbody>
+              <tr><td><b>Direction</b></td><td>Client pulls</td><td>Client pulls, server holds</td><td>Server to client</td><td>Both ways</td><td>Peer to peer, both ways</td></tr>
+              <tr><td><b>Transport</b></td><td>HTTP</td><td>HTTP</td><td>HTTP (one long response)</td><td>TCP after HTTP upgrade</td><td>UDP (SRTP, data channels)</td></tr>
+              <tr><td><b>Latency</b></td><td>Up to the poll interval</td><td>Near real time</td><td>Near real time</td><td>Lowest over TCP</td><td>Lowest (no in-order stall)</td></tr>
+              <tr><td><b>Server state</b></td><td>None</td><td>One held request per client</td><td>One open connection per client</td><td>One open connection per client</td><td>Signalling, STUN / TURN servers</td></tr>
+              <tr><td><b>Reconnect</b></td><td>Not needed</td><td>Built into the loop</td><td>Automatic, resumes with <code>Last-Event-ID</code></td><td>Yours to build</td><td>Yours to build (ICE restart)</td></tr>
+              <tr><td><b>Proxies, firewalls</b></td><td>Works everywhere</td><td>Works everywhere</td><td>Works; needs buffering off</td><td>Mostly fine over TLS on 443</td><td>Needs TURN relay when NAT blocks</td></tr>
+              <tr><td><b>Best for</b></td><td>Job status, low-frequency dashboards</td><td>Fallback, simple notifications</td><td>Feeds, tickers, progress, LLM token streams</td><td>Chat, collaboration, games</td><td>Voice, video, screen share</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="chapter" id="polling">
+        <h2>Short polling and long polling</h2>
+        <p class="kind"><a href="#part-realtime">Real-time communication</a></p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+sequenceDiagram
+  participant C as Client
+  participant S as Server
+  C->>S: GET /updates?since=10
+  S-->>C: 200 [] (nothing)
+  Note over C: wait 5s
+  C->>S: GET /updates?since=10
+  S-->>C: 200 [] (nothing)
+  Note over C: wait 5s
+  C->>S: GET /updates?since=10
+  S-->>C: 200 [event 11]
+          </script>
+          <figcaption>Short polling: most requests return nothing. Latency averages half the interval; load is clients divided by interval, whether or not anything happened.</figcaption>
+        </figure>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+sequenceDiagram
+  participant C as Client
+  participant S as Server
+  C->>S: GET /updates?since=10
+  Note over S: hold the request open, up to about 30s
+  S-->>C: 200 [event 11] (as soon as it exists)
+  C->>S: GET /updates?since=11
+  Note over S: hold ... nothing happens
+  S-->>C: 204 timeout
+  C->>S: GET /updates?since=11
+          </script>
+          <figcaption>Long polling: the server answers only when there is data or on timeout, and the client reconnects at once. The <code>since</code> cursor makes it lossless across reconnects.</figcaption>
+        </figure>
+        <ul>
+          <li><b>Arithmetic:</b> 1 million clients polling every 5 s is 200,000 requests per second of mostly empty responses. That number is why you move off short polling.</li>
+          <li>Long polling needs a server that can hold many idle requests cheaply (async I/O), and a hold time below every proxy's idle timeout.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="sse-websocket">
+        <h2>Server-Sent Events and WebSocket</h2>
+        <p class="kind"><a href="#part-realtime">Real-time communication</a></p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+sequenceDiagram
+  participant C as Client
+  participant S as Server
+  C->>S: GET /stream (Accept text/event-stream)
+  S-->>C: 200, response stays open
+  S-->>C: id 11, data ...
+  S-->>C: id 12, data ...
+  Note over C,S: connection drops
+  C->>S: GET /stream (Last-Event-ID 12)
+  S-->>C: id 13, data ... (resumes)
+          </script>
+          <figcaption>SSE: one ordinary HTTP response that never ends. The browser reconnects by itself and tells the server where it left off.</figcaption>
+        </figure>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+sequenceDiagram
+  participant C as Client
+  participant S as Server
+  C->>S: GET /ws (Upgrade websocket)
+  S-->>C: 101 Switching Protocols
+  Note over C,S: Same TCP connection, now framed messages both ways
+  C->>S: frame: send message
+  S-->>C: frame: ack
+  S-->>C: frame: new message from a peer
+  S-->>C: ping
+  C->>S: pong
+          </script>
+          <figcaption>WebSocket: an HTTP handshake, then a full-duplex channel with small per-frame overhead. Pings detect dead peers.</figcaption>
+        </figure>
+        <ul>
+          <li><b>SSE first</b> when only the server pushes: it is plain HTTP, so auth, gateways, HTTP/2 multiplexing and CDNs keep working. Client-to-server traffic uses normal POSTs. Over HTTP/1.1 browsers cap it at about 6 connections per origin.</li>
+          <li><b>WebSocket</b> when the client also sends often (typing, cursors, game input) or you need binary frames.</li>
+          <li>Neither gives delivery guarantees. Add message ids, acks and resume-from-id at the application level.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="scaling-websockets">
+        <h2>Scaling WebSocket connections</h2>
+        <p class="kind"><a href="#part-realtime">Real-time communication</a></p>
+        <p>The problem is not throughput, it is state: each user is pinned to one server, and a message for them can arrive at any other. Separate the stateful connection tier from stateless business logic and join them with pub-sub.</p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart TD
+  A([User A]) -->|WebSocket| G1[Connection server 1]
+  G1 -->|1 send| CS[Chat service]
+  CS -->|2 persist| DB[(Message store)]
+  CS -->|3 publish| PS[[Pub-sub backplane]]
+  PS -->|4 deliver| G2[Connection server 2]
+  G2 -->|WebSocket| B([User B])
+  CS -.->|where is B?| PR[(Session registry)]
+  G2 -.->|register, heartbeat| PR
+          </script>
+          <figcaption>A is on server 1, B on server 2 (a load balancer in front spreads new connections). The message is persisted first, then routed through the backplane to whichever server the registry says holds B's socket.</figcaption>
+        </figure>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Piece</th><th>What it does</th><th>Notes</th></tr></thead>
+            <tbody>
+              <tr><td>Connection servers</td><td>Hold sockets, authenticate at handshake, forward frames. No business logic.</td><td>Memory-bound: order of 10 to 50 KB per idle connection, so roughly 100k to 1M connections per tuned server</td></tr>
+              <tr><td>Pub-sub backplane</td><td>Routes a message to the server holding the recipient</td><td>Per-server or per-user channels (Redis pub-sub, Kafka, NATS). Per-room fan-out for large rooms</td></tr>
+              <tr><td>Sticky routing</td><td>The connection itself is sticky (one TCP connection). Reconnects may land anywhere</td><td>So session state lives in the registry, not in server memory</td></tr>
+              <tr><td>Presence</td><td><code>user -&gt; server, last_seen</code> with a TTL refreshed by heartbeats</td><td>Online means "heartbeat within N seconds"; fan presence out lazily, it is very chatty</td></tr>
+              <tr><td>Heartbeats</td><td>Ping every 20 to 30 s, both to detect dead peers and to keep NAT and proxy idle timers open</td><td>Half-open TCP connections are otherwise invisible for minutes</td></tr>
+              <tr><td>Reconnect with resume</td><td>Client reconnects with the last message id (or sequence); server replays the gap from the store</td><td>Backoff with jitter, or a server restart causes a reconnect stampede</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><b>Failure mode:</b> deploying the connection tier drops every socket at once. Drain gradually (send "reconnect" hints in waves), and size the fleet for the reconnect storm, including the TLS handshakes and resume queries it triggers.</p>
+      </section>
+
+      <section class="chapter" id="push-notifications">
+        <h2>Push notifications</h2>
+        <p class="kind"><a href="#part-realtime">Real-time communication</a></p>
+        <p>When the app is in the background there is no socket of yours to write to. The operating system keeps one shared connection to its vendor's push service; you ask that service to deliver.</p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  NS[Notification service] --> TK[(Device tokens)]
+  NS --> Q[[Send queue]]
+  Q --> W[Push workers]
+  W --> AP[APNs]
+  W --> FC[FCM]
+  AP --> I([iOS device])
+  FC --> D([Android device])
+          </script>
+          <figcaption>Your system ends at APNs / FCM. Delivery beyond that point is best effort and outside your control.</figcaption>
+        </figure>
+        <ul>
+          <li><b>Device token:</b> issued by the OS per app install, registered with your back end, can change; the provider's response reports invalid tokens, which the workers prune.</li>
+          <li><b>Best effort:</b> no delivery guarantee, no ordering; providers may throttle, collapse (collapse key) or drop expired messages. Payloads are small (about 4 KB).</li>
+          <li><b>Design consequence:</b> push is a hint ("you have new messages"), the app then syncs over your API. Never make push the source of truth.</li>
+          <li>Dedupe per user and event, respect preferences and quiet hours, and rate limit per user before the queue.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="choosing-realtime">
+        <h2>Choosing among them</h2>
+        <p class="kind"><a href="#part-realtime">Real-time communication</a></p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Requirement</th><th>Choose</th><th>Because</th></tr></thead>
+            <tbody>
+              <tr><td>Status of a job, updates every 10 s or slower are fine</td><td>Short polling</td><td>Stateless, cacheable, nothing new to operate</td></tr>
+              <tr><td>Server-to-client stream: feed, prices, progress, generated text</td><td>SSE</td><td>Plain HTTP, auto-reconnect and resume</td></tr>
+              <tr><td>Frequent traffic both ways: chat, typing, collaborative editing</td><td>WebSocket</td><td>Full duplex, low per-message overhead</td></tr>
+              <tr><td>Environments where SSE and WebSocket are blocked</td><td>Long polling as fallback</td><td>Looks like ordinary HTTP</td></tr>
+              <tr><td>Voice, video, low-latency peer data</td><td>WebRTC (signalling over WebSocket)</td><td>UDP media, tolerates loss instead of stalling</td></tr>
+              <tr><td>User is offline or app is in the background</td><td>Push via APNs / FCM</td><td>Only the OS can wake the device</td></tr>
+              <tr><td>Server-to-server notification</td><td>Webhook or message queue</td><td>No long-lived connection needed</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><b>Senior signal:</b> pick the simplest thing that meets the latency requirement, and state it as a number: "updates within 2 seconds" is SSE or polling, "under 100 ms both ways" is WebSocket.</p>
+      </section>
+
+      <section class="chapter part" id="part-services">
+        <h2>Service-to-service communication</h2>
+        <p class="kind">Part 5 of 6 &middot; how services talk behind the gateway</p>
+        <p>Inside the system the choice is less about protocol and more about coupling: does the caller wait for the answer, and what happens to it when the callee is down?</p>
+        <ul>
+          <li><a href="#sync-vs-async">Synchronous vs asynchronous</a></li>
+          <li><a href="#request-reply-queue">Request-reply over a queue</a></li>
+          <li><a href="#events-vs-commands">Events vs commands</a></li>
+          <li><a href="#event-schema">Event schema and versioning</a></li>
+          <li><a href="#service-mesh">Service mesh and sidecars</a></li>
+          <li><a href="#timeouts-retries-deadlines">Timeouts, retries and deadlines</a></li>
+          <li><a href="#serialization">Serialization formats</a></li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="sync-vs-async">
+        <h2>Synchronous vs asynchronous</h2>
+        <p class="kind"><a href="#part-services">Service-to-service communication</a></p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th></th><th>Synchronous request / response (REST, gRPC)</th><th>Asynchronous messaging (queue, log)</th></tr></thead>
+            <tbody>
+              <tr><td><b>Coupling</b></td><td>Temporal: both must be up at the same moment; caller knows the callee</td><td>Decoupled in time; with events, the producer does not know its consumers</td></tr>
+              <tr><td><b>Latency</b></td><td>Low and immediate; the caller's latency includes the callee's</td><td>Caller returns at once; end-to-end completion is later and variable</td></tr>
+              <tr><td><b>Failure behaviour</b></td><td>Failure propagates up the chain; availability multiplies (three 99.9% hops is about 99.7%)</td><td>Work waits in the queue; the consumer catches up after recovery</td></tr>
+              <tr><td><b>Load spikes</b></td><td>Hit the callee directly; needs load shedding</td><td>Absorbed by the queue; needs lag monitoring</td></tr>
+              <tr><td><b>Consistency</b></td><td>Immediate answer, read-your-write is easy</td><td>Eventual; needs idempotent consumers and often an outbox</td></tr>
+              <tr><td><b>Debugging</b></td><td>One trace, one stack</td><td>Needs correlation ids across hops, harder to follow</td></tr>
+              <tr><td><b>Use for</b></td><td>Queries, and commands whose result the user is waiting for</td><td>Side effects, fan-out, slow or bursty work, cross-team integration</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart TD
+  subgraph SY["Synchronous chain"]
+    direction LR
+    O1[Order] --> P1[Payment] --> F1[Fraud check]
+  end
+  subgraph AS["Asynchronous fan-out"]
+    direction LR
+    O2[Order] -.->|OrderPlaced| BR[[Broker]]
+    BR -.-> E2[Email]
+    BR -.-> I2[Inventory]
+    BR -.-> A2[Analytics]
+  end
+  SY ~~~ AS
+          </script>
+          <figcaption>Top: the caller waits on every hop. Bottom: the caller returns after publishing. The usual shape is a short synchronous path for what the user is waiting on, and events for everything else.</figcaption>
+        </figure>
+        <p class="note"><b>Interview tip:</b> a long synchronous chain is a red flag. Ask of every hop: "does the user need this answer before we respond?" If not, publish an event.</p>
+      </section>
+
+      <section class="chapter" id="request-reply-queue">
+        <h2>Request-reply over a queue</h2>
+        <p class="kind"><a href="#part-services">Service-to-service communication</a></p>
+        <p>When you want the buffering of a queue but still need an answer: send the request with a correlation id and a reply address, and match the reply when it arrives.</p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+sequenceDiagram
+  participant A as Requester
+  participant Q as Request queue
+  participant W as Worker
+  participant R as Reply queue
+  A->>Q: message (correlation_id c1, reply_to R)
+  Note over A: store c1 as pending, set a timeout
+  Q->>W: deliver
+  W->>W: process
+  W->>R: reply (correlation_id c1)
+  R->>A: deliver
+  Note over A: match c1, complete or discard if timed out
+          </script>
+          <figcaption>The correlation id is the only link between request and reply. The requester must handle a reply that is late, duplicated or never comes.</figcaption>
+        </figure>
+        <ul>
+          <li>Use for slow, bursty or rate-limited back ends (pricing engines, document rendering) where you want backpressure and worker scaling.</li>
+          <li>Avoid for low-latency lookups: you have rebuilt RPC with more moving parts. If the requester blocks waiting, you keep the temporal coupling and lose the simplicity.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="events-vs-commands">
+        <h2>Events vs commands</h2>
+        <p class="kind"><a href="#part-services">Service-to-service communication</a></p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th></th><th>Command</th><th>Event</th></tr></thead>
+            <tbody>
+              <tr><td>Says</td><td>"Do this": <code>ChargeCard</code></td><td>"This happened": <code>PaymentCaptured</code></td></tr>
+              <tr><td>Tense, naming</td><td>Imperative</td><td>Past tense, a fact</td></tr>
+              <tr><td>Receivers</td><td>Exactly one owner</td><td>Zero to many subscribers</td></tr>
+              <tr><td>Can be rejected</td><td>Yes</td><td>No, it already happened</td></tr>
+              <tr><td>Who knows whom</td><td>Sender knows the receiver</td><td>Receivers know the producer's event</td></tr>
+              <tr><td>Channel</td><td>Queue (point to point)</td><td>Topic / log (publish-subscribe)</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  O[Order service] -->|command: ChargeCard| P[Payment service]
+  P -.->|event: PaymentCaptured| T[[Topic]]
+  T -.-> S[Shipping]
+  T -.-> L[Ledger]
+  T -.-> N[Notifications]
+          </script>
+          <figcaption>A command has one addressee and an outcome. An event is broadcast, and adding a fourth subscriber changes nothing in the producer.</figcaption>
+        </figure>
+        <p class="note"><b>Trade-off:</b> events remove coupling but hide the flow: no single place shows "what happens when an order is placed". Choreography vs orchestration and sagas are in Architecture Styles and Distributed Systems Patterns.</p>
+      </section>
+
+      <section class="chapter" id="event-schema">
+        <h2>Event schema and versioning</h2>
+        <p class="kind"><a href="#part-services">Service-to-service communication</a></p>
+        <script type="text/plain" data-lang="json" data-file="Event envelope">
+{
+  "id": "evt_01JCX...",                    "type": "payment.captured",
+  "schema_version": 2,                     "source": "payment-service",
+  "occurred_at": "2026-11-17T09:30:00Z",   "trace_id": "4bf92f...",
+  "subject": "tr_9x",                      "sequence": 4127,
+  "data": { "transfer_id": "tr_9x", "amount": { "value": 150000, "currency": "INR" } }
+}
+        </script>
+        <ul>
+          <li><b>id</b> for consumer dedupe (delivery is at-least-once); <b>subject + sequence</b> for per-entity ordering; <b>occurred_at</b> is event time, not processing time; <b>trace_id</b> ties the hops together.</li>
+          <li><b>An event is a public API.</b> Consumers you have never met depend on it, and old events sit in the log for days or forever, so readers must handle every version still retained.</li>
+          <li><b>Evolve additively:</b> new optional fields with defaults only. For a real break, publish a new type (<code>payment.captured.v2</code>) alongside the old one and migrate consumers.</li>
+          <li><b>Schema registry</b> with compatibility checks in CI (backward: new readers read old data; forward: old readers read new data) stops a producer deploy from breaking consumers.</li>
+          <li><b>Thin vs fat:</b> thin events (ids only) force a callback but are never stale; fat events (full state) decouple consumers but spread data, including PII, everywhere.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="service-mesh">
+        <h2>Service mesh and sidecars</h2>
+        <p class="kind"><a href="#part-services">Service-to-service communication</a></p>
+        <p>A mesh moves network concerns out of application code into a proxy deployed next to every service instance (the sidecar), configured centrally by a control plane.</p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  subgraph SA["Service A instance"]
+    A[App A] --> PA[Sidecar proxy]
+  end
+  subgraph SB["Service B instance"]
+    PB[Sidecar proxy] --> B[App B]
+  end
+  PA -->|mTLS| PB
+  CP[Control plane] -.-> PA
+  CP -.-> PB
+          </script>
+          <figcaption>The apps speak plain HTTP or gRPC to localhost. The proxies form the data plane; the control plane pushes certificates, routes and policy to them, and they emit metrics and traces.</figcaption>
+        </figure>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>You get</th><th>How</th></tr></thead>
+            <tbody>
+              <tr><td>mTLS everywhere</td><td>Short-lived workload certificates issued and rotated by the control plane; service identity, not IP addresses</td></tr>
+              <tr><td>Traffic policy</td><td>Timeouts, retries with budgets, circuit breaking, per-request load balancing, canary and traffic splitting</td></tr>
+              <tr><td>Observability</td><td>Uniform request metrics (rate, errors, latency), access logs and trace spans for every hop, in any language</td></tr>
+              <tr><td>Authorization</td><td>"Service A may call B's <code>/transfers</code>" as policy</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><b>Trade-off:</b> two extra proxy hops per call (typically around a millisecond in total, more at the tail), extra CPU and memory per instance, and a complex system to operate. Worth it with many services in several languages; overkill for five services where a shared library does the job. Sidecar-less (per-node) meshes reduce the overhead.</p>
+      </section>
+
+      <section class="chapter" id="timeouts-retries-deadlines">
+        <h2>Timeouts, retries and deadlines</h2>
+        <p class="kind"><a href="#part-services">Service-to-service communication</a></p>
+        <p>One-line pointers; the full treatment is in <a href="sd-distributed-systems.html">Distributed Systems Patterns</a>.</p>
+        <ul>
+          <li><b>Timeout:</b> every network call has one, set from the callee's p99, not left at a library default of "forever".</li>
+          <li><b>Retry:</b> only idempotent calls, only on retryable errors, with exponential backoff, jitter and a retry budget; retry at one layer, not every layer (3 retries at 3 layers is 27 calls).</li>
+          <li><b>Deadline:</b> an absolute time passed down the chain so every hop knows the remaining budget and abandons work nobody is waiting for.</li>
+          <li><b>Circuit breaker:</b> stop calling a failing dependency and fail fast or degrade.</li>
+          <li><b>Backpressure and load shedding:</b> reject early (429 / 503) rather than queue without bound.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="serialization">
+        <h2>Serialization formats</h2>
+        <p class="kind"><a href="#part-services">Service-to-service communication</a></p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th></th><th>JSON</th><th>Protocol Buffers</th><th>Avro</th><th>MessagePack</th></tr></thead>
+            <tbody>
+              <tr><td><b>Encoding</b></td><td>Text</td><td>Binary, tagged fields</td><td>Binary, no tags or names in the data</td><td>Binary JSON-like</td></tr>
+              <tr><td><b>Size</b> (approx.)</td><td>Baseline (largest)</td><td>Often 2 to 5 times smaller</td><td>Smallest for records</td><td>Somewhat smaller than JSON; field names still included</td></tr>
+              <tr><td><b>Speed</b></td><td>Slowest to parse</td><td>Fast, generated code</td><td>Fast</td><td>Faster than JSON</td></tr>
+              <tr><td><b>Schema</b></td><td>Optional (JSON Schema)</td><td>Required <code>.proto</code>, codegen</td><td>Required; the reader needs the writer's schema (registry or file header)</td><td>None</td></tr>
+              <tr><td><b>Evolution</b></td><td>By convention only</td><td>Field numbers: add new, never reuse</td><td>Reader / writer schema resolution with defaults, checked by a registry</td><td>By convention only</td></tr>
+              <tr><td><b>Human-readable</b></td><td>Yes</td><td>No</td><td>No</td><td>No</td></tr>
+              <tr><td><b>Typical use</b></td><td>Public APIs, config, logs</td><td>gRPC, internal RPC</td><td>Kafka events, data lake files</td><td>Caches, compact internal payloads without codegen</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><b>Interview tip:</b> JSON at the edge for reach and debuggability, a schema-based binary format inside for cost and safety. Mention that JSON numbers lose precision above 2<sup>53</sup> in many parsers, so 64-bit ids and money travel as strings or integers in minor units.</p>
+      </section>
+
+      <section class="chapter part" id="part-security">
+        <h2>Security on the wire</h2>
+        <p class="kind">Part 6 of 6 &middot; who is calling, what may they do, and who can listen</p>
+        <p>Security is rarely the main topic of a design interview, but one sentence per layer is expected, and a design with <code>user_id</code> in the request body gets marked down.</p>
+        <ul>
+          <li><a href="#authn-authz">Authentication vs authorization</a>, <a href="#sessions-vs-tokens">sessions vs tokens</a>, <a href="#jwt">JWT</a></li>
+          <li><a href="#oauth-pkce">OAuth 2.0 authorization code with PKCE</a>, <a href="#client-credentials">client credentials and OpenID Connect</a>, <a href="#api-keys">API keys</a></li>
+          <li><a href="#rbac-abac">RBAC vs ABAC</a></li>
+          <li><a href="#tls-mtls">TLS and mTLS</a>, <a href="#encryption">encryption and key management</a></li>
+          <li><a href="#password-storage">Password storage</a>, <a href="#secrets-management">secrets management</a></li>
+          <li><a href="#attack-classes">Attack classes and controls</a>, <a href="#validation-least-privilege">input validation and least privilege</a></li>
+          <li><a href="#multi-tenancy">Multi-tenancy isolation</a>, <a href="#audit-pii">audit logging and PII</a></li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="authn-authz">
+        <h2>Authentication vs authorization</h2>
+        <p class="kind"><a href="#part-security">Security on the wire</a></p>
+        <p><b>Authentication</b> (authn) answers "who are you?" and fails with 401. <b>Authorization</b> (authz) answers "may you do this to that object?" and fails with 403 (or 404 to hide existence).</p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+sequenceDiagram
+  participant C as Client
+  participant G as Gateway
+  participant S as Service
+  participant D as Database
+  C->>G: request + token
+  G->>G: authenticate: signature, expiry, issuer
+  Note over G: invalid: 401
+  G->>S: request + verified identity and scopes
+  S->>S: authorize: role, ownership, tenant
+  Note over S: not allowed: 403
+  S->>D: query scoped to the caller
+  D-->>S: rows
+  S-->>C: 200
+          </script>
+          <figcaption>Authenticate once at the edge; authorize in the service that owns the data, on every request, for the specific object.</figcaption>
+        </figure>
+        <ul>
+          <li>The gateway can check coarse rules (valid token, required scope). Only the owning service can check "does account 42 belong to this caller".</li>
+          <li>Internal services must not trust a bare <code>X-User-Id</code> header: pass a signed token or rely on mTLS identity plus a propagated, verifiable user context.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="sessions-vs-tokens">
+        <h2>Sessions vs tokens</h2>
+        <p class="kind"><a href="#part-security">Security on the wire</a></p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th></th><th>Server-side session</th><th>Self-contained token (JWT)</th></tr></thead>
+            <tbody>
+              <tr><td>Client holds</td><td>Opaque random id, usually in a cookie</td><td>Signed claims, in a header or cookie</td></tr>
+              <tr><td>Server state</td><td>Session store (Redis or database)</td><td>None; verify the signature locally</td></tr>
+              <tr><td>Per-request cost</td><td>One store lookup (sub-millisecond to about 1 ms)</td><td>CPU-only signature check</td></tr>
+              <tr><td>Revocation</td><td>Immediate: delete the row</td><td>Hard: valid until expiry unless you add a denylist</td></tr>
+              <tr><td>Size on the wire</td><td>About 32 bytes</td><td>Hundreds of bytes to a few KB, on every request</td></tr>
+              <tr><td>Cross-service use</td><td>Every service needs the store</td><td>Any service with the public key can verify</td></tr>
+              <tr><td>Main risk</td><td>CSRF (cookies are sent automatically)</td><td>Theft via XSS if kept in JavaScript-readable storage; stale claims</td></tr>
+              <tr><td>Fits</td><td>First-party web apps, when instant logout matters</td><td>APIs, mobile, microservices, third-party access</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><b>Senior signal:</b> the common hybrid: an opaque session or refresh token at the edge (revocable), exchanged for a short-lived JWT that internal services verify without a lookup.</p>
+      </section>
+
+      <section class="chapter" id="jwt">
+        <h2>JWT: anatomy, validation, expiry and revocation</h2>
+        <p class="kind"><a href="#part-security">Security on the wire</a></p>
+        <script type="text/plain" data-lang="text" data-file="JWT">
+base64url(header) . base64url(payload) . base64url(signature)
+
+header   { "alg": "RS256", "kid": "key-2026-11", "typ": "JWT" }
+payload  { "iss": "https://auth.example.com",   issuer
+           "sub": "user_42",                    subject (who)
+           "aud": "transfers-api",              audience (for whom)
+           "exp": 1794909000, "iat": 1794908100,
+           "scope": "transfers:write", "tenant": "t_7", "jti": "9b1d..." }
+signature = Sign(private_key, header + "." + payload)
+
+The payload is encoded, NOT encrypted: anyone holding the token can read it.
+        </script>
+        <ul>
+          <li><b>Validate, in order:</b> algorithm against an allowlist (never trust <code>alg</code> from the token, reject <code>none</code>); signature with the key for <code>kid</code> from the issuer's JWKS (cached); <code>iss</code>; <code>aud</code>; <code>exp</code> and <code>nbf</code> with a small clock skew; then scopes.</li>
+          <li>Prefer asymmetric signing (RS256, ES256, EdDSA): services verify with a public key and cannot mint tokens. A shared HMAC secret lets every verifier forge.</li>
+          <li>Keep PII and secrets out of the payload; keep it small.</li>
+        </ul>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+sequenceDiagram
+  participant C as Client
+  participant A as Auth server
+  participant S as API
+  C->>S: request + access token (valid 10 min)
+  S-->>C: 200 (signature and exp checked locally)
+  C->>S: request + expired access token
+  S-->>C: 401
+  C->>A: refresh token r1
+  A->>A: check r1 not revoked, rotate
+  A-->>C: new access token + refresh token r2
+  Note over A: r1 used again later means theft, revoke the whole family
+          </script>
+          <figcaption>Short access tokens bound the damage of a leak; the refresh call is the one place revocation is checked.</figcaption>
+        </figure>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Revocation approach</th><th>Gain</th><th>Pay</th></tr></thead>
+            <tbody>
+              <tr><td>Short expiry (5 to 15 min) + refresh token rotation</td><td>Stateless verification</td><td>Revocation lags by up to the access-token lifetime</td></tr>
+              <tr><td>Denylist of <code>jti</code> or "tokens issued before T for user U", in a cache</td><td>Near-immediate logout</td><td>A lookup per request: state is back</td></tr>
+              <tr><td>Opaque tokens + introspection</td><td>Immediate, central control</td><td>A network call per request (cacheable for seconds)</td></tr>
+              <tr><td>Rotate the signing key</td><td>Kills everything at once</td><td>Logs out every user; emergency only</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="chapter" id="oauth-pkce">
+        <h2>OAuth 2.0 authorization code with PKCE</h2>
+        <p class="kind"><a href="#part-security">Security on the wire</a></p>
+        <p>OAuth 2.0 is delegated authorization: a user lets an app call an API on their behalf without giving the app their password. Authorization code with PKCE is the flow for web, mobile and single-page apps.</p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+sequenceDiagram
+  participant U as User browser
+  participant A as App
+  participant Z as Authorization server
+  participant R as Resource API
+  A->>A: make verifier, challenge, state
+  A->>U: redirect to /authorize
+  U->>Z: GET /authorize + challenge, state, scope
+  Z->>U: login and consent
+  U->>Z: approve
+  Z->>U: redirect to callback
+  U->>A: code, state
+  A->>Z: POST /token: code + verifier
+  Z->>Z: hash(verifier) = challenge?
+  Z-->>A: access + refresh token
+  A->>R: GET /transfers, Bearer token
+  R-->>A: 200
+          </script>
+          <figcaption><code>challenge = BASE64URL(SHA256(code_verifier))</code>. The code travels through the browser, the tokens never do. PKCE proves that whoever redeems the code is the app that started the flow.</figcaption>
+        </figure>
+        <ul>
+          <li><b>PKCE</b> (proof key for code exchange) defeats authorization-code interception: a stolen code is useless without the verifier. Required for public clients (mobile, SPA), recommended for all.</li>
+          <li><b>state</b> ties the callback to the request (CSRF protection); <b>redirect URIs</b> are matched exactly against a registered list.</li>
+          <li><b>Scopes</b> limit what the token can do; the API still enforces object-level authorization.</li>
+          <li>The implicit flow and the password grant are deprecated: do not propose them.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="client-credentials">
+        <h2>Client credentials and OpenID Connect</h2>
+        <p class="kind"><a href="#part-security">Security on the wire</a></p>
+        <p>When there is no user, a service authenticates as itself with the client credentials grant.</p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+sequenceDiagram
+  participant S as Service A
+  participant Z as Authorization server
+  participant B as Service B
+  S->>Z: POST /token (grant client_credentials, client auth, scope)
+  Z-->>S: access token (short-lived, no refresh token)
+  Note over S: cache until shortly before expiry
+  S->>B: request + Bearer token
+  B->>B: verify signature, aud, scope
+  B-->>S: 200
+          </script>
+          <figcaption>The token names the calling service, not a user. Cache it; do not fetch one per request.</figcaption>
+        </figure>
+        <ul>
+          <li>Client authentication can be a secret, a signed assertion (<code>private_key_jwt</code>) or mTLS; prefer the last two over long-lived shared secrets.</li>
+          <li>When a service acts <b>for a user</b>, propagate the user's context (token exchange or a signed internal token) so downstream authorization still sees the real principal.</li>
+          <li><b>OpenID Connect</b> in one line: an identity layer on OAuth 2.0 that adds an <b>ID token</b> (a JWT saying who logged in, for the client) next to the access token (for the API), which is what "Sign in with ..." uses.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="api-keys">
+        <h2>API keys and when they are enough</h2>
+        <p class="kind"><a href="#part-security">Security on the wire</a></p>
+        <p>An API key is a long random secret that identifies a calling <b>application or account</b>, not a user.</p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Enough when</th><th>Not enough when</th></tr></thead>
+            <tbody>
+              <tr><td>Server-to-server calls from a customer's back end</td><td>Acting on behalf of an end user (use OAuth)</td></tr>
+              <tr><td>Identifying a caller for quotas, billing and analytics</td><td>The key would ship in a browser or mobile app (it will be extracted)</td></tr>
+              <tr><td>Low-risk, read-mostly or public data</td><td>Fine-grained, short-lived or delegated permissions are needed</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <ul>
+          <li>Send in a header, never in the URL (URLs end up in logs and referrers).</li>
+          <li>Store only a hash; show the key once; give it a recognisable prefix (<code>sk_live_</code>) so secret scanners can find leaks.</li>
+          <li>Scope keys (read-only, per environment), allow several active keys for rotation, support expiry and optional IP allowlists.</li>
+          <li>For high-value calls, add request signing (HMAC over method, path, body and timestamp) so a captured request cannot be altered or replayed.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="rbac-abac">
+        <h2>RBAC vs ABAC</h2>
+        <p class="kind"><a href="#part-security">Security on the wire</a></p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th></th><th>RBAC: role-based</th><th>ABAC: attribute-based</th><th>ReBAC: relationship-based</th></tr></thead>
+            <tbody>
+              <tr><td>Decision from</td><td>User -&gt; roles -&gt; permissions</td><td>Policy over attributes of user, resource, action, context</td><td>A graph of relations (owner, member, parent)</td></tr>
+              <tr><td>Example</td><td>"Tellers can view accounts"</td><td>"Tellers can view accounts in their branch, in business hours, under 1M"</td><td>"Editors of a folder can edit documents inside it"</td></tr>
+              <tr><td>Gain</td><td>Simple, auditable, easy to explain</td><td>Fine-grained, context-aware, no role explosion</td><td>Natural for sharing and hierarchies</td></tr>
+              <tr><td>Pay</td><td>Role explosion when rules depend on data</td><td>Harder to audit ("who can see X?"), policy engine needed</td><td>A graph store and careful consistency</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <ul>
+          <li>Typical answer: RBAC for coarse permissions, plus an ownership / tenant check (an attribute) on every object. That hybrid covers most systems.</li>
+          <li>Keep policy out of scattered <code>if</code> statements: one policy decision point (library or service), enforced in each service, with decisions cached briefly.</li>
+          <li>Deny by default.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="tls-mtls">
+        <h2>TLS and mTLS</h2>
+        <p class="kind"><a href="#part-security">Security on the wire</a></p>
+        <p>TLS gives confidentiality, integrity and <b>server</b> authentication. Mutual TLS (mTLS) adds a client certificate, so each side proves its identity; it is the standard for service-to-service traffic.</p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+sequenceDiagram
+  participant C as Client
+  participant S as Server
+  C->>S: ClientHello (versions, ciphers, key share)
+  S-->>C: ServerHello (key share), certificate, Finished
+  Note over C: verify chain to a trusted CA and the hostname
+  Note over C,S: mTLS: the server's flight also carries CertificateRequest
+  C->>S: client certificate + proof of key (mTLS only)
+  Note over S: verify chain, map certificate to service identity
+  C->>S: Finished
+  Note over C,S: Application data, encrypted with session keys
+          </script>
+          <figcaption>TLS 1.3 completes in one round trip. Asymmetric keys only authenticate and agree a secret; the traffic itself uses fast symmetric encryption.</figcaption>
+        </figure>
+        <ul>
+          <li><b>Ephemeral key exchange</b> gives forward secrecy: stealing the server's key later does not decrypt recorded traffic.</li>
+          <li><b>Where TLS ends matters:</b> terminating at the load balancer leaves the internal hop in plain text. Re-encrypt to the back end, or use a mesh, for zero-trust networks.</li>
+          <li><b>mTLS cost</b> is operational: issuing, rotating and revoking certificates for every workload. Use short-lived certificates (hours to days) issued automatically.</li>
+          <li>mTLS authenticates the <b>service</b>. It says nothing about the end user, so it complements tokens rather than replacing them.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="encryption">
+        <h2>Encryption and key management</h2>
+        <p class="kind"><a href="#part-security">Security on the wire</a></p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th></th><th>In transit</th><th>At rest</th><th>Application / field level</th></tr></thead>
+            <tbody>
+              <tr><td>Protects against</td><td>Network eavesdropping and tampering</td><td>Stolen disks, backups, snapshots</td><td>Database admins, SQL injection dumps, over-broad internal access</td></tr>
+              <tr><td>How</td><td>TLS 1.2+ on every hop, including internal</td><td>Disk, volume or database encryption (AES-256)</td><td>Encrypt selected fields (card number, national id) before storing</td></tr>
+              <tr><td>Does not protect</td><td>Data at the endpoints</td><td>A running system with valid access</td><td>The application holding the key</td></tr>
+              <tr><td>Pay</td><td>Handshake CPU, certificate operations</td><td>Almost nothing</td><td>No indexing or range queries on ciphertext; key handling in the app</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+sequenceDiagram
+  participant S as Service
+  participant K as KMS (holds KEK)
+  participant T as Storage
+  Note over S,T: Write
+  S->>K: generate data key under KEK
+  K-->>S: plaintext DEK + wrapped DEK
+  S->>S: encrypt data with DEK, discard plaintext DEK
+  S->>T: store ciphertext + wrapped DEK
+  Note over S,T: Read
+  S->>T: fetch ciphertext + wrapped DEK
+  S->>K: unwrap DEK (authorized by IAM, audited)
+  K-->>S: plaintext DEK
+  S->>S: decrypt data
+          </script>
+          <figcaption>Envelope encryption: a data key (DEK) encrypts the data, a key-encryption key (KEK) that never leaves the KMS encrypts the DEK.</figcaption>
+        </figure>
+        <ul>
+          <li><b>Why envelope:</b> bulk data never goes to the KMS (which is slow and rate limited); a DEK per object or tenant limits the blast radius; rotating the KEK means re-wrapping small DEKs, not re-encrypting terabytes.</li>
+          <li><b>Key management rules:</b> keys live in a KMS or HSM, never in code or next to the data; access is by IAM policy and audited; rotate on a schedule; separate keys per environment and, where needed, per tenant.</li>
+          <li><b>Crypto-shredding:</b> deleting a tenant's key makes all its data, including backups, unreadable. Useful for deletion requirements.</li>
+          <li>Use authenticated encryption (AES-GCM or ChaCha20-Poly1305). Never invent a scheme.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="password-storage">
+        <h2>Password storage</h2>
+        <p class="kind"><a href="#part-security">Security on the wire</a></p>
+        <p>Passwords are never encrypted and never stored with a fast hash. Store the output of a <b>salted, deliberately slow, memory-hard</b> password hash.</p>
+        <script type="text/plain" data-lang="text" data-file="Stored value">
+stored = algorithm $ parameters $ salt $ hash
+         argon2id $ m=19456,t=2,p=1 $ 16 random bytes per user $ Argon2id(password, salt, params)
+
+verify:  recompute with the stored salt and parameters, compare in constant time
+upgrade: if stored parameters are weaker than current policy, rehash on next successful login
+        </script>
+        <ul>
+          <li><b>Algorithm:</b> Argon2id preferred; bcrypt or scrypt are acceptable. Not MD5, SHA-1 or plain SHA-256: those run at billions of guesses per second on GPUs.</li>
+          <li><b>Salt:</b> unique and random per user, stored with the hash. It defeats rainbow tables and makes identical passwords look different.</li>
+          <li><b>Work factor:</b> tune to roughly 100 ms or more per hash on your hardware, and raise it over time. That cost is also why login needs its own rate limit.</li>
+          <li><b>Pepper</b> (optional): a secret kept in the KMS, applied to all hashes, so a database dump alone is not enough.</li>
+          <li>Around it: rate limit and lock out per account and per IP, check against breached-password lists, offer MFA or passkeys, give identical responses for "no such user" and "wrong password".</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="secrets-management">
+        <h2>Secrets management</h2>
+        <p class="kind"><a href="#part-security">Security on the wire</a></p>
+        <ul>
+          <li><b>Where:</b> a secrets manager or vault, fetched at start-up or injected at deploy time by workload identity. Not in source control, container images, or logs.</li>
+          <li><b>Prefer no secret:</b> workload identity (cloud IAM roles, mesh certificates) removes static credentials altogether.</li>
+          <li><b>Short-lived and dynamic:</b> database credentials issued per service instance with a TTL beat a shared password that never changes.</li>
+          <li><b>Rotation without downtime:</b> accept old and new together for a window (two active keys), then retire the old one. Design every credential for this from day one.</li>
+          <li><b>Least privilege and audit:</b> each service reads only its own secrets; every read is logged.</li>
+          <li><b>Leak response:</b> secret scanning in CI and on push, and a rehearsed revoke-and-rotate procedure. A leaked secret is rotated, not "removed from git history".</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="attack-classes">
+        <h2>Attack classes and controls</h2>
+        <p class="kind"><a href="#part-security">Security on the wire</a></p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Attack</th><th>What happens</th><th>Control in the design</th></tr></thead>
+            <tbody>
+              <tr><td>Injection (SQL, NoSQL, command)</td><td>Input is interpreted as code or query</td><td>Parameterised queries, no string-built queries or shell calls, schema validation, least-privilege database user</td></tr>
+              <tr><td>Broken object-level authorization (BOLA / IDOR)</td><td>Caller changes <code>/accounts/42</code> to <code>/accounts/43</code> and it works</td><td>Check ownership or tenant on every object access, in the data-access layer; non-guessable ids as defence in depth, never as the control</td></tr>
+              <tr><td>CSRF</td><td>Another site makes the user's browser send an authenticated request (cookies ride along)</td><td><code>SameSite</code> cookies, anti-CSRF tokens, check <code>Origin</code>; not an issue for bearer tokens sent in a header</td></tr>
+              <tr><td>XSS</td><td>Attacker script runs in your page, acts as the user, steals tokens</td><td>Output encoding, Content-Security-Policy, <code>HttpOnly</code> cookies, no tokens in JavaScript-readable storage, correct <code>Content-Type</code> on API responses</td></tr>
+              <tr><td>SSRF</td><td>Server fetches an attacker-chosen URL (webhook, image import) and reaches internal services or cloud metadata</td><td>Allowlist destinations, resolve then block private and link-local ranges, no redirects, fetch from an isolated egress proxy</td></tr>
+              <tr><td>Replay</td><td>A captured valid request is sent again</td><td>TLS, plus timestamp + nonce in signed requests, idempotency keys, short token lifetimes</td></tr>
+              <tr><td>DDoS and resource exhaustion</td><td>Volume, or a few very expensive requests</td><td>CDN / scrubbing at the edge, rate limits and quotas, payload and page-size caps, timeouts, query cost limits, autoscaling with a ceiling</td></tr>
+              <tr><td>Credential stuffing</td><td>Leaked passwords replayed at login</td><td>Per-account and per-IP limits, MFA, breached-password checks, bot detection</td></tr>
+              <tr><td>Mass assignment</td><td>Client sets fields it should not (<code>role</code>, <code>balance</code>)</td><td>Explicit request schemas with an allowlist of writable fields</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><b>Interview tip:</b> broken object-level authorization is the top item in the OWASP API Security Top 10. Saying "every read and write is scoped by the caller's id from the token" is the one security sentence worth making in every design.</p>
+      </section>
+
+      <section class="chapter" id="validation-least-privilege">
+        <h2>Input validation and least privilege</h2>
+        <p class="kind"><a href="#part-security">Security on the wire</a></p>
+        <ul>
+          <li><b>Validate at the boundary against a schema:</b> types, lengths, ranges, formats, enums. Allowlist what is valid instead of blocklisting what is bad; reject unknown fields on writes.</li>
+          <li><b>Validate again where it matters:</b> business invariants (balance never negative) live in the service and the database constraints, not only in the gateway or the client.</li>
+          <li><b>Bound everything:</b> body size, array length, string length, nesting depth, page size, request time.</li>
+          <li><b>Least privilege:</b> each service gets its own identity, its own database user limited to its tables, network policy limited to the services it calls, and tokens scoped to the operations it needs.</li>
+          <li><b>Defence in depth:</b> assume one layer fails. The gateway authenticates, the service authorizes, the database user cannot drop tables, the network blocks the rest.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="multi-tenancy">
+        <h2>Multi-tenancy isolation</h2>
+        <p class="kind"><a href="#part-security">Security on the wire</a></p>
+        <p>The tenant id comes from the authenticated token, never from a request parameter, and is applied to every query, cache key, queue and object path by a shared layer (or database row-level security) rather than by each developer remembering a <code>WHERE</code> clause. Choose the isolation level by risk and cost: shared tables with a tenant column (cheapest, weakest), a schema or database per tenant, or a dedicated stack for the largest or most regulated tenants, with per-tenant rate limits and quotas so one noisy tenant cannot starve the rest.</p>
+      </section>
+
+      <section class="chapter" id="audit-pii">
+        <h2>Audit logging and PII handling</h2>
+        <p class="kind"><a href="#part-security">Security on the wire</a></p>
+        <p><b>Audit log:</b> an append-only record of security-relevant actions: who (user, service, on whose behalf), did what, to which object, when, from where, with what outcome, and the request id. It is separate from debug logs, write-once, access-controlled, and retained per policy.</p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>PII rule</th><th>In practice</th></tr></thead>
+            <tbody>
+              <tr><td>Minimise</td><td>Do not collect or return what the use case does not need; keep PII out of URLs, events and tokens; pass ids, not copies</td></tr>
+              <tr><td>Mask</td><td>Redact in logs and traces at the logging layer; show partial values (last 4 digits); tokenise card numbers; field-level encryption for the most sensitive columns</td></tr>
+              <tr><td>Retain</td><td>A retention period per data class, enforced by TTL or scheduled deletion; backups and analytics copies included</td></tr>
+              <tr><td>Delete</td><td>A deletion or erasure workflow that reaches every store, cache, search index and downstream consumer; crypto-shredding for backups</td></tr>
+              <tr><td>Control access</td><td>Role-gated, purpose-bound, and itself audited ("who looked at this customer?")</td></tr>
+              <tr><td>Locate</td><td>Know which region the data lives in; residency rules can force per-region storage and routing</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><b>Failure mode:</b> the database is locked down, but the same PII sits in application logs, an analytics topic and a search index with broad access. Deletion and masking must follow the data, which is the strongest argument for thin events and central PII storage.</p>
+      </section>
+
+      <section class="chapter" id="cheat-sheet">
+        <h2>Cheat sheet: need, choice, reason</h2>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Need</th><th>Choice</th><th>Reason</th></tr></thead>
+            <tbody>
+              <tr><td>Public or partner API</td><td>REST + JSON + OpenAPI</td><td>Universal reach, cacheable, easy to debug</td></tr>
+              <tr><td>Internal service calls</td><td>gRPC + Protobuf</td><td>Typed contracts, small payloads, streaming, deadlines</td></tr>
+              <tr><td>Many clients, different views of one graph</td><td>GraphQL or a BFF per client</td><td>Client-shaped responses in one round trip</td></tr>
+              <tr><td>Large or changing list</td><td>Cursor / keyset pagination</td><td>Constant cost per page, stable under inserts</td></tr>
+              <tr><td>Retry-safe create or payment</td><td>Idempotency key, stored atomically with the write</td><td>A timeout cannot cause a duplicate</td></tr>
+              <tr><td>Concurrent edits</td><td>ETag + <code>If-Match</code>, 412 on conflict</td><td>No lost updates, no locks held</td></tr>
+              <tr><td>Work longer than a few seconds</td><td>202 + job resource; webhook when done</td><td>No held connections, progress is visible</td></tr>
+              <tr><td>Notify another company's system</td><td>Signed webhook, at-least-once, event id</td><td>No polling; receiver dedupes</td></tr>
+              <tr><td>Server-to-client stream</td><td>SSE</td><td>Plain HTTP, auto-reconnect and resume</td></tr>
+              <tr><td>Two-way real time</td><td>WebSocket + pub-sub backplane</td><td>Full duplex; backplane routes across servers</td></tr>
+              <tr><td>App in background</td><td>APNs / FCM push, then sync</td><td>Only the OS can wake the device</td></tr>
+              <tr><td>Decouple side effects</td><td>Events on a topic</td><td>Producer does not wait for or know consumers</td></tr>
+              <tr><td>Evolve without breaking</td><td>Additive changes, tolerant readers, <code>/v1</code> for real breaks</td><td>Clients upgrade on their own schedule</td></tr>
+              <tr><td>User login for an app</td><td>OAuth 2.0 authorization code + PKCE, OIDC</td><td>No password in the app, short-lived scoped tokens</td></tr>
+              <tr><td>Service identity</td><td>mTLS, or client credentials</td><td>Mutual authentication, no shared static secrets</td></tr>
+              <tr><td>Instant logout</td><td>Server session, or short JWT + denylist</td><td>Pure JWT cannot be revoked before expiry</td></tr>
+              <tr><td>Protect sensitive fields</td><td>Envelope encryption with a KMS</td><td>Small blast radius, cheap rotation</td></tr>
+              <tr><td>Abuse and overload</td><td>Rate limits + quotas, 429 with <code>Retry-After</code></td><td>Predictable contract, protects the back end</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="chapter" id="review-checklist">
+        <h2>API review checklist</h2>
+        <ul>
+          <li><b>Shape:</b> resources are nouns, methods carry the verbs, ids are opaque, one casing, UTC timestamps, money in minor units.</li>
+          <li><b>Identity:</b> caller and tenant come from the token; every object access is authorized for that caller.</li>
+          <li><b>Writes:</b> each write is idempotent by nature or by key; behaviour on timeout and retry is defined.</li>
+          <li><b>Reads:</b> lists are paginated with a cursor and a server-side maximum; filters and sorts are allowlisted and indexed.</li>
+          <li><b>Errors:</b> correct status class, one error format, stable machine codes, request id, no internals leaked.</li>
+          <li><b>Slow work:</b> anything over a few seconds is a job with a status resource.</li>
+          <li><b>Limits:</b> rate limits, quotas, payload and page caps, timeouts, all documented and visible in headers.</li>
+          <li><b>Caching:</b> each GET is deliberately cacheable, private or no-store; ETags where clients revalidate or edit.</li>
+          <li><b>Evolution:</b> changes are additive; versioning and deprecation policy are stated; the contract is the source of truth.</li>
+          <li><b>Real time:</b> the push channel is the simplest that meets the latency number, with reconnect and resume.</li>
+          <li><b>Between services:</b> timeouts and deadlines everywhere, retries bounded, async where the user is not waiting, events versioned.</li>
+          <li><b>Security:</b> TLS on every hop, least-privilege scopes, input validated against a schema, secrets in a manager, PII minimised and masked, sensitive actions audited.</li>
+        </ul>
+        <p>Next: how these services are arranged into a whole system, in <a href="sd-architecture.html">Architecture Styles</a>.</p>
+      </section>
+
+    </div>
+  </main>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script src="../../assets/tutorial.js?v=8"></script>
+</body>
+</html>

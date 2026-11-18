@@ -1,0 +1,945 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Architecture Styles</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@500;700&display=swap">
+<link rel="stylesheet" href="../../assets/tutorial.css?v=8">
+</head>
+<body data-track="system">
+
+<header class="topbar">
+  <div class="topbar-in">
+    <a class="brand" href="../../../index.html">Learnings</a>
+    <nav class="tracks" aria-label="Paths">
+      <a href="../../../index.html#system-design" aria-current="true">System Design</a>
+      <a href="../../../archive.html">Archive</a>
+    </nav>
+    <div class="tools">
+      <button class="btn" id="menu" type="button" aria-expanded="false">Chapters</button>
+      <input id="q" type="search" placeholder="Search chapters" aria-label="Search chapters">
+      <button class="btn" id="theme" type="button">Dark mode</button>
+    </div>
+  </div>
+</header>
+
+<div class="shell">
+  <aside class="side">
+    <p class="side-label">Architecture</p>
+    <nav id="toc" aria-label="Chapters"></nav>
+  </aside>
+
+  <main>
+    <div class="page-head">
+      <p class="eyebrow">System design, part 6 of 12</p>
+      <h1>Architecture Styles</h1>
+      <p class="lead">An architecture style is a decision about where the boundaries go: what deploys together, who owns which data, and how the pieces talk. This page compares the main shapes, shows how to split a system and how the parts cooperate, covers the platform patterns an architect is expected to know, and ends with a way to choose and to defend the choice in an interview.</p>
+    </div>
+
+    <div class="chapters">
+
+      <section class="chapter part" id="shapes">
+        <h2>Shapes of a system</h2>
+        <p class="kind">Part 1 of 5 &middot; what deploys together</p>
+        <p>Four deployment shapes cover almost every system. They differ in how many things you deploy and who owns the data, not in how clean the code is. Code structure inside a deployable is a separate choice.</p>
+        <ul>
+          <li><a href="#styles-compared">The four shapes compared</a>: one table</li>
+          <li><a href="#styles-drawn">The four shapes drawn</a>: a small diagram each</li>
+          <li><a href="#when-microservices">When microservices are worth it</a>: and the distributed monolith</li>
+          <li><a href="#code-architecture">Layered, hexagonal, clean</a>: structure inside one deployable</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="styles-compared">
+        <h2>The four shapes compared</h2>
+        <p class="kind"><a href="#shapes">Shapes of a system</a></p>
+        <p>Default to the simplest shape that the team and the load allow. Each step to the right buys independent deployment or scaling and pays for it in operations and in distributed-systems problems.</p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th></th><th>Monolith</th><th>Modular monolith</th><th>Microservices</th><th>Serverless functions</th></tr></thead>
+            <tbody>
+              <tr><td><b>Team size it suits</b></td><td>1 to about 10 engineers</td><td>About 10 to 50, several teams in one repo</td><td>Many teams (roughly 50+ engineers) that block each other on releases</td><td>Any size, for event-driven or spiky workloads</td></tr>
+              <tr><td><b>Deployment</b></td><td>One artifact, one pipeline</td><td>One artifact, modules with enforced boundaries</td><td>One pipeline per service, independent releases</td><td>Per function, platform runs it</td></tr>
+              <tr><td><b>Scaling</b></td><td>Clone the whole app behind a load balancer</td><td>Same; hot modules can be extracted later</td><td>Each service scales on its own curve</td><td>Automatic, per request, to zero when idle</td></tr>
+              <tr><td><b>Data ownership</b></td><td>One shared schema</td><td>One database, a schema per module, no cross-module joins</td><td>A database per service</td><td>External managed stores; functions are stateless</td></tr>
+              <tr><td><b>Operational cost</b></td><td>Lowest</td><td>Low</td><td>High: tracing, service discovery, per-service on-call, platform team</td><td>Low to run, pay per call; expensive at steady high volume</td></tr>
+              <tr><td><b>Calls between parts</b></td><td>In-process, nanoseconds, transactional</td><td>In-process through module interfaces</td><td>Network: about 0.5 to 2 ms each inside a data centre, can fail</td><td>Network plus events</td></tr>
+              <tr><td><b>Failure modes</b></td><td>One bug or memory leak takes everything down; slow builds; merge contention</td><td>Same blast radius as a monolith; boundaries erode without tooling</td><td>Partial failure, cascading timeouts, inconsistent data, version skew</td><td>Cold starts (roughly 100 ms to seconds), time limits, connection exhaustion on databases, vendor lock-in</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><b>Senior signal:</b> say which shape you start with and why, then name the measurable trigger that would move you to the next one. "Microservices" stated as a default with no trigger reads as mid-level.</p>
+      </section>
+
+      <section class="chapter" id="styles-drawn">
+        <h2>The four shapes drawn</h2>
+        <p class="kind"><a href="#shapes">Shapes of a system</a></p>
+        <h3>Monolith</h3>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  C([Client]) --> LB[Load balancer]
+  subgraph app["One deployable, N copies"]
+    O[Orders code]
+    P[Payments code]
+    U[Users code]
+  end
+  LB --> app
+  app --> DB[(One database)]
+          </script>
+          <figcaption>Everything ships together and shares one schema. Scaling means more copies of the whole thing.</figcaption>
+        </figure>
+        <h3>Modular monolith</h3>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  C([Client]) --> LB[Load balancer]
+  subgraph app["One deployable"]
+    O[Orders module] -->|public interface| P[Payments module]
+    O -->|public interface| U[Users module]
+  end
+  LB --> O
+  O --> SO[(orders schema)]
+  P --> SP[(payments schema)]
+  U --> SU[(users schema)]
+          </script>
+          <figcaption>Still one deployment, but each module owns its tables and is called only through its interface. This is a microservice split without the network.</figcaption>
+        </figure>
+        <h3>Microservices</h3>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  C([Client]) --> G[API gateway]
+  G --> O[Orders service]
+  G --> U[Users service]
+  O -->|sync call| P[Payments service]
+  O -.->|events| Q[[Event bus]]
+  Q -.-> N[Notifications service]
+  O --> DO[(Orders DB)]
+  P --> DP[(Payments DB)]
+  U --> DU[(Users DB)]
+          </script>
+          <figcaption>Each service deploys alone and owns its database. Every arrow between services is now a network call that can be slow or fail.</figcaption>
+        </figure>
+        <h3>Serverless functions</h3>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  C([Client]) --> G[API gateway]
+  G --> F1[Function: create order]
+  F1 --> T[(Managed table)]
+  T -.->|change stream| F2[Function: send receipt]
+  B[(Object store)] -.->|upload event| F3[Function: resize image]
+  F1 -.-> Q[[Queue]]
+  Q -.-> F4[Function: charge card]
+          </script>
+          <figcaption>Functions are stateless and triggered by requests or events. The platform owns scaling; you own the wiring between triggers.</figcaption>
+        </figure>
+      </section>
+
+      <section class="chapter" id="when-microservices">
+        <h2>When microservices are worth it</h2>
+        <p class="kind"><a href="#shapes">Shapes of a system</a></p>
+        <p>Microservices solve an organisational problem (many teams shipping independently) more often than a technical one. Split when at least one of these is true and measurable:</p>
+        <ul>
+          <li><b>Release contention:</b> teams wait on each other to deploy, or one team's bug rolls back everyone's release.</li>
+          <li><b>Divergent scaling:</b> one component needs 50 times the capacity, or GPUs, or a different memory profile.</li>
+          <li><b>Divergent availability or compliance:</b> payments needs 99.99% and PCI scope; the recommendations widget does not.</li>
+          <li><b>Fault isolation:</b> a leak in report generation must not take down checkout.</li>
+          <li><b>Different technology:</b> a component is genuinely better served by another runtime or data store.</li>
+        </ul>
+        <p>Stay with a (modular) monolith when the domain is still being discovered, the team is small, or you cannot yet afford the platform: automated deployment, centralised logs, tracing and on-call per service.</p>
+        <h3>The distributed monolith</h3>
+        <p>The worst of both: separate deployables that still must be released, scaled or debugged together.</p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Symptom</th><th>Root cause</th></tr></thead>
+            <tbody>
+              <tr><td>A feature needs coordinated deploys of 3+ services</td><td>Boundaries cut through a business capability</td></tr>
+              <tr><td>Services read or write each other's tables</td><td>Shared database</td></tr>
+              <tr><td>One service down makes most requests fail</td><td>Long synchronous call chains, no fallbacks</td></tr>
+              <tr><td>Shared library upgrade forces a fleet-wide release</td><td>Domain logic in shared code instead of behind an API</td></tr>
+              <tr><td>Cannot run or test one service alone</td><td>No contracts; integration only testable end to end</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><b>Interview tip:</b> the test for a real service is "can it be deployed on a Tuesday afternoon without telling any other team?" If not, it is a module with a network cable through it.</p>
+      </section>
+
+      <section class="chapter" id="code-architecture">
+        <h2>Layered, hexagonal, clean</h2>
+        <p class="kind"><a href="#shapes">Shapes of a system</a></p>
+        <p>These describe structure <b>inside</b> one deployable and apply to a monolith or a single microservice alike. All three separate business rules from I/O; they differ in which way dependencies point.</p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart TB
+  subgraph layered["Layered"]
+    direction LR
+    L1[Presentation] --> L2[Business logic] --> L3[Data access] --> L4[(Database)]
+  end
+  subgraph hex["Hexagonal and clean"]
+    direction LR
+    IN["Inbound adapters:<br/>HTTP, CLI, consumer"] --> PI[Inbound port]
+    PI --> D["Domain core:<br/>entities, use cases"]
+    D --> PO[Outbound port]
+    OUT["Outbound adapters:<br/>SQL, queue, HTTP client"] -.->|implements| PO
+  end
+  layered ~~~ hex
+          </script>
+          <figcaption>In layered code the business logic depends on the database layer. In hexagonal and clean architecture the core defines interfaces (ports) and the infrastructure implements them, so the dependency on the database is inverted.</figcaption>
+        </figure>
+        <div class="scroll">
+          <table>
+            <thead><tr><th></th><th>Layered (n-tier)</th><th>Hexagonal (ports and adapters)</th><th>Clean architecture</th></tr></thead>
+            <tbody>
+              <tr><td><b>Dependency rule</b></td><td>Each layer calls the one below</td><td>Adapters depend on the core; the core depends on nothing external</td><td>Same rule, with named rings: entities, use cases, interface adapters, frameworks</td></tr>
+              <tr><td><b>Core knows the database?</b></td><td>Yes, usually through an ORM</td><td>No, only an outbound port</td><td>No</td></tr>
+              <tr><td><b>Testing the rules</b></td><td>Needs a database or heavy mocking</td><td>Swap adapters for in-memory fakes</td><td>Same</td></tr>
+              <tr><td><b>Cost</b></td><td>Least code; fine for CRUD</td><td>More interfaces and mapping code</td><td>Most ceremony; several models to map between</td></tr>
+              <tr><td><b>Use when</b></td><td>Thin logic over a database</td><td>Real domain rules, several entry points or swappable infrastructure</td><td>Large, long-lived domain core with many use cases</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>Hexagonal and clean are the same idea at different levels of prescription. For the code-level mechanics (dependency inversion, repository, adapter) see <a href="../../Python/docs/design-principles.html">Design Principles</a> and <a href="../../Python/docs/design-patterns.html">Design Patterns</a>, and <a href="sd-lld.html">Low-Level Design</a>.</p>
+      </section>
+
+      <section class="chapter part" id="splitting">
+        <h2>Splitting a system</h2>
+        <p class="kind">Part 2 of 5 &middot; where the boundaries go</p>
+        <p>A good boundary keeps changes local: most features touch one service, and most requests are served from data the service already owns. Boundaries follow the business domain and the data, not the technical layers.</p>
+        <ul>
+          <li><a href="#ddd">Boundaries with domain-driven design</a>: bounded context, aggregate, context map</li>
+          <li><a href="#database-per-service">Database per service</a>: why shared databases couple</li>
+          <li><a href="#data-ownership">Ownership and duplication</a>: one writer, many copies</li>
+          <li><a href="#strangler-fig">Migrating off a monolith</a>: strangler fig, anti-corruption layer, branch by abstraction</li>
+          <li><a href="#conway">Conway's law</a></li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="ddd">
+        <h2>Boundaries with domain-driven design</h2>
+        <p class="kind"><a href="#splitting">Splitting a system</a></p>
+        <p>Domain-driven design gives the vocabulary interviewers expect when you justify a service boundary.</p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Term</th><th>Definition</th><th>E-commerce example</th></tr></thead>
+            <tbody>
+              <tr><td><b>Ubiquitous language</b></td><td>One shared vocabulary used by the business and in the code, valid inside one context</td><td>"Order", "shipment", "refund" mean exactly one thing to the team that owns them</td></tr>
+              <tr><td><b>Bounded context</b></td><td>The boundary inside which a model and its language are consistent. The natural candidate for a service or module</td><td>"Product" in Catalog has description and images; in Inventory it is a SKU with a count; in Shipping it is weight and dimensions</td></tr>
+              <tr><td><b>Aggregate</b></td><td>A cluster of objects changed together in one transaction through a root; the unit of consistency. Other aggregates are referenced by id only</td><td>Order with its order lines. Customer and Product are referenced by id</td></tr>
+              <tr><td><b>Domain event</b></td><td>A fact that already happened, named in the past tense</td><td>OrderPlaced, PaymentCaptured, StockReserved</td></tr>
+              <tr><td><b>Context map</b></td><td>The relationships between contexts: who is upstream, who conforms, where translation happens</td><td>Ordering is downstream of Catalog and upstream of Shipping</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  CAT["Catalog<br/>supporting"] -->|price and name| ORD["Ordering<br/>core domain"]
+  ORD -->|reserve stock| INV["Inventory<br/>core domain"]
+  ORD -->|charge| PAY["Payments<br/>generic"]
+  PAY -->|"anti-corruption layer"| PSP([Payment provider])
+  ORD -.->|OrderPlaced| SHIP["Shipping<br/>supporting"]
+  ORD -.->|OrderPlaced| NOTE["Notifications<br/>supporting"]
+          </script>
+          <figcaption>A context map for a shop. Arrows point from the caller or publisher (dashed for events); each box is a bounded context with its own model of "product" and "customer".</figcaption>
+        </figure>
+        <ul>
+          <li><b>Finding contexts:</b> look for where the same word changes meaning, where a different team or business process takes over, and where data changes at a different rate.</li>
+          <li><b>Aggregate rule:</b> one transaction changes one aggregate. Anything across aggregates is eventually consistent (events, sagas). This is what makes a later split possible.</li>
+          <li><b>Size:</b> a service is one bounded context or a few closely related aggregates, not one entity. "User service, order service, product service" by table is an entity split and tends to produce chatty calls.</li>
+          <li><b>Spend unevenly:</b> build the core domain in-house, keep supporting contexts simple, buy generic ones.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="database-per-service">
+        <h2>Database per service</h2>
+        <p class="kind"><a href="#splitting">Splitting a system</a></p>
+        <p>A service owns its data and exposes it only through its API or its events. "Database" means a private schema at minimum; it does not have to be a separate server.</p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart TB
+  subgraph bad["Shared database: coupled"]
+    direction LR
+    A1[Orders] --> S[(Shared schema)]
+    B1[Billing] --> S
+    C1[Reports] --> S
+  end
+  subgraph good["Database per service"]
+    direction LR
+    A2[Orders] --> DA[(Orders DB)]
+    B2[Billing] --> DB2[(Billing DB)]
+    B2 -->|API call| A2
+    A2 -.->|events| C2[Reports]
+    C2 --> DC[(Reports DB)]
+  end
+  bad ~~~ good
+          </script>
+          <figcaption>On top the schema is the real interface and nobody controls it. Below, the only ways in are an API and an event stream, both versioned.</figcaption>
+        </figure>
+        <p>Why a shared database couples services:</p>
+        <ul>
+          <li><b>Schema coupling:</b> a column rename needs every reader changed and deployed together.</li>
+          <li><b>Hidden contracts:</b> other teams' queries depend on your tables, indexes and even row ordering.</li>
+          <li><b>Runtime coupling:</b> one team's slow query or lock exhausts connections for everyone; one capacity limit and one failure domain.</li>
+          <li><b>No encapsulation:</b> invariants enforced in service code are bypassed by direct writes.</li>
+        </ul>
+        <p class="note"><b>Trade-off:</b> you give up cross-service joins and ACID transactions. Joins become API composition or a local read copy; transactions become sagas (see <a href="sd-distributed-systems.html">Distributed Systems Patterns</a>). If two "services" need a transaction together constantly, they are probably one service.</p>
+      </section>
+
+      <section class="chapter" id="data-ownership">
+        <h2>Ownership and duplication</h2>
+        <p class="kind"><a href="#splitting">Splitting a system</a></p>
+        <p>Every piece of data has exactly one <b>system of record</b> that may write it. Everyone else holds a read-only copy or asks the owner.</p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Need data from another service</th><th>How</th><th>Pay with</th></tr></thead>
+            <tbody>
+              <tr><td>Rarely, must be fresh</td><td>Synchronous API call to the owner</td><td>Latency and availability coupling</td></tr>
+              <tr><td>Often, slightly stale is fine</td><td>Keep a local replica fed by the owner's events</td><td>Eventual consistency, storage, rebuild logic</td></tr>
+              <tr><td>As it was at a point in time</td><td>Copy the value into your own record (snapshot)</td><td>Nothing: this is correct, not denormalised. An order must keep the price and address at purchase time</td></tr>
+              <tr><td>For reporting across everything</td><td>Stream all services into a warehouse or lake</td><td>A pipeline to operate; minutes to hours of lag</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <ul>
+          <li>Duplicate data, never duplicate ownership. A copy carries the owner's id and version so it can be refreshed or reconciled.</li>
+          <li>Publish events reliably with the transactional outbox or change data capture, not a dual write (see <a href="sd-distributed-systems.html">Distributed Systems Patterns</a>).</li>
+          <li>Plan for rebuilds: a consumer must be able to rebuild its copy from a replay or a bulk export.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="strangler-fig">
+        <h2>Migrating off a monolith</h2>
+        <p class="kind"><a href="#splitting">Splitting a system</a></p>
+        <p>Never rewrite in one step. Put a routing layer in front, move one capability at a time, and keep the monolith serving the rest until nothing is left. This is the <b>strangler fig</b> pattern.</p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  C([Clients]) --> R{{Routing facade}}
+  R -->|"/payments, 100%"| P[Payments service]
+  R -->|"/search, 10% canary"| S[Search service]
+  R -->|everything else| M[Monolith]
+  P --> PD[(Payments DB)]
+  S --> SD[(Search index)]
+  M --> MD[(Monolith DB)]
+  P -->|"anti-corruption layer"| M
+  MD -.->|CDC| SD
+          </script>
+          <figcaption>The facade moves traffic route by route and percentage by percentage. Each step is reversible by changing a routing rule.</figcaption>
+        </figure>
+        <ol>
+          <li>Insert the facade (gateway or reverse proxy) with all routes still pointing at the monolith.</li>
+          <li>Pick a capability with clear boundaries and real pain. Build it as a service with its own data store.</li>
+          <li>Migrate the data: backfill, then keep in sync (change data capture or dual write with reconciliation), compare results in shadow mode.</li>
+          <li>Shift traffic gradually; keep the old path as the rollback.</li>
+          <li>Delete the old code and tables. A migration that skips this step leaves two systems forever.</li>
+        </ol>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Technique</th><th>What it is</th><th>Use when</th></tr></thead>
+            <tbody>
+              <tr><td><b>Strangler fig</b></td><td>Route at the edge; new system grows around the old one</td><td>The capability has its own entry points (URLs, topics)</td></tr>
+              <tr><td><b>Anti-corruption layer</b></td><td>A translation layer so the new model is not shaped by the legacy model (or a vendor's)</td><td>The new service must still call or be called by the old one</td></tr>
+              <tr><td><b>Branch by abstraction</b></td><td>Inside the codebase: introduce an interface, put old and new implementations behind it, switch with a flag, delete the old</td><td>The thing being replaced is deep inside the monolith with no external entry point</td></tr>
+              <tr><td><b>Parallel run</b></td><td>Call both, serve the old result, compare and log differences</td><td>Correctness is critical (pricing, billing)</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><b>Failure mode:</b> extracting the code but leaving the tables in the monolith database. The data migration is the hard half; say how you would do it.</p>
+      </section>
+
+      <section class="chapter" id="conway">
+        <h2>Conway's law</h2>
+        <p class="kind"><a href="#splitting">Splitting a system</a></p>
+        <p>Systems end up mirroring the communication structure of the organisation that builds them, so a service boundary that cuts across a team, or a team that spans many services, will be fought constantly. The practical use is the "inverse Conway manoeuvre": decide the architecture you want, then shape teams to match it, one team owning each service end to end.</p>
+      </section>
+
+      <section class="chapter part" id="cooperating">
+        <h2>How services cooperate</h2>
+        <p class="kind">Part 3 of 5 &middot; commands, events and read models</p>
+        <p>Once there are several services, the main design question is who knows about whom. Synchronous calls are simple and couple availability; events decouple and make the flow harder to see.</p>
+        <ul>
+          <li><a href="#orchestration-choreography">Orchestration vs choreography</a></li>
+          <li><a href="#event-styles">Three kinds of event-driven</a>: notification, state transfer, sourcing</li>
+          <li><a href="#cqrs">CQRS</a>: separate read and write models</li>
+          <li><a href="#event-sourcing">Event sourcing</a>: the log is the truth</li>
+          <li><a href="#edge-pointers">Sagas, gateways and meshes</a>: where they are covered</li>
+          <li><a href="#sidecar">Sidecar, ambassador, adapter</a></li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="orchestration-choreography">
+        <h2>Orchestration vs choreography</h2>
+        <p class="kind"><a href="#cooperating">How services cooperate</a></p>
+        <p>Use <b>orchestration</b> when the workflow has an order, compensation steps and a business owner who asks "where is order 42 stuck?". Use <b>choreography</b> for fan-out where the producer should not care who reacts.</p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+sequenceDiagram
+  participant O as Order orchestrator
+  participant I as Inventory
+  participant P as Payments
+  participant S as Shipping
+  O->>I: reserve stock
+  I-->>O: reserved
+  O->>P: charge card
+  P-->>O: declined
+  O->>I: release stock
+  Note over O: order marked FAILED
+          </script>
+          <figcaption>Orchestration: one component holds the workflow state and tells each service what to do, including the compensation when a step fails.</figcaption>
+        </figure>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  O[Orders] -.->|OrderPlaced| I[Inventory]
+  O -.->|OrderPlaced| N[Notifications]
+  O -.->|OrderPlaced| A[Analytics]
+  I -.->|StockReserved| P[Payments]
+  P -.->|PaymentCaptured| S[Shipping]
+  P -.->|PaymentFailed| I
+          </script>
+          <figcaption>Choreography: each service reacts to events and emits its own. Every dashed arrow goes through the event bus, so publishers do not know their subscribers; the flow exists only as the sum of the subscriptions.</figcaption>
+        </figure>
+        <div class="scroll">
+          <table>
+            <thead><tr><th></th><th>Orchestration</th><th>Choreography</th></tr></thead>
+            <tbody>
+              <tr><td><b>Flow lives in</b></td><td>One place (orchestrator or workflow engine)</td><td>Spread across subscribers</td></tr>
+              <tr><td><b>Coupling</b></td><td>Orchestrator knows every participant</td><td>Producer knows no consumers; consumers couple to event schemas</td></tr>
+              <tr><td><b>Adding a step</b></td><td>Change the orchestrator</td><td>Add a subscriber, no producer change</td></tr>
+              <tr><td><b>Visibility</b></td><td>Workflow state is queryable</td><td>Needs tracing and correlation ids to reconstruct</td></tr>
+              <tr><td><b>Failure handling</b></td><td>Explicit retries, timeouts, compensation in one place</td><td>Each service handles its own; cyclic event chains are possible</td></tr>
+              <tr><td><b>Risk</b></td><td>Orchestrator becomes a god service holding business logic</td><td>Nobody can say what happens after an event</td></tr>
+              <tr><td><b>Typical use</b></td><td>Checkout, onboarding, money movement</td><td>Notifications, analytics, search indexing, cache invalidation</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><b>Interview tip:</b> most real systems mix them: orchestrate the critical path (reserve, charge, confirm) and publish an event at the end for everything else to choreograph around. An orchestrator can also drive steps asynchronously through queues; orchestration is not the same thing as synchronous.</p>
+      </section>
+
+      <section class="chapter" id="event-styles">
+        <h2>Three kinds of event-driven</h2>
+        <p class="kind"><a href="#cooperating">How services cooperate</a></p>
+        <p>"Event-driven" covers three different designs. Say which one you mean.</p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th></th><th>Event notification</th><th>Event-carried state transfer</th><th>Event sourcing</th></tr></thead>
+            <tbody>
+              <tr><td><b>Event contains</b></td><td>An id and what happened: <code>OrderPlaced {id: 42}</code></td><td>The full state needed by consumers: order lines, totals, address</td><td>Every state change of an entity, in order</td></tr>
+              <tr><td><b>Consumer then</b></td><td>Calls back to the producer for details</td><td>Updates its own local copy; no call back</td><td>Is usually the same service, rebuilding its own state</td></tr>
+              <tr><td><b>Scope</b></td><td>Between services</td><td>Between services</td><td>Inside one service: a persistence choice</td></tr>
+              <tr><td><b>Gain</b></td><td>Small events, loose schema coupling</td><td>Consumer works while the producer is down; fewer calls</td><td>Full audit trail, time travel, rebuildable read models</td></tr>
+              <tr><td><b>Pay</b></td><td>Call-back load on the producer; reads may see newer state than the event described</td><td>Larger events, duplicated data, schema becomes a public contract</td><td>Complexity: versioning, replay, eventual consistency</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <ul>
+          <li>These are independent: you can publish integration events without event sourcing, and event-source one service without anyone outside knowing.</li>
+          <li>Do not expose internal event-sourcing events as the public contract. Publish separate, coarser integration events so the internals can change.</li>
+          <li>Delivery is at-least-once in practice, so consumers must be idempotent and tolerate reordering across partitions (see <a href="sd-distributed-systems.html">Distributed Systems Patterns</a>).</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="cqrs">
+        <h2>CQRS</h2>
+        <p class="kind"><a href="#cooperating">How services cooperate</a></p>
+        <p>Command Query Responsibility Segregation uses one model to validate and apply writes and one or more different models, shaped for the queries, to serve reads. The read models are derived from the write side.</p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  C([Client]) -->|command| W[Write API]
+  W --> WM[(Write store: normalised)]
+  WM -.->|"outbox or CDC"| B[[Change stream]]
+  B -.-> PR[Projector]
+  PR --> R1[(Read store: denormalised view)]
+  PR --> R2[(Search index)]
+  C -->|query| Q[Read API]
+  Q --> R1
+  Q --> R2
+          </script>
+          <figcaption>Writes go to a store built for invariants; reads come from stores built for the query. The dashed path is asynchronous, so reads lag writes.</figcaption>
+        </figure>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>It pays when</th><th>It does not pay when</th></tr></thead>
+            <tbody>
+              <tr><td>Read and write load differ by orders of magnitude (100:1 or more)</td><td>The app is CRUD and one schema serves both well</td></tr>
+              <tr><td>Reads need shapes the write model cannot serve: full-text search, feeds, aggregates across services</td><td>A read replica or a cache would be enough</td></tr>
+              <tr><td>The write model has complex invariants you do not want bent to fit queries</td><td>Users must always read their own write immediately everywhere</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <ul>
+          <li><b>What you give up:</b> read-your-writes. The read side lags by milliseconds normally and by minutes when a projector is behind or broken.</li>
+          <li><b>Mitigations:</b> return the new state in the command response; read from the write store for the author's own recent data; pass a version and have the read API wait until the view has caught up; show "processing" in the UI.</li>
+          <li>The levels: same database with separate query classes, then read replicas, then separate stores. Only the last needs a change stream. CQRS does not require event sourcing.</li>
+        </ul>
+        <p class="note"><b>Failure mode:</b> a projector bug writes wrong data to the read store. You need monitoring of projector lag and a way to rebuild a view from scratch.</p>
+      </section>
+
+      <section class="chapter" id="event-sourcing">
+        <h2>Event sourcing</h2>
+        <p class="kind"><a href="#cooperating">How services cooperate</a></p>
+        <p>Store every change as an immutable event in an append-only log; current state is a fold over the events. Use it when the history <b>is</b> the business (ledgers, order lifecycles, audit-heavy domains). Avoid it as a default persistence choice.</p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  CMD([Command]) --> H[Command handler]
+  SNAP[(Snapshots)] -->|load snapshot| H
+  LOG[("Event log, append-only")] -->|load newer events| H
+  H -->|append if version matches| LOG
+  LOG -.-> P1[Projection: balances]
+  LOG -.-> P2[Projection: statements]
+  LOG -.-> X[[Integration events]]
+  P1 --> V1[(Read view)]
+  P2 --> V2[(Read view)]
+          </script>
+          <figcaption>The handler rebuilds the aggregate from a snapshot plus recent events, validates the command, and appends new events with an optimistic version check. Everything on the right is derived and rebuildable.</figcaption>
+        </figure>
+        <script type="text/plain" data-lang="text" data-file="account-42 event stream" data-norun>
+seq  type             data
+1    AccountOpened    {owner: "c-7"}
+2    MoneyDeposited   {amount: 5000}
+3    MoneyWithdrawn   {amount: 1200}
+4    MoneyDeposited   {amount: 300}
+-- state = fold(events) -> balance 4100, version 4
+-- append(expected_version=4, MoneyWithdrawn{...}) fails if another writer got there first
+        </script>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Piece</th><th>Purpose</th></tr></thead>
+            <tbody>
+              <tr><td><b>Event log</b></td><td>Source of truth. Append-only, ordered per aggregate, optimistic concurrency on version</td></tr>
+              <tr><td><b>Projection</b></td><td>A read model built by consuming events; this is where CQRS comes in</td></tr>
+              <tr><td><b>Snapshot</b></td><td>Cached state at version N so loading does not replay thousands of events; a pure optimisation, safe to delete</td></tr>
+              <tr><td><b>Replay</b></td><td>Rebuild a projection, or build a new one, from event 1; also how you fix a projection bug</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <h3>The hard parts</h3>
+        <ul>
+          <li><b>Schema evolution:</b> events live forever, so old shapes must stay readable. Add optional fields only; for breaking changes, version the event type and "upcast" old events to the new shape on read.</li>
+          <li><b>Eventual consistency:</b> projections lag. Uniqueness checks ("email not taken") cannot be done against a projection safely; they need a reservation aggregate or a constraint in a synchronous store.</li>
+          <li><b>Deletes and GDPR:</b> an immutable log conflicts with the right to erasure. Options: keep personal data outside the log and reference it by id, or encrypt it per user and delete the key (crypto-shredding).</li>
+          <li><b>Replay side effects:</b> a replay must not re-send emails or re-charge cards. Keep side effects in separate, idempotent consumers.</li>
+          <li><b>Querying:</b> you cannot ask the log "all accounts over 1000"; every query needs a projection.</li>
+          <li><b>Fixing mistakes:</b> never edit an event; append a compensating one.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="edge-pointers">
+        <h2>Sagas, gateways and meshes</h2>
+        <p class="kind"><a href="#cooperating">How services cooperate</a></p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Pattern</th><th>One line</th><th>Covered in</th></tr></thead>
+            <tbody>
+              <tr><td><b>Saga</b></td><td>A multi-service transaction as a sequence of local transactions, each with a compensating action; orchestrated or choreographed</td><td><a href="sd-distributed-systems.html">Distributed Systems Patterns</a></td></tr>
+              <tr><td><b>API gateway</b></td><td>Single entry point for clients: routing, authentication, rate limiting, TLS termination</td><td><a href="sd-api-design.html">API and Communication Design</a></td></tr>
+              <tr><td><b>Backend-for-Frontend</b></td><td>One gateway per client type (web, mobile) that aggregates and shapes responses for that client</td><td><a href="sd-api-design.html">API and Communication Design</a></td></tr>
+              <tr><td><b>Service mesh</b></td><td>Sidecar proxies beside every service handle mTLS, retries, timeouts and telemetry for service-to-service traffic</td><td><a href="sd-api-design.html">API and Communication Design</a></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="chapter" id="sidecar">
+        <h2>Sidecar, ambassador, adapter</h2>
+        <p class="kind"><a href="#cooperating">How services cooperate</a></p>
+        <p>Three ways to add a helper container next to the application container, sharing its network and lifecycle, so cross-cutting behaviour is not compiled into every service in every language.</p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  subgraph pod["One pod"]
+    APP[Application]
+    SC[Sidecar: log shipper]
+    AMB[Ambassador: outbound proxy]
+    ADP[Adapter: metrics exporter]
+  end
+  APP -->|writes files| SC
+  APP -->|localhost| AMB
+  AMB -->|"TLS, retries"| EXT([Remote service])
+  ADP -->|reads native stats| APP
+  MON([Monitoring]) -->|standard format| ADP
+  SC --> LOGS([Log store])
+          </script>
+          <figcaption>Containers in a pod share a network address and disk, so the application talks only to localhost and local files. The helpers face the outside world.</figcaption>
+        </figure>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Pattern</th><th>Direction</th><th>Job</th><th>Example</th></tr></thead>
+            <tbody>
+              <tr><td><b>Sidecar</b></td><td>General</td><td>Extend or enhance the app without changing it</td><td>Log shipper, config reloader, certificate rotation</td></tr>
+              <tr><td><b>Ambassador</b></td><td>Outbound</td><td>Proxy the app's calls to the outside: routing, retries, TLS, sharding</td><td>Local proxy to a database cluster; a mesh data-plane proxy</td></tr>
+              <tr><td><b>Adapter</b></td><td>Inbound view of the app</td><td>Normalise the app's output to a standard interface</td><td>Exporter turning native stats into the monitoring system's format</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><b>Trade-off:</b> you gain language-independent, separately upgradable infrastructure; you pay memory and CPU per pod (multiplied by every replica), an extra local hop of latency, and one more thing that can fail or start in the wrong order.</p>
+      </section>
+
+      <section class="chapter part" id="platform">
+        <h2>Platform patterns</h2>
+        <p class="kind">Part 4 of 5 &middot; what the services run on</p>
+        <p>An architect does not need to write manifests but must know what the platform gives for free (restarts, rollouts, discovery, scaling) and where isolation boundaries can be drawn.</p>
+        <ul>
+          <li><a href="#containers">Containers and orchestration</a></li>
+          <li><a href="#discovery-config">Service discovery and configuration</a></li>
+          <li><a href="#feature-flags">Feature flags</a></li>
+          <li><a href="#multi-tenancy">Multi-tenancy</a>: silo, pool, bridge</li>
+          <li><a href="#cells">Cell-based architecture</a>: limiting blast radius</li>
+          <li><a href="#serving-paths">Batch, nearline and online paths</a></li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="containers">
+        <h2>Containers and orchestration</h2>
+        <p class="kind"><a href="#platform">Platform patterns</a></p>
+        <p>A container packages a process with its dependencies; an orchestrator (Kubernetes is the usual reference) keeps a declared number of them running, replaces failures, rolls out versions and gives them a stable address.</p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  U([Client]) --> ING[Ingress]
+  ING --> SVC["Service: stable name and virtual IP"]
+  subgraph dep["Deployment: desired 3 replicas, version v2"]
+    P1[Pod]
+    P2[Pod]
+    P3[Pod]
+  end
+  SVC --> P1
+  SVC --> P2
+  SVC --> P3
+  HPA[Horizontal autoscaler] -->|sets replica count| dep
+  MET([Metrics]) -->|"CPU, QPS, queue depth"| HPA
+          </script>
+          <figcaption>Callers use the service name; pods come and go behind it. The deployment owns rollout and replica count; the autoscaler adjusts that count from metrics.</figcaption>
+        </figure>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Object</th><th>What it is</th><th>What an architect should say</th></tr></thead>
+            <tbody>
+              <tr><td><b>Pod</b></td><td>One or more containers sharing a network address and volumes; the unit of scheduling</td><td>Pods are disposable. No local state that matters; graceful shutdown on SIGTERM</td></tr>
+              <tr><td><b>Deployment</b></td><td>Declares image version and replica count; performs rolling updates and rollbacks</td><td>Readiness probes gate traffic; liveness probes restart hung processes</td></tr>
+              <tr><td><b>Service</b></td><td>Stable DNS name and virtual IP load-balancing across ready pods</td><td>This is built-in server-side discovery</td></tr>
+              <tr><td><b>Ingress / gateway</b></td><td>HTTP entry from outside the cluster</td><td>TLS termination and host or path routing</td></tr>
+              <tr><td><b>Horizontal autoscaler</b></td><td>Changes replica count to hold a metric near a target</td><td>Reactive, takes tens of seconds to minutes; needs resource requests set and a node autoscaler behind it</td></tr>
+              <tr><td><b>StatefulSet</b></td><td>Pods with stable identity and their own disk</td><td>Running databases on the orchestrator is possible but harder; managed services are the common default</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><b>Interview tip:</b> one sentence is enough: "stateless services run as containers on an orchestrator with at least three replicas across zones, autoscaled on CPU or queue depth". Go deeper only if asked.</p>
+      </section>
+
+      <section class="chapter" id="discovery-config">
+        <h2>Service discovery and configuration</h2>
+        <p class="kind"><a href="#platform">Platform patterns</a></p>
+        <p>Instances change address constantly, so callers look up a name, not an IP. Configuration follows the same rule: it lives outside the artifact so one build runs in every environment.</p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart TB
+  subgraph ss["Server-side discovery"]
+    A2[Caller] -->|stable name| LB[Load balancer]
+    LB --> B2[Instance]
+    LB --> B3[Instance]
+  end
+  subgraph cs["Client-side discovery"]
+    B1[Instance] -.->|heartbeat| REG[(Registry)]
+    A1[Caller] -->|lookup| REG
+    A1 -->|direct call| B1
+  end
+          </script>
+          <figcaption>Client-side puts the load-balancing logic in every caller (or its sidecar); server-side hides it behind one address at the cost of an extra hop.</figcaption>
+        </figure>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Topic</th><th>Options</th><th>Notes</th></tr></thead>
+            <tbody>
+              <tr><td><b>Discovery</b></td><td>DNS; a registry (Consul, etcd, ZooKeeper); platform services; mesh</td><td>DNS is simplest but TTL caching delays failover. Registries need health checks to evict dead instances</td></tr>
+              <tr><td><b>Static config</b></td><td>Environment variables, mounted files</td><td>Changes need a restart or redeploy; versioned with the release</td></tr>
+              <tr><td><b>Dynamic config</b></td><td>Config service with watch or poll</td><td>Changes in seconds without deploy; treat a config push like a code deploy: review, staged rollout, rollback</td></tr>
+              <tr><td><b>Secrets</b></td><td>Secret manager, short-lived credentials</td><td>Never in the image or the repo; rotate automatically</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><b>Failure mode:</b> the registry or config service becomes a single point of failure. Callers must cache the last known good answer and keep working when it is unreachable.</p>
+      </section>
+
+      <section class="chapter" id="feature-flags">
+        <h2>Feature flags</h2>
+        <p class="kind"><a href="#platform">Platform patterns</a></p>
+        <p>A flag is a runtime switch that separates <b>deploying</b> code from <b>releasing</b> behaviour. It is the cheapest rollback there is: flip it off, no deploy.</p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Flag type</th><th>Purpose</th><th>Lifetime</th></tr></thead>
+            <tbody>
+              <tr><td>Release</td><td>Hide unfinished work; ramp 1%, 10%, 100%</td><td>Days to weeks, then delete</td></tr>
+              <tr><td>Experiment</td><td>A/B test by user cohort</td><td>Length of the experiment</td></tr>
+              <tr><td>Ops / kill switch</td><td>Turn off an expensive or optional feature under load</td><td>Permanent, tested regularly</td></tr>
+              <tr><td>Permission</td><td>Enable per tenant or plan</td><td>Permanent</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <ul>
+          <li>Evaluate locally from a cached rule set; never make a network call per flag check. Default to the safe value if the flag service is down.</li>
+          <li>Bucket by a stable hash of user or tenant id so a user gets a consistent experience.</li>
+          <li><b>Cost:</b> every flag doubles the paths to test. Stale flags are debt and a known incident cause; give each an owner and an expiry.</li>
+        </ul>
+        <p>Flags as a deployment tool are covered in <a href="sd-reliability.html">Reliability and Operations</a>.</p>
+      </section>
+
+      <section class="chapter" id="multi-tenancy">
+        <h2>Multi-tenancy</h2>
+        <p class="kind"><a href="#platform">Platform patterns</a></p>
+        <p>How much infrastructure tenants share is a trade between isolation and cost. Most B2B products end up with a pool for small tenants and silos for the few large or regulated ones.</p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart TB
+  subgraph pool["Pool: all shared"]
+    PA[Shared app] --> PD[("Shared tables,<br/>tenant_id column")]
+  end
+  subgraph bridge["Bridge: shared app"]
+    BA[Shared app] --> BDA[(Schema A)]
+    BA --> BDB[(Schema B)]
+  end
+  subgraph silo["Silo: stack per tenant"]
+    SA[App A] --> SDA[(DB A)]
+    SB[App B] --> SDB[(DB B)]
+  end
+          </script>
+          <figcaption>Left to right: less isolation, lower cost per tenant, more tenants per unit of operations effort.</figcaption>
+        </figure>
+        <div class="scroll">
+          <table>
+            <thead><tr><th></th><th>Silo</th><th>Bridge</th><th>Pool</th></tr></thead>
+            <tbody>
+              <tr><td><b>Isolation</b></td><td>Strongest: separate compute, data, often account or network</td><td>Data isolated by database or schema; compute shared</td><td>Logical only: a <code>tenant_id</code> on every row and query</td></tr>
+              <tr><td><b>Cost per tenant</b></td><td>Highest; idle capacity per tenant</td><td>Medium</td><td>Lowest; best utilisation</td></tr>
+              <tr><td><b>Noisy neighbour</b></td><td>None</td><td>In the app tier</td><td>Everywhere unless limited</td></tr>
+              <tr><td><b>Onboarding</b></td><td>Provision a stack (minutes to hours, automated)</td><td>Create a schema</td><td>Insert a row</td></tr>
+              <tr><td><b>Operations at 10,000 tenants</b></td><td>Hard: 10,000 deployments and migrations</td><td>Hard: schema count limits, slow migrations</td><td>Easy: one of everything</td></tr>
+              <tr><td><b>Per-tenant restore, residency, custom keys</b></td><td>Easy</td><td>Possible</td><td>Hard</td></tr>
+              <tr><td><b>Fits</b></td><td>Enterprise, regulated, very large tenants</td><td>Mid-market with compliance needs</td><td>Self-serve SaaS, many small tenants</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <h3>The noisy-neighbour problem</h3>
+        <p>In shared tiers one tenant's burst or heavy query degrades everyone. Controls, cheapest first:</p>
+        <ul>
+          <li>Per-tenant rate limits and quotas at the gateway; per-tenant concurrency limits inside services.</li>
+          <li>Fair queueing: a queue per tenant or weighted scheduling, so one backlog cannot starve others.</li>
+          <li>Tenant-aware sharding, and moving a hot tenant to its own shard or silo.</li>
+          <li>Per-tenant metrics. Without a tenant label you cannot tell who the neighbour is.</li>
+        </ul>
+        <p class="note"><b>Failure mode:</b> in a pool, one query missing its tenant filter leaks data across customers. Enforce the filter below application code: row-level security, or a data-access layer that cannot run without a tenant context.</p>
+      </section>
+
+      <section class="chapter" id="cells">
+        <h2>Cell-based architecture</h2>
+        <p class="kind"><a href="#platform">Platform patterns</a></p>
+        <p>Run several complete, independent copies of the stack ("cells") and pin each tenant or user to one. A bad deploy, poison request or overload then hurts one cell, not everyone. With N equal cells the blast radius of a cell failure is about 1/N of users.</p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  U([Clients]) --> R["Cell router: thin, tenant to cell map"]
+  subgraph c1["Cell 1"]
+    A1[Services] --> D1[(Data)]
+  end
+  subgraph c2["Cell 2"]
+    A2[Services] --> D2[(Data)]
+  end
+  subgraph c3["Cell 3: canary cell"]
+    A3[Services] --> D3[(Data)]
+  end
+  R --> A1
+  R --> A2
+  R --> A3
+          </script>
+          <figcaption>Cells share nothing with each other. The router is the only common component, so it must be as simple and as stable as possible.</figcaption>
+        </figure>
+        <ul>
+          <li><b>Rules:</b> no cross-cell calls on the request path; each cell has a fixed maximum size that has been load tested; scale by adding cells, not by growing them.</li>
+          <li><b>Deploys:</b> roll out one cell at a time, starting with a canary cell, so a bad change is contained before it spreads.</li>
+          <li><b>Pays with:</b> more infrastructure and lower utilisation, tooling to migrate tenants between cells, harder cross-cell features (global search, a tenant larger than one cell), and the router as a critical dependency.</li>
+          <li><b>Shuffle sharding</b> is a related idea: give each tenant a different random subset of instances so two tenants rarely share all of them.</li>
+        </ul>
+        <p class="note"><b>Senior signal:</b> when asked "how do you limit the damage of a bad deploy or a poison tenant at very large scale?", cells plus staged rollout is the expected answer. It is the same thinking as bulkheads, applied to the whole stack.</p>
+      </section>
+
+      <section class="chapter" id="serving-paths">
+        <h2>Batch, nearline and online paths</h2>
+        <p class="kind"><a href="#platform">Platform patterns</a></p>
+        <p>Decide per feature how fresh the result must be, then compute it on the cheapest path that meets that freshness. Precompute whatever you can; do online only what depends on the request.</p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  E([User events]) --> K[[Event stream]]
+  K --> L[(Data lake)]
+  L --> BJ["Batch jobs: hours"]
+  K --> SP["Stream processor: seconds"]
+  BJ --> ST[(Serving store)]
+  SP --> ST
+  RQ([Request]) --> ON["Online service: milliseconds"]
+  ON -->|lookup| ST
+  ON --> RS([Response])
+          </script>
+          <figcaption>Batch and nearline both write precomputed results into a serving store; the online path does a lookup plus the small amount of work that needs the live request.</figcaption>
+        </figure>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Path</th><th>Freshness</th><th>Computes</th><th>Strength</th><th>Weakness</th></tr></thead>
+            <tbody>
+              <tr><td><b>Batch (offline)</b></td><td>Hours to a day</td><td>Whole dataset: model training, daily aggregates, full index rebuilds</td><td>Cheap per record, easy to re-run, complex logic</td><td>Stale; a failed run means yesterday's data</td></tr>
+              <tr><td><b>Nearline (streaming)</b></td><td>Seconds to minutes</td><td>Incremental updates per event: counters, feature updates, index deltas</td><td>Fresh without request-time cost</td><td>Ordering, late events, state management, reprocessing</td></tr>
+              <tr><td><b>Online</b></td><td>Now</td><td>Per request, inside the latency budget: ranking, filtering, permission checks</td><td>Uses live context</td><td>Tight budget (tens of ms); cost scales with QPS</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p><b>Edge compute:</b> small functions running at CDN points of presence (redirects, auth checks, header rewriting, personalising cached pages) cut a round trip to the origin but have tight CPU and state limits; see <a href="sd-building-blocks.html">Building Blocks</a> for CDNs.</p>
+      </section>
+
+      <section class="chapter part" id="choosing">
+        <h2>Choosing</h2>
+        <p class="kind">Part 5 of 5 &middot; picking a style and defending it</p>
+        <p>There is no best architecture, only one that fits the team, the load and the consistency needs today, with a clear path to the next step.</p>
+        <ul>
+          <li><a href="#decision-flow">A decision flowchart</a></li>
+          <li><a href="#anti-patterns">Anti-patterns</a></li>
+          <li><a href="#evolution">Talking about evolution</a></li>
+          <li><a href="#cheat-sheet">Cheat sheet</a></li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="decision-flow">
+        <h2>A decision flowchart</h2>
+        <p class="kind"><a href="#choosing">Choosing</a></p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart TD
+  S([New system]) --> T{{"More than about 3 teams, or teams blocked on releases?"}}
+  T -->|no| MM[Modular monolith]
+  T -->|yes| B{{"Domain boundaries stable and understood?"}}
+  B -->|no| MM
+  B -->|yes| P{{"Platform ready: CI/CD, tracing, on-call?"}}
+  P -->|no| MM
+  P -->|yes| MS[Microservices per bounded context]
+  MM --> H{{"One part with very different scale or risk?"}}
+  H -->|yes| EX[Extract that part only]
+  H -->|no| KEEP[Keep it together]
+  MS --> X{{"Multi-step workflow needing a transaction?"}}
+  X -->|yes| SAGA[Orchestrated saga]
+  X -->|no| EVT[Events and choreography]
+          </script>
+          <figcaption>Three "yes" answers are needed to justify microservices up front; otherwise start modular and extract only what earns it.</figcaption>
+        </figure>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>If the requirement is</th><th>Lean towards</th></tr></thead>
+            <tbody>
+              <tr><td>Strong consistency across several entities</td><td>Keep them in one service and one database; a saga is a cost, not a feature</td></tr>
+              <tr><td>Reads far outnumber writes, or need different shapes</td><td>Read replicas first, then CQRS with projected views</td></tr>
+              <tr><td>Complete audit trail, "what was the state on date X"</td><td>Event sourcing for that aggregate only</td></tr>
+              <tr><td>Spiky, infrequent or event-triggered work</td><td>Serverless functions or queue workers</td></tr>
+              <tr><td>Many consumers reacting to one fact</td><td>Publish an event; choreography</td></tr>
+              <tr><td>Very large scale, a failure must not hit all users</td><td>Cells, staged rollouts</td></tr>
+              <tr><td>Enterprise tenants with isolation demands</td><td>Pool by default, silo for the few</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="chapter" id="anti-patterns">
+        <h2>Anti-patterns</h2>
+        <p class="kind"><a href="#choosing">Choosing</a></p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Anti-pattern</th><th>How it shows up</th><th>Fix</th></tr></thead>
+            <tbody>
+              <tr><td><b>Distributed monolith</b></td><td>Services that must be deployed together; lockstep versioning</td><td>Re-draw boundaries around capabilities; versioned contracts; merge services that always change together</td></tr>
+              <tr><td><b>Shared database</b></td><td>Several services writing the same tables</td><td>One owner per table; others use its API or events</td></tr>
+              <tr><td><b>Chatty services</b></td><td>One user request causes dozens of internal calls; N+1 over the network</td><td>Coarser APIs, batch endpoints, local read copies, merge the services</td></tr>
+              <tr><td><b>God service</b></td><td>One service (often "core" or the orchestrator) that every feature must change</td><td>Push logic back to the owning contexts; keep orchestrators thin</td></tr>
+              <tr><td><b>Premature split</b></td><td>More services than engineers; boundaries wrong because the domain was not understood</td><td>Start as a modular monolith; split on a measured trigger</td></tr>
+              <tr><td><b>Synchronous chains</b></td><td>A calls B calls C calls D; latency adds, availability multiplies down (four hops at 99.9% is about 99.6%)</td><td>Async where the caller need not wait; cache; fallbacks; flatten the call graph</td></tr>
+              <tr><td><b>Entity services</b></td><td>Services named after tables, with business logic left in the callers</td><td>Split by capability, not by noun</td></tr>
+              <tr><td><b>Shared domain library</b></td><td>A common library of business models that every service must upgrade together</td><td>Share only infrastructure code; duplicate small domain types</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="chapter" id="evolution">
+        <h2>Talking about evolution</h2>
+        <p class="kind"><a href="#choosing">Choosing</a></p>
+        <p>Interviewers want to hear a path, not a destination. Start with the simplest thing that meets the stated requirements, and for each step up name the trigger that would justify it.</p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart TD
+  A[Monolith, one DB] -->|read load| B[Add replicas and cache]
+  B -->|slow background work| C[Add queue and workers]
+  C -->|teams collide| D[Modular monolith]
+  D -->|one hot or risky module| E[Extract first service]
+  E -->|many teams| F[Services per context]
+  F -->|blast radius| G[Cells, multi-region]
+          </script>
+          <figcaption>Each arrow is labelled with its trigger. Being able to say the trigger is the difference between evolution and fashion.</figcaption>
+        </figure>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Step</th><th>Trigger to name</th><th>What you now pay</th></tr></thead>
+            <tbody>
+              <tr><td>Replicas, cache</td><td>Database CPU dominated by reads; p99 read latency over target</td><td>Replication lag, cache invalidation</td></tr>
+              <tr><td>Queue and workers</td><td>Requests doing slow or failure-prone work inline (email, thumbnails, third-party calls)</td><td>At-least-once delivery, idempotency</td></tr>
+              <tr><td>Modular monolith</td><td>Merge conflicts, unclear ownership, changes rippling across the codebase</td><td>Discipline and tooling to enforce boundaries</td></tr>
+              <tr><td>First extraction</td><td>One module needs different scale, availability or release cadence</td><td>Network calls, a second pipeline, distributed tracing</td></tr>
+              <tr><td>Services per context</td><td>Deploy queue is the bottleneck; build and test times in tens of minutes</td><td>Platform team, sagas, eventual consistency</td></tr>
+              <tr><td>Sharding, CQRS</td><td>Write volume or data size past one primary; queries the write model cannot serve</td><td>Cross-shard queries, read lag</td></tr>
+              <tr><td>Cells, multi-region</td><td>One failure affects all users; latency or residency requirements</td><td>Cost, tenant migration tooling, replication conflicts</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><b>Interview tip:</b> a sentence that works: "For the first version I would run this as one service with a replicated database; the first thing I would split out is X, when Y happens, because Z." It shows you know the complex design and chose not to pay for it yet.</p>
+      </section>
+
+      <section class="chapter" id="cheat-sheet">
+        <h2>Cheat sheet</h2>
+        <p class="kind"><a href="#choosing">Choosing</a></p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Topic</th><th>Remember</th></tr></thead>
+            <tbody>
+              <tr><td>Default shape</td><td>Modular monolith until team count, scale divergence or fault isolation forces a split</td></tr>
+              <tr><td>Microservice test</td><td>Deployable alone, owns its data, one team, one bounded context</td></tr>
+              <tr><td>Distributed monolith</td><td>Separate deploys, shared fate: shared DB, lockstep releases, sync chains</td></tr>
+              <tr><td>Hexagonal / clean</td><td>Dependencies point inward; core defines ports, infrastructure implements adapters</td></tr>
+              <tr><td>Bounded context</td><td>Where a model and its language are consistent; the service boundary candidate</td></tr>
+              <tr><td>Aggregate</td><td>Unit of transactional consistency; reference others by id; one transaction, one aggregate</td></tr>
+              <tr><td>Database per service</td><td>No shared tables; joins become API composition or local copies; transactions become sagas</td></tr>
+              <tr><td>Data ownership</td><td>One writer per fact; copies are read-only and rebuildable</td></tr>
+              <tr><td>Strangler fig</td><td>Facade, move one route at a time, migrate the data, delete the old code</td></tr>
+              <tr><td>Anti-corruption layer</td><td>Translate at the boundary so a legacy or vendor model does not leak in</td></tr>
+              <tr><td>Orchestration vs choreography</td><td>Central workflow with visible state vs decoupled reactions; orchestrate the critical path</td></tr>
+              <tr><td>Event notification / state transfer / sourcing</td><td>Id only and call back / full state in the event / the log is the database</td></tr>
+              <tr><td>CQRS</td><td>Separate read models fed asynchronously; you lose read-your-writes on the read side</td></tr>
+              <tr><td>Event sourcing</td><td>Append-only log, projections, snapshots, replay; hard: schema evolution, GDPR, lag</td></tr>
+              <tr><td>Sidecar / ambassador / adapter</td><td>Helper container: extend / proxy outbound / normalise output</td></tr>
+              <tr><td>Multi-tenancy</td><td>Silo (isolated, costly), bridge (shared app, separate data), pool (shared, cheap, noisy neighbours)</td></tr>
+              <tr><td>Cells</td><td>Independent full stacks behind a thin router; blast radius about 1/N; deploy cell by cell</td></tr>
+              <tr><td>Serving paths</td><td>Batch (hours), nearline (seconds), online (milliseconds); precompute what you can</td></tr>
+              <tr><td>Sync chain arithmetic</td><td>Latencies add, availabilities multiply: 0.999 to the power 4 is about 0.996</td></tr>
+              <tr><td>Evolution answer</td><td>Start simple; name the trigger and the cost of each step</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>Next: how to keep whichever architecture you chose running, in <a href="sd-reliability.html">Reliability and Operations</a>.</p>
+      </section>
+
+    </div>
+  </main>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script src="../../assets/tutorial.js?v=8"></script>
+</body>
+</html>

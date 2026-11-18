@@ -1,0 +1,2693 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>LLD Case Studies</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@500;700&display=swap">
+<link rel="stylesheet" href="../../assets/tutorial.css?v=8">
+</head>
+<body data-track="system">
+
+<header class="topbar">
+  <div class="topbar-in">
+    <a class="brand" href="../../../index.html">Learnings</a>
+    <nav class="tracks" aria-label="Paths">
+      <a href="../../../index.html#system-design" aria-current="true">System Design</a>
+      <a href="../../../archive.html">Archive</a>
+    </nav>
+    <div class="tools">
+      <button class="btn" id="menu" type="button" aria-expanded="false">Chapters</button>
+      <input id="q" type="search" placeholder="Search chapters" aria-label="Search chapters">
+      <button class="btn" id="theme" type="button">Dark mode</button>
+    </div>
+  </div>
+</header>
+
+<div class="shell">
+  <aside class="side">
+    <p class="side-label">LLD Case Studies</p>
+    <nav id="toc" aria-label="Chapters"></nav>
+  </aside>
+
+  <main>
+    <div class="page-head">
+      <p class="eyebrow">System design, part 11 of 12</p>
+      <h1>LLD Case Studies</h1>
+      <p class="lead">Ten low-level designs that come up again and again, each worked through the same four steps: requirements, design, runnable code, extensions. Each case is sized for a 45 to 90 minute round: the core is complete and runs, the rest is named and placed. The method, UML notation and concurrency tools are on <a href="sd-lld.html">Low-Level Design</a>; pattern mechanics are on <a href="../../Python/docs/design-patterns.html">Design Patterns</a>. All code is Python 3.9, standard library only, and every demo is deterministic.</p>
+    </div>
+
+    <div class="chapters">
+
+      <section class="chapter part" id="how-to">
+        <h2>How to use these</h2>
+        <p class="kind">Part 1 of 12 &middot; the template and the map</p>
+        <p>Read a case as a rehearsal, not a reference: cover the code, write your own from the requirements and design, then compare. The differences are your gaps.</p>
+        <ul>
+          <li><a href="#template">The four-step template</a></li>
+          <li><a href="#case-map">What each case exercises</a></li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="template">
+        <h2>The four-step template</h2>
+        <p class="kind"><a href="#how-to">How to use these</a></p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  R["1 Requirements<br/>scope and questions"] --> D["2 Design<br/>classes and one flow"]
+  D --> C["3 Code<br/>core plus demo"]
+  C --> E["4 Extensions<br/>next requirement"]
+  E -.->|reshapes| D
+          </script>
+          <figcaption>Every case below follows this order. Extensions loop back into the design: a good design absorbs them as new classes, not edits.</figcaption>
+        </figure>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Step</th><th>Produce</th><th>Time in a 90 min round</th><th>Senior answer adds</th></tr></thead>
+            <tbody>
+              <tr><td>1. Requirements</td><td>Functional list, constraints, out of scope, assumptions written down</td><td>5 to 8</td><td>Asks the one question that changes the model (see each case)</td></tr>
+              <tr><td>2. Design</td><td>Class diagram with key members, entity table, a state or sequence diagram</td><td>8 to 12</td><td>Names the variation point and the invariant that needs a lock</td></tr>
+              <tr><td>3. Code</td><td>Entities, one service, a demo with one failure path</td><td>50 to 60</td><td>Injected clock and randomness; domain errors; no dead code</td></tr>
+              <tr><td>4. Extensions</td><td>"To add X, I add class Y"</td><td>5 to 10</td><td>Size of each change; concurrency story; what breaks at scale</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><b>Interview tip:</b> each case's code is about 90 to 150 lines, which is roughly what fits in 60 minutes of typing. If yours is twice that, you are building features nobody asked for.</p>
+      </section>
+
+      <section class="chapter" id="case-map">
+        <h2>What each case exercises</h2>
+        <p class="kind"><a href="#how-to">How to use these</a></p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Case</th><th>Patterns</th><th>Core skill tested</th><th>Concurrency question</th></tr></thead>
+            <tbody>
+              <tr><td><a href="#parking">Parking lot</a></td><td>Strategy</td><td>Entity modelling, allocation data structure</td><td>Two cars, one spot</td></tr>
+              <tr><td><a href="#lru">LRU and LFU cache</a></td><td>None (data structure)</td><td>O(1) design with a hash map plus linked list</td><td>Reads mutate order</td></tr>
+              <tr><td><a href="#elevator">Elevator</a></td><td>Strategy, State</td><td>Scheduling, simulation with ticks</td><td>Requests arrive while cars move</td></tr>
+              <tr><td><a href="#vending">Vending machine</a></td><td>State</td><td>Lifecycle with legal and illegal actions; change-making</td><td>Single user, hardware events</td></tr>
+              <tr><td><a href="#split">Expense sharing</a></td><td>Strategy</td><td>Money as integers, rounding, graph simplification</td><td>Concurrent edits to one group</td></tr>
+              <tr><td><a href="#movie">Movie booking</a></td><td>Strategy (payment port)</td><td>Holds with expiry, two-phase confirm</td><td>Double booking: the headline</td></tr>
+              <tr><td><a href="#limiter">Rate limiter</a></td><td>Strategy, Factory</td><td>Algorithms behind one interface, injectable clock</td><td>Per-key state under many threads</td></tr>
+              <tr><td><a href="#logger">Logging framework</a></td><td>Chain of Responsibility, Strategy, Observer</td><td>Pipelines, filtering, extensible outputs</td><td>Async sinks, ordering</td></tr>
+              <tr><td><a href="#game">Tic-tac-toe</a></td><td>None needed; Strategy for players</td><td>Clean game loop, O(1) win check</td><td>Rarely asked</td></tr>
+              <tr><td><a href="#pubsub">Pub-sub queue</a></td><td>Observer</td><td>Offsets, delivery semantics, dead letters</td><td>Producers and consumers in parallel</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="chapter part" id="parking">
+        <h2>Parking lot</h2>
+        <p class="kind">Part 2 of 12 &middot; entities, allocation, pricing</p>
+        <p>A multi-floor lot with spot sizes issues a ticket on entry, finds the nearest free spot that fits, and charges on exit. It tests whether your entities carry behaviour and whether "nearest" has a data structure behind it.</p>
+        <ul>
+          <li><a href="#parking-requirements">Requirements</a></li>
+          <li><a href="#parking-design">Design</a></li>
+          <li><a href="#parking-code">Code</a></li>
+          <li><a href="#parking-extensions">Extensions and follow-ups</a></li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="parking-requirements">
+        <h2>Parking: requirements</h2>
+        <p class="kind"><a href="#parking">Parking lot</a></p>
+        <ul>
+          <li><b>Functional:</b> park a vehicle and get a ticket; leave with the ticket and pay; refuse when no spot fits.</li>
+          <li><b>Rules:</b> motorbike fits small or larger, car fits medium or larger, truck fits large only. Prefer the smallest size that fits, then the nearest spot.</li>
+          <li><b>Constraints:</b> a few thousand spots, several entry gates (so allocation is concurrent), fee by duration and vehicle kind.</li>
+          <li><b>Out of scope:</b> payment methods, reservations, sensors, display boards, multiple lots.</li>
+        </ul>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Ask</th><th>Why it matters</th><th>Assumed</th></tr></thead>
+            <tbody>
+              <tr><td>What does "nearest" mean?</td><td>Defines the sort key of the allocator</td><td>Lowest floor, then distance to the lift</td></tr>
+              <tr><td>Can a car take a large spot?</td><td>Best fit vs first fit</td><td>Yes, only when no medium spot is free</td></tr>
+              <tr><td>How is the fee computed?</td><td>Is pricing a variation point?</td><td>Per started hour, rate by kind; will change per lot</td></tr>
+              <tr><td>Lost ticket, overnight cap?</td><td>Extra pricing rules</td><td>Not now; pricing must accept them later</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="chapter" id="parking-design">
+        <h2>Parking: design</h2>
+        <p class="kind"><a href="#parking">Parking lot</a></p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+classDiagram
+  direction LR
+  class ParkingLot {
+    +park(vehicle) Ticket
+    +leave(ticket_id) int
+    -take_nearest(size) Spot
+  }
+  class Spot {
+    +spot_id: str
+    +floor: int
+    +distance: int
+    +size: SpotSize
+  }
+  class Ticket {
+    +ticket_id: int
+    +entered_at: int
+  }
+  class Vehicle {
+    +plate: str
+    +kind: VehicleKind
+  }
+  class PricingStrategy {
+    <<interface>>
+    +fee(kind, minutes) int
+  }
+  class HourlyPricing
+  ParkingLot "1" o-- "*" Spot : free heaps
+  ParkingLot "1" *-- "*" Ticket
+  Ticket --> Vehicle
+  Ticket --> Spot
+  ParkingLot --> PricingStrategy
+  PricingStrategy <|.. HourlyPricing
+          </script>
+          <figcaption>The lot owns tickets and allocation; pricing is the one interface, because it is the rule most likely to differ per lot.</figcaption>
+        </figure>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Class</th><th>Kind</th><th>Responsibility</th></tr></thead>
+            <tbody>
+              <tr><td><code>ParkingLot</code></td><td>Service</td><td>Allocate the nearest fitting spot, issue and close tickets</td></tr>
+              <tr><td><code>Spot</code></td><td>Value (frozen)</td><td>Location and size; occupancy lives in the lot's free heaps, not in the spot</td></tr>
+              <tr><td><code>Vehicle</code>, <code>Ticket</code></td><td>Value</td><td>What parked, where, since when</td></tr>
+              <tr><td><code>PricingStrategy</code></td><td>Interface</td><td>Fee from kind and duration</td></tr>
+              <tr><td><code>VehicleKind</code>, <code>SpotSize</code></td><td>Enums</td><td>Fixed sets; <code>SMALLEST_FIT</code> maps one to the other</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+sequenceDiagram
+  actor D as Driver
+  participant L as ParkingLot
+  participant H as Free heaps
+  participant P as PricingStrategy
+  D->>L: park(car)
+  L->>H: pop nearest MEDIUM, else LARGE
+  H-->>L: spot G-M1
+  L-->>D: Ticket 1
+  D->>L: leave(1)
+  L->>H: push G-M1 back
+  L->>P: fee(CAR, 130 min)
+  P-->>L: 150
+  L-->>D: 150
+          </script>
+          <figcaption>One min-heap per spot size keyed by (floor, distance): taking and returning a spot are O(log n), not a scan of every spot.</figcaption>
+        </figure>
+        <p class="note"><b>Senior signal:</b> say why there is no <code>Floor</code> class here: nothing in scope depends on a floor beyond its number. Add it when floors get behaviour (display boards, per-floor capacity, closing a floor).</p>
+      </section>
+
+      <section class="chapter" id="parking-code">
+        <h2>Parking: code</h2>
+        <p class="kind"><a href="#parking">Parking lot</a></p>
+        <script type="text/plain" data-lang="py" data-file="parking_lot.py">
+import heapq
+import math
+from dataclasses import dataclass
+from enum import Enum
+from itertools import count
+from typing import Callable, Dict, List, Protocol, Tuple
+
+
+class VehicleKind(Enum):
+    MOTORBIKE = "motorbike"
+    CAR = "car"
+    TRUCK = "truck"
+
+
+class SpotSize(Enum):
+    SMALL = 1
+    MEDIUM = 2
+    LARGE = 3
+
+
+SMALLEST_FIT = {VehicleKind.MOTORBIKE: SpotSize.SMALL,
+                VehicleKind.CAR: SpotSize.MEDIUM,
+                VehicleKind.TRUCK: SpotSize.LARGE}
+
+
+class ParkingError(Exception):
+    pass
+
+
+class LotFull(ParkingError):
+    pass
+
+
+class UnknownTicket(ParkingError):
+    pass
+
+
+@dataclass(frozen=True)
+class Vehicle:
+    plate: str
+    kind: VehicleKind
+
+
+@dataclass(frozen=True)
+class Spot:
+    spot_id: str
+    floor: int
+    distance: int                         # metres from the lift on its floor
+    size: SpotSize
+
+
+@dataclass(frozen=True)
+class Ticket:
+    ticket_id: int
+    vehicle: Vehicle
+    spot: Spot
+    entered_at: int                       # minutes on the injected clock
+
+
+class PricingStrategy(Protocol):
+    def fee(self, kind: VehicleKind, minutes: int) -> int: ...
+
+
+@dataclass(frozen=True)
+class HourlyPricing:
+    per_hour: Dict[VehicleKind, int]
+
+    def fee(self, kind: VehicleKind, minutes: int) -> int:
+        return max(1, math.ceil(minutes / 60)) * self.per_hour[kind]
+
+
+class ParkingLot:
+    def __init__(self, spots: List[Spot], pricing: PricingStrategy,
+                 clock: Callable[[], int]) -> None:
+        self._free: Dict[SpotSize, List[Tuple[int, int, str, Spot]]] = {s: [] for s in SpotSize}
+        for spot in spots:
+            self._release(spot)
+        self._pricing = pricing
+        self._clock = clock
+        self._tickets: Dict[int, Ticket] = {}
+        self._ids = count(1)
+
+    def park(self, vehicle: Vehicle) -> Ticket:
+        spot = self._take_nearest(SMALLEST_FIT[vehicle.kind])
+        ticket = Ticket(next(self._ids), vehicle, spot, self._clock())
+        self._tickets[ticket.ticket_id] = ticket
+        return ticket
+
+    def leave(self, ticket_id: int) -> int:
+        ticket = self._tickets.pop(ticket_id, None)
+        if ticket is None:
+            raise UnknownTicket(f"no open ticket {ticket_id}")
+        self._release(ticket.spot)
+        return self._pricing.fee(ticket.vehicle.kind, self._clock() - ticket.entered_at)
+
+    def _take_nearest(self, smallest: SpotSize) -> Spot:
+        for size in SpotSize:             # best fit first, then the next size up
+            if size.value >= smallest.value and self._free[size]:
+                return heapq.heappop(self._free[size])[-1]
+        raise LotFull(f"no spot for a {smallest.name.lower()} vehicle")
+
+    def _release(self, spot: Spot) -> None:
+        heapq.heappush(self._free[spot.size], (spot.floor, spot.distance, spot.spot_id, spot))
+
+
+class FakeClock:
+    def __init__(self) -> None:
+        self.minutes = 0
+
+    def __call__(self) -> int:
+        return self.minutes
+
+
+clock = FakeClock()
+spots = [Spot("G-M2", 0, 40, SpotSize.MEDIUM), Spot("G-M1", 0, 10, SpotSize.MEDIUM),
+         Spot("1-L1", 1, 5, SpotSize.LARGE), Spot("1-S1", 1, 5, SpotSize.SMALL)]
+rates = HourlyPricing({VehicleKind.MOTORBIKE: 20, VehicleKind.CAR: 50, VehicleKind.TRUCK: 120})
+lot = ParkingLot(spots, rates, clock)
+
+first = lot.park(Vehicle("MH12 AB 1111", VehicleKind.CAR))
+second = lot.park(Vehicle("MH12 CD 2222", VehicleKind.CAR))
+third = lot.park(Vehicle("MH12 EF 3333", VehicleKind.CAR))
+print(first.spot.spot_id, second.spot.spot_id, third.spot.spot_id)   # G-M1 G-M2 1-L1
+try:
+    lot.park(Vehicle("MH14 TR 9999", VehicleKind.TRUCK))
+except ParkingError as err:
+    print(type(err).__name__, "-", err)   # LotFull - no spot for a large vehicle
+clock.minutes = 130
+print(lot.leave(first.ticket_id))         # 150
+print(lot.park(Vehicle("MH12 GH 4444", VehicleKind.MOTORBIKE)).spot.spot_id)   # 1-S1
+        </script>
+        <ul>
+          <li>Best fit, then nearest: iterating <code>SpotSize</code> in order gives the smallest size that has a free spot; the heap gives the nearest within it.</li>
+          <li>The clock is injected, so "130 minutes later" is one assignment, not a sleep.</li>
+          <li>The truck is refused with <code>LotFull</code> before any state changes.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="parking-extensions">
+        <h2>Parking: extensions and follow-ups</h2>
+        <p class="kind"><a href="#parking">Parking lot</a></p>
+        <p><b>Patterns:</b> <a href="../../Python/docs/design-patterns.html#strategy">Strategy</a> for pricing; a <a href="../../Python/docs/design-patterns.html#decorator">Decorator</a> for caps and discounts on top of it.</p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>New requirement</th><th>Change</th></tr></thead>
+            <tbody>
+              <tr><td>Daily cap, weekend rates, lost-ticket fee</td><td>New <code>PricingStrategy</code> classes; <code>CappedPricing(inner, cap)</code> wraps any of them</td></tr>
+              <tr><td>Electric spots with chargers</td><td>New <code>SpotSize</code> (or a <code>features</code> set on <code>Spot</code>) and a rule in <code>SMALLEST_FIT</code>; allocator unchanged</td></tr>
+              <tr><td>"Nearest to my gate" per entrance</td><td>Allocation becomes a <code>SpotFinder</code> strategy with one heap set per entrance</td></tr>
+              <tr><td>Free-spot display per floor</td><td>Introduce <code>Floor</code> with counters; the lot notifies it on park and leave (<a href="../../Python/docs/design-patterns.html#observer">Observer</a>)</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p><b>Concurrency:</b> several gates call <code>park</code> at once. Pop-from-heap plus ticket insert is a check-then-act: guard <code>park</code> and <code>leave</code> with one lock in the lot (the work inside is microseconds). Across many lots, the source of truth moves to a database row per spot with a conditional update.</p>
+        <ul>
+          <li><b>Why not store <code>is_free</code> on the spot?</b> Then "find nearest free" is a scan; keeping the free set in the allocator makes the query cheap and the spot immutable.</li>
+          <li><b>Why a frozen <code>Spot</code>?</b> It is shared by the heap and tickets; immutability means neither can corrupt the other.</li>
+          <li><b>How do you test pricing?</b> Unit-test strategies alone with plain numbers; the lot test only checks the right strategy is called.</li>
+          <li><b>Where do floors with different rates go?</b> Pricing takes the <code>Spot</code> as well; the interface widens, callers do not change.</li>
+        </ul>
+      </section>
+
+      <section class="chapter part" id="lru">
+        <h2>LRU cache, then LFU</h2>
+        <p class="kind">Part 3 of 12 &middot; O(1) data structure design</p>
+        <p>A fixed-capacity cache with O(1) <code>get</code> and <code>put</code> that evicts the least recently used key; then the least frequently used variant. It tests whether you can combine two structures so each covers the other's weak operation.</p>
+        <ul>
+          <li><a href="#lru-requirements">Requirements</a></li>
+          <li><a href="#lru-design">Design</a></li>
+          <li><a href="#lru-code">Code</a></li>
+          <li><a href="#lru-extensions">Extensions and follow-ups</a>, including LFU</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="lru-requirements">
+        <h2>LRU: requirements</h2>
+        <p class="kind"><a href="#lru">LRU cache, then LFU</a></p>
+        <ul>
+          <li><b>Functional:</b> <code>get(key)</code> returns the value or a miss; <code>put(key, value)</code> inserts or updates; at capacity, insert evicts the least recently used key.</li>
+          <li><b>Constraints:</b> both operations O(1) average; capacity at least 1; "use" means a <code>get</code> or a <code>put</code>.</li>
+          <li><b>Out of scope:</b> TTL, size in bytes, persistence, distribution.</li>
+        </ul>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Ask</th><th>Assumed</th></tr></thead>
+            <tbody>
+              <tr><td>Does updating a key count as a use?</td><td>Yes: it moves to most recent</td></tr>
+              <tr><td>What does a miss return: <code>None</code>, <code>-1</code>, an exception?</td><td><code>None</code>; a miss is an expected outcome, not an error</td></tr>
+              <tr><td>Can I use <code>OrderedDict</code>?</td><td>Write it by hand first; show the shortcut after</td></tr>
+              <tr><td>Called from several threads?</td><td>Discuss; code single-threaded</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="chapter" id="lru-design">
+        <h2>LRU: design</h2>
+        <p class="kind"><a href="#lru">LRU cache, then LFU</a></p>
+        <p>A dict gives O(1) lookup but no order; a list gives order but O(n) removal from the middle. A doubly linked list keyed by a dict of nodes gives both.</p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  M[("dict: key to node")]
+  H(["head sentinel"]) <--> A["subhash<br/>most recent"] <--> B["rishikesh<br/>least recent"] <--> T(["back to head"])
+  M -.-> A
+  M -.-> B
+          </script>
+          <figcaption>The sentinel's next is the most recent, its prev the least recent. Eviction is head.prev; no None checks at either end.</figcaption>
+        </figure>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+classDiagram
+  direction LR
+  class LRUCache {
+    -capacity: int
+    -nodes: dict
+    -head: Node
+    +get(key) value
+    +put(key, value)
+    -unlink(node)
+    -push_front(node)
+  }
+  class Node {
+    +key
+    +value
+    +prev: Node
+    +next: Node
+  }
+  LRUCache "1" *-- "*" Node
+          </script>
+          <figcaption>Two private helpers do all the pointer work; get and put are written only in terms of them.</figcaption>
+        </figure>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Operation</th><th>Steps</th><th>Cost</th></tr></thead>
+            <tbody>
+              <tr><td><code>get</code> hit</td><td>dict lookup, unlink, push front</td><td>O(1)</td></tr>
+              <tr><td><code>put</code> existing</td><td>update value, unlink, push front</td><td>O(1)</td></tr>
+              <tr><td><code>put</code> new at capacity</td><td>unlink head.prev, delete its key from the dict, insert</td><td>O(1)</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="chapter" id="lru-code">
+        <h2>LRU: code</h2>
+        <p class="kind"><a href="#lru">LRU cache, then LFU</a></p>
+        <script type="text/plain" data-lang="py" data-file="lru_cache.py">
+from collections import OrderedDict
+from typing import Dict, Generic, Hashable, List, Optional, TypeVar
+
+K = TypeVar("K", bound=Hashable)
+V = TypeVar("V")
+
+
+class Node(Generic[K, V]):
+    __slots__ = ("key", "value", "prev", "next")
+
+    def __init__(self, key: Optional[K] = None, value: Optional[V] = None) -> None:
+        self.key = key
+        self.value = value
+        self.prev: "Node[K, V]" = self
+        self.next: "Node[K, V]" = self
+
+
+class LRUCache(Generic[K, V]):
+    """Hash map for O(1) lookup + doubly linked list for O(1) reorder and evict."""
+
+    def __init__(self, capacity: int) -> None:
+        if capacity < 1:
+            raise ValueError("capacity must be at least 1")
+        self._capacity = capacity
+        self._nodes: Dict[K, Node[K, V]] = {}
+        self._head: Node[K, V] = Node()   # sentinel: head.next is most recent,
+                                          # head.prev is least recent
+
+    def get(self, key: K) -> Optional[V]:
+        node = self._nodes.get(key)
+        if node is None:
+            return None
+        self._unlink(node)
+        self._push_front(node)
+        return node.value
+
+    def put(self, key: K, value: V) -> None:
+        node = self._nodes.get(key)
+        if node is not None:
+            node.value = value
+            self._unlink(node)
+        else:
+            if len(self._nodes) == self._capacity:
+                oldest = self._head.prev
+                self._unlink(oldest)
+                del self._nodes[oldest.key]
+            node = self._nodes[key] = Node(key, value)
+        self._push_front(node)
+
+    def keys(self) -> List[K]:            # most recent first
+        out: List[K] = []
+        node = self._head.next
+        while node is not self._head:
+            out.append(node.key)
+            node = node.next
+        return out
+
+    def _unlink(self, node: Node[K, V]) -> None:
+        node.prev.next, node.next.prev = node.next, node.prev
+
+    def _push_front(self, node: Node[K, V]) -> None:
+        node.prev, node.next = self._head, self._head.next
+        self._head.next.prev = node
+        self._head.next = node
+
+
+class OrderedDictLRU(Generic[K, V]):
+    """The same contract in ten lines; say you know both."""
+
+    def __init__(self, capacity: int) -> None:
+        self._capacity = capacity
+        self._data: "OrderedDict[K, V]" = OrderedDict()
+
+    def get(self, key: K) -> Optional[V]:
+        if key not in self._data:
+            return None
+        self._data.move_to_end(key)
+        return self._data[key]
+
+    def put(self, key: K, value: V) -> None:
+        self._data[key] = value
+        self._data.move_to_end(key)
+        if len(self._data) > self._capacity:
+            self._data.popitem(last=False)
+
+
+cache: LRUCache[str, int] = LRUCache(capacity=2)
+cache.put("rishikesh", 1)
+cache.put("sandhya", 2)
+print(cache.get("rishikesh"), cache.keys())   # 1 ['rishikesh', 'sandhya']
+cache.put("subhash", 3)                       # evicts sandhya, the least recent
+print(cache.get("sandhya"), cache.keys())     # None ['subhash', 'rishikesh']
+cache.put("rishikesh", 10)
+print(cache.get("rishikesh"))                 # 10
+
+short: OrderedDictLRU[str, int] = OrderedDictLRU(capacity=2)
+for name, value in [("a", 1), ("b", 2)]:
+    short.put(name, value)
+short.get("a")
+short.put("c", 3)
+print(short.get("b"), short.get("a"))         # None 1
+try:
+    LRUCache(0)
+except ValueError as err:
+    print(err)                                # capacity must be at least 1
+        </script>
+        <ul>
+          <li>The node stores its key so eviction can delete the dict entry; forgetting this is the most common bug.</li>
+          <li><code>__slots__</code> on <code>Node</code> cuts per-entry memory; with millions of entries that matters.</li>
+          <li><code>OrderedDict</code> is itself a dict plus a doubly linked list in CPython, so the shortcut has the same complexity.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="lru-extensions">
+        <h2>LRU: extensions and follow-ups</h2>
+        <p class="kind"><a href="#lru">LRU cache, then LFU</a></p>
+        <p><b>LFU:</b> evict the key with the fewest uses, least recent among ties. Keep key to (value, uses), uses to an ordered set of keys, and the current minimum; a new key always resets the minimum to 1.</p>
+        <script type="text/plain" data-lang="py" data-file="lfu_cache.py">
+from collections import OrderedDict, defaultdict
+from typing import DefaultDict, Dict, Hashable, Optional, Tuple
+
+
+class LFUCache:
+    """Evict the least frequently used key; ties go to the least recently used."""
+
+    def __init__(self, capacity: int) -> None:
+        self._capacity = capacity
+        self._entries: Dict[Hashable, Tuple[object, int]] = {}         # key -> (value, uses)
+        self._by_uses: DefaultDict[int, "OrderedDict[Hashable, None]"] = defaultdict(OrderedDict)
+        self._min_uses = 0
+
+    def get(self, key: Hashable) -> Optional[object]:
+        if key not in self._entries:
+            return None
+        value, _ = self._entries[key]
+        self._touch(key, value)
+        return value
+
+    def put(self, key: Hashable, value: object) -> None:
+        if key in self._entries:
+            self._touch(key, value)
+            return
+        if len(self._entries) == self._capacity:
+            victim, _ = self._by_uses[self._min_uses].popitem(last=False)
+            del self._entries[victim]
+        self._entries[key] = (value, 1)
+        self._by_uses[1][key] = None
+        self._min_uses = 1                # a new key is always the least used
+
+    def _touch(self, key: Hashable, value: object) -> None:
+        _, uses = self._entries[key]
+        bucket = self._by_uses[uses]
+        del bucket[key]
+        if not bucket and self._min_uses == uses:
+            self._min_uses = uses + 1
+        self._entries[key] = (value, uses + 1)
+        self._by_uses[uses + 1][key] = None
+
+
+lfu = LFUCache(capacity=2)
+lfu.put("hemkesh", "H")
+lfu.put("malinikesh", "M")
+lfu.get("hemkesh")
+lfu.get("hemkesh")
+lfu.get("malinikesh")
+lfu.put("subhash", "S")                   # malinikesh: 2 uses, hemkesh: 3
+print(lfu.get("malinikesh"), lfu.get("hemkesh"), lfu.get("subhash"))   # None H S
+        </script>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>New requirement</th><th>Change</th></tr></thead>
+            <tbody>
+              <tr><td>Per-entry TTL</td><td>Store expiry in the node; treat expired as a miss on <code>get</code> (lazy), optionally a min-heap of expiries for active cleanup</td></tr>
+              <tr><td>Evict by memory, not count</td><td>Track bytes; evict in a loop until under the budget</td></tr>
+              <tr><td>Pluggable policy (LRU, LFU, FIFO)</td><td>An <code>EvictionPolicy</code> interface with <code>touch</code>, <code>add</code>, <code>victim</code> (<a href="../../Python/docs/design-patterns.html#strategy">Strategy</a>); the cache keeps the dict</td></tr>
+              <tr><td>Load on miss</td><td>Inject a loader; see the per-key loading discussion on Low-Level Design</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p><b>Concurrency:</b> <code>get</code> mutates the list, so even reads need the lock. Wrap both methods in one <code>threading.Lock</code>. For heavy contention, shard: N independent caches selected by <code>hash(key) % N</code>, each with its own lock; recency becomes approximate per shard, which is usually acceptable.</p>
+        <ul>
+          <li><b>Why doubly linked?</b> Removing a node from the middle needs its predecessor in O(1).</li>
+          <li><b>LRU vs LFU?</b> LRU adapts fast to shifting access; LFU protects long-term hot keys but holds stale ones without ageing.</li>
+          <li><b>Scan resistance?</b> One full scan flushes an LRU; segmented LRU or admission policies (as in some modern caches) avoid that.</li>
+          <li><b>Is <code>functools.lru_cache</code> enough?</b> For memoising a pure function, yes; it has no explicit put, delete or TTL.</li>
+        </ul>
+      </section>
+
+      <section class="chapter part" id="elevator">
+        <h2>Elevator system</h2>
+        <p class="kind">Part 4 of 12 &middot; scheduling, state, simulation</p>
+        <p>Several cars serve hall calls (up or down at a floor) and car calls (a floor button inside). It tests separating dispatching (which car) from movement (in what order a car serves its stops), and modelling time as discrete ticks.</p>
+        <ul>
+          <li><a href="#elevator-requirements">Requirements</a></li>
+          <li><a href="#elevator-design">Design</a></li>
+          <li><a href="#elevator-code">Code</a></li>
+          <li><a href="#elevator-extensions">Extensions and follow-ups</a></li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="elevator-requirements">
+        <h2>Elevator: requirements</h2>
+        <p class="kind"><a href="#elevator">Elevator system</a></p>
+        <ul>
+          <li><b>Functional:</b> hall call assigns one car; car call adds a stop to that car; cars move one floor per tick and open doors at stops; invalid floors are refused.</li>
+          <li><b>Rules:</b> a moving car keeps its direction while it has stops ahead (SCAN / LOOK); the dispatcher prefers an idle car or one already heading to the caller in the caller's direction.</li>
+          <li><b>Out of scope:</b> door timing, weight limits, emergency mode, express zones.</li>
+        </ul>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Ask</th><th>Assumed</th></tr></thead>
+            <tbody>
+              <tr><td>Simulation or controller for real hardware?</td><td>Simulation with ticks; the same classes would take sensor events</td></tr>
+              <tr><td>Optimise wait time, travel time or energy?</td><td>Wait time; strategy is swappable</td></tr>
+              <tr><td>Can an assignment change after it is made?</td><td>No (simpler); mention reassignment as an extension</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="chapter" id="elevator-design">
+        <h2>Elevator: design</h2>
+        <p class="kind"><a href="#elevator">Elevator system</a></p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+classDiagram
+  direction LR
+  class ElevatorSystem {
+    +call(floor, direction) str
+    +press(car_id, floor)
+    +tick() list
+  }
+  class Car {
+    +car_id: str
+    +floor: int
+    +direction: Direction
+    +stops: set
+    +add_stop(floor)
+    +step() int
+  }
+  class DispatchStrategy {
+    <<interface>>
+    +choose(cars, floor, direction) Car
+  }
+  class NearestCar {
+    +cost(car, floor, direction) int
+  }
+  ElevatorSystem "1" *-- "*" Car
+  ElevatorSystem --> DispatchStrategy
+  DispatchStrategy <|.. NearestCar
+          </script>
+          <figcaption>Two decisions, two owners: the strategy picks the car, the car orders its own stops.</figcaption>
+        </figure>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Class</th><th>Responsibility</th></tr></thead>
+            <tbody>
+              <tr><td><code>ElevatorSystem</code></td><td>Validate floors, route hall calls through the strategy, advance time</td></tr>
+              <tr><td><code>Car</code></td><td>Its floor, direction and stop set; LOOK movement in <code>step</code></td></tr>
+              <tr><td><code>DispatchStrategy</code></td><td>Pick a car for a hall call; <code>NearestCar</code> scores by distance plus a penalty for cars that must turn round first</td></tr>
+              <tr><td><code>Direction</code></td><td>Enum UP, DOWN, IDLE with values +1, -1, 0, so moving is <code>floor += direction.value</code></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+stateDiagram-v2
+  direction LR
+  [*] --> Idle
+  Idle --> MovingUp: stop above
+  Idle --> MovingDown: stop below
+  MovingUp --> DoorsOpen: reach a stop
+  MovingDown --> DoorsOpen: reach a stop
+  DoorsOpen --> MovingUp: stops above
+  DoorsOpen --> MovingDown: stops below
+  DoorsOpen --> Idle: no stops
+          </script>
+          <figcaption>The car's lifecycle. A car never reverses between stops; it turns round only at a stop with nothing left ahead.</figcaption>
+        </figure>
+      </section>
+
+      <section class="chapter" id="elevator-code">
+        <h2>Elevator: code</h2>
+        <p class="kind"><a href="#elevator">Elevator system</a></p>
+        <script type="text/plain" data-lang="py" data-file="elevator.py">
+from dataclasses import dataclass, field
+from enum import Enum
+from typing import Dict, List, Optional, Protocol, Set
+
+
+class Direction(Enum):
+    UP = 1
+    DOWN = -1
+    IDLE = 0
+
+
+class InvalidFloor(Exception):
+    pass
+
+
+@dataclass(eq=False)
+class Car:
+    car_id: str
+    floor: int = 0
+    direction: Direction = Direction.IDLE
+    stops: Set[int] = field(default_factory=set)
+
+    def add_stop(self, floor: int) -> None:
+        self.stops.add(floor)
+
+    def step(self) -> Optional[int]:
+        """Advance one tick. Returns the floor where the doors open, if any."""
+        if self.floor in self.stops:
+            self.stops.remove(self.floor)
+            return self.floor
+        if not self.stops:
+            self.direction = Direction.IDLE
+            return None
+        if not self.has_stops_toward(self.direction):     # LOOK: reverse only when
+            self.direction = (Direction.UP                # nothing is left ahead
+                              if self.has_stops_toward(Direction.UP) else Direction.DOWN)
+        self.floor += self.direction.value
+        if self.floor in self.stops:
+            self.stops.remove(self.floor)
+            return self.floor
+        return None
+
+    def has_stops_toward(self, direction: Direction) -> bool:
+        return any((stop - self.floor) * direction.value > 0 for stop in self.stops)
+
+
+class DispatchStrategy(Protocol):
+    def choose(self, cars: List[Car], floor: int, direction: Direction) -> Car: ...
+
+
+@dataclass(frozen=True)
+class NearestCar:
+    top_floor: int
+
+    def choose(self, cars: List[Car], floor: int, direction: Direction) -> Car:
+        return min(cars, key=lambda car: (self.cost(car, floor, direction), car.car_id))
+
+    def cost(self, car: Car, floor: int, direction: Direction) -> int:
+        distance = abs(car.floor - floor)
+        heading_to_it = (floor - car.floor) * car.direction.value >= 0
+        if car.direction is Direction.IDLE or (heading_to_it and car.direction is direction):
+            return distance
+        return distance + 2 * self.top_floor              # must finish its sweep first
+
+
+class ElevatorSystem:
+    def __init__(self, cars: List[Car], top_floor: int, strategy: DispatchStrategy) -> None:
+        self._cars: Dict[str, Car] = {car.car_id: car for car in cars}
+        self._top = top_floor
+        self._strategy = strategy
+
+    def call(self, floor: int, direction: Direction) -> str:      # hall button
+        self._check(floor)
+        car = self._strategy.choose(list(self._cars.values()), floor, direction)
+        car.add_stop(floor)
+        return car.car_id
+
+    def press(self, car_id: str, floor: int) -> None:            # button inside a car
+        self._check(floor)
+        self._cars[car_id].add_stop(floor)
+
+    def tick(self) -> List[str]:
+        opened = ((car.car_id, car.step()) for car in self._cars.values())
+        return [f"{car_id}@{floor}" for car_id, floor in opened if floor is not None]
+
+    def _check(self, floor: int) -> None:
+        if not 0 <= floor <= self._top:
+            raise InvalidFloor(f"floor {floor} is outside 0..{self._top}")
+
+
+system = ElevatorSystem([Car("A", floor=0), Car("B", floor=8)], top_floor=10,
+                        strategy=NearestCar(top_floor=10))
+print(system.call(6, Direction.DOWN), system.call(1, Direction.UP))   # B A
+log = []
+for tick in range(1, 4):
+    log += [f"t{tick} {event}" for event in system.tick()]
+system.press("A", 4)                      # Sandhya boards A at floor 1
+system.press("B", 0)                      # Subhash boards B at floor 6
+for tick in range(4, 11):
+    log += [f"t{tick} {event}" for event in system.tick()]
+print(log)                                # ['t1 A@1', 't2 B@6', 't6 A@4', 't9 B@0']
+try:
+    system.call(12, Direction.UP)
+except InvalidFloor as err:
+    print(err)                            # floor 12 is outside 0..10
+        </script>
+        <ul>
+          <li>B is at 8 and A at 0: the call at 6 goes to B (distance 2), the call at 1 to A (distance 1).</li>
+          <li>The <code>DoorsOpen</code> state is collapsed into the tick that serves a stop; with door timing it becomes a real state with a countdown.</li>
+          <li>Ties are broken by car id, so dispatch is deterministic and testable.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="elevator-extensions">
+        <h2>Elevator: extensions and follow-ups</h2>
+        <p class="kind"><a href="#elevator">Elevator system</a></p>
+        <p><b>Patterns:</b> <a href="../../Python/docs/design-patterns.html#strategy">Strategy</a> for dispatch; <a href="../../Python/docs/design-patterns.html#state">State</a> for the car once doors, maintenance and emergency each change behaviour.</p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>New requirement</th><th>Change</th></tr></thead>
+            <tbody>
+              <tr><td>Zoning: car A serves floors 0 to 20 only</td><td>A <code>serves(floor)</code> check on <code>Car</code>; the strategy filters candidates</td></tr>
+              <tr><td>Peak-hour mode (lobby up-peak)</td><td>A second strategy, swapped by a schedule; no change to <code>Car</code></td></tr>
+              <tr><td>Maintenance or fire mode</td><td>Car becomes a State object; <code>Maintenance.add_stop</code> refuses, <code>FireMode</code> forces floor 0</td></tr>
+              <tr><td>Display "car arriving"</td><td>Cars publish arrival events to listeners (<a href="../../Python/docs/design-patterns.html#observer">Observer</a>)</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p><b>Concurrency:</b> hall buttons fire from many threads while a controller thread ticks. Common design: buttons only enqueue requests to a thread-safe queue; one controller thread drains it and owns all car state. No locks inside <code>Car</code>, because only one thread ever touches it.</p>
+        <ul>
+          <li><b>SCAN vs LOOK?</b> SCAN runs to the end floor before reversing; LOOK reverses at the last request. This code is LOOK.</li>
+          <li><b>Why not nearest car by distance only?</b> A car two floors away heading the other way may take minutes; the penalty models that.</li>
+          <li><b>Starvation?</b> LOOK bounds waiting to about two sweeps; age requests if a strict bound is required.</li>
+          <li><b>How to test?</b> Scripted calls plus ticks, assert the event log, as in the demo.</li>
+        </ul>
+      </section>
+
+      <section class="chapter part" id="vending">
+        <h2>Vending machine</h2>
+        <p class="kind">Part 5 of 12 &middot; the State pattern done properly</p>
+        <p>A machine accepts coins, sells a product, returns change and refuses actions that make no sense in its current state. It is the canonical State pattern question; the trap is making change after you have already committed the sale.</p>
+        <ul>
+          <li><a href="#vending-requirements">Requirements</a></li>
+          <li><a href="#vending-design">Design</a></li>
+          <li><a href="#vending-code">Code</a></li>
+          <li><a href="#vending-extensions">Extensions and follow-ups</a></li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="vending-requirements">
+        <h2>Vending: requirements</h2>
+        <p class="kind"><a href="#vending">Vending machine</a></p>
+        <ul>
+          <li><b>Functional:</b> insert coins; select a product; receive the product and change; cancel for a refund; machine reports out of stock when empty.</li>
+          <li><b>Rules:</b> select needs enough money and stock; the sale happens only if exact change can be returned; no coins accepted while dispensing or out of stock.</li>
+          <li><b>Out of scope:</b> cards, notes, admin UI, telemetry. Restock is named, not coded.</li>
+        </ul>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Ask</th><th>Assumed</th></tr></thead>
+            <tbody>
+              <tr><td>Can the user buy several items on one credit?</td><td>No: change is returned after one sale</td></tr>
+              <tr><td>Can the inserted coins be used as change?</td><td>Yes, they join the coin box before change is computed</td></tr>
+              <tr><td>What signals the end of dispensing?</td><td>A hardware event, modelled as <code>dispensed()</code></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="chapter" id="vending-design">
+        <h2>Vending: design</h2>
+        <p class="kind"><a href="#vending">Vending machine</a></p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+stateDiagram-v2
+  direction LR
+  [*] --> Idle
+  Idle --> HasMoney: insert
+  HasMoney --> Idle: cancel and refund
+  HasMoney --> Dispensing: select ok
+  Dispensing --> Idle: dispensed, stock left
+  Dispensing --> OutOfStock: dispensed, empty
+  OutOfStock --> Idle: restock
+          </script>
+          <figcaption>Every arrow is a method a state overrides; more coins or a refused select keep HasMoney. Anything not drawn, such as insert while Dispensing, raises InvalidAction.</figcaption>
+        </figure>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+classDiagram
+  class VendingMachine {
+    +state: State
+    +escrow: list
+    +insert(coin)
+    +select(code) list
+    +cancel() list
+    +dispensed()
+  }
+  class State {
+    <<abstract>>
+    +insert(machine, coin)
+    +select(machine, code) list
+    +cancel(machine) list
+    +dispensed(machine)
+  }
+  class CoinBox {
+    +take_change(inserted, amount) list
+  }
+  class Slot {
+    +product: str
+    +price: int
+    +count: int
+  }
+  VendingMachine --> State
+  VendingMachine *-- CoinBox
+  VendingMachine "1" *-- "*" Slot
+  State <|-- Idle
+  State <|-- HasMoney
+  State <|-- Dispensing
+  State <|-- OutOfStock
+          </script>
+          <figcaption>The machine delegates every action to its current state. The base state refuses everything; each subclass overrides only its legal actions.</figcaption>
+        </figure>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Class</th><th>Responsibility</th></tr></thead>
+            <tbody>
+              <tr><td><code>VendingMachine</code></td><td>Context: holds slots, coin box, escrow and current state; public API</td></tr>
+              <tr><td><code>State</code> and four subclasses</td><td>What each action does in that state, and the next state</td></tr>
+              <tr><td><code>CoinBox</code></td><td>Coin counts; computes change and commits it only if exact</td></tr>
+              <tr><td><code>Slot</code></td><td>Product, price, count</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="chapter" id="vending-code">
+        <h2>Vending: code</h2>
+        <p class="kind"><a href="#vending">Vending machine</a></p>
+        <script type="text/plain" data-lang="py" data-file="vending_machine.py">
+from abc import ABC
+from collections import Counter
+from dataclasses import dataclass
+from typing import Dict, List, NoReturn
+
+
+class VendingError(Exception):
+    pass
+
+
+class InvalidAction(VendingError):
+    pass
+
+
+class SoldOut(VendingError):
+    pass
+
+
+class CannotMakeChange(VendingError):
+    pass
+
+
+@dataclass
+class Slot:
+    product: str
+    price: int                            # rupees
+    count: int
+
+
+class State(ABC):
+    """Every action is illegal unless a state says otherwise."""
+
+    def insert(self, machine: "VendingMachine", coin: int) -> None:
+        self._refuse("insert")
+
+    def select(self, machine: "VendingMachine", code: str) -> List[int]:
+        self._refuse("select")
+
+    def cancel(self, machine: "VendingMachine") -> List[int]:
+        self._refuse("cancel")
+
+    def dispensed(self, machine: "VendingMachine") -> None:
+        self._refuse("dispensed")
+
+    def _refuse(self, action: str) -> NoReturn:
+        raise InvalidAction(f"cannot {action} while {type(self).__name__}")
+
+
+class Idle(State):
+    def insert(self, machine: "VendingMachine", coin: int) -> None:
+        machine.escrow.append(coin)
+        machine.state = HasMoney()
+
+
+class HasMoney(State):
+    def insert(self, machine: "VendingMachine", coin: int) -> None:
+        machine.escrow.append(coin)
+
+    def select(self, machine: "VendingMachine", code: str) -> List[int]:
+        slot = machine.slots[code]
+        paid = sum(machine.escrow)
+        if slot.count == 0:
+            raise SoldOut(f"{slot.product} is sold out")
+        if paid < slot.price:
+            raise InvalidAction(f"{slot.product} costs {slot.price}, paid {paid}")
+        change = machine.coins.take_change(machine.escrow, paid - slot.price)
+        machine.escrow.clear()
+        slot.count -= 1
+        machine.state = Dispensing()
+        return change
+
+    def cancel(self, machine: "VendingMachine") -> List[int]:
+        refund, machine.escrow = machine.escrow, []
+        machine.state = Idle()
+        return refund
+
+
+class Dispensing(State):
+    def dispensed(self, machine: "VendingMachine") -> None:
+        machine.state = Idle() if machine.has_stock() else OutOfStock()
+
+
+class OutOfStock(State):
+    pass                                  # refuses everything until restocked
+
+
+class CoinBox:
+    def __init__(self, coins: Dict[int, int]) -> None:
+        self._coins = Counter(coins)
+
+    def take_change(self, inserted: List[int], amount: int) -> List[int]:
+        available = self._coins + Counter(inserted)
+        change: List[int] = []
+        for coin in sorted(available, reverse=True):      # greedy: fine for 10/5/2/1
+            use = min(available[coin], amount // coin)
+            change += [coin] * use
+            amount -= coin * use
+        if amount:
+            raise CannotMakeChange("exact change only")     # checked before anything moves
+        self._coins = available - Counter(change)
+        return change
+
+
+class VendingMachine:
+    def __init__(self, slots: Dict[str, Slot], coins: CoinBox) -> None:
+        self.slots = slots
+        self.coins = coins
+        self.escrow: List[int] = []
+        self.state: State = Idle() if self.has_stock() else OutOfStock()
+
+    def has_stock(self) -> bool:
+        return any(slot.count for slot in self.slots.values())
+
+    def insert(self, coin: int) -> None:
+        self.state.insert(self, coin)
+
+    def select(self, code: str) -> List[int]:
+        return self.state.select(self, code)
+
+    def cancel(self) -> List[int]:
+        return self.state.cancel(self)
+
+    def dispensed(self) -> None:          # signal from the motor: item has dropped
+        self.state.dispensed(self)
+
+    @property
+    def status(self) -> str:
+        return type(self.state).__name__
+
+
+machine = VendingMachine({"A1": Slot("Chips", 15, 2), "B1": Slot("Water", 20, 0)},
+                         CoinBox({5: 1, 2: 2}))
+try:
+    machine.select("A1")
+except VendingError as err:
+    print(err)                                        # cannot select while Idle
+machine.insert(10)
+machine.insert(10)
+print(machine.select("A1"), machine.status)           # [5] Dispensing
+machine.dispensed()
+machine.insert(10)                                    # Sandhya: the only 5 is gone
+machine.insert(10)
+try:
+    machine.select("A1")
+except VendingError as err:
+    print(type(err).__name__, "-", err)               # CannotMakeChange - exact change only
+print(machine.cancel(), machine.status)               # [10, 10] Idle
+machine.insert(10)
+machine.insert(5)
+print(machine.select("A1"))                           # []
+machine.dispensed()
+try:
+    machine.insert(10)
+except VendingError as err:
+    print(err)                                        # cannot insert while OutOfStock
+        </script>
+        <ul>
+          <li>Order inside <code>HasMoney.select</code>: check stock, check money, compute change, and only then decrement stock and switch state. A failed change leaves everything as it was.</li>
+          <li><code>take_change</code> builds a new counter and swaps it in only on success: raise before mutating.</li>
+          <li>Greedy change is optimal for canonical coin systems such as 10/5/2/1 with unlimited coins; with limited counts or odd denominations it can fail where a solution exists, so use a bounded-coin DP if asked.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="vending-extensions">
+        <h2>Vending: extensions and follow-ups</h2>
+        <p class="kind"><a href="#vending">Vending machine</a></p>
+        <p><b>Patterns:</b> <a href="../../Python/docs/design-patterns.html#state">State</a>; change-making as a <a href="../../Python/docs/design-patterns.html#strategy">Strategy</a> once there are two algorithms.</p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>New requirement</th><th>Change</th></tr></thead>
+            <tbody>
+              <tr><td>Card payments</td><td>A <code>PaymentMethod</code> interface; a new <code>AwaitingCard</code> state between select and dispensing</td></tr>
+              <tr><td>Restock and maintenance</td><td><code>restock()</code> on <code>OutOfStock</code> and <code>Idle</code>; a <code>Maintenance</code> state that refuses customers</td></tr>
+              <tr><td>Dispense jam</td><td><code>dispense_failed()</code> on <code>Dispensing</code>: refund, restore count, go to <code>Maintenance</code></td></tr>
+              <tr><td>Sales report</td><td>States emit sale events to a listener (<a href="../../Python/docs/design-patterns.html#observer">Observer</a>)</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p><b>Concurrency:</b> one user at a time by construction, but hardware events (coin sensor, motor) can arrive on other threads. Serialise all events through one queue or one lock on the machine; states hold no data of their own, so they can be shared singletons.</p>
+        <ul>
+          <li><b>Why not an enum and if statements?</b> Fine for two or three states; with four states and four actions it becomes a 16-cell table spread through every method.</li>
+          <li><b>Who owns transitions, state or context?</b> Here, states set <code>machine.state</code>; a transition table in the context is the alternative when transitions must be configured.</li>
+          <li><b>Why escrow?</b> Inserted coins are not the machine's until a sale; cancel must return exactly those coins.</li>
+        </ul>
+      </section>
+
+      <section class="chapter part" id="split">
+        <h2>Expense sharing</h2>
+        <p class="kind">Part 6 of 12 &middot; split rules, balances, simplifying debts</p>
+        <p>Users in a group record expenses split equally, by exact amounts or by percentage, see who owes whom, and settle with few transfers. It tests money handling, a clean Strategy and a small graph algorithm.</p>
+        <ul>
+          <li><a href="#split-requirements">Requirements</a></li>
+          <li><a href="#split-design">Design</a></li>
+          <li><a href="#split-code">Code</a></li>
+          <li><a href="#split-extensions">Extensions and follow-ups</a></li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="split-requirements">
+        <h2>Expense sharing: requirements</h2>
+        <p class="kind"><a href="#split">Expense sharing</a></p>
+        <ul>
+          <li><b>Functional:</b> add an expense (payer, amount, participants, split type); show net balance per member; produce a settlement plan.</li>
+          <li><b>Rules:</b> exact shares must sum to the amount; percentages to 100; everyone involved must be in the group; shares sum to the amount to the paisa.</li>
+          <li><b>Out of scope:</b> currencies, recurring expenses, notifications, payments.</li>
+        </ul>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Ask</th><th>Assumed</th></tr></thead>
+            <tbody>
+              <tr><td>Where does the leftover paisa go on an equal split?</td><td>To the first participants, one each; deterministic</td></tr>
+              <tr><td>Simplify across the group or keep pairwise debts?</td><td>Across the group, on request</td></tr>
+              <tr><td>Can expenses be edited or deleted?</td><td>Not now; keep a ledger so it is possible</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="chapter" id="split-design">
+        <h2>Expense sharing: design</h2>
+        <p class="kind"><a href="#split">Expense sharing</a></p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+classDiagram
+  direction LR
+  class Group {
+    +members: list
+    +expenses: list
+    +balances: dict
+    +add_expense(paid_by, amount, people, split)
+    +settle_up() list
+  }
+  class Expense {
+    +paid_by: User
+    +amount: int
+    +shares: dict
+  }
+  class SplitStrategy {
+    <<interface>>
+    +shares(amount, people) dict
+  }
+  class User {
+    +user_id: str
+    +name: str
+  }
+  Group "1" *-- "*" Expense
+  Group "1" o-- "*" User
+  Group ..> SplitStrategy
+  SplitStrategy <|.. EqualSplit
+  SplitStrategy <|.. ExactSplit
+  SplitStrategy <|.. PercentSplit
+          </script>
+          <figcaption>The split rule is used once, to turn an expense into shares; what is stored is the resulting shares, so later changes to a rule never rewrite history.</figcaption>
+        </figure>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Class</th><th>Responsibility</th></tr></thead>
+            <tbody>
+              <tr><td><code>Group</code></td><td>Membership check, ledger of expenses, net balance per user, settlement</td></tr>
+              <tr><td><code>Expense</code></td><td>Immutable ledger entry with computed shares</td></tr>
+              <tr><td><code>SplitStrategy</code></td><td>Amount and participants to shares; validates its own inputs</td></tr>
+              <tr><td><code>User</code></td><td>Value object with an id; equal by id and name</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  M["Malinikesh -1943.33"] -->|1430.00| R["Rishikesh +1430.00"]
+  M -->|513.33| S["Subhash +756.67"]
+  Sa["Sandhya -243.34"] -->|243.34| S
+          </script>
+          <figcaption>Net balances from the demo's four expenses (ten pairwise debts) settle in three transfers: largest debtor pays largest creditor, repeat.</figcaption>
+        </figure>
+      </section>
+
+      <section class="chapter" id="split-code">
+        <h2>Expense sharing: code</h2>
+        <p class="kind"><a href="#split">Expense sharing</a></p>
+        <script type="text/plain" data-lang="py" data-file="splitwise.py">
+from collections import defaultdict
+from dataclasses import dataclass, field
+from typing import DefaultDict, Dict, List, Protocol, Tuple
+
+
+class SplitError(Exception):
+    pass
+
+
+@dataclass(frozen=True)
+class User:
+    user_id: str
+    name: str
+
+
+class SplitStrategy(Protocol):
+    def shares(self, amount: int, people: List[User]) -> Dict[User, int]: ...
+
+
+class EqualSplit:
+    def shares(self, amount: int, people: List[User]) -> Dict[User, int]:
+        base, extra = divmod(amount, len(people))      # first `extra` people pay 1 paisa more
+        return {user: base + (1 if i < extra else 0) for i, user in enumerate(people)}
+
+
+@dataclass(frozen=True)
+class ExactSplit:
+    amounts: Dict[User, int]
+
+    def shares(self, amount: int, people: List[User]) -> Dict[User, int]:
+        if sum(self.amounts.values()) != amount:
+            raise SplitError(f"exact shares must add up to {amount}")
+        return dict(self.amounts)
+
+
+@dataclass(frozen=True)
+class PercentSplit:
+    percents: Dict[User, int]
+
+    def shares(self, amount: int, people: List[User]) -> Dict[User, int]:
+        if sum(self.percents.values()) != 100:
+            raise SplitError("percentages must add up to 100")
+        owed = {user: amount * pct // 100 for user, pct in self.percents.items()}
+        first = next(iter(owed))
+        owed[first] += amount - sum(owed.values())     # rounding remainder to one person
+        return owed
+
+
+@dataclass(frozen=True)
+class Expense:                            # the ledger entry; balances are derived from these
+    paid_by: User
+    amount: int
+    shares: Dict[User, int]
+
+
+@dataclass
+class Group:
+    name: str
+    members: List[User]
+    expenses: List[Expense] = field(default_factory=list)
+    balances: DefaultDict[User, int] = field(default_factory=lambda: defaultdict(int))
+
+    def add_expense(self, paid_by: User, amount: int, people: List[User],
+                    split: SplitStrategy) -> None:
+        shares = split.shares(amount, people)          # validate before touching balances
+        if not set(shares) | {paid_by} <= set(self.members):
+            raise SplitError(f"everyone in an expense must be in {self.name}")
+        self.expenses.append(Expense(paid_by, amount, shares))
+        self.balances[paid_by] += amount
+        for user, share in shares.items():
+            self.balances[user] -= share
+
+    def settle_up(self) -> List[Tuple[str, str, int]]:
+        """Greedy: largest debtor pays largest creditor. At most n - 1 transfers."""
+        net = {user: bal for user, bal in self.balances.items() if bal}
+        transfers = []
+        while net:
+            debtor = min(net, key=lambda u: (net[u], u.user_id))
+            creditor = max(net, key=lambda u: (net[u], u.user_id))
+            amount = min(-net[debtor], net[creditor])
+            transfers.append((debtor.name, creditor.name, amount))
+            for user, delta in ((debtor, amount), (creditor, -amount)):
+                net[user] += delta
+                if net[user] == 0:
+                    del net[user]
+        return transfers
+
+
+rishikesh, sandhya = User("u1", "Rishikesh"), User("u2", "Sandhya")
+subhash, malinikesh = User("u3", "Subhash"), User("u4", "Malinikesh")
+trip = Group("Goa trip", [rishikesh, sandhya, subhash, malinikesh])
+everyone = trip.members
+
+trip.add_expense(rishikesh, 300_000, everyone, EqualSplit())                # hotel, in paise
+trip.add_expense(sandhya, 100_000, [sandhya, subhash, malinikesh], EqualSplit())
+trip.add_expense(subhash, 200_000, [rishikesh, malinikesh],
+                 ExactSplit({rishikesh: 50_000, malinikesh: 150_000}))
+trip.add_expense(malinikesh, 80_000, everyone,
+                 PercentSplit({rishikesh: 40, sandhya: 20, subhash: 20, malinikesh: 20}))
+print([trip.balances[user] for user in everyone])    # [143000, -24334, 75667, -194333]
+transfers = trip.settle_up()
+print(transfers[0])                       # ('Malinikesh', 'Rishikesh', 143000)
+print(transfers[1])                       # ('Malinikesh', 'Subhash', 51333)
+print(transfers[2])                       # ('Sandhya', 'Subhash', 24334)
+try:
+    trip.add_expense(sandhya, 1_000, everyone, PercentSplit({sandhya: 50, subhash: 40}))
+except SplitError as err:
+    print(err)                            # percentages must add up to 100
+        </script>
+        <ul>
+          <li>All amounts are integer paise. Equal split of 1000.00 among three gives 333.34, 333.33, 333.33; nothing is lost to rounding.</li>
+          <li>Shares are computed and validated before any balance changes, so a bad split leaves the group untouched.</li>
+          <li>Balances sum to zero by construction; assert that in a test.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="split-extensions">
+        <h2>Expense sharing: extensions and follow-ups</h2>
+        <p class="kind"><a href="#split">Expense sharing</a></p>
+        <p><b>Patterns:</b> <a href="../../Python/docs/design-patterns.html#strategy">Strategy</a> for split types, chosen by a <a href="../../Python/docs/design-patterns.html#factory">Factory</a> from the request's split code.</p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>New requirement</th><th>Change</th></tr></thead>
+            <tbody>
+              <tr><td>Split by shares (2:1:1)</td><td>New <code>ShareSplit</code> strategy; nothing else changes</td></tr>
+              <tr><td>Edit or delete an expense</td><td>Append a reversing entry to the ledger, then the new one; balances follow</td></tr>
+              <tr><td>Multiple currencies</td><td><code>Money</code> value object with currency; balances per currency; convert only at settlement</td></tr>
+              <tr><td>Record a payment between users</td><td>A payment is an expense paid by the debtor with one exact share for the creditor</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p><b>Concurrency:</b> two members adding expenses to one group at once is a read-modify-write on balances. Lock per group; in a database, insert ledger rows and derive balances, or update balance rows in one transaction with the ledger insert.</p>
+        <ul>
+          <li><b>Minimum number of transfers?</b> Finding the true minimum is NP-hard in general; greedy gives at most n - 1 transfers, which is what products ship.</li>
+          <li><b>Why not store "A owes B" pairs?</b> Pairs grow as O(n squared) and need netting anyway; one net number per user is enough to settle.</li>
+          <li><b>Floating point?</b> Never: integers in minor units, with an explicit rule for the remainder.</li>
+        </ul>
+      </section>
+
+      <section class="chapter part" id="movie">
+        <h2>Movie ticket booking</h2>
+        <p class="kind">Part 7 of 12 &middot; holds, expiry, no double booking</p>
+        <p>Users pick seats for a show, hold them for a few minutes while paying, and get a booking. The question is really about concurrency: two users must never end up with the same seat, and a slow payment must not block everyone else.</p>
+        <ul>
+          <li><a href="#movie-requirements">Requirements</a></li>
+          <li><a href="#movie-design">Design</a></li>
+          <li><a href="#movie-code">Code</a></li>
+          <li><a href="#movie-extensions">Extensions and follow-ups</a></li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="movie-requirements">
+        <h2>Movie booking: requirements</h2>
+        <p class="kind"><a href="#movie">Movie ticket booking</a></p>
+        <ul>
+          <li><b>Functional:</b> hold a set of seats for a show (all or none); confirm a hold with payment to get a booking; holds expire after 10 minutes.</li>
+          <li><b>Invariant:</b> a seat has at most one live hold or booking at any time.</li>
+          <li><b>Out of scope:</b> catalogue and search (movies, theatres, screens), pricing tiers, cancellations, notifications.</li>
+        </ul>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Ask</th><th>Assumed</th></tr></thead>
+            <tbody>
+              <tr><td>All-or-nothing for multiple seats?</td><td>Yes: a group wants seats together</td></tr>
+              <tr><td>Hold duration, and what if payment finishes after it?</td><td>10 minutes; late payment is refunded</td></tr>
+              <tr><td>One process or many?</td><td>One process here; say how it changes with many</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="chapter" id="movie-design">
+        <h2>Movie booking: design</h2>
+        <p class="kind"><a href="#movie">Movie ticket booking</a></p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+classDiagram
+  direction LR
+  class Show {
+    +show_id: str
+    +price: int
+    +hold(user, seats) Hold
+    +confirm(hold_id, payments) Booking
+    -live_hold(hold_id) Hold
+  }
+  class Hold {
+    +hold_id: int
+    +user: str
+    +seats: frozenset
+    +expires_at: float
+  }
+  class Booking {
+    +booking_id: int
+    +seats: frozenset
+    +receipt: str
+  }
+  class PaymentGateway {
+    <<interface>>
+    +charge(user, amount) str
+    +refund(receipt)
+  }
+  Show "1" *-- "*" Hold
+  Show "1" *-- "*" Booking
+  Show ..> PaymentGateway
+          </script>
+          <figcaption>The show owns its seat map and the lock; Movie, Theatre and Screen are catalogue entities outside this core.</figcaption>
+        </figure>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+stateDiagram-v2
+  direction LR
+  [*] --> Free
+  Free --> Held: hold
+  Held --> Free: expires
+  Held --> Booked: confirm paid
+  Booked --> Free: cancel, out of scope
+          </script>
+          <figcaption>Seat state is derived, not stored: a seat is held if a live hold covers it. Expiry needs no timer; it is checked on access.</figcaption>
+        </figure>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+sequenceDiagram
+  actor U as User
+  participant S as Show
+  participant P as PaymentGateway
+  U->>S: hold(A1, A2)
+  Note over S: lock: check free, add hold
+  S-->>U: Hold, expires in 10 min
+  U->>S: confirm(hold)
+  Note over S: lock: hold still live?
+  S->>P: charge, no lock held
+  P-->>S: receipt
+  Note over S: lock: re-check, then book
+  alt expired while paying
+    S->>P: refund(receipt)
+    S-->>U: HoldExpired
+  else live
+    S-->>U: Booking
+  end
+          </script>
+          <figcaption>Two short critical sections around a slow call. The second check closes the gap where the hold expires during payment.</figcaption>
+        </figure>
+      </section>
+
+      <section class="chapter" id="movie-code">
+        <h2>Movie booking: code</h2>
+        <p class="kind"><a href="#movie">Movie ticket booking</a></p>
+        <script type="text/plain" data-lang="py" data-file="movie_booking.py">
+import threading
+from dataclasses import dataclass
+from itertools import count
+from typing import Callable, Dict, FrozenSet, List, Protocol
+
+
+class BookingError(Exception):
+    pass
+
+
+class SeatsUnavailable(BookingError):
+    pass
+
+
+class HoldExpired(BookingError):
+    pass
+
+
+@dataclass(frozen=True)
+class Hold:
+    hold_id: int
+    user: str
+    seats: FrozenSet[str]
+    expires_at: float
+
+
+@dataclass(frozen=True)
+class Booking:
+    booking_id: int
+    user: str
+    seats: FrozenSet[str]
+    receipt: str
+
+
+class PaymentGateway(Protocol):
+    def charge(self, user: str, amount: int) -> str: ...
+    def refund(self, receipt: str) -> None: ...
+
+
+class Show:
+    """Owns the seat map of one screening, and the lock that guards it."""
+
+    HOLD_SECONDS = 600
+
+    def __init__(self, show_id: str, seats: List[str], price: int,
+                 clock: Callable[[], float]) -> None:
+        self.show_id = show_id
+        self.price = price
+        self._seats = set(seats)
+        self._clock = clock
+        self._holds: Dict[int, Hold] = {}
+        self._booked: Dict[str, int] = {}                 # seat -> booking id
+        self._lock = threading.Lock()
+        self._ids = count(1)
+
+    def hold(self, user: str, seats: FrozenSet[str]) -> Hold:
+        with self._lock:                                  # check and claim are one step
+            taken = self._booked.keys() | {s for h in self._live_holds() for s in h.seats}
+            if not seats <= self._seats or seats & taken:
+                raise SeatsUnavailable(f"{sorted(seats & taken)} not free")
+            hold = Hold(next(self._ids), user, seats, self._clock() + self.HOLD_SECONDS)
+            self._holds[hold.hold_id] = hold
+            return hold
+
+    def confirm(self, hold_id: int, payments: PaymentGateway) -> Booking:
+        with self._lock:
+            hold = self._live_hold(hold_id)
+        receipt = payments.charge(hold.user, self.price * len(hold.seats))   # no lock held
+        with self._lock:
+            try:
+                self._live_hold(hold_id)                  # expired while paying?
+            except HoldExpired:
+                payments.refund(receipt)
+                raise
+            del self._holds[hold_id]
+            booking = Booking(next(self._ids), hold.user, hold.seats, receipt)
+            self._booked.update(dict.fromkeys(hold.seats, booking.booking_id))
+            return booking
+
+    def _live_hold(self, hold_id: int) -> Hold:
+        hold = self._holds.get(hold_id)
+        if hold is None or hold.expires_at <= self._clock():
+            raise HoldExpired(f"hold {hold_id} has expired")
+        return hold
+
+    def _live_holds(self) -> List[Hold]:                  # expiry is lazy: no timer thread
+        now = self._clock()
+        return [h for h in self._holds.values() if h.expires_at > now]
+
+
+class FakeGateway:
+    def __init__(self) -> None:
+        self.log: List[str] = []
+
+    def charge(self, user: str, amount: int) -> str:
+        self.log.append(f"charge {user} {amount}")
+        return f"r{len(self.log)}"
+
+    def refund(self, receipt: str) -> None:
+        self.log.append(f"refund {receipt}")
+
+
+now = [0.0]
+show = Show("inception-2100", ["A1", "A2", "A3", "A4"], price=250, clock=lambda: now[0])
+gate = threading.Barrier(2)
+holds: List[Hold] = []
+refused: List[str] = []
+
+
+def try_hold(user: str) -> None:
+    gate.wait()                                           # both threads race from here
+    try:
+        holds.append(show.hold(user, frozenset({"A1", "A2"})))
+    except SeatsUnavailable:
+        refused.append(user)
+
+
+racers = [threading.Thread(target=try_hold, args=(u,)) for u in ("Rishikesh", "Sandhya")]
+for thread in racers:
+    thread.start()
+for thread in racers:
+    thread.join()
+print(len(holds), len(refused))                           # 1 1
+gateway = FakeGateway()
+print(sorted(show.confirm(holds[0].hold_id, gateway).seats))  # ['A1', 'A2']
+
+late = show.hold("Subhash", frozenset({"A3"}))
+now[0] = 601.0                                            # Subhash went for coffee
+try:
+    show.confirm(late.hold_id, gateway)
+except BookingError as err:
+    print(err)                                            # hold 3 has expired
+print(sorted(show.hold("Hemkesh", frozenset({"A3"})).seats))   # ['A3']
+        </script>
+        <ul>
+          <li>The race is real: two threads released together by a <code>Barrier</code>. Which one wins varies; that exactly one wins does not, so the printed output is stable.</li>
+          <li>The check (no live hold or booking covers the seats) and the claim (add the hold) are inside one <code>with self._lock</code>.</li>
+          <li>The clock is injected: "11 minutes later" is <code>now[0] = 601.0</code>.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="movie-extensions">
+        <h2>Movie booking: extensions and follow-ups</h2>
+        <p class="kind"><a href="#movie">Movie ticket booking</a></p>
+        <p><b>Patterns:</b> payment behind an interface (a port; <a href="../../Python/docs/design-patterns.html#strategy">Strategy</a> when several gateways exist); <a href="../../Python/docs/design-patterns.html#observer">Observer</a> for confirmation messages.</p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>New requirement</th><th>Change</th></tr></thead>
+            <tbody>
+              <tr><td>Seat categories and prices</td><td><code>Seat</code> value object with a category; a <code>PricingStrategy</code> per show</td></tr>
+              <tr><td>Cancellation and refund rules</td><td><code>cancel(booking_id)</code> frees seats; refund amount from a policy by time to show</td></tr>
+              <tr><td>Very popular shows</td><td>Lock per seat, acquired in sorted seat-id order to avoid deadlock, instead of one lock per show</td></tr>
+              <tr><td>Several app servers</td><td>Seat rows in a database: conditional update <code>WHERE status = 'free' OR hold_expired</code>, or a unique constraint on (show, seat)</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p><b>Concurrency:</b> one lock per show is correct and fast for an in-process design because the critical sections are microseconds. The senior points are: no I/O under the lock, re-validate after the slow step, and idempotent payment (charge with a request id so a retry does not double-charge). Python mechanics are in <a href="../../Python/docs/python-concurrency.html">Python Concurrency</a>.</p>
+        <ul>
+          <li><b>Why not lock while paying?</b> Payment takes seconds; every other user of the show would wait.</li>
+          <li><b>Why not a background thread to expire holds?</b> Lazy expiry on access is simpler and exact; a sweeper only reclaims memory.</li>
+          <li><b>Optimistic instead?</b> Version per seat and compare-and-set; good when conflicts are rare, retry storms when a show opens.</li>
+          <li><b>Payment succeeds but the server crashes before booking?</b> Reconcile: a job matches receipts to bookings and refunds orphans.</li>
+        </ul>
+      </section>
+
+      <section class="chapter part" id="limiter">
+        <h2>Rate limiter library</h2>
+        <p class="kind">Part 8 of 12 &middot; algorithms behind one interface</p>
+        <p>A library that answers "may this key make a request now?" with token bucket and sliding window implementations and per-key limits. It tests interface design, time as a dependency, and per-key state.</p>
+        <ul>
+          <li><a href="#limiter-requirements">Requirements</a></li>
+          <li><a href="#limiter-design">Design</a></li>
+          <li><a href="#limiter-code">Code</a></li>
+          <li><a href="#limiter-extensions">Extensions and follow-ups</a></li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="limiter-requirements">
+        <h2>Rate limiter: requirements</h2>
+        <p class="kind"><a href="#limiter">Rate limiter library</a></p>
+        <ul>
+          <li><b>Functional:</b> <code>allow(key) -&gt; bool</code>; token bucket (burst plus steady rate) and sliding window log (strict count per window); limits chosen per key tier.</li>
+          <li><b>Constraints:</b> O(1) or near it per call; thread-safe; deterministic tests (no sleeping).</li>
+          <li><b>Out of scope:</b> limits shared across servers (an HLD topic; one extension below), HTTP headers.</li>
+        </ul>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Ask</th><th>Assumed</th></tr></thead>
+            <tbody>
+              <tr><td>Are bursts allowed?</td><td>Yes for token bucket; the sliding log is strict</td></tr>
+              <tr><td>What is a key: user, IP, API key, endpoint?</td><td>An opaque string; the caller builds it, with a tier prefix</td></tr>
+              <tr><td>Does a denied request cost anything?</td><td>No</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="chapter" id="limiter-design">
+        <h2>Rate limiter: design</h2>
+        <p class="kind"><a href="#limiter">Rate limiter library</a></p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+classDiagram
+  class RateLimiter {
+    <<interface>>
+    +allow(key) bool
+  }
+  class TokenBucket {
+    -capacity: int
+    -rate: float
+    -buckets: dict
+  }
+  class SlidingWindowLog {
+    -limit: int
+    -window: float
+    -logs: dict
+  }
+  class TieredLimiter {
+    +tiers: dict
+    +default: RateLimiter
+  }
+  class Clock {
+    <<interface>>
+    +call() float
+  }
+  RateLimiter <|.. TokenBucket
+  RateLimiter <|.. SlidingWindowLog
+  RateLimiter <|.. TieredLimiter
+  TieredLimiter o-- RateLimiter : routes to
+  TokenBucket ..> Clock
+  SlidingWindowLog ..> Clock
+          </script>
+          <figcaption>TieredLimiter is itself a RateLimiter that delegates by key prefix, so callers never know which algorithm or tier they hit.</figcaption>
+        </figure>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Algorithm</th><th>State per key</th><th>Bursts</th><th>Accuracy</th><th>Use when</th></tr></thead>
+            <tbody>
+              <tr><td>Token bucket</td><td>2 numbers</td><td>Up to capacity</td><td>Exact average rate</td><td>APIs: allow short bursts, cap the average</td></tr>
+              <tr><td>Leaky bucket</td><td>Queue or 2 numbers</td><td>Smoothed out</td><td>Constant outflow</td><td>Shaping traffic to a fixed rate</td></tr>
+              <tr><td>Fixed window counter</td><td>2 numbers</td><td>Up to 2x at window edges</td><td>Approximate</td><td>Cheap quotas (per day)</td></tr>
+              <tr><td>Sliding window log</td><td>One timestamp per request</td><td>None</td><td>Exact</td><td>Low limits where precision matters (logins)</td></tr>
+              <tr><td>Sliding window counter</td><td>2 counters</td><td>Small</td><td>Approximate (weighted)</td><td>High limits, little memory</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  A["allow(key)"] --> B["refill: tokens + elapsed x rate,<br/>capped at capacity"]
+  B --> C{{"tokens at least 1?"}}
+  C -->|yes| D["take 1, allow"]
+  C -->|no| E[deny]
+          </script>
+          <figcaption>Token bucket refills lazily on each call from the elapsed time; there is no timer thread.</figcaption>
+        </figure>
+      </section>
+
+      <section class="chapter" id="limiter-code">
+        <h2>Rate limiter: code</h2>
+        <p class="kind"><a href="#limiter">Rate limiter library</a></p>
+        <script type="text/plain" data-lang="py" data-file="rate_limiter.py">
+import threading
+from collections import deque
+from dataclasses import dataclass
+from typing import Callable, Deque, Dict, List, Protocol, Tuple
+
+Clock = Callable[[], float]
+
+
+class RateLimiter(Protocol):
+    def allow(self, key: str) -> bool: ...
+
+
+class TokenBucket:
+    """Bursts up to `capacity`, then a steady `rate` requests per second."""
+
+    def __init__(self, capacity: int, rate: float, clock: Clock) -> None:
+        self._capacity, self._rate, self._clock = capacity, rate, clock
+        self._buckets: Dict[str, Tuple[float, float]] = {}    # key -> (tokens, last refill)
+        self._lock = threading.Lock()
+
+    def allow(self, key: str) -> bool:
+        with self._lock:
+            now = self._clock()
+            tokens, last = self._buckets.get(key, (self._capacity, now))
+            tokens = min(self._capacity, tokens + (now - last) * self._rate)
+            allowed = tokens >= 1
+            self._buckets[key] = (tokens - 1 if allowed else tokens, now)
+            return allowed
+
+
+class SlidingWindowLog:
+    """At most `limit` requests in any `window` seconds; exact, O(limit) memory per key."""
+
+    def __init__(self, limit: int, window: float, clock: Clock) -> None:
+        self._limit, self._window, self._clock = limit, window, clock
+        self._logs: Dict[str, Deque[float]] = {}
+        self._lock = threading.Lock()
+
+    def allow(self, key: str) -> bool:
+        with self._lock:
+            now = self._clock()
+            log = self._logs.setdefault(key, deque())
+            while log and log[0] <= now - self._window:
+                log.popleft()
+            if len(log) >= self._limit:
+                return False
+            log.append(now)
+            return True
+
+
+@dataclass(frozen=True)
+class TieredLimiter:
+    """Per-key limits: the key's prefix picks the limiter (free:..., pro:...)."""
+
+    tiers: Dict[str, RateLimiter]
+    default: RateLimiter
+
+    def allow(self, key: str) -> bool:
+        tier = key.split(":", 1)[0]
+        return self.tiers.get(tier, self.default).allow(key)
+
+
+class FakeClock:
+    def __init__(self) -> None:
+        self.now = 0.0
+
+    def __call__(self) -> float:
+        return self.now
+
+
+def burst(limiter: RateLimiter, key: str, n: int) -> List[int]:
+    return [int(limiter.allow(key)) for _ in range(n)]
+
+
+clock = FakeClock()
+bucket = TokenBucket(capacity=3, rate=1.0, clock=clock)
+print(burst(bucket, "rishikesh", 5))      # [1, 1, 1, 0, 0]
+clock.now = 2.0
+print(burst(bucket, "rishikesh", 3))      # [1, 1, 0]
+print(burst(bucket, "sandhya", 1))        # [1]
+
+window = SlidingWindowLog(limit=2, window=10.0, clock=clock)
+seen = []
+for t in (0.0, 1.0, 5.0, 10.0, 10.5, 11.0):
+    clock.now = t
+    seen.append(int(window.allow("subhash")))
+print(seen)                               # [1, 1, 0, 1, 0, 1]
+
+clock.now = 100.0
+api = TieredLimiter({"pro": TokenBucket(10, 5.0, clock)}, default=TokenBucket(2, 0.1, clock))
+print(burst(api, "free:hemkesh", 3), burst(api, "pro:malinikesh", 3))   # [1, 1, 0] [1, 1, 1]
+        </script>
+        <ul>
+          <li>Bucket of 3 at 1 per second: 3 allowed at t=0, 2 more after 2 seconds of refill.</li>
+          <li>Sliding log of 2 per 10 seconds: t=10.0 is allowed because t=0.0 has left the window; t=10.5 is not because t=1.0 is still in it.</li>
+          <li>Denial is a <code>False</code>, not an exception: it is the expected, frequent outcome.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="limiter-extensions">
+        <h2>Rate limiter: extensions and follow-ups</h2>
+        <p class="kind"><a href="#limiter">Rate limiter library</a></p>
+        <p><b>Patterns:</b> <a href="../../Python/docs/design-patterns.html#strategy">Strategy</a> for the algorithm, <a href="../../Python/docs/design-patterns.html#factory">Factory</a> to build limiters from config, <a href="../../Python/docs/design-patterns.html#composite">Composite</a> for combined limits.</p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>New requirement</th><th>Change</th></tr></thead>
+            <tbody>
+              <tr><td>Several limits at once (10/s and 1000/day)</td><td><code>AllOf([...])</code> limiter that allows only if every child allows; children must not consume when a later one denies (check, then commit)</td></tr>
+              <tr><td>Limits from a config file</td><td>Factory from <code>{"tier": "pro", "algo": "token_bucket", ...}</code> to instances</td></tr>
+              <tr><td>Tell the client when to retry</td><td>Return a <code>Decision(allowed, retry_after)</code>; token bucket computes it from the deficit</td></tr>
+              <tr><td>Memory for idle keys</td><td>Evict keys idle longer than their refill time (an LRU over keys)</td></tr>
+              <tr><td>Shared across servers</td><td>Store state in Redis with an atomic script; the interface does not change</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p><b>Concurrency:</b> refill, compare and decrement is a check-then-act; one lock per limiter is the baseline. For high throughput, stripe locks by key hash so unrelated keys do not contend.</p>
+        <ul>
+          <li><b>Why inject the clock?</b> Tests advance time by assignment; production passes <code>time.monotonic</code>, never wall-clock time, which can jump.</li>
+          <li><b>Fixed window edge problem?</b> 100 at 0:59 and 100 at 1:00 gives 200 in two seconds; sliding windows fix it.</li>
+          <li><b>Token bucket vs sliding log memory?</b> Two floats vs one timestamp per allowed request.</li>
+        </ul>
+      </section>
+
+      <section class="chapter part" id="logger">
+        <h2>Logging framework</h2>
+        <p class="kind">Part 9 of 12 &middot; levels, sinks, formatters, chains</p>
+        <p>A small logging library: named loggers with levels, several outputs with their own formatters and filters, records travelling up a logger hierarchy. It tests separating what is logged, where it goes and how it looks.</p>
+        <ul>
+          <li><a href="#logger-requirements">Requirements</a></li>
+          <li><a href="#logger-design">Design</a></li>
+          <li><a href="#logger-code">Code</a></li>
+          <li><a href="#logger-extensions">Extensions and follow-ups</a></li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="logger-requirements">
+        <h2>Logging: requirements</h2>
+        <p class="kind"><a href="#logger">Logging framework</a></p>
+        <ul>
+          <li><b>Functional:</b> log at DEBUG, INFO, WARNING, ERROR with structured context; named loggers in a dotted hierarchy; several sinks each with a minimum level, filters and a formatter.</li>
+          <li><b>Constraints:</b> a disabled level must cost almost nothing; logging must never crash the caller; safe from many threads.</li>
+          <li><b>Out of scope:</b> config files, rotation, remote shipping (named as extensions).</li>
+        </ul>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Ask</th><th>Assumed</th></tr></thead>
+            <tbody>
+              <tr><td>Does a child's record also reach the parent's sinks?</td><td>Yes (propagation), like most logging libraries</td></tr>
+              <tr><td>Sync or async writes?</td><td>Sync in code; async as an extension</td></tr>
+              <tr><td>Structured or text output?</td><td>Both, by formatter</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="chapter" id="logger-design">
+        <h2>Logging: design</h2>
+        <p class="kind"><a href="#logger">Logging framework</a></p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+classDiagram
+  direction LR
+  class Logger {
+    +name: str
+    +level: Level
+    +parent: Logger
+    +sinks: list
+    +log(level, message)
+    +effective_level() Level
+  }
+  class Sink {
+    <<abstract>>
+    +level: Level
+    +filters: list
+    +handle(record)
+    +write(line)*
+  }
+  class Formatter {
+    <<interface>>
+    +format(record) str
+  }
+  Logger "1" o-- "*" Sink
+  Sink --> Formatter
+  Sink <|-- MemorySink
+  Formatter <|.. TextFormatter
+  Formatter <|.. JsonFormatter
+          </script>
+          <figcaption>Three independent axes: which logger (hierarchy), which sink (destination), which formatter (shape). Each varies without touching the others.</figcaption>
+        </figure>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart TD
+  C["payments.error()"] --> L{{"level at least effective?"}}
+  L -->|no| X["dropped, no record built"]
+  L -->|yes| R[LogRecord]
+  R -->|own sinks| S1["app.payments sinks"]
+  R -->|then parent| S2["app sinks"]
+  S1 --> W["each sink: level, filters,<br/>format, write"]
+  S2 --> W
+          </script>
+          <figcaption>The logger's level is checked before a record is built; each sink then applies its own level and filters.</figcaption>
+        </figure>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Class</th><th>Responsibility</th></tr></thead>
+            <tbody>
+              <tr><td><code>Logger</code></td><td>Level gate, build the record, walk the parent chain</td></tr>
+              <tr><td><code>LogRecord</code></td><td>Immutable: logger, level, message, time, context</td></tr>
+              <tr><td><code>Sink</code></td><td>Its own level and filters, then format and write; subclasses only implement <code>write</code></td></tr>
+              <tr><td><code>Formatter</code></td><td>Record to string: text or JSON</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="chapter" id="logger-code">
+        <h2>Logging: code</h2>
+        <p class="kind"><a href="#logger">Logging framework</a></p>
+        <script type="text/plain" data-lang="py" data-file="logging_framework.py">
+import json
+from abc import ABC, abstractmethod
+from dataclasses import dataclass, field
+from enum import IntEnum
+from typing import Callable, Dict, List, Optional, Protocol
+
+
+class Level(IntEnum):
+    DEBUG = 10
+    INFO = 20
+    WARNING = 30
+    ERROR = 40
+
+
+@dataclass(frozen=True)
+class LogRecord:
+    logger: str
+    level: Level
+    message: str
+    at: float
+    context: Dict[str, str] = field(default_factory=dict)
+
+
+class Formatter(Protocol):
+    def format(self, record: LogRecord) -> str: ...
+
+
+class TextFormatter:
+    def format(self, record: LogRecord) -> str:
+        return f"{record.at:.0f} {record.level.name:<7} {record.logger}: {record.message}"
+
+
+class JsonFormatter:
+    def format(self, record: LogRecord) -> str:
+        return json.dumps({"level": record.level.name, "logger": record.logger,
+                           "msg": record.message, **record.context}, sort_keys=True)
+
+
+Filter = Callable[[LogRecord], bool]
+
+
+@dataclass
+class Sink(ABC):
+    """Where records go. Subclasses decide how a formatted line is written."""
+
+    formatter: Formatter
+    level: Level = Level.DEBUG
+    filters: List[Filter] = field(default_factory=list)
+
+    def handle(self, record: LogRecord) -> None:
+        if record.level >= self.level and all(accept(record) for accept in self.filters):
+            self.write(self.formatter.format(record))
+
+    @abstractmethod
+    def write(self, line: str) -> None: ...
+
+
+@dataclass
+class MemorySink(Sink):                   # stands in for a file or console in the demo
+    lines: List[str] = field(default_factory=list)
+
+    def write(self, line: str) -> None:
+        self.lines.append(line)
+
+
+class Logger:
+    """Records pass the logger's level, then travel up the dotted-name chain."""
+
+    def __init__(self, name: str, clock: Callable[[], float],
+                 parent: Optional["Logger"] = None, level: Optional[Level] = None) -> None:
+        self.name, self.parent, self.level = name, parent, level
+        self.sinks: List[Sink] = []
+        self._clock = clock
+
+    def effective_level(self) -> Level:
+        logger: Optional[Logger] = self
+        while logger is not None:
+            if logger.level is not None:
+                return logger.level
+            logger = logger.parent
+        return Level.WARNING
+
+    def log(self, level: Level, message: str, **context: str) -> None:
+        if level < self.effective_level():
+            return                        # cheapest possible exit for disabled levels
+        record = LogRecord(self.name, level, message, self._clock(), context)
+        logger: Optional[Logger] = self
+        while logger is not None:         # chain of responsibility, every link may handle
+            for sink in logger.sinks:
+                sink.handle(record)
+            logger = logger.parent
+
+    def info(self, message: str, **context: str) -> None:
+        self.log(Level.INFO, message, **context)
+
+    def error(self, message: str, **context: str) -> None:
+        self.log(Level.ERROR, message, **context)
+
+
+def no_secrets(record: LogRecord) -> bool:
+    return "password" not in record.message.lower()
+
+
+def clock() -> float:
+    return 1700000000.0
+
+
+root = Logger("app", clock, level=Level.INFO)
+payments = Logger("app.payments", clock, parent=root)
+console = MemorySink(TextFormatter(), filters=[no_secrets])
+alerts = MemorySink(JsonFormatter(), level=Level.ERROR)
+root.sinks.append(console)
+payments.sinks.append(alerts)
+
+payments.info("charge started", user="rishikesh")
+payments.log(Level.DEBUG, "gateway handshake")                # below INFO: dropped
+payments.error("charge failed", code="E42")
+root.info("password reset for sandhya")                       # filtered by the console sink
+print(console.lines[0])                   # 1700000000 INFO    app.payments: charge started
+print(console.lines[1])                   # 1700000000 ERROR   app.payments: charge failed
+print(alerts.lines[0])   # {"code": "E42", "level": "ERROR", "logger": "app.payments", "msg": "charge failed"}
+print(len(console.lines))                 # 2
+        </script>
+        <ul>
+          <li>The DEBUG call returns before building a record; the password line is built and then dropped by the console sink's filter.</li>
+          <li><code>Sink.handle</code> is a template method: the shared level and filter logic in the base, only <code>write</code> in subclasses.</li>
+          <li>The clock is injected, so timestamps in the demo are fixed.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="logger-extensions">
+        <h2>Logging: extensions and follow-ups</h2>
+        <p class="kind"><a href="#logger">Logging framework</a></p>
+        <p><b>Patterns:</b> <a href="../../Python/docs/design-patterns.html#chain">Chain of Responsibility</a> (logger hierarchy, filter list), <a href="../../Python/docs/design-patterns.html#strategy">Strategy</a> (formatters), <a href="../../Python/docs/design-patterns.html#template">Template Method</a> (<code>Sink.handle</code>), <a href="../../Python/docs/design-patterns.html#observer">Observer</a> (sinks subscribe to a logger).</p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>New requirement</th><th>Change</th></tr></thead>
+            <tbody>
+              <tr><td>Async writing</td><td><code>AsyncSink(inner)</code>: <code>write</code> puts on a bounded <code>queue.Queue</code>; one worker thread calls <code>inner.write</code>. Decide drop-or-block when full; flush on shutdown</td></tr>
+              <tr><td>File rotation</td><td><code>RotatingFileSink</code> subclass; nothing else changes</td></tr>
+              <tr><td>Request id on every line</td><td>A filter or the logger reads a <code>contextvars.ContextVar</code> and adds it to the record context</td></tr>
+              <tr><td>Configure from a file</td><td>A builder that creates loggers and sinks from a dict; loggers fetched by name from a registry</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p><b>Concurrency:</b> two threads writing to one file can interleave partial lines. Give each sink a lock around <code>write</code>, or route all writes through one async worker, which also preserves order. Loggers are read-mostly; configure them at startup.</p>
+        <ul>
+          <li><b>What if a sink raises?</b> Catch it inside <code>handle</code> and report to stderr; logging must never break the request.</li>
+          <li><b>Why build the record lazily?</b> Most DEBUG calls are disabled in production; string formatting is the cost.</li>
+          <li><b>Why a registry instead of a Singleton logger?</b> Many named loggers, one tree; the registry is the shared root, injected or module-level.</li>
+        </ul>
+      </section>
+
+      <section class="chapter part" id="game">
+        <h2>Tic-tac-toe</h2>
+        <p class="kind">Part 10 of 12 &middot; board, turns, win detection</p>
+        <p>An N by N tic-tac-toe for two or more players with turn management, move validation and win or draw detection. It tests a clean game loop and an O(1) win check instead of scanning the board after every move. The same skeleton fits snake and ladder (board of jumps, a dice port).</p>
+        <ul>
+          <li><a href="#game-requirements">Requirements</a></li>
+          <li><a href="#game-design">Design</a></li>
+          <li><a href="#game-code">Code</a></li>
+          <li><a href="#game-extensions">Extensions and follow-ups</a></li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="game-requirements">
+        <h2>Game: requirements</h2>
+        <p class="kind"><a href="#game">Tic-tac-toe</a></p>
+        <ul>
+          <li><b>Functional:</b> players take turns placing their symbol; a full row, column or diagonal wins; a full board without a winner is a draw; no moves after the game ends.</li>
+          <li><b>Rules:</b> off-board or occupied cells are refused and the turn does not pass.</li>
+          <li><b>Constraints:</b> board size N is a parameter; moves are scripted so tests are stable.</li>
+          <li><b>Out of scope:</b> AI player, UI, networking, undo.</li>
+        </ul>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Ask</th><th>Assumed</th></tr></thead>
+            <tbody>
+              <tr><td>Win needs a full line, or K in a row on a bigger board?</td><td>Full line of N; K in a row is an extension</td></tr>
+              <tr><td>More than two players?</td><td>Allowed; turns rotate</td></tr>
+              <tr><td>Who goes first?</td><td>The first player passed in</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="chapter" id="game-design">
+        <h2>Game: design</h2>
+        <p class="kind"><a href="#game">Tic-tac-toe</a></p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+classDiagram
+  direction LR
+  class Game {
+    +status: Status
+    +winner: Player
+    +current: Player
+    +play(row, col) Status
+  }
+  class Board {
+    +size: int
+    +place(player, row, col)
+    +is_full() bool
+  }
+  class WinTracker {
+    -counts: Counter
+    +record(player, row, col) bool
+  }
+  class Player {
+    +name: str
+    +symbol: str
+  }
+  Game *-- Board
+  Game *-- WinTracker
+  Game "1" o-- "*" Player
+          </script>
+          <figcaption>The board validates cells, the tracker detects wins, the game owns turns and status. None of them knows about printing.</figcaption>
+        </figure>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Class</th><th>Responsibility</th></tr></thead>
+            <tbody>
+              <tr><td><code>Game</code></td><td>Turn order, status (in progress, won, draw), refusing moves after the end</td></tr>
+              <tr><td><code>Board</code></td><td>Cells, bounds and occupancy checks, fullness</td></tr>
+              <tr><td><code>WinTracker</code></td><td>Counts per (player, line); a count reaching N is a win. O(1) per move, O(N) memory per player</td></tr>
+              <tr><td><code>Player</code></td><td>Value object: name and symbol</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+sequenceDiagram
+  participant G as Game
+  participant B as Board
+  participant W as WinTracker
+  G->>G: status in progress?
+  G->>B: place(player, row, col)
+  B-->>G: ok, or GameError
+  G->>W: record(player, row, col)
+  W-->>G: won?
+  G->>G: set status, pass the turn
+          </script>
+          <figcaption>Validation first, then mutation; the turn passes only after a legal move.</figcaption>
+        </figure>
+      </section>
+
+      <section class="chapter" id="game-code">
+        <h2>Game: code</h2>
+        <p class="kind"><a href="#game">Tic-tac-toe</a></p>
+        <script type="text/plain" data-lang="py" data-file="tic_tac_toe.py">
+from collections import Counter
+from dataclasses import dataclass
+from enum import Enum
+from typing import List, Optional, Sequence, Tuple
+
+
+class GameError(Exception):
+    pass
+
+
+class Status(Enum):
+    IN_PROGRESS = "in progress"
+    WON = "won"
+    DRAW = "draw"
+
+
+@dataclass(frozen=True)
+class Player:
+    name: str
+    symbol: str
+
+
+class Board:
+    def __init__(self, size: int) -> None:
+        self.size = size
+        self._cells: List[List[Optional[Player]]] = [[None] * size for _ in range(size)]
+        self._filled = 0
+
+    def place(self, player: Player, row: int, col: int) -> None:
+        if not (0 <= row < self.size and 0 <= col < self.size):
+            raise GameError(f"({row}, {col}) is off the board")
+        if self._cells[row][col] is not None:
+            raise GameError(f"({row}, {col}) is taken")
+        self._cells[row][col] = player
+        self._filled += 1
+
+    def is_full(self) -> bool:
+        return self._filled == self.size * self.size
+
+    def rows(self) -> List[str]:
+        return ["".join(p.symbol if p else "." for p in row) for row in self._cells]
+
+
+class WinTracker:
+    """O(1) win check per move: count each player's marks per row, column and diagonal."""
+
+    def __init__(self, size: int) -> None:
+        self._size = size
+        self._counts: Counter = Counter()
+
+    def record(self, player: Player, row: int, col: int) -> bool:
+        lines: List[Tuple[str, int]] = [("row", row), ("col", col)]
+        if row == col:
+            lines.append(("diag", 0))
+        if row + col == self._size - 1:
+            lines.append(("anti", 0))
+        for line in lines:
+            self._counts[player, line] += 1
+        return any(self._counts[player, line] == self._size for line in lines)
+
+
+class Game:
+    def __init__(self, players: Sequence[Player], size: int = 3) -> None:
+        self.board = Board(size)
+        self._wins = WinTracker(size)
+        self._players = list(players)
+        self._turn = 0
+        self.status = Status.IN_PROGRESS
+        self.winner: Optional[Player] = None
+
+    @property
+    def current(self) -> Player:
+        return self._players[self._turn % len(self._players)]
+
+    def play(self, row: int, col: int) -> Status:
+        if self.status is not Status.IN_PROGRESS:
+            raise GameError(f"game is over: {self.status.value}")
+        player = self.current
+        self.board.place(player, row, col)                # raises before any state changes
+        if self._wins.record(player, row, col):
+            self.status, self.winner = Status.WON, player
+        elif self.board.is_full():
+            self.status = Status.DRAW
+        self._turn += 1
+        return self.status
+
+
+game = Game([Player("Rishikesh", "X"), Player("Sandhya", "O")])
+game.play(0, 0)
+try:
+    game.play(0, 0)
+except GameError as err:
+    print(err, "-", game.current.name, "to play")   # (0, 0) is taken - Sandhya to play
+for row, col in [(1, 0), (0, 1), (1, 1), (0, 2)]:  # scripted, so the output is stable
+    game.play(row, col)
+print(game.status.value, game.winner.name)        # won Rishikesh
+print(game.board.rows())                          # ['XXX', 'OO.', '...']
+try:
+    game.play(2, 2)
+except GameError as err:
+    print(err)                                    # game is over: won
+        </script>
+        <ul>
+          <li>The refused move leaves Sandhya to play: the error is raised before <code>_turn</code> changes.</li>
+          <li>Each move touches at most four counters (row, column, two diagonals), whatever N is.</li>
+          <li>Snake and ladder reuses the shape: <code>Board</code> becomes a map of jumps, <code>WinTracker</code> becomes "reached the last square", and an injected <code>Dice</code> (seeded or scripted) replaces the move input.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="game-extensions">
+        <h2>Game: extensions and follow-ups</h2>
+        <p class="kind"><a href="#game">Tic-tac-toe</a></p>
+        <p><b>Patterns:</b> mostly none, which is the point; <a href="../../Python/docs/design-patterns.html#strategy">Strategy</a> for player types and <a href="../../Python/docs/design-patterns.html#command">Command</a> for undo when asked.</p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>New requirement</th><th>Change</th></tr></thead>
+            <tbody>
+              <tr><td>Computer player</td><td><code>MoveSource</code> interface: <code>HumanInput</code>, <code>RandomBot(seed)</code>, <code>MinimaxBot</code>; the game asks the current player's source</td></tr>
+              <tr><td>K in a row on a large board</td><td>Replace the tracker: after a move, count matching cells outward in four directions; O(K) per move</td></tr>
+              <tr><td>Undo</td><td>Each move as a Command with <code>undo</code>; the tracker decrements its counters</td></tr>
+              <tr><td>Online play</td><td>The game becomes a server-side entity per match; moves arrive as commands with the player id checked against <code>current</code></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p><b>Concurrency:</b> rarely asked. For online play, serialise moves per game with one lock or a per-game queue, and reject a move whose player is not <code>current</code>.</p>
+        <ul>
+          <li><b>Why not check the whole board after each move?</b> O(N squared) per move; the counter trick is O(1).</li>
+          <li><b>Where does printing go?</b> Outside: <code>rows()</code> returns data, a renderer prints it.</li>
+          <li><b>How do you test a random game?</b> Inject a seeded <code>random.Random</code> or a scripted dice.</li>
+        </ul>
+      </section>
+
+      <section class="chapter part" id="pubsub">
+        <h2>In-memory pub-sub queue</h2>
+        <p class="kind">Part 11 of 12 &middot; topics, offsets, redelivery</p>
+        <p>Publishers append to topics; consumer groups each read every message in order, tracking their own offset, with retries and a dead-letter list for messages that keep failing. It tests delivery semantics and why a log with offsets beats a queue that deletes on read.</p>
+        <ul>
+          <li><a href="#pubsub-requirements">Requirements</a></li>
+          <li><a href="#pubsub-design">Design</a></li>
+          <li><a href="#pubsub-code">Code</a></li>
+          <li><a href="#pubsub-extensions">Extensions and follow-ups</a></li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="pubsub-requirements">
+        <h2>Pub-sub: requirements</h2>
+        <p class="kind"><a href="#pubsub">In-memory pub-sub queue</a></p>
+        <ul>
+          <li><b>Functional:</b> create topics; publish returns an offset; subscribe a consumer group with a handler; each group receives every message, in order.</li>
+          <li><b>Delivery:</b> at least once. The group's offset advances only after its handler succeeds; a failing message is retried, then dead-lettered after N attempts.</li>
+          <li><b>Constraints:</b> publishers and consumers on different threads; a late group can replay from the start.</li>
+          <li><b>Out of scope:</b> persistence, partitions, retention, network protocol.</li>
+        </ul>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Ask</th><th>Assumed</th></tr></thead>
+            <tbody>
+              <tr><td>Ordering per topic required?</td><td>Yes, so one failing message blocks its group until retried or dead-lettered</td></tr>
+              <tr><td>Push or pull?</td><td>The broker pushes in rounds; a pull API is the same offsets</td></tr>
+              <tr><td>At most, at least or exactly once?</td><td>At least once; consumers must be idempotent</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="chapter" id="pubsub-design">
+        <h2>Pub-sub: design</h2>
+        <p class="kind"><a href="#pubsub">In-memory pub-sub queue</a></p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+classDiagram
+  direction LR
+  class Broker {
+    +create_topic(name)
+    +publish(topic, payload) int
+    +subscribe(topic, group)
+    +pump() list
+  }
+  class Topic {
+    +name: str
+    +append(payload) int
+    +read(offset) list
+  }
+  class ConsumerGroup {
+    +name: str
+    +offset: int
+    +attempts: int
+    +deliver(topic) list
+  }
+  class Message {
+    +topic: str
+    +offset: int
+    +payload: str
+  }
+  Broker "1" *-- "*" Topic
+  Broker "1" o-- "*" ConsumerGroup
+  Topic "1" *-- "*" Message
+          </script>
+          <figcaption>The topic is an append-only log; a group's whole state is one offset plus a retry count. Adding a group costs nothing to the others.</figcaption>
+        </figure>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart TD
+  M0["orders 0"] --- M1[1] --- M2["2 poison"] --- M3[3] --- N["4 (next)"]
+  A(["audit: offset 0"]) -.-> M0
+  E(["email: offset 1, retrying"]) -.-> M1
+  B(["billing: offset 4"]) -.-> N
+          </script>
+          <figcaption>Topic orders, a snapshot after the first round: one log, three groups at different positions. Consuming moves a pointer; it never deletes, so a new group can replay.</figcaption>
+        </figure>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+sequenceDiagram
+  participant G as email group
+  participant T as Topic
+  participant H as Handler
+  G->>T: read(offset 1)
+  T-->>G: messages 1 to 3
+  G->>H: handle(1)
+  H-->>G: error
+  Note over G: attempts 1, offset stays 1
+  G->>H: handle(1), next round
+  H-->>G: ok
+  Note over G: commit offset 2
+          </script>
+          <figcaption>Commit after handling gives at-least-once; committing before handling would give at-most-once.</figcaption>
+        </figure>
+      </section>
+
+      <section class="chapter" id="pubsub-code">
+        <h2>Pub-sub: code</h2>
+        <p class="kind"><a href="#pubsub">In-memory pub-sub queue</a></p>
+        <script type="text/plain" data-lang="py" data-file="pubsub.py">
+import threading
+from dataclasses import dataclass, field
+from typing import Callable, Dict, List
+
+Handler = Callable[["Message"], None]
+
+
+class UnknownTopic(Exception):
+    pass
+
+
+@dataclass(frozen=True)
+class Message:
+    topic: str
+    offset: int
+    payload: str
+
+
+class Topic:
+    """Append-only log. Messages are never removed when consumed."""
+
+    def __init__(self, name: str) -> None:
+        self.name = name
+        self._log: List[Message] = []
+        self._lock = threading.Lock()
+
+    def append(self, payload: str) -> int:
+        with self._lock:                  # offset assignment and append are one step
+            message = Message(self.name, len(self._log), payload)
+            self._log.append(message)
+            return message.offset
+
+    def read(self, offset: int) -> List[Message]:
+        with self._lock:
+            return self._log[offset:]
+
+
+@dataclass
+class ConsumerGroup:
+    """Each group sees every message once, in order; its offset is its only state."""
+
+    name: str
+    handler: Handler
+    max_attempts: int = 3
+    offset: int = 0                       # next message to deliver
+    attempts: int = 0                     # failed tries of that message
+    dead_letters: List[Message] = field(default_factory=list)
+
+    def deliver(self, topic: Topic) -> List[str]:
+        events = []
+        for message in topic.read(self.offset):
+            try:
+                self.handler(message)
+            except Exception as err:      # any handler failure: retry on the next round
+                self.attempts += 1
+                if self.attempts < self.max_attempts:
+                    events.append(f"{self.name} retry {message.offset}: {err}")
+                    break                 # keep order: nothing after it is delivered yet
+                self.dead_letters.append(message)
+                events.append(f"{self.name} dead-letter {message.offset}")
+            self.offset, self.attempts = message.offset + 1, 0    # commit after handling
+        return events
+
+
+class Broker:
+    def __init__(self) -> None:
+        self._topics: Dict[str, Topic] = {}
+        self._groups: Dict[str, List[ConsumerGroup]] = {}
+
+    def create_topic(self, name: str) -> None:
+        self._topics[name] = Topic(name)
+        self._groups[name] = []
+
+    def publish(self, topic: str, payload: str) -> int:
+        return self._topic(topic).append(payload)
+
+    def subscribe(self, topic: str, group: ConsumerGroup) -> None:
+        self._topic(topic)
+        self._groups[topic].append(group)
+
+    def pump(self) -> List[str]:          # one delivery round; a worker thread would loop
+        return [event for name, topic in self._topics.items()
+                for group in self._groups[name] for event in group.deliver(topic)]
+
+    def _topic(self, name: str) -> Topic:
+        if name not in self._topics:
+            raise UnknownTopic(name)
+        return self._topics[name]
+
+
+billed: List[str] = []
+calls: Dict[int, int] = {}
+
+
+def send_email(message: Message) -> None:    # fails once on offset 1, always on "poison"
+    calls[message.offset] = calls.get(message.offset, 0) + 1
+    if message.payload == "poison" or (message.offset == 1 and calls[1] == 1):
+        raise RuntimeError("smtp timeout")
+
+
+broker = Broker()
+broker.create_topic("orders")
+broker.subscribe("orders", ConsumerGroup("billing", lambda m: billed.append(m.payload)))
+email = ConsumerGroup("email", send_email, max_attempts=2)
+broker.subscribe("orders", email)
+for payload in ("order-rishikesh", "order-sandhya", "poison", "order-subhash"):
+    broker.publish("orders", payload)
+print(broker.pump())                      # ['email retry 1: smtp timeout']
+print(broker.pump())                      # ['email retry 2: smtp timeout']
+print(broker.pump())                      # ['email dead-letter 2']
+print(calls)                              # {0: 1, 1: 2, 2: 2, 3: 1}
+audit = ConsumerGroup("audit", lambda m: None)            # joins late, replays from 0
+broker.subscribe("orders", audit)
+broker.pump()
+print(len(billed), audit.offset, email.dead_letters[0].payload)   # 4 4 poison
+try:
+    broker.publish("payments", "x")
+except UnknownTopic as err:
+    print("unknown topic", err)           # unknown topic payments
+        </script>
+        <ul>
+          <li><code>calls</code> shows at-least-once: offset 1 was handled twice, the poison message twice (its <code>max_attempts</code>), the others once.</li>
+          <li>The email group stops at a failing message instead of skipping it, which preserves order; billing is not slowed by email's failures.</li>
+          <li>Failures are scripted by attempt count, so the output is the same on every run.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="pubsub-extensions">
+        <h2>Pub-sub: extensions and follow-ups</h2>
+        <p class="kind"><a href="#pubsub">In-memory pub-sub queue</a></p>
+        <p><b>Patterns:</b> <a href="../../Python/docs/design-patterns.html#observer">Observer</a> at its core, decoupled in time by the log; <a href="../../Python/docs/design-patterns.html#iterator">Iterator</a> for a pull consumer reading from its offset.</p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>New requirement</th><th>Change</th></tr></thead>
+            <tbody>
+              <tr><td>Parallel consumers in one group</td><td>Partitions: a topic is K logs, a key hash picks one; each partition is read by one member, so order holds per key</td></tr>
+              <tr><td>Retry with back-off</td><td>Store <code>retry_at</code> per group from an injected clock; skip delivery until then</td></tr>
+              <tr><td>Retention</td><td>Drop log prefix below the smallest committed offset, or by age; groups behind it jump forward</td></tr>
+              <tr><td>Message filtering per subscriber</td><td>A predicate on the group; skipped messages still advance the offset</td></tr>
+              <tr><td>Durability</td><td>Append to a file per topic and store offsets; replay on start</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p><b>Concurrency:</b> <code>Topic.append</code> holds a lock so offset assignment and append are atomic; <code>read</code> copies a slice under the same lock. Each group is driven by one worker thread, so its offset needs no lock. A blocking pull would use a <code>threading.Condition</code> to wait for new messages (see the bounded queue on Low-Level Design). This mirrors the log-plus-offsets design popularised by Kafka; a real broker adds partitions, replication and persistence.</p>
+        <ul>
+          <li><b>Exactly once?</b> Not from the broker alone: at-least-once delivery plus idempotent handlers (dedupe by message id) gives effectively-once processing.</li>
+          <li><b>Queue vs log?</b> A queue deletes on ack and spreads messages across consumers; a log keeps messages and gives each group its own cursor.</li>
+          <li><b>Slow consumer?</b> With a log it just lags; monitor lag (end offset minus committed) and alert.</li>
+          <li><b>Poison message?</b> Bounded attempts, then a dead-letter list with the error, so the group moves on.</li>
+        </ul>
+      </section>
+
+      <section class="chapter part" id="wrap-up">
+        <h2>Practice and reference</h2>
+        <p class="kind">Part 12 of 12 &middot; more questions, one-page summary</p>
+        <p>Ten more prompts with the modelling decision that defines each, then the one-table summary of the cases above.</p>
+        <ul>
+          <li><a href="#practice">Further questions to practise</a></li>
+          <li><a href="#cheat-sheet">Cheat sheet</a></li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="practice">
+        <h2>Further questions to practise</h2>
+        <p class="kind"><a href="#wrap-up">Practice and reference</a></p>
+        <p>Run each through the four steps. The decision column is the thing the interviewer is waiting for you to notice.</p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Prompt</th><th>The defining modelling decision</th><th>Closest case above</th></tr></thead>
+            <tbody>
+              <tr><td>ATM</td><td>Session as a State machine (card in, PIN ok, transaction, eject) and note dispensing as a Chain of denominations</td><td>Vending machine</td></tr>
+              <tr><td>Library management</td><td>Book (title) vs copy (physical item); loans and reservations per copy, queues per title</td><td>Low-Level Design worked example</td></tr>
+              <tr><td>Hotel booking</td><td>Availability as date ranges per room; overlap check plus hold is the double-booking problem again</td><td>Movie booking</td></tr>
+              <tr><td>Chess</td><td>Piece movement as polymorphism on <code>Piece</code>; the board validates check, not the piece</td><td>Tic-tac-toe</td></tr>
+              <tr><td>File system</td><td>Composite: file and directory share one interface; path resolution walks the tree</td><td>Logging (hierarchy)</td></tr>
+              <tr><td>Notification service</td><td>Channel as Strategy (email, SMS, push), templates separate from delivery, retries with idempotency keys</td><td>Pub-sub, logging</td></tr>
+              <tr><td>Inventory management</td><td>Reserved vs available stock per warehouse; reservation with expiry, atomic decrement</td><td>Movie booking</td></tr>
+              <tr><td>Food ordering</td><td>Order lifecycle as a state machine with timeouts; restaurant and delivery assignment as separate strategies</td><td>Elevator (dispatch), vending (state)</td></tr>
+              <tr><td>Cab booking</td><td>Matching driver to rider as a Strategy over a spatial index; trip state machine; driver held while offered</td><td>Elevator, movie booking</td></tr>
+              <tr><td>URL shortener (classes)</td><td>Key generation as an injected strategy (counter plus base62 or random with collision check); repository behind an interface</td><td>Rate limiter (interfaces)</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="chapter" id="cheat-sheet">
+        <h2>Cheat sheet</h2>
+        <p class="kind"><a href="#wrap-up">Practice and reference</a></p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Case</th><th>Core classes</th><th>Key pattern or structure</th><th>The trap</th></tr></thead>
+            <tbody>
+              <tr><td>Parking lot</td><td>ParkingLot, Spot, Ticket, PricingStrategy</td><td>Strategy; min-heap per size</td><td>Scanning every spot; <code>if kind ==</code> pricing</td></tr>
+              <tr><td>LRU / LFU</td><td>LRUCache, Node; LFU frequency buckets</td><td>Dict plus doubly linked list; min-frequency pointer</td><td>Node without its key; forgetting reads reorder</td></tr>
+              <tr><td>Elevator</td><td>ElevatorSystem, Car, DispatchStrategy</td><td>Strategy for dispatch; LOOK in the car</td><td>One class doing dispatch and movement; reversing mid-sweep</td></tr>
+              <tr><td>Vending machine</td><td>VendingMachine, State subclasses, CoinBox, Slot</td><td>State</td><td>Committing the sale before change is known to be possible</td></tr>
+              <tr><td>Expense sharing</td><td>Group, Expense, SplitStrategy, User</td><td>Strategy; greedy settle-up</td><td>Floats; losing the rounding paisa; storing pairwise debts</td></tr>
+              <tr><td>Movie booking</td><td>Show, Hold, Booking, PaymentGateway</td><td>Lock per show; holds with lazy expiry</td><td>Check and claim not atomic; paying under the lock; no re-check after paying</td></tr>
+              <tr><td>Rate limiter</td><td>RateLimiter, TokenBucket, SlidingWindowLog, TieredLimiter</td><td>Strategy; injected clock</td><td>Wall-clock time; sleeping in tests; fixed-window edge bursts</td></tr>
+              <tr><td>Logging</td><td>Logger, LogRecord, Sink, Formatter</td><td>Chain of Responsibility; Template Method</td><td>Building records for disabled levels; a sink exception breaking the caller</td></tr>
+              <tr><td>Tic-tac-toe</td><td>Game, Board, WinTracker, Player</td><td>Counters per line</td><td>O(N squared) board scan; passing the turn on an illegal move</td></tr>
+              <tr><td>Pub-sub</td><td>Broker, Topic, ConsumerGroup, Message</td><td>Append-only log plus offsets; Observer</td><td>Deleting on read; committing before handling; no dead-letter path</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>Recurring moves across all ten: inject time and randomness, raise named errors before mutating, keep one lock around each check-then-act, and answer every extension with the class you would add.</p>
+        <p>Next: how to run the whole interview, from the first question to the wrap-up, in <a href="sd-interview-playbook.html">Senior Interview Playbook</a>.</p>
+      </section>
+
+    </div>
+  </main>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script src="../../assets/tutorial.js?v=8"></script>
+</body>
+</html>

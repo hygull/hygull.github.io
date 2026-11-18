@@ -1,0 +1,1685 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Building Blocks</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@500;700&display=swap">
+<link rel="stylesheet" href="../../assets/tutorial.css?v=8">
+</head>
+<body data-track="system">
+
+<header class="topbar">
+  <div class="topbar-in">
+    <a class="brand" href="../../../index.html">Learnings</a>
+    <nav class="tracks" aria-label="Paths">
+      <a href="../../../index.html#system-design" aria-current="true">System Design</a>
+      <a href="../../../archive.html">Archive</a>
+    </nav>
+    <div class="tools">
+      <button class="btn" id="menu" type="button" aria-expanded="false">Chapters</button>
+      <input id="q" type="search" placeholder="Search chapters" aria-label="Search chapters">
+      <button class="btn" id="theme" type="button">Dark mode</button>
+    </div>
+  </div>
+</header>
+
+<div class="shell">
+  <aside class="side">
+    <p class="side-label">Building Blocks</p>
+    <nav id="toc" aria-label="Chapters"></nav>
+  </aside>
+
+  <main>
+    <div class="page-head">
+      <p class="eyebrow">System design, part 2 of 12</p>
+      <h1>Building Blocks</h1>
+      <p class="lead">Every high-level design answer is assembled from the same two dozen components. This is the reference page for them: what each block is, how it works at interview depth, the options side by side, when to use or avoid it, how it fails, and the numbers worth remembering. All numbers are approximate, order-of-magnitude figures. The method for using these blocks in an answer is in <a href="sd-foundations.html">System Design Foundations</a>.</p>
+    </div>
+
+    <div class="chapters">
+
+      <section class="chapter" id="map">
+        <h2>The blocks on one page</h2>
+        <p>A request passes through the edge, reaches stateless compute, reads through a cache, lands in storage, and hands slow work to a queue. Each tier below is one part of this page.</p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  U([Client]) --> DNS[DNS]
+  U --> CDN[CDN]
+  U --> LB[Load balancer]
+  LB --> GW[API gateway]
+  GW --> S[Stateless services]
+  S --> C[(Cache)]
+  S --> DB[(Database)]
+  S --> O[(Object store)]
+  S -.-> Q[[Queue or log]]
+  Q -.-> W[Workers]
+  W --> DB
+          </script>
+          <figcaption>Solid edges are synchronous and sit on the user's latency path. Dashed edges are asynchronous and do not.</figcaption>
+        </figure>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Part</th><th>Blocks</th><th>The question it answers</th></tr></thead>
+            <tbody>
+              <tr><td><a href="#edge">The edge</a></td><td>DNS, CDN, load balancer, reverse proxy, API gateway</td><td>How does a request find a healthy server, cheaply and close to the user?</td></tr>
+              <tr><td><a href="#compute">Compute</a></td><td>Stateless services, autoscaling, discovery, pools</td><td>How do we add capacity by adding machines?</td></tr>
+              <tr><td><a href="#caching">Caching</a></td><td>Layers, strategies, eviction, failure patterns</td><td>How do we avoid doing the same work twice?</td></tr>
+              <tr><td><a href="#storage">Storage choices</a></td><td>Database families, object storage</td><td>Which store fits this data and this query?</td></tr>
+              <tr><td><a href="#scaling-data">Scaling data</a></td><td>Replication, sharding, consistent hashing</td><td>What happens when one node is not enough?</td></tr>
+              <tr><td><a href="#async">Asynchronous work</a></td><td>Queues, logs, pub-sub, schedulers</td><td>What can leave the request path?</td></tr>
+              <tr><td><a href="#specialised">Specialised blocks</a></td><td>Rate limiter, IDs, Bloom filter, search, geo, media</td><td>Which named component solves this sub-problem?</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="chapter part" id="edge">
+        <h2>The edge</h2>
+        <p class="kind">Part 1 of 7 &middot; everything between the user and your code</p>
+        <p>The edge finds a healthy server for each request, terminates TLS, and serves whatever it can without touching the origin. It is also the first place to shed load and reject bad traffic.</p>
+        <ul>
+          <li><a href="#dns">DNS</a>: name to address, plus coarse traffic steering</li>
+          <li><a href="#cdn">CDN</a>: cached content served near the user</li>
+          <li><a href="#load-balancer">Load balancers</a>: L4 vs L7</li>
+          <li><a href="#lb-algorithms">Balancing algorithms</a>: round robin to power of two choices</li>
+          <li><a href="#lb-operations">Health checks, pairs, stickiness, TLS</a></li>
+          <li><a href="#gateway">Reverse proxy and API gateway</a></li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="dns">
+        <h2>DNS</h2>
+        <p class="kind"><a href="#edge">The edge</a></p>
+        <p>DNS maps a name to addresses through a hierarchy of cached lookups. Because every answer is cached for its TTL, DNS is also a slow but global traffic-steering tool.</p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+sequenceDiagram
+  participant C as Client
+  participant R as Recursive resolver
+  participant Root as Root server
+  participant T as TLD server
+  participant A as Authoritative server
+  C->>R: A record for api.shop.com
+  R->>Root: who serves com
+  Root-->>R: TLD servers
+  R->>T: who serves shop.com
+  T-->>R: authoritative servers
+  R->>A: A record for api.shop.com
+  A-->>R: 203.0.113.10 with TTL 60
+  R-->>C: 203.0.113.10
+          </script>
+          <figcaption>Only a cold lookup walks the whole chain. The browser, the OS and the resolver each cache the answer for the TTL, so most lookups cost nothing.</figcaption>
+        </figure>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Record</th><th>Maps</th><th>Why it matters in a design</th></tr></thead>
+            <tbody>
+              <tr><td>A / AAAA</td><td>Name to IPv4 / IPv6 address</td><td>Several addresses in one answer is the crudest load balancing</td></tr>
+              <tr><td>CNAME</td><td>Name to another name</td><td>How a hostname is pointed at a CDN or a cloud load balancer. Not allowed at the zone apex</td></tr>
+              <tr><td>ALIAS / ANAME</td><td>Apex name to another name</td><td>Provider feature that works around the apex CNAME rule</td></tr>
+              <tr><td>NS</td><td>Zone to its authoritative servers</td><td>Delegation. Use two DNS providers to survive a provider outage</td></tr>
+              <tr><td>MX, TXT, SRV</td><td>Mail hosts, free text, service host and port</td><td>TXT carries domain verification and mail policy. SRV is used by some service discovery</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <ul>
+          <li><b>TTL:</b> long (hours) means fewer lookups and slow change. Short (30 to 60 s) means fast failover and more resolver load. Some resolvers and clients ignore or extend short TTLs, and long-lived connections never re-resolve, so DNS failover is tens of seconds to minutes, never instant.</li>
+          <li><b>DNS-based load balancing:</b> the authoritative server returns different answers per query: weighted (canary, migration), latency-based or geo (nearest region, data residency), failover (drop an address whose health check fails).</li>
+          <li><b>Anycast:</b> the same IP address is announced from many locations and the network routes each packet to the nearest one. It is how DNS providers and CDNs get users to a nearby site without DNS tricks.</li>
+          <li><b>Numbers:</b> cached lookup about 0 to 1 ms, cold lookup roughly 20 to 120 ms.</li>
+        </ul>
+        <p class="note"><b>Failure mode:</b> DNS is a single dependency for everything. Its outages are total and its mistakes are cached for the TTL. Lower the TTL before a planned migration, not during it.</p>
+      </section>
+
+      <section class="chapter" id="cdn">
+        <h2>CDN</h2>
+        <p class="kind"><a href="#edge">The edge</a></p>
+        <p>A CDN is a fleet of caching reverse proxies in points of presence (PoPs) near users. It cuts latency, takes read traffic and bandwidth off the origin, and absorbs volumetric attacks.</p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+sequenceDiagram
+  participant U as User
+  participant E as Edge PoP
+  participant O as Origin
+  U->>E: GET /img/42.jpg
+  E->>O: miss, fetch from origin
+  O-->>E: 200 with Cache-Control max-age
+  E-->>U: 200 and stored at the edge
+  U->>E: GET /img/42.jpg again
+  E-->>U: 200 from edge cache
+          </script>
+          <figcaption>A pull CDN fills itself on the first miss. Every later request in that PoP is served without touching the origin until the TTL expires.</figcaption>
+        </figure>
+        <div class="scroll">
+          <table>
+            <thead><tr><th></th><th>Pull CDN</th><th>Push CDN</th></tr></thead>
+            <tbody>
+              <tr><td>How content arrives</td><td>Edge fetches from origin on first miss</td><td>You upload to the CDN ahead of time</td></tr>
+              <tr><td>First request</td><td>Slow (origin round trip) per PoP</td><td>Fast everywhere</td></tr>
+              <tr><td>Operational cost</td><td>Low: set cache headers</td><td>You manage uploads, expiry and storage</td></tr>
+              <tr><td>Use when</td><td>Default. Many objects, long tail</td><td>Few large objects known in advance: releases, video segments, game patches</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <ul>
+          <li><b>Cache key:</b> by default host + path + query string. Each extra dimension (a header via <code>Vary</code>, a cookie, a device class) multiplies the number of variants and lowers the hit ratio. Normalise query strings and never key on a session cookie.</li>
+          <li><b>Invalidation, best first:</b> versioned URLs (<code>app.3f9a.js</code>, cached for a year, never purged), short TTL plus <code>stale-while-revalidate</code>, purge API by URL or tag (takes seconds to minutes to reach every PoP).</li>
+          <li><b>Edge compute:</b> small functions run in the PoP for redirects, header rewrites, token checks and A/B routing.</li>
+          <li><b>Put on it:</b> static assets, images, video segments, downloads, public API responses that many users share. <b>Keep off it:</b> per-user responses unless the cache key includes the user and they are marked <code>private</code>.</li>
+          <li><b>Numbers:</b> edge hit 10 to 30 ms versus 100 to 300 ms cross-continent to origin. A healthy static site has a hit ratio above 90%.</li>
+        </ul>
+        <p class="note"><b>Failure mode:</b> a purge or a cold PoP sends the full load to the origin at once. Size the origin for a cache-cold event or put a second cache tier (origin shield) in front of it.</p>
+      </section>
+
+      <section class="chapter" id="load-balancer">
+        <h2>Load balancers: L4 vs L7</h2>
+        <p class="kind"><a href="#edge">The edge</a></p>
+        <p>A load balancer spreads connections or requests over a pool of servers and stops sending to the unhealthy ones. The main choice is the layer it works at.</p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  U([Clients]) --> L4[L4 balancer]
+  L4 --> P1[L7 proxy]
+  L4 --> P2[L7 proxy]
+  P1 -->|"/api"| A[API pool]
+  P1 -->|"/img"| I[Image pool]
+  P2 -->|"/api"| A
+  P2 -->|"/img"| I
+          </script>
+          <figcaption>A common large-scale layout: a simple, very fast L4 tier spreads connections over a fleet of L7 proxies, which do the content-aware routing.</figcaption>
+        </figure>
+        <div class="scroll">
+          <table>
+            <thead><tr><th></th><th>L4 (transport)</th><th>L7 (application)</th></tr></thead>
+            <tbody>
+              <tr><td>Sees</td><td>IP addresses, ports, TCP / UDP</td><td>HTTP method, path, headers, cookies, gRPC</td></tr>
+              <tr><td>Unit balanced</td><td>Connection</td><td>Request</td></tr>
+              <tr><td>Routing</td><td>By address and port only</td><td>By host, path, header. Canary and blue-green splits</td></tr>
+              <tr><td>TLS</td><td>Usually passed through</td><td>Terminated, optionally re-encrypted to the backend</td></tr>
+              <tr><td>Extras</td><td>None. Preserves client IP easily</td><td>Retries, timeouts, compression, auth, rate limits, caching</td></tr>
+              <tr><td>Cost per request</td><td>Very low. Millions of connections per node</td><td>Higher: parses every request. Tens of thousands of RPS per core</td></tr>
+              <tr><td>Use when</td><td>Raw TCP / UDP, databases, the tier in front of L7</td><td>HTTP and gRPC services. The default for web APIs</td></tr>
+              <tr><td>Products</td><td>AWS NLB, LVS, Maglev-style</td><td>NGINX, HAProxy, Envoy, AWS ALB</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><b>Senior signal:</b> long-lived HTTP/2 and gRPC connections defeat L4 balancing, because one connection carries thousands of requests to a single backend. Balance gRPC at L7 or in the client.</p>
+      </section>
+
+      <section class="chapter" id="lb-algorithms">
+        <h2>Balancing algorithms</h2>
+        <p class="kind"><a href="#edge">The edge</a></p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Algorithm</th><th>Picks</th><th>Good for</th><th>Weakness</th></tr></thead>
+            <tbody>
+              <tr><td>Round robin</td><td>Next server in turn</td><td>Identical servers, short uniform requests</td><td>Ignores load. Slow requests pile up on one server</td></tr>
+              <tr><td>Weighted round robin</td><td>In turn, in proportion to a weight</td><td>Mixed instance sizes, canary at 1%</td><td>Weights are static</td></tr>
+              <tr><td>Least connections</td><td>Server with fewest open requests</td><td>Variable request duration, long-lived connections</td><td>A new or failing-fast server looks idle and gets flooded. Needs slow start</td></tr>
+              <tr><td>Consistent hash</td><td>Server owning hash(key)</td><td>Cache affinity, sharded or stateful backends</td><td>Uneven load with hot keys. See <a href="#consistent-hashing">consistent hashing</a></td></tr>
+              <tr><td>Power of two choices</td><td>Two servers at random, then the less loaded of the two</td><td>Many balancers with a stale view of load</td><td>Slightly worse than a perfect global view</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <ul>
+          <li><b>Why power of two choices:</b> when many balancers all pick "the least loaded server" from the same stale data, they stampede onto it. Two random candidates removes the herd and gets most of the benefit of full knowledge.</li>
+          <li><b>Default answer:</b> least connections or power of two choices for request traffic, consistent hash only when a request must reach a particular backend.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="lb-operations">
+        <h2>Health checks, pairs, stickiness, TLS</h2>
+        <p class="kind"><a href="#edge">The edge</a></p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  U([Clients]) --> VIP{{Virtual IP}}
+  VIP --> A[LB active]
+  VIP -.->|on failover| B[LB standby]
+  A <-.->|heartbeat| B
+  A --> S1[Server 1]
+  A --> S2[Server 2]
+  A -. ejected .-> S3[Server 3 unhealthy]
+          </script>
+          <figcaption>The balancer must not be the single point of failure. The standby takes over the virtual IP when heartbeats stop. Cloud load balancers hide this pair from you.</figcaption>
+        </figure>
+        <ul>
+          <li><b>Health checks:</b> <i>active</i> probes (GET <code>/healthz</code> every 2 to 10 s, eject after 2 or 3 failures) and <i>passive</i> checks (eject on real error rate or timeouts, also called outlier detection). Use both. Re-admit gradually.</li>
+          <li><b>Active-passive pair:</b> simple, and half the capacity is idle. Active-active behind anycast or DNS uses all capacity, and each node must then be able to carry the full load alone.</li>
+          <li><b>Sticky sessions:</b> pin a user to a server by cookie or source IP. Avoid: load becomes uneven, a server loss drops its sessions, and scale-in and deploys get harder. Keep session state in a shared store or a signed token instead. Acceptable for WebSocket connections, which are pinned by nature.</li>
+          <li><b>TLS termination:</b> terminate at the balancer to centralise certificates and to let L7 see the request. Re-encrypt to the backend (often mutual TLS) when the internal network is not trusted. A full handshake costs 1 round trip in TLS 1.3 and 2 in TLS 1.2, so keep connections alive and resume sessions.</li>
+        </ul>
+        <p class="note"><b>Failure mode:</b> a health check that tests a shared dependency (the database) fails on every server at once and the balancer ejects the whole pool. Keep the check shallow and fail open when most of the pool looks unhealthy.</p>
+      </section>
+
+      <section class="chapter" id="gateway">
+        <h2>Reverse proxy and API gateway</h2>
+        <p class="kind"><a href="#edge">The edge</a></p>
+        <p>A reverse proxy is any server that accepts requests on behalf of backends. A load balancer is a reverse proxy whose job is distribution. An API gateway is a reverse proxy whose job is API policy.</p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  M([Mobile]) --> GW
+  W([Web]) --> GW
+  subgraph GW["API gateway"]
+    direction TB
+    T[TLS and auth] --> RL[Rate limit]
+    RL --> RT[Route and shape]
+  end
+  GW --> U[User service]
+  GW --> O[Order service]
+  GW --> P[Payment service]
+          </script>
+          <figcaption>Cross-cutting concerns are done once at the gateway so that each service does not re-implement them.</figcaption>
+        </figure>
+        <div class="scroll">
+          <table>
+            <thead><tr><th></th><th>Load balancer</th><th>Reverse proxy</th><th>API gateway</th></tr></thead>
+            <tbody>
+              <tr><td>Main job</td><td>Spread load, hide failures</td><td>Front one or more backends</td><td>Enforce API policy per client and per route</td></tr>
+              <tr><td>Typical features</td><td>Algorithms, health checks</td><td>TLS, compression, caching, static files</td><td>Authentication, rate limits and quotas, routing by version, request and response shaping, aggregation</td></tr>
+              <tr><td>Knows about</td><td>Servers</td><td>Sites and paths</td><td>API keys, users, plans, routes</td></tr>
+              <tr><td>Products</td><td>NLB, HAProxy</td><td>NGINX, Envoy</td><td>Kong, Apigee, AWS API Gateway</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <ul>
+          <li><b>Request shaping:</b> size limits, header normalisation, protocol translation (REST to gRPC), response trimming for mobile.</li>
+          <li><b>Use a gateway when</b> many services share auth, quotas and versioning, or third parties call the API. <b>Avoid</b> putting business logic in it: it becomes a shared monolith that every team must deploy through.</li>
+        </ul>
+        <p class="note"><b>Trade-off:</b> the gateway adds a hop (about 1 to 5 ms) and is on the path of every request, so it needs the same redundancy as the load balancer. Details of gateway patterns are in <a href="sd-api-design.html">API and Communication Design</a>.</p>
+      </section>
+
+      <section class="chapter part" id="compute">
+        <h2>Compute</h2>
+        <p class="kind">Part 2 of 7 &middot; servers you can add and remove freely</p>
+        <p>Compute scales horizontally only if any instance can serve any request. Everything in this part follows from pushing state out of the process.</p>
+        <ul>
+          <li><a href="#stateless">Stateless services</a> and horizontal scaling</li>
+          <li><a href="#autoscaling">Autoscaling signals</a></li>
+          <li><a href="#service-discovery">Service discovery</a>: client-side vs server-side</li>
+          <li><a href="#connection-pooling">Connection pooling</a></li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="stateless">
+        <h2>Stateless services</h2>
+        <p class="kind"><a href="#compute">Compute</a></p>
+        <p>A stateless service keeps nothing between requests that another instance would need. Sessions, uploads, locks and counters live in shared stores.</p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  LB[Load balancer] --> A1[Instance 1]
+  LB --> A2[Instance 2]
+  LB --> A3[Instance N]
+  A1 --> SS[(Session store)]
+  A2 --> SS
+  A3 --> SS
+  A1 --> DB[(Database)]
+  A2 --> DB
+  A3 --> DB
+          </script>
+          <figcaption>Instances are interchangeable, so any of them can be added, killed or replaced mid-traffic. The state tier is now the part that is hard to scale.</figcaption>
+        </figure>
+        <div class="scroll">
+          <table>
+            <thead><tr><th></th><th>Vertical scaling (bigger machine)</th><th>Horizontal scaling (more machines)</th></tr></thead>
+            <tbody>
+              <tr><td>Limit</td><td>Largest machine available</td><td>Coordination and the shared state tier</td></tr>
+              <tr><td>Failure</td><td>One machine is a single point of failure</td><td>Loses 1 / N of capacity</td></tr>
+              <tr><td>Complexity</td><td>None</td><td>Load balancing, discovery, externalised state</td></tr>
+              <tr><td>Use when</td><td>Early stage, and stateful stores for as long as possible</td><td>Stateless tiers, always</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <ul>
+          <li><b>Where session state goes:</b> a signed token in the client (no lookup, hard to revoke) or a session store such as Redis (one lookup, easy to revoke).</li>
+          <li><b>Capacity rule:</b> run N + 1 or N + 2 so that losing an instance or a zone leaves utilisation below about 70%. A typical request-serving instance handles hundreds to a few thousand RPS, depending on the work per request.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="autoscaling">
+        <h2>Autoscaling signals</h2>
+        <p class="kind"><a href="#compute">Compute</a></p>
+        <p>Scale on the signal that saturates first for the workload, and prefer a signal that leads demand over one that lags it.</p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Signal</th><th>Fits</th><th>Watch out for</th></tr></thead>
+            <tbody>
+              <tr><td>CPU utilisation (target 50 to 60%)</td><td>CPU-bound request handlers</td><td>Useless for I/O-bound services that stall at 20% CPU</td></tr>
+              <tr><td>Requests per instance</td><td>Uniform request cost</td><td>Needs a known per-instance capacity from load tests</td></tr>
+              <tr><td>Queue depth or consumer lag</td><td>Workers behind a queue</td><td>Scale on backlog divided by processing rate, not raw depth</td></tr>
+              <tr><td>Latency (p95 / p99)</td><td>User-facing SLO</td><td>Lagging, and a slow dependency triggers pointless scale-out</td></tr>
+              <tr><td>Schedule or forecast</td><td>Daily peaks, launches, sales</td><td>Wrong forecast. Combine with a reactive signal</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <ul>
+          <li><b>Scale out fast, scale in slowly:</b> use a cooldown and step limits to stop flapping.</li>
+          <li><b>Reaction time</b> is detection + provisioning + warm-up: tens of seconds for containers, minutes for virtual machines. Keep headroom for the spike that arrives faster than that.</li>
+        </ul>
+        <p class="note"><b>Failure mode:</b> scaling the stateless tier moves the bottleneck to the database, usually as connection exhaustion. Cap the maximum instance count by what the tier behind it can take.</p>
+      </section>
+
+      <section class="chapter" id="service-discovery">
+        <h2>Service discovery</h2>
+        <p class="kind"><a href="#compute">Compute</a></p>
+        <p>Instances come and go, so callers need a live list of healthy addresses. Instances register themselves (or the platform registers them) and health checks or heartbeats remove the dead ones.</p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  subgraph CS["Client-side"]
+    A[Caller with LB library] -->|1 lookup| R1[(Registry)]
+    A -->|2 call directly| B1[Instance]
+    A --> B2[Instance]
+  end
+  subgraph SS["Server-side"]
+    C[Caller] -->|stable name| P[Proxy or LB]
+    P -->|lookup| R2[(Registry)]
+    P --> D1[Instance]
+    P --> D2[Instance]
+  end
+          </script>
+          <figcaption>Client-side: the caller holds the instance list and balances itself. Server-side: the caller knows one stable name and a proxy does the rest.</figcaption>
+        </figure>
+        <div class="scroll">
+          <table>
+            <thead><tr><th></th><th>Client-side</th><th>Server-side</th></tr></thead>
+            <tbody>
+              <tr><td>Extra hop</td><td>No</td><td>Yes (proxy)</td></tr>
+              <tr><td>Balancing logic lives in</td><td>A library in every language you use</td><td>One proxy tier</td></tr>
+              <tr><td>Smart routing</td><td>Easy: per-request choice, zone awareness</td><td>Whatever the proxy supports</td></tr>
+              <tr><td>Examples</td><td>Eureka with a client library, gRPC with a resolver</td><td>Kubernetes Service, cloud load balancer, internal DNS</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <ul>
+          <li><b>Service mesh:</b> a sidecar proxy next to each instance does client-side discovery without a library in the application.</li>
+          <li><b>Registry:</b> a strongly consistent store such as etcd, ZooKeeper or Consul. Callers must cache the last known list so that a registry outage does not stop traffic.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="connection-pooling">
+        <h2>Connection pooling</h2>
+        <p class="kind"><a href="#compute">Compute</a></p>
+        <p>A pool keeps a bounded set of open connections and lends them to requests. It removes per-request connection setup (TCP + TLS + authentication, several round trips) and caps the load on the backend.</p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  A1["App 1, pool 10"] --> PX["Pooler, 3000 clients in"]
+  A2["App 2, pool 10"] --> PX
+  A3["App 300, pool 10"] --> PX
+  PX -->|100 connections| DB[(Database)]
+          </script>
+          <figcaption>300 instances with 10 connections each would open 3,000 database connections. A pooling proxy multiplexes them onto the 100 the database can serve well.</figcaption>
+        </figure>
+        <ul>
+          <li><b>Sizing:</b> instances x pool size must stay below the database connection limit, with room for admin and migration sessions. A database does useful work on roughly as many connections as it has cores, so small pools with a short wait queue beat large pools.</li>
+          <li><b>Why the limit is low:</b> a PostgreSQL connection is a server process costing several MB, so limits are usually in the hundreds. Use a proxy (PgBouncer, RDS Proxy, ProxySQL) once the instance count is large or when using serverless functions.</li>
+          <li><b>Settings that matter:</b> acquire timeout (fail fast instead of queueing forever), max lifetime (so connections rebalance after a failover), validation on borrow.</li>
+        </ul>
+        <p class="note"><b>Failure mode:</b> one slow query holds connections, the pool empties, every request waits on acquire and the service appears down while the database is merely slow. Set query timeouts shorter than the acquire timeout.</p>
+      </section>
+
+      <section class="chapter part" id="caching">
+        <h2>Caching</h2>
+        <p class="kind">Part 3 of 7 &middot; trade freshness and memory for latency and load</p>
+        <p>A cache keeps the result of expensive work close to where it is needed. Every caching decision is three choices: where it lives, how it is filled and written, and how stale data leaves.</p>
+        <ul>
+          <li><a href="#cache-layers">Where caches live</a></li>
+          <li>Strategies: <a href="#cache-aside">cache-aside</a>, <a href="#read-through">read-through</a>, <a href="#write-through">write-through</a>, <a href="#write-behind">write-behind</a>, <a href="#refresh-ahead">refresh-ahead</a>, and <a href="#cache-strategies">how to choose</a></li>
+          <li><a href="#eviction">Eviction policies</a> and <a href="#cache-invalidation">invalidation</a></li>
+          <li>Classic problems: <a href="#stampede">stampede</a>, <a href="#cache-problems">penetration, avalanche, hot keys, big keys</a>, <a href="#stale-data">stale data</a></li>
+          <li><a href="#redis-memcached">Redis vs Memcached</a> and <a href="#cache-sizing">sizing a cache</a></li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="cache-layers">
+        <h2>Where caches live</h2>
+        <p class="kind"><a href="#caching">Caching</a></p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  B[Browser cache] --> CDN[CDN edge]
+  CDN --> GW[Gateway cache]
+  GW --> L[In-process cache]
+  L --> R[(Distributed cache)]
+  R --> DB[(Database buffer pool)]
+          </script>
+          <figcaption>A request stops at the first layer that has the answer. Layers to the left are faster and cheaper, and harder to invalidate.</figcaption>
+        </figure>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Layer</th><th>Holds</th><th>Latency</th><th>Invalidation</th></tr></thead>
+            <tbody>
+              <tr><td>Client (browser, app)</td><td>Static assets, API responses with <code>Cache-Control</code> or ETag</td><td>0 ms</td><td>None once sent: TTL or a new URL only</td></tr>
+              <tr><td>CDN</td><td>Shared public content</td><td>10 to 30 ms</td><td>Purge API, seconds to minutes</td></tr>
+              <tr><td>Gateway / reverse proxy</td><td>Whole responses for hot endpoints</td><td>About 1 ms</td><td>TTL or purge</td></tr>
+              <tr><td>In-process</td><td>Small hot set: config, feature flags, hot objects</td><td>Under 1 microsecond</td><td>Hard: each instance has its own copy. Short TTL or a pub-sub invalidation message</td></tr>
+              <tr><td>Distributed (Redis, Memcached)</td><td>Objects, query results, sessions, counters</td><td>0.5 to 1 ms in the same zone</td><td>Explicit delete or TTL</td></tr>
+              <tr><td>Database</td><td>Pages in the buffer pool, materialised views</td><td>Part of the query</td><td>Managed by the database</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><b>Interview tip:</b> name the layer and the key when you say "add a cache": "a Redis cache-aside on <code>product:{id}</code>, TTL 5 minutes, deleted on update" is an answer. "We cache it" is not.</p>
+      </section>
+
+      <section class="chapter" id="cache-aside">
+        <h2>Cache-aside</h2>
+        <p class="kind"><a href="#caching">Caching</a></p>
+        <p>The application owns the logic: read the cache, on a miss read the database and fill the cache, on a write update the database and <b>delete</b> the key. Also called lazy loading. It is the default.</p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+sequenceDiagram
+  participant A as App
+  participant K as Cache
+  participant D as Database
+  A->>K: GET product:42
+  K-->>A: miss
+  A->>D: SELECT product 42
+  D-->>A: row
+  A->>K: SET product:42 with TTL
+  Note over A,D: write path
+  A->>D: UPDATE product 42
+  A->>K: DEL product:42
+          </script>
+          <figcaption>Only requested data is cached, and a cache outage degrades to slower reads instead of errors.</figcaption>
+        </figure>
+        <ul>
+          <li><b>Use when:</b> read-heavy, misses are tolerable, the cached shape differs from the table (joined or computed objects).</li>
+          <li><b>Pay:</b> every miss costs three round trips, and there is a stale window between the database write and the delete, plus a rare <a href="#stale-data">race</a>.</li>
+          <li><b>Delete, do not set, on write:</b> two concurrent writers that both set can leave the older value in the cache. Delete is idempotent and order-free.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="read-through">
+        <h2>Read-through</h2>
+        <p class="kind"><a href="#caching">Caching</a></p>
+        <p>The same read flow as cache-aside, with the loading moved into the cache layer or a caching library. The application only ever talks to the cache.</p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+sequenceDiagram
+  participant A as App
+  participant K as Cache with loader
+  participant D as Database
+  A->>K: get product:42
+  K->>D: load on miss
+  D-->>K: row
+  K-->>A: value, now cached
+  A->>K: get product:42
+  K-->>A: value from memory
+          </script>
+          <figcaption>The loader lives in one place, which makes request coalescing and refresh policies easy to add.</figcaption>
+        </figure>
+        <ul>
+          <li><b>Use when:</b> a library or a cache service supports loaders (Caffeine, Guava, a CDN, DynamoDB DAX) and you want uniform behaviour for many callers.</li>
+          <li><b>Pay:</b> the cached model must match what the loader can fetch, and the cache is now on the critical path for reads.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="write-through">
+        <h2>Write-through</h2>
+        <p class="kind"><a href="#caching">Caching</a></p>
+        <p>Every write goes to the cache and the database synchronously, as one operation, before the caller gets a reply. Reads then always hit.</p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+sequenceDiagram
+  participant A as App
+  participant K as Cache
+  participant D as Database
+  A->>K: put product:42
+  K->>D: write row
+  D-->>K: ok
+  K-->>A: ok
+  A->>K: get product:42
+  K-->>A: fresh value
+          </script>
+          <figcaption>The cache is never behind the database, at the price of a slower write.</figcaption>
+        </figure>
+        <ul>
+          <li><b>Use when:</b> data is read soon after it is written and stale reads are not acceptable. Usually paired with read-through.</li>
+          <li><b>Pay:</b> write latency includes both stores, data that is never read still fills the cache (add a TTL), and a failure between the two writes needs a rule: write the database first and treat the cache write as best effort.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="write-behind">
+        <h2>Write-behind</h2>
+        <p class="kind"><a href="#caching">Caching</a></p>
+        <p>The write is acknowledged from the cache and flushed to the database later, in batches. Also called write-back.</p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+sequenceDiagram
+  participant A as App
+  participant K as Cache
+  participant D as Database
+  A->>K: incr views:42
+  K-->>A: ok in under 1 ms
+  A->>K: incr views:42
+  K-->>A: ok
+  Note over K,D: later, batched
+  K-)D: flush views:42 +2
+          </script>
+          <figcaption>Many small writes collapse into one database write. Anything not yet flushed is lost if the cache node dies.</figcaption>
+        </figure>
+        <ul>
+          <li><b>Use when:</b> write-heavy and loss-tolerant: view counters, likes, last-seen timestamps, metrics.</li>
+          <li><b>Avoid when:</b> the write is money, inventory or anything that must survive a crash. If you need both speed and durability, write to a durable log first (see <a href="#queue-vs-stream">queues and logs</a>).</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="refresh-ahead">
+        <h2>Refresh-ahead</h2>
+        <p class="kind"><a href="#caching">Caching</a></p>
+        <p>The cache reloads a hot entry in the background shortly before it expires, so readers never see the miss.</p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+sequenceDiagram
+  participant A as App
+  participant K as Cache
+  participant D as Database
+  A->>K: get home:feed, TTL nearly over
+  K-->>A: current value at once
+  K-)D: reload in background
+  D--)K: new value, TTL reset
+  A->>K: get home:feed
+  K-->>A: refreshed value
+          </script>
+          <figcaption>Readers always get an answer from memory. The reload happens off the request path.</figcaption>
+        </figure>
+        <ul>
+          <li><b>Use when:</b> a small set of very hot keys is expensive to rebuild: home page, leaderboards, configuration.</li>
+          <li><b>Pay:</b> wasted reloads for keys nobody asks for again. Refresh only keys read within the last TTL.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="cache-strategies">
+        <h2>Choosing a caching strategy</h2>
+        <p class="kind"><a href="#caching">Caching</a></p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Strategy</th><th>Consistency with the database</th><th>Read latency</th><th>Write latency</th><th>If the cache fails</th></tr></thead>
+            <tbody>
+              <tr><td>Cache-aside</td><td>Stale until delete or TTL</td><td>Fast on hit, slow on miss</td><td>Database + one delete</td><td>Reads fall back to the database. Watch the load</td></tr>
+              <tr><td>Read-through</td><td>Stale until TTL or invalidation</td><td>Fast on hit, slow on miss</td><td>Unchanged</td><td>Reads fail unless the library falls back</td></tr>
+              <tr><td>Write-through</td><td>Fresh</td><td>Always fast</td><td>Slower: two writes</td><td>Writes fail or bypass, by policy</td></tr>
+              <tr><td>Write-behind</td><td>Database lags the cache</td><td>Always fast</td><td>Fastest</td><td>Unflushed writes are lost</td></tr>
+              <tr><td>Refresh-ahead</td><td>Stale by at most one refresh interval</td><td>Always fast for hot keys</td><td>Unchanged</td><td>Serves stale, then misses</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><b>Senior signal:</b> state the staleness you accept as a number ("product price may be up to 60 s old, stock is never cached") and pick the strategy from that. Do not cache what must be read-after-write correct unless you also say how it is invalidated.</p>
+      </section>
+
+      <section class="chapter" id="eviction">
+        <h2>Eviction policies</h2>
+        <p class="kind"><a href="#caching">Caching</a></p>
+        <p>Eviction decides what leaves when memory is full. Expiry (TTL) decides what leaves because it is old. A cache needs both.</p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Policy</th><th>Evicts</th><th>Good for</th><th>Weakness</th></tr></thead>
+            <tbody>
+              <tr><td>LRU</td><td>Least recently used</td><td>General default: recent access predicts the next one</td><td>A one-off scan over cold keys flushes the hot set</td></tr>
+              <tr><td>LFU</td><td>Least frequently used</td><td>Stable popularity: catalogue, media</td><td>Old favourites linger unless counts decay. New keys are evicted early</td></tr>
+              <tr><td>FIFO</td><td>Oldest inserted</td><td>Cheap. Data that ages out naturally</td><td>Evicts hot keys just for being old</td></tr>
+              <tr><td>TTL</td><td>Expired entries, or soonest to expire</td><td>Bounding staleness</td><td>Not a memory policy by itself</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <ul>
+          <li><b>Choosing:</b> start with LRU plus a TTL on every key. Move to LFU when the hit ratio is poor and popularity is skewed and stable. Modern caches use hybrids (for example W-TinyLFU in Caffeine) that admit a new key only if it is likely to be more useful than the victim.</li>
+          <li><b>In Redis:</b> eviction is approximate (it samples keys). <code>allkeys-lru</code> or <code>allkeys-lfu</code> for a pure cache. The default <code>noeviction</code> returns errors on writes when memory is full, which is right for a data store and wrong for a cache.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="cache-invalidation">
+        <h2>Cache invalidation</h2>
+        <p class="kind"><a href="#caching">Caching</a></p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Approach</th><th>How</th><th>Staleness</th><th>Cost</th></tr></thead>
+            <tbody>
+              <tr><td>TTL only</td><td>Let entries expire</td><td>Up to the TTL</td><td>None. Always have it as the safety net</td></tr>
+              <tr><td>Delete on write</td><td>Writer deletes the keys it affects</td><td>Milliseconds</td><td>The writer must know every key derived from the row</td></tr>
+              <tr><td>Event-driven</td><td>Consumer of the database change stream (CDC) deletes keys</td><td>Sub-second to seconds</td><td>A pipeline to run. Decouples writers from cache keys</td></tr>
+              <tr><td>Versioned keys</td><td>Put a version in the key (<code>user:42:v7</code>) and bump it</td><td>None for readers that know the version</td><td>An extra lookup for the version. Old keys expire by TTL</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <ul>
+          <li><b>The hard cases</b> are derived keys: lists, counts and search pages that depend on many rows. Prefer short TTLs for those and precise invalidation for single-entity keys.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="stampede">
+        <h2>Stampede (thundering herd)</h2>
+        <p class="kind"><a href="#caching">Caching</a></p>
+        <p>A hot key expires, and every concurrent request misses and recomputes it at once. The database sees the whole read load for that key in one burst.</p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+sequenceDiagram
+  participant R1 as Request 1
+  participant R2 as Request 2
+  participant K as Cache
+  participant D as Database
+  R1->>K: get hot key
+  K-->>R1: miss
+  R2->>K: get hot key
+  K-->>R2: miss
+  R1->>K: SET lock NX with short TTL
+  K-->>R1: acquired
+  R2->>K: SET lock NX
+  K-->>R2: held by another
+  R1->>D: rebuild once
+  D-->>R1: value
+  R1->>K: set hot key, release lock
+  R2->>K: retry after a short wait
+  K-->>R2: hit
+          </script>
+          <figcaption>With a per-key lock only one request rebuilds the value. The others wait briefly or are given the stale value.</figcaption>
+        </figure>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Fix</th><th>How it works</th><th>Note</th></tr></thead>
+            <tbody>
+              <tr><td>Locking</td><td>Per-key mutex in the cache. One rebuilds, the rest wait or serve stale</td><td>The lock needs a TTL so a crashed holder does not block the key</td></tr>
+              <tr><td>Request coalescing</td><td>In one process, concurrent callers for a key share one in-flight load ("single flight")</td><td>Cuts the herd to one per instance, with no extra round trip</td></tr>
+              <tr><td>Jittered TTL</td><td>TTL = base + random 0 to 10 or 20%</td><td>Stops keys that were written together from expiring together</td></tr>
+              <tr><td>Early refresh</td><td>Refresh before expiry, either by a background job or probabilistically as the TTL nears its end</td><td>The hot key never actually misses</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="chapter" id="cache-problems">
+        <h2>Penetration, avalanche, hot keys, big keys</h2>
+        <p class="kind"><a href="#caching">Caching</a></p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Problem</th><th>What happens</th><th>Fixes</th></tr></thead>
+            <tbody>
+              <tr><td>Penetration</td><td>Requests for keys that do not exist miss the cache every time and always reach the database. Often an attack or a bug</td><td>Negative caching (store "not found" with a short TTL), a <a href="#bloom-filter">Bloom filter</a> of valid ids in front, input validation</td></tr>
+              <tr><td>Avalanche</td><td>A large share of keys expires together, or the cache cluster goes down, and the database takes the full read load</td><td>Jittered TTLs, replicas and multi-zone cache, warm-up before taking traffic, load shedding and circuit breakers on the database path</td></tr>
+              <tr><td>Hot key</td><td>One key takes a large share of traffic and overloads the single shard that owns it</td><td>In-process cache in front, read from replicas, split into <code>key#1..N</code> copies and pick one at random</td></tr>
+              <tr><td>Big key</td><td>One value of many MB, or a collection with millions of members, blocks the server while it is read, deleted or migrated</td><td>Split into chunks or buckets, page through collections, delete asynchronously, compress, store the blob elsewhere and cache a pointer</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  R([Request for id]) --> BF{{In Bloom filter?}}
+  BF -->|no| N[Return 404]
+  BF -->|maybe| K{{In cache?}}
+  K -->|hit| V[Return value]
+  K -->|miss| DB[(Database)]
+  DB -->|found| S[Cache value]
+  DB -->|not found| NC[Cache the miss briefly]
+          </script>
+          <figcaption>Two defences against penetration: the Bloom filter rejects ids that cannot exist, and negative caching absorbs the rest.</figcaption>
+        </figure>
+        <p class="note"><b>Failure mode:</b> a cache that hides an undersized database. If the system cannot survive a cold cache, the cache is a hard dependency and needs the availability of a database: replicas, failover, and a tested warm-up plan.</p>
+      </section>
+
+      <section class="chapter" id="stale-data">
+        <h2>Stale data and double delete</h2>
+        <p class="kind"><a href="#caching">Caching</a></p>
+        <p>Cache-aside has a race: a reader that missed can write an old value back <i>after</i> a writer has deleted the key. The stale value then lives for a full TTL.</p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+sequenceDiagram
+  participant Rd as Reader
+  participant Wr as Writer
+  participant K as Cache
+  participant D as Database
+  Rd->>K: get, miss
+  Rd->>D: read old value v1
+  Wr->>D: write v2
+  Wr->>K: delete key
+  Rd->>K: set v1, now stale
+  Note over Wr,K: after a short delay
+  Wr-)K: delete key again
+          </script>
+          <figcaption>The delayed second delete removes whatever a slow reader put back. The delay should exceed one read round trip plus replication lag.</figcaption>
+        </figure>
+        <ul>
+          <li><b>Double delete:</b> delete, then delete again after a few hundred ms to a second, usually from a queue so that it is retried. It narrows the window and does not close it.</li>
+          <li><b>Also happens with replicas:</b> the reader fills the cache from a lagging replica after the delete. The delay must cover replication lag, or cache fills must read the leader.</li>
+          <li><b>Stronger fixes:</b> invalidate from the change stream in commit order, or store a version with the value and only accept a set with a newer version (compare-and-set). A TTL remains the backstop.</li>
+          <li><b>Order of operations:</b> write the database, then delete the cache. Deleting first lets a reader refill the old value before the write commits.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="redis-memcached">
+        <h2>Redis vs Memcached</h2>
+        <p class="kind"><a href="#caching">Caching</a></p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th></th><th>Redis</th><th>Memcached</th></tr></thead>
+            <tbody>
+              <tr><td>Data model</td><td>Strings, hashes, lists, sets, sorted sets, streams, bitmaps, HyperLogLog, geo</td><td>Opaque string values only</td></tr>
+              <tr><td>Threading</td><td>Commands run on one thread (I/O can be threaded), so each command is atomic</td><td>Multi-threaded: uses all cores of one node</td></tr>
+              <tr><td>Persistence</td><td>Optional snapshots and append-only file</td><td>None</td></tr>
+              <tr><td>Replication and failover</td><td>Built in: replicas, Sentinel, Cluster</td><td>None built in</td></tr>
+              <tr><td>Sharding</td><td>Redis Cluster: 16,384 hash slots assigned to nodes</td><td>Client-side, usually consistent hashing</td></tr>
+              <tr><td>Extras</td><td>Atomic scripts, transactions, pub-sub, per-key TTL, many eviction policies</td><td>LRU eviction, per-key TTL</td></tr>
+              <tr><td>Value size</td><td>Up to 512 MB per string (keep values small anyway)</td><td>1 MB by default</td></tr>
+              <tr><td>Pick it for</td><td>Almost everything: cache plus counters, leaderboards, rate limits, sessions, locks, queues</td><td>A plain, very large, multi-threaded key-value cache with simple operations</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <ul>
+          <li><b>Numbers:</b> either does on the order of 100,000 simple operations per second per node, with sub-millisecond latency inside a zone. Network round trips dominate, so pipeline or batch (<code>MGET</code>).</li>
+          <li><b>Failure mode:</b> Redis replication is asynchronous, so a failover can lose the last acknowledged writes. Do not treat it as the system of record unless you accept that.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="cache-sizing">
+        <h2>Sizing a cache</h2>
+        <p class="kind"><a href="#caching">Caching</a></p>
+        <p>Access is skewed: roughly 20% of the items take 80% of the reads. Cache the hot 20% and you take most of the load off the database for a fifth of the memory.</p>
+        <script type="text/plain" data-lang="text" data-file="cache sizing, worked example" data-norun>
+Given     100 M products, 1 KB average cached object
+          20,000 read QPS at peak, 200 write QPS
+
+Hot set   20% x 100 M           = 20 M objects
+Raw size  20 M x 1 KB           = 20 GB
+Overhead  x 1.5 (keys, pointers, fragmentation)
+                                = 30 GB
+Headroom  keep memory under 75% = 40 GB provisioned
+
+Layout    3 shards x 16 GB, each with 1 replica = 6 nodes
+
+Hit ratio about 80%
+DB reads  20,000 x (1 - 0.8)    = 4,000 QPS      (was 20,000)
+Cold      if the cache is empty the database sees all 20,000 QPS:
+          plan warm-up and load shedding for that case
+        </script>
+        <ul>
+          <li><b>Check throughput too:</b> 20,000 QPS over 3 shards is about 7,000 operations per second per node, far below what a node can do. Memory, not CPU, sets the node count here.</li>
+          <li><b>Measure, then adjust:</b> the real signal is the hit ratio and the eviction rate. Evictions with a low hit ratio mean the cache is too small or the TTL too long for the key space.</li>
+          <li><b>TTL from the staleness budget</b>, not from memory: memory pressure is handled by eviction.</li>
+        </ul>
+      </section>
+
+      <section class="chapter part" id="storage">
+        <h2>Storage choices</h2>
+        <p class="kind">Part 4 of 7 &middot; pick the store from the data model and the queries</p>
+        <p>Choose a database by the shape of the data, the access patterns and the consistency needed, in that order. Most systems use more than one store: a system of record plus derived stores for search, analytics and caching. Storage engines, indexes, transactions and isolation are covered in <a href="sd-data-systems.html">Data Systems</a>.</p>
+        <ul>
+          <li><a href="#db-families">Database families</a>: the decision table</li>
+          <li><a href="#sql-nosql">SQL vs NoSQL</a>, stated carefully</li>
+          <li><a href="#object-storage">Object storage and large files</a></li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="db-families">
+        <h2>Database families</h2>
+        <p class="kind"><a href="#storage">Storage choices</a></p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Family</th><th>Data model</th><th>Strengths</th><th>Weaknesses</th><th>Typical products</th><th>Pick it when the question is</th></tr></thead>
+            <tbody>
+              <tr><td>Relational</td><td>Tables, rows, foreign keys, SQL</td><td>ACID transactions, joins, ad hoc queries, constraints</td><td>Write scaling beyond one node needs sharding or a distributed SQL engine</td><td>PostgreSQL, MySQL, Spanner, CockroachDB</td><td>"Do several records have to change together, correctly?"</td></tr>
+              <tr><td>Key-value</td><td>Key to opaque value</td><td>Simplest, fastest, scales by partitioning the key</td><td>Lookup by key only. No queries on the value</td><td>Redis, DynamoDB, Riak</td><td>"Is every access a get or put by one known key?"</td></tr>
+              <tr><td>Document</td><td>JSON-like documents, nested fields</td><td>Flexible schema, whole aggregate in one read, secondary indexes</td><td>Joins and multi-document invariants are weak or costly. Duplication</td><td>MongoDB, Couchbase, Firestore</td><td>"Is the data a self-contained aggregate read as a whole?"</td></tr>
+              <tr><td>Wide-column</td><td>Partition key + sorted clustering columns</td><td>Very high write throughput, linear scale, time-ordered rows in a partition</td><td>Queries must follow the key design. No joins. Usually eventual consistency</td><td>Cassandra, HBase, Bigtable, ScyllaDB</td><td>"Is it huge, write-heavy, and always queried by a known key and range?"</td></tr>
+              <tr><td>Graph</td><td>Nodes, edges, properties</td><td>Multi-hop traversals, path queries</td><td>Hard to shard. Poor at bulk aggregates</td><td>Neo4j, Neptune, JanusGraph</td><td>"Is the query about relationships several hops deep?"</td></tr>
+              <tr><td>Time-series</td><td>Timestamped points per series, with tags</td><td>Fast append, compression, downsampling, retention</td><td>High-cardinality tags are expensive. Updates are awkward</td><td>InfluxDB, TimescaleDB, Prometheus</td><td>"Is it append-only measurements queried by time window?"</td></tr>
+              <tr><td>Search</td><td>Documents in an inverted index</td><td>Full-text, relevance ranking, facets, fuzzy match</td><td>Near-real-time, not transactional. Not a system of record</td><td>Elasticsearch, OpenSearch, Solr</td><td>"Does the user type words and expect ranked results?"</td></tr>
+              <tr><td>Object / blob store</td><td>Bucket + key to immutable bytes</td><td>Cheap, very durable, effectively unlimited, HTTP access</td><td>No query, no partial update, tens of ms per request</td><td>S3, GCS, Azure Blob</td><td>"Is it a file or a large payload?"</td></tr>
+              <tr><td>Data warehouse</td><td>Columnar tables, SQL</td><td>Scans and aggregates over billions of rows</td><td>Seconds per query. Poor at point lookups and frequent small writes</td><td>BigQuery, Snowflake, Redshift, ClickHouse</td><td>"Is it analytics over history, not serving a user request?"</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><b>Interview tip:</b> justify each store in one sentence from the access pattern: "orders in PostgreSQL because checkout updates order, payment and stock rows in one transaction, product search in Elasticsearch fed by change events, images in object storage behind the CDN".</p>
+      </section>
+
+      <section class="chapter" id="sql-nosql">
+        <h2>SQL vs NoSQL, stated carefully</h2>
+        <p class="kind"><a href="#storage">Storage choices</a></p>
+        <p>The real difference is the data model and the <i>shape</i> in which each scales, not that one scales and the other does not. Relational databases run at very large scale with replicas and sharding. NoSQL stores scale out more easily because they give up joins and cross-partition transactions, which are exactly the features that are hard to distribute.</p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Dimension</th><th>Relational</th><th>Typical NoSQL (key-value, document, wide-column)</th></tr></thead>
+            <tbody>
+              <tr><td>Design starts from</td><td>The entities: normalise, then query any way</td><td>The queries: one table or collection per access pattern, denormalised</td></tr>
+              <tr><td>Schema</td><td>Enforced on write</td><td>Flexible, enforced by the application on read</td></tr>
+              <tr><td>Transactions</td><td>Multi-row ACID is the default</td><td>Single key or single partition by default. Wider ones are limited or cost more</td></tr>
+              <tr><td>Joins</td><td>In the database</td><td>In the application, or avoided by duplication</td></tr>
+              <tr><td>Scaling shape</td><td>Scale up, add read replicas, then shard (manual, or built in with distributed SQL)</td><td>Partitioned from day one: add nodes for capacity</td></tr>
+              <tr><td>Consistency</td><td>Strong on the leader</td><td>Often tunable or eventual</td></tr>
+              <tr><td>New query later</td><td>Add an index</td><td>May need a new table and a backfill</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <ul>
+          <li><b>Default to relational</b> when access patterns are still changing or invariants span records. A single well-indexed node handles thousands of writes and tens of thousands of simple reads per second, and terabytes of data.</li>
+          <li><b>Choose NoSQL</b> when the access pattern is known and simple, the write volume or data size is beyond one node, and you can live without cross-partition joins and transactions.</li>
+          <li><b>The lines blur:</b> PostgreSQL stores JSON, DynamoDB and MongoDB have transactions, and distributed SQL gives relational semantics on a partitioned store at a latency cost.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="object-storage">
+        <h2>Object storage and large files</h2>
+        <p class="kind"><a href="#storage">Storage choices</a></p>
+        <p>Never put large binaries in the database or send them through application servers. Store bytes in an object store, keep metadata in a database, and let clients transfer directly with short-lived signed URLs.</p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+sequenceDiagram
+  participant C as Client
+  participant A as App service
+  participant M as Metadata DB
+  participant O as Object store
+  C->>A: request upload for video.mp4
+  A->>M: insert file row, status pending
+  A-->>C: pre-signed URLs, one per part
+  C->>O: PUT parts in parallel
+  O-->>C: part checksums
+  C->>A: complete upload
+  A->>O: assemble parts
+  A->>M: status ready, size, checksum
+          </script>
+          <figcaption>The bytes never pass through the application tier. It only issues URLs and records metadata.</figcaption>
+        </figure>
+        <ul>
+          <li><b>Metadata vs blob split:</b> the database row holds owner, name, size, checksum, status and the object key. It is small, queryable and transactional. The blob is immutable and addressed by key.</li>
+          <li><b>Chunking:</b> split a large file into parts (commonly 4 to 64 MB). Parts upload in parallel, a failed part is retried alone, an interrupted upload resumes, and identical chunks can be deduplicated by content hash. The file is then a list of chunk ids in the metadata store.</li>
+          <li><b>Pre-signed URL:</b> a URL signed by the service that grants one operation on one key for a few minutes. Downloads use the same idea, usually through the CDN.</li>
+          <li><b>Numbers:</b> S3 is designed for eleven nines of durability. Multipart parts are 5 MB to 5 GB with up to 10,000 parts. First-byte latency is tens of ms, so it is not a low-latency key-value store.</li>
+          <li><b>Lifecycle:</b> move cold objects to cheaper tiers by age, and delete the parts of abandoned uploads.</li>
+        </ul>
+        <p class="note"><b>Failure mode:</b> orphans. The blob is uploaded and the metadata write fails, or the reverse. Write the metadata row first with a pending status, confirm it on completion, and run a sweeper that removes pending rows and unreferenced blobs.</p>
+      </section>
+
+      <section class="chapter part" id="scaling-data">
+        <h2>Scaling data</h2>
+        <p class="kind">Part 5 of 7 &middot; more copies, then more pieces</p>
+        <p>Replication copies the same data to several nodes, for availability and read capacity. Partitioning splits the data over nodes, for write capacity and size. Real systems do both: each shard is a replicated group. Consensus, quorums and consistency models are in <a href="sd-distributed-systems.html">Distributed Systems Patterns</a>.</p>
+        <ul>
+          <li><a href="#replication">Replication</a>: leader-follower, sync vs async</li>
+          <li><a href="#replication-lag">Replication lag</a> and read-your-writes</li>
+          <li><a href="#failover">Failover and split brain</a></li>
+          <li><a href="#sharding">Partitioning and sharding</a>: range, hash, directory, geo</li>
+          <li><a href="#shard-key">Shard keys, hot partitions, rebalancing</a></li>
+          <li><a href="#cross-shard">Cross-shard queries, joins and transactions</a></li>
+          <li><a href="#consistent-hashing">Consistent hashing</a></li>
+          <li><a href="#secondary-indexes">Secondary indexes on sharded data</a></li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="replication">
+        <h2>Replication</h2>
+        <p class="kind"><a href="#scaling-data">Scaling data</a></p>
+        <p>In leader-follower replication one node accepts all writes and ships its log to followers, which apply it in the same order and serve reads.</p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  A[App] -->|writes| L[(Leader)]
+  A -->|reads| F1
+  A -->|reads| F2
+  L -->|sync| F1[(Follower 1)]
+  L -.->|async| F2[(Follower 2)]
+  L -.->|async| F3[(Follower in another region)]
+          </script>
+          <figcaption>One synchronous follower gives a second durable copy of every commit. The asynchronous ones add read capacity and a remote copy without slowing writes.</figcaption>
+        </figure>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Mode</th><th>Commit is acknowledged when</th><th>Durability on leader loss</th><th>Write latency</th><th>If a follower is down</th></tr></thead>
+            <tbody>
+              <tr><td>Asynchronous</td><td>The leader has written it</td><td>Recent writes can be lost</td><td>Lowest</td><td>No effect</td></tr>
+              <tr><td>Synchronous (all)</td><td>Every follower confirms</td><td>No loss</td><td>Slowest follower sets it</td><td>Writes stall</td></tr>
+              <tr><td>Semi-synchronous</td><td>At least one follower confirms</td><td>No loss while one confirmed copy survives</td><td>One extra round trip</td><td>Another follower takes the synchronous role, or it degrades to async</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <ul>
+          <li><b>Use it for:</b> surviving a node loss, serving reads near users, read scaling when reads far outnumber writes. It does <b>not</b> scale writes: every node applies every write.</li>
+          <li><b>Numbers:</b> same-region lag is usually milliseconds, and grows to seconds or minutes under heavy writes or long transactions on the follower. Cross-region adds the network round trip (50 to 150 ms).</li>
+          <li><b>Other topologies:</b> multi-leader (writes in several regions, conflicts must be resolved) and leaderless (quorum reads and writes) are in <a href="sd-distributed-systems.html">Distributed Systems Patterns</a>.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="replication-lag">
+        <h2>Replication lag and read-your-writes</h2>
+        <p class="kind"><a href="#scaling-data">Scaling data</a></p>
+        <p>With asynchronous followers a read can arrive before the write does. The user saves a profile, reloads, and sees the old one.</p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+sequenceDiagram
+  participant U as User
+  participant A as App
+  participant L as Leader
+  participant F as Follower
+  U->>A: update profile
+  A->>L: write, commit at log position 1042
+  L-->>A: ok, position 1042
+  A-->>U: ok, token 1042
+  U->>A: read profile with token 1042
+  A->>F: read if applied position is at least 1042
+  F-->>A: only at 1040
+  A->>L: fall back to the leader
+  L-->>A: fresh profile
+  A-->>U: fresh profile
+          </script>
+          <figcaption>The client carries the log position of its last write. A follower may answer only if it has caught up to that position.</figcaption>
+        </figure>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Anomaly</th><th>Fix</th><th>Cost</th></tr></thead>
+            <tbody>
+              <tr><td>Not seeing your own write</td><td>Read the user's own data from the leader, or from the leader for a few seconds after a write</td><td>More leader load</td></tr>
+              <tr><td>Same, across devices</td><td>Position token as above, stored per user</td><td>A lookup and occasional fallback</td></tr>
+              <tr><td>Time going backwards between two reads</td><td>Monotonic reads: pin each user to one follower</td><td>Less even load. Re-pin on failure</td></tr>
+              <tr><td>Stale reads in general</td><td>Stop routing to followers whose lag exceeds a threshold</td><td>Less read capacity when lag is high</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><b>Senior signal:</b> say which reads may be stale. "The timeline can lag by seconds and reads from followers. Balance and settings read from the leader."</p>
+      </section>
+
+      <section class="chapter" id="failover">
+        <h2>Failover and split brain</h2>
+        <p class="kind"><a href="#scaling-data">Scaling data</a></p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  D[Detect: missed heartbeats] --> E[Elect: most up-to-date follower]
+  E --> F[Fence the old leader]
+  F --> P[Promote and repoint clients]
+  P --> R[Old leader rejoins as follower]
+          </script>
+          <figcaption>Fencing comes before promotion. Skipping it is how two nodes end up accepting writes.</figcaption>
+        </figure>
+        <ul>
+          <li><b>Detection is a guess:</b> a slow node and a dead node look the same. A short timeout causes needless failovers, a long one extends the outage. Typical: 10 to 30 s of missed heartbeats, total failover 30 s to a couple of minutes.</li>
+          <li><b>Data loss:</b> with async replication the new leader may lack the last writes. When the old leader returns, its extra writes are discarded or need manual repair.</li>
+          <li><b>Split brain:</b> a network partition leaves two nodes that each believe they are the leader, and both accept writes that then diverge.</li>
+          <li><b>Prevention:</b> promote only with a majority vote (an odd number of voters, a witness in a third zone), fence the old leader (revoke its lease, cut its storage or network), and attach an increasing epoch number to writes so that storage rejects a stale leader.</li>
+        </ul>
+        <p class="note"><b>Failure mode:</b> automatic failover during an overload. The leader is slow, not dead. Failing over moves the same load onto a colder node and adds a recovery storm. Many teams automate detection and keep a human in the loop for cross-region promotion.</p>
+      </section>
+
+      <section class="chapter" id="sharding">
+        <h2>Partitioning and sharding</h2>
+        <p class="kind"><a href="#scaling-data">Scaling data</a></p>
+        <p>Sharding splits one logical dataset across nodes so that each holds a part. It is the answer to write throughput or data size beyond one node, and it should come after vertical scaling, read replicas and caching.</p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  A[App] --> R{{"Router: shard for user_id"}}
+  R --> L1[(Shard 1 leader)]
+  R --> L2[(Shard 2 leader)]
+  R --> L3[(Shard 3 leader)]
+  L1 -.-> F1[(Follower)]
+  L2 -.-> F2[(Follower)]
+  L3 -.-> F3[(Follower)]
+          </script>
+          <figcaption>Each shard is a replicated group of its own. The router can be a client library, a proxy tier, or the database itself.</figcaption>
+        </figure>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Scheme</th><th>Key to shard</th><th>Gain</th><th>Pay</th><th>Used for</th></tr></thead>
+            <tbody>
+              <tr><td>Range</td><td>Contiguous key ranges (A to F, by date)</td><td>Efficient range scans. Easy to split a range</td><td>Hot spots on sequential keys: all new writes hit the last range</td><td>HBase, Bigtable, time-ordered data</td></tr>
+              <tr><td>Hash</td><td>hash(key) to a partition</td><td>Even spread</td><td>No range scans across keys. Resizing moves data unless done with fixed slots or a ring</td><td>DynamoDB, Cassandra, Redis Cluster</td></tr>
+              <tr><td>Directory / lookup</td><td>A table maps key or tenant to shard</td><td>Full control: move one tenant, isolate a big one</td><td>The lookup service is a critical dependency and must be cached and replicated</td><td>Multi-tenant SaaS, Vitess-style setups</td></tr>
+              <tr><td>Geo</td><td>User's region or country</td><td>Low latency, data residency</td><td>Uneven shard sizes. Cross-region users and queries</td><td>Regulated or globally spread user data</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><b>Interview tip:</b> give the arithmetic that forces sharding ("2 TB a year and 30,000 writes per second is past one node") before you shard. Sharding without a stated reason is a red flag.</p>
+      </section>
+
+      <section class="chapter" id="shard-key">
+        <h2>Shard keys, hot partitions, rebalancing</h2>
+        <p class="kind"><a href="#scaling-data">Scaling data</a></p>
+        <p>The shard key is the hardest decision to change later. A good key has high cardinality, spreads load evenly, and is present in almost every query so that the query reaches one shard.</p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Candidate key</th><th>Result</th></tr></thead>
+            <tbody>
+              <tr><td><code>user_id</code> for user-owned data</td><td>Good: one user's data on one shard, queries are single-shard</td></tr>
+              <tr><td><code>created_at</code> or an auto-increment id</td><td>Bad with range partitioning: every write lands on the newest shard</td></tr>
+              <tr><td><code>country</code> or <code>status</code></td><td>Bad: few values, heavily skewed</td></tr>
+              <tr><td><code>tenant_id</code></td><td>Good until one tenant outgrows a shard. Use a directory, or a compound key</td></tr>
+              <tr><td><code>(user_id, created_at)</code> compound</td><td>Good: hashed first part spreads load, sorted second part gives per-user range scans</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <ul>
+          <li><b>Hot partitions</b> (a celebrity, a flash-sale item): add a suffix to split the key over N sub-partitions and merge on read, give the heavy key its own shard through the directory, or absorb reads with a cache.</li>
+          <li><b>Rebalancing, never <code>hash mod N</code>:</b> changing N moves almost every key. Use a fixed number of logical partitions much larger than the node count (for example 1,024 or 16,384) and move whole partitions between nodes, or split ranges dynamically when they grow, or use <a href="#consistent-hashing">consistent hashing</a>.</li>
+          <li><b>Moving data live:</b> copy the partition in the background, replicate changes until caught up, switch the routing entry, then delete the old copy. Throttle it: rebalancing competes with production traffic.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="cross-shard">
+        <h2>Cross-shard queries, joins and transactions</h2>
+        <p class="kind"><a href="#scaling-data">Scaling data</a></p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  Q["Query without shard key"] --> R[Router]
+  R --> S1[(Shard 1)]
+  R --> S2[(Shard 2)]
+  R --> S3[(Shard 3)]
+  S1 --> M[Merge, sort, limit]
+  S2 --> M
+  S3 --> M
+  M --> A[Result]
+          </script>
+          <figcaption>Scatter-gather: latency is that of the slowest shard, and one unavailable shard fails or truncates the whole query.</figcaption>
+        </figure>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Operation</th><th>Why it gets hard</th><th>What to do instead</th></tr></thead>
+            <tbody>
+              <tr><td>Query not on the shard key</td><td>Must ask every shard. Tail latency grows with the shard count</td><td>A global index or a second copy keyed differently, or a search or analytics store</td></tr>
+              <tr><td>Join</td><td>The rows live on different nodes, so the join moves data over the network</td><td>Co-locate related tables on the same key, denormalise, or join in the application</td></tr>
+              <tr><td>Transaction</td><td>No single node can commit it. Needs two-phase commit, which blocks if the coordinator fails, or a saga</td><td>Choose the key so that a transaction stays in one shard. Otherwise a saga with compensations</td></tr>
+              <tr><td>Unique constraint, auto-increment</td><td>No shard sees all the rows</td><td>Include the shard key in the constraint. Generate ids outside the database (see <a href="#unique-ids">unique IDs</a>)</td></tr>
+              <tr><td>Sorting and paging</td><td>Each shard returns its top N, and deep pages multiply the work</td><td>Cursor paging on the shard key, or a precomputed view</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><b>Trade-off:</b> sharding buys write scale and pays with every feature that needs a global view. Two-phase commit and sagas are covered in <a href="sd-distributed-systems.html">Distributed Systems Patterns</a>.</p>
+      </section>
+
+      <section class="chapter" id="consistent-hashing">
+        <h2>Consistent hashing</h2>
+        <p class="kind"><a href="#scaling-data">Scaling data</a></p>
+        <p>Consistent hashing maps keys to nodes so that adding or removing a node moves only about 1 / N of the keys, where <code>hash mod N</code> moves nearly all of them.</p>
+        <p><b>How it works:</b> hash both nodes and keys onto the same circular space (0 to 2<sup>32</sup> - 1). A key belongs to the first node found going clockwise from the key's position.</p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  A(("Node A<br/>at 10")) -->|clockwise| B(("Node B<br/>at 40"))
+  B --> C(("Node C<br/>at 75"))
+  C -->|wraps past 0| A
+  K1["key at 22"] -.->|owned by| B
+  K2["key at 60"] -.->|owned by| C
+  K3["key at 90"] -.->|owned by| A
+          </script>
+          <figcaption>The ring on a 0 to 99 scale. Each key walks clockwise to the next node: 22 goes to B, 60 goes to C, 90 wraps around to A.</figcaption>
+        </figure>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Event</th><th>What moves</th><th>What does not</th></tr></thead>
+            <tbody>
+              <tr><td>Node D joins at 55</td><td>Keys in (40, 55] move from C to D. The key at 60 stays on C</td><td>Everything on A and B</td></tr>
+              <tr><td>Node B leaves</td><td>Keys in (10, 40] move from B to C, the next node clockwise</td><td>Everything on A, and C's existing keys</td></tr>
+              <tr><td>Same change with <code>hash mod N</code></td><td>About N / (N + 1) of all keys change node</td><td>Almost nothing</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <ul>
+          <li><b>Problem with one point per node:</b> arcs are uneven, so load is uneven, and a departing node dumps its whole arc onto one neighbour, which can then fail in turn.</li>
+          <li><b>Virtual nodes:</b> place each physical node at many positions (100 to 200 is common). Arcs average out, a leaving node's keys spread over all the others, and a bigger machine can be given more positions.</li>
+          <li><b>Replication on the ring:</b> store each key on the next R distinct physical nodes clockwise. This is the preference list in Dynamo-style stores.</li>
+          <li><b>Where it is used:</b> Dynamo and Cassandra partitioning, client-side sharding of Memcached (ketama), cache-affinity load balancing, CDN request routing.</li>
+          <li><b>Alternatives:</b> rendezvous hashing (score every node per key and take the highest: simple, no ring), jump consistent hash (no memory, nodes can only be added or removed at the end), and bounded-load variants that cap any node at a factor above the average.</li>
+        </ul>
+        <script type="text/plain" data-lang="py" data-file="ring.py">
+import bisect
+import hashlib
+from collections import Counter
+
+
+def h(text):                                  # stable 32-bit position on the ring
+    return int(hashlib.md5(text.encode()).hexdigest()[:8], 16)
+
+
+class Ring:
+    def __init__(self, nodes, vnodes=100):
+        self.points = sorted((h(f"{n}#{i}"), n) for n in nodes for i in range(vnodes))
+        self.positions = [p for p, _ in self.points]
+
+    def node(self, key):                      # first point clockwise from the key
+        i = bisect.bisect_right(self.positions, h(key)) % len(self.points)
+        return self.points[i][1]
+
+
+keys = [f"user:{i}" for i in range(10000)]
+before, after = Ring("ABCD"), Ring("ABCDE")   # node E joins
+
+moved = [k for k in keys if before.node(k) != after.node(k)]
+print(len(moved) / len(keys))                 # 0.1889   about 1/5 of the keys move
+print({after.node(k) for k in moved})         # {'E'}    and all of them move to E
+
+print(sum(h(k) % 4 != h(k) % 5 for k in keys) / len(keys))
+# 0.7975   with hash mod N, four keys in five move
+
+print(sorted(Counter(after.node(k) for k in keys).items()))
+# [('A', 2089), ('B', 2239), ('C', 1969), ('D', 1814), ('E', 1889)]   100 virtual nodes: even
+
+print(sorted(Counter(Ring("ABCDE", vnodes=1).node(k) for k in keys).items()))
+# [('A', 309), ('B', 124), ('C', 4077), ('D', 3795), ('E', 1695)]     1 point per node: skewed
+        </script>
+        <p class="note"><b>Senior signal:</b> consistent hashing limits how much data <i>moves</i>. It does not fix a hot key, which lands on one node whatever the ring looks like.</p>
+      </section>
+
+      <section class="chapter" id="secondary-indexes">
+        <h2>Secondary indexes on sharded data</h2>
+        <p class="kind"><a href="#scaling-data">Scaling data</a></p>
+        <p>Data is sharded by one key and queried by another (orders sharded by <code>user_id</code>, looked up by <code>restaurant_id</code>). The index can be kept per shard or as a separate partitioned structure.</p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  subgraph LO["Local index"]
+    Q1[Query by restaurant] --> A1["Shard 1 + its index"]
+    Q1 --> A2["Shard 2 + its index"]
+    Q1 --> A3["Shard 3 + its index"]
+  end
+  subgraph GL["Global index"]
+    Q2[Query by restaurant] --> GI[("Index partition for that restaurant")]
+    GI --> B2["Shard 2 rows"]
+  end
+          </script>
+          <figcaption>A local index makes the read fan out to every shard. A global index sends the read to one index partition and makes the write touch two places.</figcaption>
+        </figure>
+        <div class="scroll">
+          <table>
+            <thead><tr><th></th><th>Local (partitioned by document)</th><th>Global (partitioned by term)</th></tr></thead>
+            <tbody>
+              <tr><td>Write</td><td>One shard, atomic with the row</td><td>Row shard + index partition: distributed, usually asynchronous</td></tr>
+              <tr><td>Read by indexed field</td><td>Scatter-gather over all shards</td><td>One index partition, then the rows</td></tr>
+              <tr><td>Consistency</td><td>Index always matches the row</td><td>Index can lag the row</td></tr>
+              <tr><td>Use when</td><td>The query also carries the shard key, or is rare</td><td>The query is frequent and does not carry the shard key</td></tr>
+              <tr><td>Examples</td><td>Elasticsearch shards, MongoDB, Cassandra secondary index, DynamoDB local secondary index</td><td>DynamoDB global secondary index</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="chapter part" id="async">
+        <h2>Asynchronous work</h2>
+        <p class="kind">Part 6 of 7 &middot; take work off the request path</p>
+        <p>A queue or a log between two components decouples them in time: the producer returns at once, the consumer works at its own pace, and a burst becomes a backlog instead of an outage. The price is eventual completion and duplicate handling.</p>
+        <ul>
+          <li><a href="#queue-vs-stream">Message queues vs event streams</a></li>
+          <li><a href="#delivery-semantics">Delivery semantics</a></li>
+          <li><a href="#consumer-groups">Consumer groups and partitions</a></li>
+          <li><a href="#dlq-backpressure">Dead-letter queues, backpressure, ordering keys</a></li>
+          <li><a href="#pubsub">Pub-sub and fan-out</a></li>
+          <li><a href="#task-queues">Task queues and schedulers</a></li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="queue-vs-stream">
+        <h2>Message queues vs event streams</h2>
+        <p class="kind"><a href="#async">Asynchronous work</a></p>
+        <p>A queue hands each message to one worker and forgets it once acknowledged. A stream is an append-only log that keeps every event for a retention period, and each reader keeps its own position.</p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  subgraph QU["Message queue"]
+    P1[Producer] --> Q[[Queue]]
+    Q --> W1[Worker]
+    Q --> W2[Worker]
+  end
+  subgraph ST["Event stream"]
+    P2[Producer] --> LG[["Log: 0 1 2 3 4 5"]]
+    LG -->|offset 5| G1[Billing group]
+    LG -->|offset 2| G2[Analytics group]
+  end
+          </script>
+          <figcaption>Queue: workers compete and a message is gone after its acknowledgement. Stream: the log stays, and independent groups read it at their own offsets.</figcaption>
+        </figure>
+        <div class="scroll">
+          <table>
+            <thead><tr><th></th><th>Message queue</th><th>Event stream / log</th></tr></thead>
+            <tbody>
+              <tr><td>Unit</td><td>A task to do once</td><td>A fact that happened</td></tr>
+              <tr><td>Ordering</td><td>Best effort, or FIFO within a group at lower throughput</td><td>Total order within a partition</td></tr>
+              <tr><td>Retention</td><td>Until acknowledged</td><td>By time or size (days, or forever), whether or not it was read</td></tr>
+              <tr><td>Consumer model</td><td>Competing consumers, per-message acknowledgement, redelivery on timeout</td><td>Consumer groups that commit an offset per partition</td></tr>
+              <tr><td>Replay</td><td>No</td><td>Yes: rewind the offset. New consumers can read history</td></tr>
+              <tr><td>Per-message features</td><td>Delay, priority, routing rules, per-message retry and dead-lettering</td><td>Few: one slow message blocks its partition</td></tr>
+              <tr><td>Throughput</td><td>Thousands to tens of thousands per second</td><td>Hundreds of thousands to millions per second per cluster</td></tr>
+              <tr><td>Products</td><td>RabbitMQ, Amazon SQS, ActiveMQ</td><td>Apache Kafka, Amazon Kinesis, Pulsar</td></tr>
+              <tr><td>Use for</td><td>Background jobs, emails, work distribution</td><td>Event sourcing, change data capture, analytics pipelines, many consumers of the same events</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <ul>
+          <li><b>Why a log is fast:</b> sequential appends to disk, batching, and consumers that read straight from the page cache. This is Kafka's documented design.</li>
+          <li><b>Payload size:</b> keep messages small (Kafka's default limit is about 1 MB). Put large payloads in object storage and send the key.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="delivery-semantics">
+        <h2>Delivery semantics</h2>
+        <p class="kind"><a href="#async">Asynchronous work</a></p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Guarantee</th><th>How it is achieved</th><th>Failure outcome</th><th>Use for</th></tr></thead>
+            <tbody>
+              <tr><td>At-most-once</td><td>Acknowledge (or commit the offset) before processing. No retries</td><td>Message can be lost, never duplicated</td><td>Metrics, logs, anything where a gap is harmless</td></tr>
+              <tr><td>At-least-once</td><td>Process, then acknowledge. Redeliver on timeout</td><td>Never lost, can be delivered twice</td><td>The default. Requires idempotent consumers</td></tr>
+              <tr><td>Effectively-once</td><td>At-least-once delivery plus deduplication or idempotent writes, or a transaction that covers the result and the offset</td><td>Duplicates arrive and have no effect</td><td>Payments, counters, inventory</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><b>Senior signal:</b> "exactly-once delivery" does not exist over an unreliable network. What exists is exactly-once <i>effect</i>: at-least-once delivery plus an idempotency key that the consumer checks. Idempotency keys, the outbox pattern and transactional messaging are in <a href="sd-distributed-systems.html">Distributed Systems Patterns</a>.</p>
+      </section>
+
+      <section class="chapter" id="consumer-groups">
+        <h2>Consumer groups and partitions</h2>
+        <p class="kind"><a href="#async">Asynchronous work</a></p>
+        <p>A topic is split into partitions. The producer picks the partition from the hash of a key. Within a consumer group each partition is read by exactly one consumer, which is what preserves order per key.</p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  P["Producer: hash of order_id"] --> P0
+  P --> P1
+  P --> P2
+  subgraph T["Topic: orders"]
+    P0[[Partition 0]]
+    P1[[Partition 1]]
+    P2[[Partition 2]]
+  end
+  subgraph GA["Group: billing"]
+    C1[Consumer 1]
+    C2[Consumer 2]
+  end
+  P0 --> C1
+  P1 --> C1
+  P2 --> C2
+  T -.->|all partitions| C3["Group: search indexer<br/>Consumer 3"]
+          </script>
+          <figcaption>Inside a group the partitions are divided among consumers. Each group sees every message, so groups are how one stream feeds several independent systems.</figcaption>
+        </figure>
+        <ul>
+          <li><b>Parallelism is capped by the partition count:</b> a group with more consumers than partitions has idle consumers. Choose the count for peak throughput with headroom. It can be increased later, and doing so changes which partition a key maps to.</li>
+          <li><b>Rebalance:</b> when a consumer joins or dies, partitions are reassigned and consumption pauses briefly. Messages processed and not yet committed are delivered again to the new owner.</li>
+          <li><b>Lag</b> (latest offset minus committed offset) is the health metric. Alert on it and autoscale on it.</li>
+          <li><b>Durability:</b> each partition is replicated (typically 3 copies). A producer that waits for all in-sync replicas trades latency for no loss on a broker failure.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="dlq-backpressure">
+        <h2>Dead-letter queues, backpressure, ordering keys</h2>
+        <p class="kind"><a href="#async">Asynchronous work</a></p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  P[Producer] --> Q[[Main queue]]
+  Q --> W[Worker]
+  W -->|ok| D[Done, ack]
+  W -->|"fail, attempt under 5"| RQ[[Retry with backoff]]
+  RQ --> Q
+  W -->|"fail, attempt 5"| DLQ[[Dead-letter queue]]
+  DLQ --> AL[Alert, inspect, redrive]
+          </script>
+          <figcaption>A message that keeps failing is parked after a bounded number of attempts, so that it cannot block or starve the healthy ones.</figcaption>
+        </figure>
+        <ul>
+          <li><b>Dead-letter queue:</b> holds poison messages with their error and attempt count. Alert on its depth, fix the cause, then redrive. Retry with exponential backoff and jitter first. On a stream, publish the failed event to a retry or dead-letter topic and move on, which gives up strict ordering for that key.</li>
+          <li><b>Backpressure:</b> what happens when producers outrun consumers. Options, in order of preference: scale consumers on lag, bound the queue and reject or slow producers (HTTP 429, blocking send), shed low-priority work, drop the oldest. An unbounded queue only converts overload into unbounded latency and then an out-of-memory failure.</li>
+          <li><b>Ordering key:</b> messages with the same key (order id, account id) go to the same partition or message group and are processed in order. Different keys run in parallel. Choose the narrowest key that needs ordering: ordering everything globally means one partition and no parallelism.</li>
+        </ul>
+        <p class="note"><b>Failure mode:</b> retries on an overloaded downstream multiply the load. Cap attempts, back off, and stop consuming (circuit breaker) when the dependency is down, letting the backlog wait in the queue.</p>
+      </section>
+
+      <section class="chapter" id="pubsub">
+        <h2>Pub-sub and fan-out</h2>
+        <p class="kind"><a href="#async">Asynchronous work</a></p>
+        <p>In publish-subscribe the producer publishes to a topic without knowing who listens, and every subscriber gets its own copy.</p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  O[Order service] -->|OrderPlaced| T{{Topic}}
+  T --> Q1[[Email queue]]
+  T --> Q2[[Inventory queue]]
+  T --> Q3[[Analytics queue]]
+  Q1 --> E[Email workers]
+  Q2 --> I[Inventory workers]
+  Q3 --> A[Analytics loader]
+          </script>
+          <figcaption>Topic plus one queue per subscriber: each consumer gets durability, its own retry policy and its own pace. A new subscriber needs no change to the publisher.</figcaption>
+        </figure>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Fan-out choice</th><th>How</th><th>Gain</th><th>Pay</th></tr></thead>
+            <tbody>
+              <tr><td>On write (push)</td><td>At publish time, copy the item to every recipient's inbox or queue</td><td>Reads are a single cheap lookup</td><td>Write cost grows with the number of recipients. A sender with millions of followers is a storm</td></tr>
+              <tr><td>On read (pull)</td><td>Store once. Each reader assembles its view at read time</td><td>Cheap writes</td><td>Slow, expensive reads</td></tr>
+              <tr><td>Hybrid</td><td>Push for ordinary senders, pull for the few with huge audiences</td><td>Bounded write cost and fast reads</td><td>Two code paths to merge</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <ul>
+          <li><b>Products:</b> SNS + SQS, Google Pub/Sub, Kafka topics with one consumer group per subscriber, Redis pub-sub (not durable: a subscriber that is offline misses the message).</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="task-queues">
+        <h2>Task queues and schedulers</h2>
+        <p class="kind"><a href="#async">Asynchronous work</a></p>
+        <p>A task queue runs background jobs on a worker pool. A scheduler decides <i>when</i> a job becomes due and hands it to the queue.</p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  API[API service] -->|enqueue now| Q[[Task queue]]
+  SCH[Scheduler] -->|enqueue when due| Q
+  JS[(Job store)] --> SCH
+  Q --> W1[Worker]
+  Q --> W2[Worker]
+  W1 --> JS
+  W2 --> JS
+          </script>
+          <figcaption>The scheduler only makes due jobs visible. Execution, retries and scaling belong to the queue and its workers, and the job store records the outcome.</figcaption>
+        </figure>
+        <ul>
+          <li><b>Task contract:</b> idempotent (it will run twice some day), with a timeout, bounded retries with backoff, and a visibility timeout longer than the task's worst case so that a second worker does not pick it up mid-run.</li>
+          <li><b>Scheduler designs:</b> poll a database table for <code>run_at &lt;= now</code> with row locking (simple, good to thousands of jobs per second), delayed messages in the queue, or a sorted set scored by due time. For long delays keep jobs in durable storage and load only the next few minutes into memory.</li>
+          <li><b>Exactly one scheduler firing:</b> run several scheduler instances for availability and let one lead (leader election), or let all poll and claim jobs with an atomic update.</li>
+          <li><b>Isolation:</b> separate queues per priority or job class so that a flood of bulk jobs cannot delay password-reset emails.</li>
+          <li><b>Products:</b> Celery, Sidekiq, SQS with workers, Temporal or Airflow for multi-step workflows.</li>
+        </ul>
+      </section>
+
+      <section class="chapter part" id="specialised">
+        <h2>Specialised blocks</h2>
+        <p class="kind">Part 7 of 7 &middot; named components for recurring sub-problems</p>
+        <p>These come up inside almost every case study. Knowing the standard options lets you name one in a sentence and spend the time on the trade-off.</p>
+        <ul>
+          <li><a href="#rate-limiter">Rate limiter</a>: five algorithms and where to place it</li>
+          <li><a href="#unique-ids">Unique ID generation</a></li>
+          <li><a href="#bloom-filter">Bloom filter</a> and other probabilistic structures</li>
+          <li><a href="#search-index">Search index</a></li>
+          <li><a href="#geo-index">Geospatial indexing</a></li>
+          <li><a href="#media-pipeline">Blob and media processing pipeline</a></li>
+          <li><a href="#heartbeats">Heartbeats, health checks, locks and leaders</a></li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="rate-limiter">
+        <h2>Rate limiter</h2>
+        <p class="kind"><a href="#specialised">Specialised blocks</a></p>
+        <p>A rate limiter caps how many requests a client (user, API key, IP address) may make in a period, to protect capacity and enforce fairness and quotas.</p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  C([Client]) --> G[Gateway limiter]
+  G <-->|check| R[(Redis counters)]
+  G -->|allowed| S[Service]
+  G -.->|429| C
+  S --> L[Local limiter]
+  L --> D[(Downstream)]
+          </script>
+          <figcaption>Per-client limits belong at the edge, where rejecting is cheapest: an atomic check-and-decrement in Redis, then pass or 429 with Retry-After. A second, local limiter protects each fragile dependency from the service's own traffic.</figcaption>
+        </figure>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Algorithm</th><th>How</th><th>Bursts</th><th>Memory per key</th><th>Accuracy and notes</th></tr></thead>
+            <tbody>
+              <tr><td>Token bucket</td><td>Tokens refill at rate r up to capacity b. A request spends one</td><td>Allowed, up to b</td><td>2 values: tokens, last refill time</td><td>The usual default. Two knobs: sustained rate and burst size</td></tr>
+              <tr><td>Leaky bucket</td><td>Requests enter a queue that drains at a fixed rate. Overflow is dropped</td><td>Smoothed away</td><td>Queue or 2 values</td><td>Constant output rate. Adds delay. Good in front of a fragile backend</td></tr>
+              <tr><td>Fixed window</td><td>One counter per window (per minute)</td><td>Up to 2x the limit across a window boundary</td><td>1 counter</td><td>Simplest. Fine for coarse quotas</td></tr>
+              <tr><td>Sliding window log</td><td>Store the timestamp of every request, count those inside the window</td><td>None beyond the limit</td><td>One entry per request, up to the limit</td><td>Exact and expensive</td></tr>
+              <tr><td>Sliding window counter</td><td>Current window count + previous window count weighted by overlap</td><td>Small error</td><td>2 counters</td><td>Approximate, cheap. Good default for strict limits at scale</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <ul>
+          <li><b>Distributed counting:</b> keep counters in Redis and make check-and-update atomic (a script or a single increment with expiry). For very high rates, each node takes a local batch of tokens and syncs periodically, trading exactness for no round trip.</li>
+          <li><b>Layers:</b> edge or gateway for per-client limits, the service for per-tenant business quotas, the client library for polite backoff.</li>
+          <li><b>When the limiter's store is down:</b> fail open for availability (most APIs), fail closed for abuse-sensitive paths such as login or one-time-password sending.</li>
+        </ul>
+        <p class="note"><b>Interview tip:</b> state the key, the limit and the response: "100 requests per minute per API key, token bucket with burst 20, 429 with <code>Retry-After</code>, limits returned in response headers".</p>
+      </section>
+
+      <section class="chapter" id="unique-ids">
+        <h2>Unique ID generation</h2>
+        <p class="kind"><a href="#specialised">Specialised blocks</a></p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Scheme</th><th>Size</th><th>Sortable by time</th><th>Coordination</th><th>Gain</th><th>Pay</th></tr></thead>
+            <tbody>
+              <tr><td>Database auto-increment</td><td>64 bits</td><td>Yes</td><td>The one database</td><td>Simple, compact, dense</td><td>Single writer. Breaks with sharding. Exposes volume and is guessable</td></tr>
+              <tr><td>UUID v4</td><td>128 bits</td><td>No</td><td>None</td><td>Generate anywhere, no collisions in practice (122 random bits)</td><td>Large. Random inserts scatter across a B-tree index and hurt write locality</td></tr>
+              <tr><td>UUID v7</td><td>128 bits</td><td>Yes (ms)</td><td>None</td><td>Timestamp prefix keeps inserts at the end of the index</td><td>Large. Reveals creation time</td></tr>
+              <tr><td>Snowflake-style</td><td>64 bits</td><td>Yes (ms)</td><td>A machine id per generator</td><td>Compact, ordered, generated locally at very high rates</td><td>Depends on clocks. Machine ids must be assigned</td></tr>
+              <tr><td>Ticket server</td><td>64 bits</td><td>Roughly</td><td>A dedicated id service</td><td>Simple numeric ids across shards</td><td>A network call per id or per block, and a service to keep highly available</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>The Snowflake layout, as published by Twitter. Variants move the bit boundaries.</p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Field</th><th>Bits</th><th>Holds</th><th>Capacity</th></tr></thead>
+            <tbody>
+              <tr><td>Sign</td><td>1</td><td>Always 0, so the id is positive in signed types</td><td></td></tr>
+              <tr><td>Timestamp</td><td>41</td><td>Milliseconds since a custom epoch</td><td>About 69 years</td></tr>
+              <tr><td>Machine id</td><td>10</td><td>Datacenter + worker</td><td>1,024 generators</td></tr>
+              <tr><td>Sequence</td><td>12</td><td>Counter within the same millisecond</td><td>4,096 ids per ms per generator</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <ul>
+          <li><b>Clock moving backwards</b> could repeat an id. The generator must refuse or wait until the clock passes the last timestamp it used.</li>
+          <li><b>Ticket server:</b> a database that only hands out auto-increment values. Run two with different offsets (one odd, one even) for availability, and hand out blocks of ids (1,000 at a time) to cut round trips. The ids are then only roughly ordered.</li>
+          <li><b>Choosing:</b> one database: auto-increment. Sharded or generated by many services, with ordering needed: Snowflake-style or UUID v7. Ids created offline or on clients: UUID. Public ids should not be guessable, so do not expose a raw sequence.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="bloom-filter">
+        <h2>Bloom filter and friends</h2>
+        <p class="kind"><a href="#specialised">Specialised blocks</a></p>
+        <p>A Bloom filter is a bit array with k hash functions that answers "is this key in the set?" with <b>no false negatives</b>: "no" is certain, "yes" means probably.</p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  K[Key] --> H1[Hash 1]
+  K --> H2[Hash 2]
+  K --> H3[Hash 3]
+  H1 --> B[Bit array]
+  H2 --> B
+  H3 --> B
+  B --> Q{{All k bits set?}}
+  Q -->|no| N[Definitely absent]
+  Q -->|yes| Y[Probably present]
+          </script>
+          <figcaption>Adding a key sets k bits. A lookup checks the same k bits: one zero bit proves the key was never added.</figcaption>
+        </figure>
+        <ul>
+          <li><b>Sizing intuition:</b> about 10 bits per key with 7 hash functions gives a 1% false-positive rate, whatever the key size. Each further 10x reduction costs about 4.8 more bits per key. One billion keys at 1% is about 1.2 GB.</li>
+          <li><b>Limits:</b> no deletes (a counting variant allows them at several times the memory), no listing, and the rate rises once more keys are added than it was sized for.</li>
+          <li><b>Uses:</b> skipping disk reads for absent keys in LSM-tree stores, blocking <a href="#cache-problems">cache penetration</a>, "already seen" checks for crawled URLs or recommended items, username-taken pre-checks.</li>
+          <li><b>HyperLogLog</b> estimates the number of <i>distinct</i> items (unique visitors) to within about 1% in roughly 12 KB. <b>Count-Min Sketch</b> estimates how <i>often</i> each item occurred (top-K, heavy hitters) in fixed memory, and can only overestimate.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="search-index">
+        <h2>Search index</h2>
+        <p class="kind"><a href="#specialised">Specialised blocks</a></p>
+        <p>An inverted index maps each term to the sorted list of documents that contain it (a posting list), so a text query becomes a few list lookups and an intersection instead of a scan.</p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  D["Docs: 1 red shoes, 2 red hat, 3 blue shoes"] --> AN["Analyzer: tokenize, lowercase, stem"]
+  AN --> T1["red: 1, 2"]
+  AN --> T2["shoe: 1, 3"]
+  AN --> T3["hat: 2"]
+  AN --> T4["blue: 3"]
+  Q(["Query: Red Shoes"]) --> AN2[Same analyzer]
+  AN2 --> T1
+  AN2 --> T2
+  T1 --> X["Intersect: doc 1"]
+  T2 --> X
+  X --> RK[Rank and return]
+          </script>
+          <figcaption>Documents and queries pass through the same analyzer. The posting lists for "red" and "shoe" intersect at document 1.</figcaption>
+        </figure>
+        <ul>
+          <li><b>Ranking:</b> a relevance score such as BM25 (term frequency, rarity of the term, document length), usually blended with business signals such as popularity and recency.</li>
+          <li><b>Writes:</b> new documents go to small immutable segments that are merged in the background, so search is near-real-time (about a second behind), not transactional.</li>
+          <li><b>Scaling:</b> the index is split into shards. A query is scatter-gather over all shards, each returning its top N.</li>
+          <li><b>Use when</b> users search text, need facets or fuzzy matching. <b>Avoid</b> as the system of record: feed it from the primary database through change events and be able to rebuild it.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="geo-index">
+        <h2>Geospatial indexing</h2>
+        <p class="kind"><a href="#specialised">Specialised blocks</a></p>
+        <p>"Find things near this point" is a two-dimensional query, and ordinary indexes are one-dimensional. Every scheme maps an area to a cell id that an ordinary index can store.</p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  P(["Rider at lat, lng"]) --> C[Compute cell id]
+  C --> N["Cell + 8 neighbours"]
+  N --> L[(Index: cell id to drivers)]
+  L --> F[Filter by exact distance]
+  F --> R[Rank, return nearest]
+          </script>
+          <figcaption>The neighbours matter: two points can be metres apart and still fall in different cells.</figcaption>
+        </figure>
+        <div class="scroll">
+          <table>
+            <thead><tr><th></th><th>Geohash</th><th>Quadtree</th><th>S2 / H3</th></tr></thead>
+            <tbody>
+              <tr><td>Idea</td><td>Interleave latitude and longitude bits into a base-32 string. A shared prefix means the same cell</td><td>Tree that splits a square into 4 whenever it holds too many points</td><td>S2: square cells on a sphere ordered along a space-filling curve, 64-bit ids. H3: hexagonal cells</td></tr>
+              <tr><td>Cell size</td><td>Fixed per length: 5 chars about 5 km, 6 about 1 km, 7 about 150 m</td><td>Adapts to density: small cells downtown, large in the countryside</td><td>Fixed per level, many levels</td></tr>
+              <tr><td>Storage</td><td>Any database or Redis: a string or integer column with a normal index</td><td>Usually an in-memory structure you build and update</td><td>An integer column, with a library to compute cells and coverings</td></tr>
+              <tr><td>Gain</td><td>Simplest. Prefix queries. Built into Redis and Elasticsearch</td><td>Even load per leaf. Natural "k nearest" search</td><td>Little distortion. S2 covers arbitrary regions well. H3 neighbours are all at the same distance</td></tr>
+              <tr><td>Pay</td><td>Cell edges, and cells shrink toward the poles. Dense areas overload a cell</td><td>Rebuilding and rebalancing as points move. Harder to shard</td><td>Library dependency, more concepts</td></tr>
+              <tr><td>Pick for</td><td>Nearby search with a fixed radius</td><td>Very uneven density, static or slowly changing points</td><td>Ride-hailing and maps at scale, region coverage, aggregation by area</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <ul>
+          <li><b>Moving objects</b> (drivers): keep the latest position in memory keyed by cell with a short TTL, updated every few seconds. Do not write each update to the durable store.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="media-pipeline">
+        <h2>Blob and media processing pipeline</h2>
+        <p class="kind"><a href="#specialised">Specialised blocks</a></p>
+        <p>Uploads are processed asynchronously: the original lands in object storage, an event starts a set of workers, and the derived files are published through the CDN.</p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  U([Uploader]) --> RAW[(Raw bucket)]
+  RAW -.->|event| Q[[Job queue]]
+  Q --> T[Scan and transcode]
+  T --> OUT[(Output bucket)]
+  T --> M[(Metadata DB)]
+  OUT --> CDN[CDN]
+          </script>
+          <figcaption>The upload (a pre-signed PUT) returns as soon as the original is stored. Every later step is a retryable job, and the metadata row moves from processing to ready.</figcaption>
+        </figure>
+        <ul>
+          <li><b>Work as a graph:</b> split a video into segments, transcode each segment into several resolutions and bitrates in parallel, then write the manifests. Images get resized variants and a stripped copy without location metadata.</li>
+          <li><b>Each step is idempotent</b> and writes to a deterministic output key, so a retry overwrites instead of duplicating.</li>
+          <li><b>Status:</b> the client polls the metadata service or receives a webhook or push when the state becomes ready.</li>
+          <li><b>Scaling:</b> autoscale workers on queue lag. Use separate queues for short and long jobs so that a 4-hour video does not delay profile pictures.</li>
+          <li><b>Numbers:</b> transcoding is CPU or GPU bound and takes a meaningful fraction of the video's duration per rendition. It is the cost centre of the pipeline.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="heartbeats">
+        <h2>Heartbeats, health checks, locks and leaders</h2>
+        <p class="kind"><a href="#specialised">Specialised blocks</a></p>
+        <p>A heartbeat is a periodic "I am alive" signal. A node that misses several in a row is treated as dead, which is always a guess: the node may only be slow or cut off.</p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+sequenceDiagram
+  participant N as Node
+  participant M as Monitor or registry
+  participant LB as Load balancer
+  N->>M: heartbeat at t = 0 s
+  N->>M: heartbeat at t = 5 s
+  Note over N: node stalls
+  Note over M: nothing for 15 s, 3 intervals missed
+  M->>LB: remove node
+  N->>M: heartbeat resumes
+  M->>LB: add node back after it passes checks
+          </script>
+          <figcaption>Detection time is the interval times the number of misses allowed. Shorter means faster failover and more false alarms.</figcaption>
+        </figure>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Check</th><th>Asks</th><th>On failure</th><th>Should test</th></tr></thead>
+            <tbody>
+              <tr><td>Liveness</td><td>Is the process stuck?</td><td>Restart it</td><td>Only the process itself. Never dependencies</td></tr>
+              <tr><td>Readiness</td><td>Can it serve traffic now?</td><td>Take it out of rotation, do not restart</td><td>Warm-up done, critical local resources available</td></tr>
+              <tr><td>Deep / dependency</td><td>Are the things it calls healthy?</td><td>Alert, degrade features</td><td>Used for dashboards, not for ejecting instances</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <ul>
+          <li><b>Push vs pull:</b> nodes send heartbeats to a registry (works across network boundaries, the registry must expire entries), or a checker probes the nodes (no client code, the checker must reach everyone).</li>
+          <li><b>At scale:</b> gossip protocols spread liveness information between peers without a central monitor.</li>
+          <li><b>Distributed lock:</b> a lease with an expiry and a fencing token, so that only one holder acts at a time. See <a href="sd-distributed-systems.html">Distributed Systems Patterns</a>.</li>
+          <li><b>Leader election:</b> one node from a group is chosen through a consensus-backed store (etcd, ZooKeeper) and keeps the role by renewing a lease. See <a href="sd-distributed-systems.html">Distributed Systems Patterns</a>.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="cheat-sheet">
+        <h2>Cheat sheet</h2>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Need</th><th>Block</th><th>Key trade-off</th></tr></thead>
+            <tbody>
+              <tr><td>Route users to the nearest healthy region</td><td><a href="#dns">Geo or latency DNS</a>, anycast</td><td>Failover is only as fast as the TTL</td></tr>
+              <tr><td>Serve static or shared content fast</td><td><a href="#cdn">CDN</a></td><td>Invalidation delay. Use versioned URLs</td></tr>
+              <tr><td>Spread requests, hide dead servers</td><td><a href="#load-balancer">L7 load balancer</a></td><td>Extra hop, and it must itself be redundant</td></tr>
+              <tr><td>Auth, quotas, routing in one place</td><td><a href="#gateway">API gateway</a></td><td>Central choke point. Keep logic out of it</td></tr>
+              <tr><td>Handle more request traffic</td><td><a href="#stateless">Stateless services</a> + <a href="#autoscaling">autoscaling</a></td><td>State moves to shared stores, which become the bottleneck</td></tr>
+              <tr><td>Too many database connections</td><td><a href="#connection-pooling">Connection pool or pooling proxy</a></td><td>Pool exhaustion when queries are slow</td></tr>
+              <tr><td>Cut read latency and database load</td><td><a href="#cache-aside">Cache-aside</a> on Redis</td><td>Staleness, and survival of a cold cache</td></tr>
+              <tr><td>Absorb very frequent small writes</td><td><a href="#write-behind">Write-behind</a></td><td>Loses unflushed writes on a crash</td></tr>
+              <tr><td>Hot key expiring under load</td><td><a href="#stampede">Lock, coalesce, jitter, early refresh</a></td><td>Waiters see extra latency or stale data</td></tr>
+              <tr><td>Lookups for keys that do not exist</td><td><a href="#cache-problems">Negative cache</a>, <a href="#bloom-filter">Bloom filter</a></td><td>False positives, and no deletes</td></tr>
+              <tr><td>Transactions and flexible queries</td><td><a href="#db-families">Relational database</a></td><td>Write scaling needs sharding</td></tr>
+              <tr><td>Huge write volume by known key</td><td><a href="#db-families">Wide-column or key-value store</a></td><td>Queries are fixed by the key design</td></tr>
+              <tr><td>Files, images, video</td><td><a href="#object-storage">Object store</a> + pre-signed URLs + CDN</td><td>No queries. Metadata lives elsewhere</td></tr>
+              <tr><td>Survive a node loss, scale reads</td><td><a href="#replication">Leader-follower replication</a></td><td>Lag, and data loss on async failover</td></tr>
+              <tr><td>Scale writes or data size</td><td><a href="#sharding">Sharding</a> on a well-chosen key</td><td>Cross-shard joins, transactions and queries</td></tr>
+              <tr><td>Add or remove nodes with little data movement</td><td><a href="#consistent-hashing">Consistent hashing</a> with virtual nodes</td><td>Does not help with hot keys</td></tr>
+              <tr><td>Query sharded data by another field</td><td><a href="#secondary-indexes">Global secondary index</a></td><td>Index lags the row. Extra write cost</td></tr>
+              <tr><td>Run slow work later</td><td><a href="#queue-vs-stream">Message queue</a> + workers</td><td>At-least-once: handlers must be idempotent</td></tr>
+              <tr><td>Many consumers, replay, ordered events</td><td><a href="#consumer-groups">Event log with consumer groups</a></td><td>Order only within a partition. Parallelism capped by partitions</td></tr>
+              <tr><td>Notify several systems of one event</td><td><a href="#pubsub">Pub-sub, one queue per subscriber</a></td><td>Fan-out on write grows with the audience</td></tr>
+              <tr><td>Messages that always fail</td><td><a href="#dlq-backpressure">Retries with backoff, dead-letter queue</a></td><td>Someone has to watch and redrive it</td></tr>
+              <tr><td>Protect an API from abuse or overload</td><td><a href="#rate-limiter">Token bucket at the gateway</a></td><td>Shared counter store. Fail open or closed</td></tr>
+              <tr><td>IDs across shards, time-ordered</td><td><a href="#unique-ids">Snowflake-style or UUID v7</a></td><td>Clock dependence, or 128-bit keys</td></tr>
+              <tr><td>Full-text search</td><td><a href="#search-index">Inverted index</a></td><td>Near-real-time, a derived store to keep in sync</td></tr>
+              <tr><td>Find things nearby</td><td><a href="#geo-index">Geohash, quadtree, S2 or H3</a></td><td>Cell-edge handling, uneven density</td></tr>
+              <tr><td>Process uploads</td><td><a href="#media-pipeline">Object store event, queue, workers</a></td><td>Asynchronous: the client must track status</td></tr>
+              <tr><td>Know which nodes are alive</td><td><a href="#heartbeats">Heartbeats and health checks</a></td><td>Detection speed versus false positives</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>Numbers to keep in your head, all approximate:</p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Thing</th><th>Order of magnitude</th></tr></thead>
+            <tbody>
+              <tr><td>Redis or Memcached operation, same zone</td><td>0.5 to 1 ms, about 100,000 operations per second per node</td></tr>
+              <tr><td>CDN edge hit vs cross-continent origin</td><td>10 to 30 ms vs 100 to 300 ms</td></tr>
+              <tr><td>Object store first byte</td><td>Tens of ms</td></tr>
+              <tr><td>Replication lag, same region / cross region</td><td>Milliseconds normally / 50 to 150 ms and up</td></tr>
+              <tr><td>Database failover</td><td>30 s to a couple of minutes</td></tr>
+              <tr><td>Consistent hashing, node added to N</td><td>About 1 / (N + 1) of keys move</td></tr>
+              <tr><td>Bloom filter</td><td>10 bits per key for 1% false positives</td></tr>
+              <tr><td>Snowflake id</td><td>41 + 10 + 12 bits: 69 years, 1,024 generators, 4,096 ids per ms each</td></tr>
+              <tr><td>Kafka message limit by default</td><td>About 1 MB</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>Next: how these stores work inside, from storage engines and indexes to transactions and isolation, in <a href="sd-data-systems.html">Data Systems</a>.</p>
+      </section>
+
+    </div>
+  </main>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script src="../../assets/tutorial.js?v=8"></script>
+</body>
+</html>

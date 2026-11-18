@@ -1,0 +1,1110 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>System Design Foundations</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@500;700&display=swap">
+<link rel="stylesheet" href="../../assets/tutorial.css?v=8">
+</head>
+<body data-track="system">
+
+<header class="topbar">
+  <div class="topbar-in">
+    <a class="brand" href="../../../index.html">Learnings</a>
+    <nav class="tracks" aria-label="Paths">
+      <a href="../../../index.html#system-design" aria-current="true">System Design</a>
+      <a href="../../../archive.html">Archive</a>
+    </nav>
+    <div class="tools">
+      <button class="btn" id="menu" type="button" aria-expanded="false">Chapters</button>
+      <input id="q" type="search" placeholder="Search chapters" aria-label="Search chapters">
+      <button class="btn" id="theme" type="button">Dark mode</button>
+    </div>
+  </div>
+</header>
+
+<div class="shell">
+  <aside class="side">
+    <p class="side-label">Foundations</p>
+    <nav id="toc" aria-label="Chapters"></nav>
+  </aside>
+
+  <main>
+    <div class="page-head">
+      <p class="eyebrow">System design, part 1 of 12</p>
+      <h1>System Design Foundations</h1>
+      <p class="lead">The map of the whole path, a repeatable 45-minute interview structure, the estimation arithmetic and the core trade-offs that every later page relies on. Written for an experienced backend engineer: definitions are precise, numbers are order of magnitude, and each chapter leads with the decision.</p>
+    </div>
+
+    <div class="chapters">
+
+      <section class="chapter part" id="part-map">
+        <h2>The map</h2>
+        <p class="kind">Part 1 of 5 &middot; what is asked and where it lives on this site</p>
+        <p>System design interviews come in two shapes: high-level design (HLD) of a distributed system, and low-level design (LLD) of the classes inside one service. Everything else on this path is the toolkit those two rounds draw on.</p>
+        <ul>
+          <li><a href="#rounds">HLD, LLD and the supporting areas</a>: what each round asks and scores</li>
+          <li><a href="#path-map">How the 12 pages fit</a>: reading order and dependencies</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="rounds">
+        <h2>HLD, LLD and the supporting areas</h2>
+        <p class="kind"><a href="#part-map">The map</a></p>
+        <p><b>HLD</b> answers "which components, how does data flow, how does it scale and fail". <b>LLD</b> answers "which classes and interfaces, which patterns, how is it made thread-safe and extensible". A senior candidate is expected to move between both levels in the same conversation.</p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Round type</th><th>What is asked</th><th>What is evaluated</th><th>Where on this site</th></tr></thead>
+            <tbody>
+              <tr><td>HLD (system design)</td><td>"Design a news feed / chat / rate limiter" for N users</td><td>Requirement scoping, numbers, component choice, data model, scaling, failure handling, trade-offs</td><td><a href="sd-hld-cases-1.html">HLD Case Studies: Core</a>, <a href="sd-hld-cases-2.html">HLD Case Studies: Advanced</a></td></tr>
+              <tr><td>LLD / machine coding</td><td>"Design a parking lot / splitwise / LRU cache" as classes, often with running code</td><td>Object modelling, interfaces, patterns, SOLID, concurrency, testability, extensibility</td><td><a href="sd-lld.html">Low-Level Design</a>, <a href="sd-lld-cases.html">LLD Case Studies</a></td></tr>
+              <tr><td>Building-block probes</td><td>"How does a load balancer / cache / queue behave when ..."</td><td>Knowing each component's guarantees, limits and failure modes</td><td><a href="sd-building-blocks.html">Building Blocks</a></td></tr>
+              <tr><td>Storage deep dive</td><td>Choice of database, indexing, replication, partitioning, transactions</td><td>Matching the store to access patterns; consistency reasoning</td><td><a href="sd-data-systems.html">Data Systems</a></td></tr>
+              <tr><td>Distributed-systems deep dive</td><td>Consensus, idempotency, ordering, clocks, distributed transactions</td><td>Correctness under partial failure</td><td><a href="sd-distributed-systems.html">Distributed Systems Patterns</a></td></tr>
+              <tr><td>API design</td><td>REST / gRPC / events, pagination, versioning, real-time channels</td><td>Clean contracts, backward compatibility, idempotent writes</td><td><a href="sd-api-design.html">API and Communication Design</a></td></tr>
+              <tr><td>Architecture discussion</td><td>Monolith vs microservices, event-driven, CQRS, migration paths</td><td>Judgement: fitting structure to team and load, not fashion</td><td><a href="sd-architecture.html">Architecture Styles</a></td></tr>
+              <tr><td>Operations and reliability</td><td>SLOs, observability, deploys, overload, disaster recovery</td><td>Operational maturity: you have run systems in production</td><td><a href="sd-reliability.html">Reliability and Operations</a></td></tr>
+              <tr><td>The loop itself</td><td>How to run the session, question bank, study plan</td><td>Driving, prioritising, communicating</td><td><a href="sd-interview-playbook.html">Senior Interview Playbook</a></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><b>Senior signal:</b> a mid-level answer lists components. A senior answer states the requirement that forces each component, the number that sizes it and what happens when it fails.</p>
+      </section>
+
+      <section class="chapter" id="path-map">
+        <h2>How the 12 pages fit</h2>
+        <p class="kind"><a href="#part-map">The map</a></p>
+        <p>Read top to bottom. The toolkit pages can be read in any order after this page; the case studies assume all of them.</p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart TD
+  F[1 Foundations] --> BB[2 Building Blocks]
+  F --> API[5 API Design]
+  F --> L[10 Low-Level Design]
+  BB --> DS[3 Data Systems]
+  DS --> DP[4 Distributed Patterns]
+  API --> AR[6 Architecture Styles]
+  AR --> RE[7 Reliability]
+  DP --> H1[8 HLD Cases Core]
+  RE --> H1
+  H1 --> H2[9 HLD Cases Advanced]
+  L --> LC[11 LLD Cases]
+  H2 --> P[12 Interview Playbook]
+  LC --> P
+          </script>
+          <figcaption>Pages 2 to 7 are the toolkit for the HLD case studies; the LLD track on the right is independent; both end at the playbook.</figcaption>
+        </figure>
+        <ul>
+          <li>Short on time: this page, <a href="sd-building-blocks.html">Building Blocks</a>, <a href="sd-data-systems.html">Data Systems</a>, then the case studies.</li>
+          <li>LLD round only: <a href="sd-lld.html">Low-Level Design</a> then <a href="sd-lld-cases.html">LLD Case Studies</a>.</li>
+        </ul>
+      </section>
+
+      <section class="chapter part" id="part-framework">
+        <h2>The interview framework</h2>
+        <p class="kind">Part 2 of 5 &middot; a repeatable 45-minute structure</p>
+        <p>The framework exists so that no minute is spent deciding what to do next. Requirements drive numbers, numbers drive the API and data model, and those drive the diagram.</p>
+        <ul>
+          <li><a href="#framework-flow">The eight steps and the time budget</a></li>
+          <li><a href="#requirements">Functional vs non-functional requirements</a></li>
+          <li><a href="#step-outputs">What to produce and say at each step</a></li>
+          <li><a href="#api-data-sketch">API and data model sketch</a></li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="framework-flow">
+        <h2>The eight steps and the time budget</h2>
+        <p class="kind"><a href="#part-framework">The interview framework</a></p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart TD
+  subgraph Frame["Frame: 0 to 17 min"]
+    direction LR
+    R[1 Clarify] --> E[2 Estimate] --> A[3 API] --> D[4 Data model]
+  end
+  subgraph Build["Design: 17 to 45 min"]
+    direction LR
+    H[5 High-level diagram] --> X[6 Deep dives] --> B[7 Bottlenecks] --> W[8 Wrap-up]
+    X -.->|new constraint| H
+  end
+  Frame --> Build
+          </script>
+          <figcaption>The only loop is between deep dives and the diagram: a deep dive often changes a box, and that is expected.</figcaption>
+        </figure>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Minutes</th><th>Step</th><th>Budget</th><th>Output on the board</th></tr></thead>
+            <tbody>
+              <tr><td>0 to 5</td><td>1. Clarify requirements</td><td>5</td><td>3 to 5 functional, 3 to 5 non-functional, out-of-scope list</td></tr>
+              <tr><td>5 to 9</td><td>2. Estimate</td><td>4</td><td>QPS (read, write, peak), storage, the one number that shapes the design</td></tr>
+              <tr><td>9 to 13</td><td>3. API</td><td>4</td><td>4 to 6 endpoints or RPCs with key parameters</td></tr>
+              <tr><td>13 to 17</td><td>4. Data model</td><td>4</td><td>Entities, keys, main access patterns, store choice</td></tr>
+              <tr><td>17 to 27</td><td>5. High-level diagram</td><td>10</td><td>End-to-end path for each core use case</td></tr>
+              <tr><td>27 to 39</td><td>6. Deep dives</td><td>12</td><td>1 to 2 areas taken to implementation depth</td></tr>
+              <tr><td>39 to 43</td><td>7. Bottlenecks, failures, trade-offs</td><td>4</td><td>Single points of failure, hot spots, what was traded away</td></tr>
+              <tr><td>43 to 45</td><td>8. Wrap-up</td><td>2</td><td>Summary against requirements, what you would do next</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><b>Interview tip:</b> a working end-to-end design by minute 27 matters more than a perfect step 2. If the interviewer says "skip the numbers", skip them and state your assumed scale in one sentence.</p>
+      </section>
+
+      <section class="chapter" id="requirements">
+        <h2>Functional vs non-functional requirements</h2>
+        <p class="kind"><a href="#part-framework">The interview framework</a></p>
+        <p><b>Functional</b>: what the system does ("a user can post", "followers see the post"). <b>Non-functional</b>: how well it does it (scale, latency, availability). Functional requirements pick the boxes; non-functional requirements pick how many, where and with which guarantees.</p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  P([Vague prompt]) --> F[Functional<br/>what it does]
+  P --> N[Non-functional<br/>how well]
+  P --> O[Out of scope<br/>said out loud]
+  F --> API[API and data model]
+  N --> S[Scale, replication,<br/>consistency choices]
+  API --> D[Design]
+  S --> D
+          </script>
+          <figcaption>Three lists come out of the first five minutes; the out-of-scope list protects the rest of the session.</figcaption>
+        </figure>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Non-functional</th><th>Question to ask</th><th>What the answer changes</th></tr></thead>
+            <tbody>
+              <tr><td>Scale</td><td>DAU, read:write ratio, data size, growth, peak vs average?</td><td>Single node vs partitioned; cache and replica count</td></tr>
+              <tr><td>Latency</td><td>p99 target for the hot path? Is it user-facing or batch?</td><td>Sync vs async, caching, precomputation, region placement</td></tr>
+              <tr><td>Availability</td><td>Target nines? Is degraded service acceptable?</td><td>Redundancy level, multi-AZ or multi-region, fallbacks</td></tr>
+              <tr><td>Consistency</td><td>Can a read be stale? For how long? Which operations cannot be?</td><td>Leader reads vs replica reads, quorum, transactions</td></tr>
+              <tr><td>Durability</td><td>Is losing an acknowledged write ever acceptable?</td><td>Sync replication, fsync policy, backups, queue persistence</td></tr>
+              <tr><td>Security</td><td>Who may call it? Any PII, payments, multi-tenant isolation?</td><td>AuthN/AuthZ placement, encryption, audit trail</td></tr>
+              <tr><td>Cost</td><td>Is there a budget or cost-per-request constraint?</td><td>Storage tiering, compute choice, how much is precomputed</td></tr>
+              <tr><td>Compliance</td><td>Data residency, retention, right to delete?</td><td>Region pinning, deletion pipelines, immutable logs</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><b>Interview tip:</b> do not ask all eight. Ask scale, latency and consistency, then propose the rest: "I'll assume 99.9% availability and no acknowledged write is lost; tell me if that is wrong".</p>
+      </section>
+
+      <section class="chapter" id="step-outputs">
+        <h2>What to produce and say at each step</h2>
+        <p class="kind"><a href="#part-framework">The interview framework</a></p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Step</th><th>Produce</th><th>Say</th><th>Common mistake</th></tr></thead>
+            <tbody>
+              <tr><td>1. Clarify</td><td>Three short lists: functional, non-functional, out of scope</td><td>"The core use cases are A, B, C. I'm leaving out D and E unless you want them."</td><td>Designing before scoping; 10 minutes of questions with no decisions</td></tr>
+              <tr><td>2. Estimate</td><td>Read and write QPS, peak, storage per year, one design-shaping number</td><td>"100:1 read-heavy, 12k reads/s at peak, so caching and replicas matter more than write scaling."</td><td>Arithmetic with no conclusion; false precision</td></tr>
+              <tr><td>3. API</td><td>Endpoints with inputs, outputs, auth, idempotency key on writes, pagination on lists</td><td>"These map one-to-one to the functional requirements."</td><td>CRUD for every entity instead of the use cases; no pagination</td></tr>
+              <tr><td>4. Data model</td><td>Entities, primary keys, indexes for each access pattern, SQL vs NoSQL with a reason</td><td>"The hot query is by user_id ordered by time, so that is the partition and sort key."</td><td>Picking the database before listing queries</td></tr>
+              <tr><td>5. High-level</td><td>Client, edge, services, stores, async paths; trace each use case through it</td><td>"Let me walk a write, then a read, through the diagram."</td><td>Boxes with no data flow; adding Kafka with no stated need</td></tr>
+              <tr><td>6. Deep dives</td><td>Detail on the 1 to 2 hardest parts: schema, algorithm, protocol, failure handling</td><td>"The risky part is the fan-out. Shall I go deep there, or do you prefer the storage layer?"</td><td>Shallow coverage of everything; waiting to be asked</td></tr>
+              <tr><td>7. Bottlenecks</td><td>SPOFs, hot keys, thundering herds, what breaks at 10x, monitoring</td><td>"If this cache cluster is lost, the DB sees 20x load; I'd protect it with ..."</td><td>Claiming the design has no weaknesses</td></tr>
+              <tr><td>8. Wrap-up</td><td>30-second recap mapped to requirements; next steps</td><td>"We meet the latency goal via X; the open risk is Y; next I would add Z."</td><td>Trailing off; introducing new components at minute 44</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="chapter" id="api-data-sketch">
+        <h2>API and data model sketch</h2>
+        <p class="kind"><a href="#part-framework">The interview framework</a></p>
+        <p>The level of detail to aim for on the board, here for a short-post service. Enough to show keys, idempotency and pagination; no more.</p>
+        <script type="text/plain" data-lang="text" data-file="API" data-norun>
+POST /v1/posts            {text, media_ids[]}   Idempotency-Key header  -> 201 {post_id}
+GET  /v1/users/{id}/posts ?cursor=&limit=20                             -> {items[], next_cursor}
+GET  /v1/feed             ?cursor=&limit=20                             -> {items[], next_cursor}
+POST /v1/users/{id}/follow                                              -> 204
+        </script>
+        <script type="text/plain" data-lang="text" data-file="SQL" data-norun>
+posts   (post_id PK, author_id, created_at, text, media_ids)   index (author_id, created_at DESC)
+follows (follower_id, followee_id, created_at)                 PK (follower_id, followee_id)
+                                                               index (followee_id)   -- who follows X
+feed    (user_id, created_at, post_id)                         partition by user_id, sort by created_at
+        </script>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+erDiagram
+  USER ||--o{ POST : writes
+  USER ||--o{ FOLLOW : follows
+  USER ||--o{ FEED_ITEM : sees
+  POST ||--o{ FEED_ITEM : appears_as
+  POST {
+    bigint post_id PK
+    bigint author_id FK
+    timestamp created_at
+  }
+  FEED_ITEM {
+    bigint user_id PK
+    timestamp created_at PK
+    bigint post_id FK
+  }
+          </script>
+          <figcaption>Each table exists because of one access pattern; FEED_ITEM is a precomputed read model, not a source of truth.</figcaption>
+        </figure>
+      </section>
+
+      <section class="chapter part" id="part-estimation">
+        <h2>Estimation</h2>
+        <p class="kind">Part 3 of 5 &middot; back-of-envelope arithmetic and the numbers to memorise</p>
+        <p>Estimation is not about the answer; it is about finding which resource is the constraint. Round hard, keep one significant figure, and end every estimate with a design consequence.</p>
+        <ul>
+          <li><a href="#est-method">The method</a></li>
+          <li><a href="#est-units">Powers of two and time</a></li>
+          <li><a href="#est-worked">Worked example</a></li>
+          <li><a href="#latency-numbers">Latency numbers</a></li>
+          <li><a href="#throughput-numbers">Throughput of one node</a></li>
+          <li><a href="#nines">Availability nines</a></li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="est-method">
+        <h2>The method</h2>
+        <p class="kind"><a href="#part-estimation">Estimation</a></p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  DAU([DAU]) --> RQ[Requests per day]
+  RQ --> QPS[Average QPS]
+  QPS --> PK[Peak QPS]
+  RQ --> ST[Storage per day]
+  ST --> Y5[5-year storage]
+  PK --> BW[Bandwidth]
+  PK --> SV[Server count]
+  ST --> CM[Cache memory]
+          </script>
+          <figcaption>Everything derives from DAU times actions per user; peak QPS sizes compute, storage per day sizes the data tier.</figcaption>
+        </figure>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Quantity</th><th>Formula</th><th>Shortcut</th></tr></thead>
+            <tbody>
+              <tr><td>Average QPS</td><td>DAU x actions per user per day / 86,400</td><td>Divide by 10^5: 1M per day is about 12/s, call it 10</td></tr>
+              <tr><td>Peak QPS</td><td>Average x peak factor</td><td>2x to 3x typical; 10x or more for flash sales and live events</td></tr>
+              <tr><td>Storage per day</td><td>Writes per day x bytes per record</td><td>1M x 1 KB = 1 GB</td></tr>
+              <tr><td>5-year storage</td><td>Per day x 365 x 5 x replication factor</td><td>x 2,000 per replica; x 3 replicas is about x 5,500</td></tr>
+              <tr><td>Bandwidth</td><td>QPS x response size</td><td>1,000/s x 1 MB = 1 GB/s = 8 Gbps</td></tr>
+              <tr><td>Cache memory</td><td>20% of the hot working set x object size (80/20 rule)</td><td>Plus about 30% to 50% overhead for keys and metadata</td></tr>
+              <tr><td>Servers</td><td>Peak QPS / QPS per server, plus headroom</td><td>Add 30% and N+1 or N+2 for failures and deploys</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><b>80/20 rule:</b> a rule of thumb that about 20% of the objects receive about 80% of the reads. Real workloads are often more skewed (Zipf-like), which makes caching work even better and hot keys worse.</p>
+      </section>
+
+      <section class="chapter" id="est-units">
+        <h2>Powers of two and time</h2>
+        <p class="kind"><a href="#part-estimation">Estimation</a></p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Power</th><th>Approximate value</th><th>Unit</th><th>Feel for it</th></tr></thead>
+            <tbody>
+              <tr><td>2^10</td><td>1 thousand (10^3)</td><td>1 KB</td><td>A short JSON record or a row</td></tr>
+              <tr><td>2^20</td><td>1 million (10^6)</td><td>1 MB</td><td>A compressed photo is 0.2 to 2 MB</td></tr>
+              <tr><td>2^30</td><td>1 billion (10^9)</td><td>1 GB</td><td>1M records of 1 KB</td></tr>
+              <tr><td>2^40</td><td>1 trillion (10^12)</td><td>1 TB</td><td>1B records of 1 KB; one large disk</td></tr>
+              <tr><td>2^50</td><td>10^15</td><td>1 PB</td><td>Object-storage territory</td></tr>
+              <tr><td>2^32</td><td>about 4.3 billion</td><td>&nbsp;</td><td>IPv4 space; 32-bit id space</td></tr>
+              <tr><td>2^64</td><td>about 1.8 x 10^19</td><td>&nbsp;</td><td>64-bit id space; never runs out</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Time fact</th><th>Value</th><th>Use</th></tr></thead>
+            <tbody>
+              <tr><td>Seconds in a day</td><td>86,400, round to 10^5</td><td>Per-day to per-second</td></tr>
+              <tr><td>Seconds in a month</td><td>about 2.6 million (2.5 x 10^6)</td><td>Monthly quotas</td></tr>
+              <tr><td>Seconds in a year</td><td>about 31.5 million (pi x 10^7)</td><td>Downtime budgets</td></tr>
+              <tr><td>1 request/s</td><td>about 86k per day, 2.6M per month</td><td>Sanity checks</td></tr>
+              <tr><td>Days in 5 years</td><td>about 1,800, round to 2,000</td><td>Storage horizon</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Object</th><th>Typical size (approximate)</th></tr></thead>
+            <tbody>
+              <tr><td>UUID / 64-bit id / timestamp</td><td>16 bytes / 8 bytes / 8 bytes</td></tr>
+              <tr><td>Tweet-sized text with metadata</td><td>about 1 KB</td></tr>
+              <tr><td>Web page HTML</td><td>about 100 KB</td></tr>
+              <tr><td>Photo (compressed)</td><td>about 200 KB to 2 MB</td></tr>
+              <tr><td>1 minute of video (720p to 1080p, compressed)</td><td>about 10 to 50 MB</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="chapter" id="est-worked">
+        <h2>Worked example</h2>
+        <p class="kind"><a href="#part-estimation">Estimation</a></p>
+        <p>A short-post service: 100M DAU, each user writes 2 posts and loads the feed 20 times a day. A post is 1 KB; 10% carry a 500 KB image; a feed page returns 10 posts. In the interview you would round as in the right-hand column of the table below; the code shows the exact arithmetic.</p>
+        <script type="text/plain" data-lang="py" data-file="estimate.py">
+DAU = 100_000_000
+DAY = 86_400
+KB, MB, GB, TB, PB = 10**3, 10**6, 10**9, 10**12, 10**15
+
+writes_per_day = DAU * 2
+reads_per_day = DAU * 20
+write_qps = writes_per_day / DAY
+read_qps = reads_per_day / DAY
+peak_read_qps = read_qps * 3                      # assumed peak factor
+
+text_per_day = writes_per_day * 1 * KB
+media_per_day = writes_per_day * 0.10 * 500 * KB
+days = 365 * 5
+text_5y = text_per_day * days * 3                 # 3 replicas
+media_5y = media_per_day * days
+
+egress = read_qps * 10 * 1 * KB                   # bytes per second, text only
+cache = writes_per_day * 1 * KB * 0.20 * 1.5      # hot 20% of a day, 50% overhead
+servers = peak_read_qps / 1000 * 1.3              # assume 1,000 QPS per server, 30% headroom
+
+print(f"write QPS      {write_qps:,.0f}")         # write QPS      2,315
+print(f"read QPS       {read_qps:,.0f}")          # read QPS       23,148
+print(f"peak read QPS  {peak_read_qps:,.0f}")     # peak read QPS  69,444
+print(f"text per day   {text_per_day / GB:,.0f} GB")    # text per day   200 GB
+print(f"media per day  {media_per_day / TB:,.0f} TB")   # media per day  10 TB
+print(f"text 5 years   {text_5y / PB:.1f} PB")          # text 5 years   1.1 PB
+print(f"media 5 years  {media_5y / PB:.1f} PB")         # media 5 years  18.2 PB
+print(f"egress         {egress * 8 / 10**9:.1f} Gbps")  # egress         1.9 Gbps
+print(f"cache          {cache / GB:,.0f} GB")           # cache          60 GB
+print(f"app servers    {servers:,.0f}")                 # app servers    90
+        </script>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Quantity</th><th>Interview rounding</th><th>Design consequence</th></tr></thead>
+            <tbody>
+              <tr><td>Write QPS</td><td>200M / 10^5 = 2k/s</td><td>One leader per shard can take it; writes are not the hard part</td></tr>
+              <tr><td>Read QPS</td><td>2B / 10^5 = 20k/s, peak 60k/s</td><td>10:1 read-heavy: precompute feeds, cache, read replicas</td></tr>
+              <tr><td>Text storage</td><td>200 GB/day, about 1 PB in 5 years with 3 replicas</td><td>Far beyond one node: partition by user or post id from the start</td></tr>
+              <tr><td>Media storage</td><td>10 TB/day, about 20 PB in 5 years</td><td>Object storage plus CDN; never in the database</td></tr>
+              <tr><td>Egress (text)</td><td>20k/s x 10 KB = 200 MB/s, about 2 Gbps</td><td>Fine; images dominate bandwidth, so serve them from the CDN</td></tr>
+              <tr><td>Cache</td><td>20% of 200 GB = 40 GB, 60 GB with overhead</td><td>A small replicated cache cluster, not a fleet</td></tr>
+              <tr><td>App servers</td><td>60k / 1k per server = 60, about 80 to 90 with headroom</td><td>Stateless tier behind a load balancer, autoscaled</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><b>Senior signal:</b> the last column. Every number ends in "so we need ..." or "so this is not a concern". The 1,000 QPS per server figure is an assumption; say so and move on.</p>
+      </section>
+
+      <section class="chapter" id="latency-numbers">
+        <h2>Latency numbers</h2>
+        <p class="kind"><a href="#part-estimation">Estimation</a></p>
+        <p>Order of magnitude only; they vary by hardware and year. What matters is the ratios: memory is about 1,000x faster than SSD, a network hop inside a datacentre costs about as much as thousands of memory reads, and crossing an ocean costs hundreds of datacentre hops.</p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Operation</th><th>Time (order of magnitude)</th><th>Relative</th></tr></thead>
+            <tbody>
+              <tr><td>L1 cache reference</td><td>about 1 ns</td><td>1x</td></tr>
+              <tr><td>Branch mispredict / L2 cache reference</td><td>about 3 to 10 ns</td><td>10x</td></tr>
+              <tr><td>Mutex lock and unlock (uncontended)</td><td>about 20 ns</td><td>20x</td></tr>
+              <tr><td>Main memory (RAM) reference</td><td>about 100 ns</td><td>100x</td></tr>
+              <tr><td>Compress 1 KB with a fast codec</td><td>about 2 to 10 us</td><td>10^4 x</td></tr>
+              <tr><td>SSD random read</td><td>about 100 us</td><td>10^5 x</td></tr>
+              <tr><td>Read 1 MB sequentially from memory</td><td>about 10 to 100 us</td><td>10^5 x</td></tr>
+              <tr><td>Round trip within the same datacentre</td><td>about 0.5 ms</td><td>5 x 10^5 x</td></tr>
+              <tr><td>Read 1 MB sequentially from SSD</td><td>about 1 ms</td><td>10^6 x</td></tr>
+              <tr><td>Spinning-disk seek</td><td>about 10 ms</td><td>10^7 x</td></tr>
+              <tr><td>Read 1 MB sequentially from spinning disk</td><td>about 10 to 20 ms</td><td>10^7 x</td></tr>
+              <tr><td>Round trip between continents</td><td>about 100 to 150 ms</td><td>10^8 x</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <ul>
+          <li>A cache hit over the network (about 0.5 to 1 ms) is dominated by the network, not by the cache.</li>
+          <li>Sequential I/O beats random I/O by orders of magnitude on disk, which is why logs (WAL, Kafka, LSM trees) append.</li>
+          <li>A cross-region synchronous call adds about 100 ms per round trip; keep them off the hot path or pay for it knowingly.</li>
+          <li>Human-perceived "instant" is about 100 ms; a typical API p99 budget is 100 to 500 ms.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="throughput-numbers">
+        <h2>Throughput of one node</h2>
+        <p class="kind"><a href="#part-estimation">Estimation</a></p>
+        <p>Approximate, for sizing only. Real figures depend heavily on hardware, payload size, query shape and durability settings; state the assumption and offer to load-test.</p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>System (one node)</th><th>Approximate throughput</th><th>Limited by</th></tr></thead>
+            <tbody>
+              <tr><td>Application server, typical business logic</td><td>about 1k requests/s (hundreds to a few thousand)</td><td>CPU per request, downstream latency, runtime</td></tr>
+              <tr><td>Reverse proxy / L7 load balancer</td><td>tens of thousands of requests/s</td><td>TLS handshakes, connections, CPU</td></tr>
+              <tr><td>Relational DB, indexed point reads</td><td>about 10k queries/s</td><td>Buffer-pool hit rate, connections</td></tr>
+              <tr><td>Relational DB, transactional writes</td><td>about 1k to 5k writes/s</td><td>WAL fsync, index maintenance, locks</td></tr>
+              <tr><td>In-memory key-value store (Redis-like)</td><td>about 100k operations/s</td><td>Single-threaded command loop, network</td></tr>
+              <tr><td>Log broker (Kafka-like)</td><td>hundreds of thousands of small messages/s, on the order of 100 MB/s</td><td>Disk and network throughput, replication</td></tr>
+              <tr><td>LSM wide-column node (Cassandra-like)</td><td>about 10k writes/s</td><td>Compaction, disk</td></tr>
+              <tr><td>Search node (Lucene-based)</td><td>hundreds to low thousands of queries/s</td><td>Query complexity, shard count</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <ul>
+          <li>Connections: one server can hold on the order of 100k to 1M mostly idle connections (WebSocket, long poll) if memory per connection is small; active throughput is the tighter limit.</li>
+          <li>Disk: a comfortable single-node dataset is up to a few TB; past that, rebuild and backup times force partitioning before capacity does.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="nines">
+        <h2>Availability nines</h2>
+        <p class="kind"><a href="#part-estimation">Estimation</a></p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Availability</th><th>Downtime per year</th><th>Per 30-day month</th><th>Typically needs</th></tr></thead>
+            <tbody>
+              <tr><td>99% (two nines)</td><td>3.65 days</td><td>7.2 hours</td><td>One server and a restart script</td></tr>
+              <tr><td>99.9% (three nines)</td><td>8.76 hours</td><td>43 minutes</td><td>Redundant instances, automated failover</td></tr>
+              <tr><td>99.95%</td><td>4.38 hours</td><td>22 minutes</td><td>Multi-AZ, tested failover</td></tr>
+              <tr><td>99.99% (four nines)</td><td>52.6 minutes</td><td>4.3 minutes</td><td>No manual step in recovery; safe deploys; multi-AZ at least</td></tr>
+              <tr><td>99.999% (five nines)</td><td>5.26 minutes</td><td>26 seconds</td><td>Multi-region active-active; very few systems truly need it</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><b>Interview tip:</b> at four nines a human cannot be in the recovery loop: paging and logging in already takes longer than the monthly budget.</p>
+      </section>
+
+      <section class="chapter part" id="part-tradeoffs">
+        <h2>Core trade-offs</h2>
+        <p class="kind">Part 4 of 5 &middot; the vocabulary of every design decision</p>
+        <p>Each chapter is one axis you will be asked to choose a position on. The detail (replication protocols, quorums, consensus) lives in <a href="sd-data-systems.html">Data Systems</a> and <a href="sd-distributed-systems.html">Distributed Systems Patterns</a>.</p>
+        <ul>
+          <li><a href="#scalability">Scalability: vertical vs horizontal</a></li>
+          <li><a href="#latency-throughput">Latency, throughput and percentiles</a></li>
+          <li><a href="#availability-math">Availability arithmetic</a></li>
+          <li><a href="#rad">Reliability vs availability vs durability</a></li>
+          <li><a href="#consistency-ladder">Consistency models as a ladder</a></li>
+          <li><a href="#cap-pacelc">CAP and PACELC</a></li>
+          <li><a href="#acid-base">ACID vs BASE, strong vs eventual</a></li>
+          <li><a href="#workload-shape">Read-heavy vs write-heavy</a></li>
+          <li><a href="#interaction-styles">Push vs pull, sync vs async, stateful vs stateless</a></li>
+          <li><a href="#replication-topologies">Single-leader vs multi-leader vs leaderless</a></li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="scalability">
+        <h2>Scalability: vertical vs horizontal</h2>
+        <p class="kind"><a href="#part-tradeoffs">Core trade-offs</a></p>
+        <p>Scale <b>up</b> (bigger machine) until it stops being cheap or safe; scale <b>out</b> (more machines) when you need capacity beyond one box or redundancy. Scaling out is easy for stateless tiers and hard for state.</p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart TD
+  subgraph Horizontal
+    direction LR
+    LB[Load balancer] --> H1[App]
+    LB --> H2[App]
+    LB --> H3[App]
+    H1 --> ST[(Shared state)]
+    H2 --> ST
+    H3 --> ST
+  end
+  subgraph Vertical
+    direction LR
+    V1[4 CPU] --> V2[64 CPU]
+  end
+          </script>
+          <figcaption>Horizontal scaling works because the app instances hold no state of their own; the state moved to a shared store, which is now the thing to scale.</figcaption>
+        </figure>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>&nbsp;</th><th>Vertical (scale up)</th><th>Horizontal (scale out)</th></tr></thead>
+            <tbody>
+              <tr><td>Gain</td><td>No code change, no distributed-systems problems, strong consistency stays easy</td><td>Near-linear capacity, redundancy, incremental cost</td></tr>
+              <tr><td>Pay</td><td>Hard ceiling, single point of failure, downtime to resize, price grows faster than capacity at the top end</td><td>Load balancing, partitioning, coordination, partial failure, operational complexity</td></tr>
+              <tr><td>Use when</td><td>Databases early on; anything under one node's limits</td><td>Stateless services always; data tier once one node is not enough</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <ul>
+          <li><b>Stateless service</b>: any instance can serve any request because session and data live in a shared store or in the request (token). This is what makes load balancing, autoscaling and rolling deploys trivial.</li>
+          <li>Scalability is not performance: a system is scalable if adding resources adds capacity roughly in proportion.</li>
+        </ul>
+        <p class="note"><b>Senior signal:</b> "one large Postgres with a replica handles this for the first two years; I'd shard only when write volume or dataset size forces it" is a stronger answer than sharding on day one.</p>
+      </section>
+
+      <section class="chapter" id="latency-throughput">
+        <h2>Latency, throughput and percentiles</h2>
+        <p class="kind"><a href="#part-tradeoffs">Core trade-offs</a></p>
+        <p><b>Latency</b> is time per request; <b>throughput</b> is requests per unit time. Batching and queueing raise throughput and raise latency. Near saturation, latency grows non-linearly, so plan to run at 50% to 70% utilisation.</p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Metric</th><th>Meaning</th><th>Use</th></tr></thead>
+            <tbody>
+              <tr><td>p50 (median)</td><td>Half of requests are faster</td><td>Typical experience; hides problems</td></tr>
+              <tr><td>p95</td><td>1 in 20 is slower</td><td>Capacity planning</td></tr>
+              <tr><td>p99</td><td>1 in 100 is slower</td><td>SLOs; heavy users hit it constantly</td></tr>
+              <tr><td>p99.9</td><td>1 in 1,000 is slower</td><td>Large fan-out systems</td></tr>
+              <tr><td>Average</td><td>Sum / count</td><td>Avoid: one 10 s outlier hides in a 50 ms mean</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  C([Request]) --> A[Aggregator]
+  A --> B1[Backend 1]
+  A --> B2[Backend 2]
+  A --> B3[Backend ...]
+  A --> B4[Backend 100]
+  B1 --> R[Wait for all]
+  B2 --> R
+  B3 --> R
+  B4 -->|slowest wins| R
+          </script>
+          <figcaption>Fan-out amplification: the request is as slow as its slowest backend, so backend p99 becomes the caller's common case.</figcaption>
+        </figure>
+        <ul>
+          <li>If each backend exceeds its p99 on 1% of calls, a request touching 100 backends is slow with probability 1 - 0.99^100 = 63%. With 10 backends it is about 10%.</li>
+          <li>Tail-latency tools: timeouts with budgets, hedged requests (send a second copy after the p95 delay), partial results, fewer hops, avoiding shared queues.</li>
+          <li>Sources of tail latency: GC pauses, lock contention, cold caches, noisy neighbours, retries, queue build-up.</li>
+        </ul>
+        <p class="note"><b>Interview tip:</b> always quote a percentile: "p99 under 200 ms", never "fast" or "200 ms average".</p>
+      </section>
+
+      <section class="chapter" id="availability-math">
+        <h2>Availability arithmetic</h2>
+        <p class="kind"><a href="#part-tradeoffs">Core trade-offs</a></p>
+        <p>Components in <b>series</b> (all must work) multiply availabilities and make things worse. Components in <b>parallel</b> (any one is enough) multiply failure probabilities and make things better, assuming failures are independent.</p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  U([User]) --> LB["LB 99.99%"]
+  subgraph AppTier["App tier in parallel"]
+    A1["App 99.9%"]
+    A2["App 99.9%"]
+  end
+  LB --> A1
+  LB --> A2
+  A1 --> DB[("DB 99.95%")]
+  A2 --> DB
+          </script>
+          <figcaption>Three stages in series; the middle stage is two instances in parallel. The weakest serial stage (the database) sets the ceiling.</figcaption>
+        </figure>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Step</th><th>Arithmetic</th><th>Result</th></tr></thead>
+            <tbody>
+              <tr><td>Series rule</td><td>A = A1 x A2 x ... x An</td><td>Three 99.9% parts in series: 99.7%</td></tr>
+              <tr><td>Parallel rule</td><td>A = 1 - (1 - A1) x (1 - A2) x ...</td><td>Two 99% parts in parallel: 99.99%</td></tr>
+              <tr><td>App tier above</td><td>1 - 0.001 x 0.001</td><td>99.9999%</td></tr>
+              <tr><td>Whole path</td><td>0.9999 x 0.999999 x 0.9995</td><td>about 99.94%, roughly 5 hours down per year</td></tr>
+              <tr><td>Add a DB standby with failover</td><td>DB becomes 1 - 0.0005^2, in theory</td><td>Path is now limited by the LB: about 99.99%</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <ul>
+          <li>Redundancy only helps if failures are independent: same rack, same AZ, same bad deploy or same poisoned request breaks the assumption.</li>
+          <li>Failover is not instant or perfect; detection time and failed failovers count as downtime.</li>
+          <li>Every hard dependency you add in series lowers your ceiling. Make dependencies soft (cache, default, degrade) where you can.</li>
+        </ul>
+        <p class="note"><b>Failure mode:</b> correlated failure. Most large outages are a config push, a bad deploy or an overload cascade that hits all replicas at once, not independent hardware faults.</p>
+      </section>
+
+      <section class="chapter" id="rad">
+        <h2>Reliability vs availability vs durability</h2>
+        <p class="kind"><a href="#part-tradeoffs">Core trade-offs</a></p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Property</th><th>Question it answers</th><th>Measured by</th><th>Bought with</th></tr></thead>
+            <tbody>
+              <tr><td>Availability</td><td>Does it answer right now?</td><td>Successful requests / total; nines</td><td>Redundancy, failover, load shedding</td></tr>
+              <tr><td>Reliability</td><td>Does it do the correct thing over time, even under faults?</td><td>Error rate, MTBF, correctness of results</td><td>Testing, idempotency, safe deploys, fault isolation</td></tr>
+              <tr><td>Durability</td><td>Once acknowledged, is the data ever lost?</td><td>Probability of loss per year (for example "eleven nines" for object stores)</td><td>Replication, fsync, checksums, backups, restore drills</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <ul>
+          <li>Available but not reliable: answers every request, sometimes with wrong or stale data.</li>
+          <li>Durable but not available: data is safe on disk, the service is down.</li>
+          <li>Related terms: <b>fault tolerance</b> (keeps working when a component fails), <b>resilience</b> (recovers quickly), <b>MTTR</b> (mean time to recover). Availability is about MTBF / (MTBF + MTTR), so cutting recovery time is usually cheaper than preventing every failure.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="consistency-ladder">
+        <h2>Consistency models as a ladder</h2>
+        <p class="kind"><a href="#part-tradeoffs">Core trade-offs</a></p>
+        <p>Stronger models are easier to program against and cost more latency and availability. Pick the weakest model that keeps the product correct, per operation, not per system.</p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart TD
+  L[Linearizable] --> S[Sequential]
+  S --> C[Causal]
+  C --> RYW[Read-your-writes]
+  C --> MR[Monotonic reads]
+  RYW --> E[Eventual]
+  MR --> E
+          </script>
+          <figcaption>Top is strongest and most expensive. The two session guarantees sit side by side: each is weaker than causal, and neither implies the other.</figcaption>
+        </figure>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Model</th><th>Guarantee in one line</th><th>When it matters</th></tr></thead>
+            <tbody>
+              <tr><td>Linearizable</td><td>Behaves like a single copy; every operation takes effect at one point in real time, and later reads see it</td><td>Locks, leader election, unique constraints, balances, inventory decrement</td></tr>
+              <tr><td>Sequential</td><td>All clients see the same single order of operations, but that order may lag real time</td><td>Replicated logs, state machines fed from an ordered log</td></tr>
+              <tr><td>Causal</td><td>Operations that are causally related are seen in order by everyone; concurrent ones may differ</td><td>Comment threads (reply never appears before its parent), collaborative apps</td></tr>
+              <tr><td>Read-your-writes</td><td>A client always sees its own earlier writes</td><td>Profile edit then reload; post then view own timeline</td></tr>
+              <tr><td>Monotonic reads</td><td>A client never sees time go backwards across successive reads</td><td>Pagination and refresh across replicas with different lag</td></tr>
+              <tr><td>Eventual</td><td>If writes stop, all replicas converge; no bound on when, no ordering promise meanwhile</td><td>Like counts, view counts, DNS, caches, search indexes</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <ul>
+          <li>"Strong consistency" in interviews nearly always means linearizable reads and writes on one object. Serializability is a different axis: isolation of multi-object transactions (see <a href="sd-data-systems.html">Data Systems</a>).</li>
+          <li>Cheap ways to get session guarantees on an eventually consistent store: read from the leader for a short window after a write, sticky routing to one replica, or pass a version token and wait for the replica to catch up.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="cap-pacelc">
+        <h2>CAP and PACELC</h2>
+        <p class="kind"><a href="#part-tradeoffs">Core trade-offs</a></p>
+        <p><b>CAP, stated precisely:</b> when a network partition separates replicas, a system must choose between consistency (C, meaning linearizability) and availability (A, meaning every non-failed node answers). It is not "pick two of three": partitions are not optional, so the real choice is C or A <i>during</i> a partition. <b>PACELC</b> adds the everyday case: else (E), with no partition, you still trade latency (L) against consistency (C).</p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  P{{Network partition?}}
+  P -->|yes| PA[Stay available<br/>may return stale or conflicting data]
+  P -->|yes| PC[Stay consistent<br/>minority side rejects requests]
+  P -->|no| EL[Favour latency<br/>async replication, local reads]
+  P -->|no| EC[Favour consistency<br/>sync replication, quorum]
+          </script>
+          <figcaption>PACELC as two independent choices: PA or PC under partition, EL or EC otherwise.</figcaption>
+        </figure>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Class</th><th>Behaviour</th><th>Commonly cited examples (depends on configuration)</th><th>Fits</th></tr></thead>
+            <tbody>
+              <tr><td>PA / EL</td><td>Always writable, low latency, reconcile later</td><td>Dynamo-style stores such as Cassandra with low consistency levels</td><td>Carts, feeds, telemetry, session data</td></tr>
+              <tr><td>PC / EC</td><td>Consistent always; pays latency, loses availability on the minority side</td><td>Consensus-based stores: Spanner-style databases, etcd, ZooKeeper</td><td>Money, inventory, metadata, coordination</td></tr>
+              <tr><td>PC / EL</td><td>Fast when healthy, refuses rather than diverges when partitioned</td><td>Less common; some single-leader setups with async replicas and strict failover</td><td>Systems that prefer downtime to split brain</td></tr>
+              <tr><td>PA / EC</td><td>Consistent when healthy, stays up by relaxing consistency under partition</td><td>Some configurable stores</td><td>Rarely a deliberate target</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <ul>
+          <li>Many stores are tunable per request (consistency level, quorum size), so classify the configuration, not the product.</li>
+          <li>CAP's "available" is stricter than SLA availability, and its "consistent" is unrelated to the C in ACID.</li>
+        </ul>
+        <p class="note"><b>Interview tip:</b> do not say "this is a CP system" and stop. Say which operation needs which: "placing an order is CP; browsing the catalogue is AP and may be seconds stale".</p>
+      </section>
+
+      <section class="chapter" id="acid-base">
+        <h2>ACID vs BASE, strong vs eventual</h2>
+        <p class="kind"><a href="#part-tradeoffs">Core trade-offs</a></p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>&nbsp;</th><th>ACID</th><th>BASE</th></tr></thead>
+            <tbody>
+              <tr><td>Stands for</td><td>Atomicity, Consistency (invariants hold), Isolation, Durability</td><td>Basically Available, Soft state, Eventually consistent</td></tr>
+              <tr><td>Promise</td><td>A transaction is all-or-nothing and invariants are never visibly broken</td><td>The system stays up and converges; the application handles intermediate states</td></tr>
+              <tr><td>Cost</td><td>Coordination: locks or MVCC, sync commit; hard across shards or regions</td><td>Conflict resolution, compensation, idempotency, harder reasoning</td></tr>
+              <tr><td>Typical home</td><td>Relational and distributed SQL databases</td><td>Dynamo-style key-value and wide-column stores, caches, search indexes</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+sequenceDiagram
+  participant A as Client A
+  participant L as Leader
+  participant F as Follower
+  participant B as Client B
+  A->>L: like post 42
+  L-->>A: ok, count 101
+  B->>F: read count
+  F-->>B: 100 (stale)
+  L-->>F: replicate, async
+  B->>F: read count
+  F-->>B: 101
+          </script>
+          <figcaption>Eventual consistency in practice: B briefly reads a stale count. Harmless for likes, unacceptable for a balance check before a withdrawal.</figcaption>
+        </figure>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Data</th><th>Needs</th><th>Why</th></tr></thead>
+            <tbody>
+              <tr><td>Bank balance, wallet, ledger</td><td>Strong (linearizable, transactional)</td><td>A stale read allows a double spend; invariants must hold</td></tr>
+              <tr><td>Inventory, seat booking</td><td>Strong on the decrement / reservation</td><td>Overselling is a real-world cost</td></tr>
+              <tr><td>Unique username, idempotency key</td><td>Strong</td><td>Two winners is a correctness bug</td></tr>
+              <tr><td>Like count, view count, follower count</td><td>Eventual</td><td>Off by a few for a few seconds is invisible</td></tr>
+              <tr><td>Feed, search results, recommendations</td><td>Eventual</td><td>Freshness in seconds is fine; availability and latency matter more</td></tr>
+              <tr><td>Own profile after editing</td><td>Read-your-writes</td><td>Others may see it late; the author must not</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="chapter" id="workload-shape">
+        <h2>Read-heavy vs write-heavy</h2>
+        <p class="kind"><a href="#part-tradeoffs">Core trade-offs</a></p>
+        <p>The read:write ratio is the first number that shapes a design. Read-heavy systems move work to write time (precompute, cache, replicate). Write-heavy systems move work off the write path (append, buffer, batch, partition).</p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart TD
+  subgraph ReadHeavy["Read-heavy"]
+    direction LR
+    C1([Client]) --> CDN[CDN]
+    C1 --> AP1[App]
+    AP1 --> CA[(Cache)]
+    AP1 --> RR[(Read replicas)]
+  end
+  subgraph WriteHeavy["Write-heavy"]
+    direction LR
+    C2([Client]) --> AP2[App]
+    AP2 --> Q[[Log or queue]]
+    Q --> W[Batch writers]
+    W --> SH[(Sharded LSM store)]
+  end
+  ReadHeavy ~~~ WriteHeavy
+          </script>
+          <figcaption>Read-heavy designs add copies in front of the database; write-heavy designs add a buffer and partitions behind the app.</figcaption>
+        </figure>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>&nbsp;</th><th>Read-heavy (for example 100:1)</th><th>Write-heavy (for example 1:10)</th></tr></thead>
+            <tbody>
+              <tr><td>Examples</td><td>Feeds, product pages, URL redirects, profiles</td><td>Metrics, logs, IoT, click streams, chat messages, location pings</td></tr>
+              <tr><td>Main tools</td><td>Cache, CDN, read replicas, denormalised read models, indexes</td><td>Append-only log, queue buffering, batching, sharding, LSM storage</td></tr>
+              <tr><td>Storage bias</td><td>B-tree, many indexes</td><td>LSM-tree, few indexes</td></tr>
+              <tr><td>You pay</td><td>Staleness, invalidation complexity, slower writes</td><td>Read-time work (merge, aggregate), eventual visibility</td></tr>
+              <tr><td>Watch for</td><td>Cache stampede, replica lag, hot keys</td><td>Backpressure, hot partitions, compaction stalls</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="chapter" id="interaction-styles">
+        <h2>Push vs pull, sync vs async, stateful vs stateless</h2>
+        <p class="kind"><a href="#part-tradeoffs">Core trade-offs</a></p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Axis</th><th>Option</th><th>Gain</th><th>Pay</th><th>Use when</th></tr></thead>
+            <tbody>
+              <tr><td rowspan="2">Delivery</td><td>Push (fan-out on write, server-sent)</td><td>Fast reads, fresh data</td><td>Write amplification, wasted work for inactive receivers</td><td>Few receivers per event, low latency required</td></tr>
+              <tr><td>Pull (fan-out on read, polling)</td><td>Cheap writes, receiver controls rate</td><td>Slow or heavy reads, staleness up to the poll interval</td><td>Huge fan-out (celebrity), infrequent readers</td></tr>
+              <tr><td rowspan="2">Coupling in time</td><td>Synchronous (request-response)</td><td>Simple, immediate result and error</td><td>Caller blocked; availabilities multiply; cascading failure</td><td>User needs the answer now; short call chain</td></tr>
+              <tr><td>Asynchronous (queue, event)</td><td>Absorbs spikes, isolates failures, retries for free</td><td>Eventual result, duplicates, ordering, harder debugging</td><td>Slow or unreliable work; spikes; multiple consumers</td></tr>
+              <tr><td rowspan="2">Server state</td><td>Stateless</td><td>Any instance serves any request; trivial scaling and failover</td><td>Every request pays a state lookup</td><td>Default for request-serving tiers</td></tr>
+              <tr><td>Stateful</td><td>Data locality, no lookup, long-lived connections</td><td>Sticky routing, rebalancing, careful deploys, replication of state</td><td>WebSocket gateways, databases, stream processors, game servers</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+sequenceDiagram
+  participant C as Client
+  participant O as Order service
+  participant Q as Queue
+  participant E as Email worker
+  C->>O: place order
+  O->>O: commit order (sync)
+  O-->>Q: OrderPlaced (async)
+  O-->>C: 201 Created
+  Q-->>E: deliver
+  E->>E: send email, retry on failure
+          </script>
+          <figcaption>Keep on the synchronous path only what the user must wait for; everything else goes behind the queue.</figcaption>
+        </figure>
+        <p class="note"><b>Trade-off:</b> hybrids are normal. Feeds push to ordinary users and pull for celebrity accounts; APIs accept synchronously (202 plus a status URL) and process asynchronously.</p>
+      </section>
+
+      <section class="chapter" id="replication-topologies">
+        <h2>Single-leader vs multi-leader vs leaderless</h2>
+        <p class="kind"><a href="#part-tradeoffs">Core trade-offs</a></p>
+        <p>Where writes are accepted decides whether conflicts can exist. Details (replication lag, quorums, conflict resolution) are in <a href="sd-data-systems.html">Data Systems</a> and <a href="sd-distributed-systems.html">Distributed Systems Patterns</a>.</p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart TD
+  subgraph Less["Leaderless"]
+    direction LR
+    N1[(Node)] --- N2[(Node)]
+    N2 --- N3[(Node)]
+    N3 --- N1
+  end
+  subgraph Multi["Multi-leader"]
+    direction LR
+    ML1[(Leader A)] --> ML2[(Leader B)]
+    ML2 --> ML1
+  end
+  subgraph Single["Single-leader"]
+    direction LR
+    SL[(Leader)] --> SF1[(Follower)]
+    SL --> SF2[(Follower)]
+  end
+          </script>
+          <figcaption>One writer, several writers, or every node a writer: conflicts become possible as soon as there is more than one.</figcaption>
+        </figure>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>&nbsp;</th><th>Single-leader</th><th>Multi-leader</th><th>Leaderless</th></tr></thead>
+            <tbody>
+              <tr><td>Writes go to</td><td>One node</td><td>Any leader, usually one per region</td><td>Any replica; W of N must acknowledge</td></tr>
+              <tr><td>Write conflicts</td><td>None</td><td>Yes; need resolution (last-write-wins, CRDT, app merge)</td><td>Yes; versions, read repair, anti-entropy</td></tr>
+              <tr><td>Consistency available</td><td>Strong from the leader; stale from async followers</td><td>Eventual across leaders</td><td>Tunable; R + W &gt; N gives overlap, not full linearizability</td></tr>
+              <tr><td>Write availability</td><td>Lost until failover completes</td><td>Survives loss of a leader or region</td><td>Survives node loss with no failover step</td></tr>
+              <tr><td>Write scaling</td><td>One node (shard to go further)</td><td>Per region, not per key</td><td>Scales with nodes</td></tr>
+              <tr><td>Main risk</td><td>Failover: lost async writes, split brain</td><td>Conflict handling bugs</td><td>Stale reads, sloppy quorums, LWW data loss</td></tr>
+              <tr><td>Typical use</td><td>Most OLTP: PostgreSQL, MySQL, MongoDB replica sets</td><td>Multi-region writes, offline-capable clients</td><td>Dynamo-style stores: Cassandra, Riak</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><b>Interview tip:</b> default to single-leader with replicas. Move away only when you can name the requirement: writes in several regions, or write availability through node loss.</p>
+      </section>
+
+      <section class="chapter part" id="part-scaling">
+        <h2>Scaling a design step by step</h2>
+        <p class="kind">Part 5 of 5 &middot; from one server to millions of users</p>
+        <p>The classic evolution. Each step is taken because a specific limit was hit, not in advance. In an interview, start at the step your numbers justify and name the trigger for the next one.</p>
+        <ul>
+          <li><a href="#scale-triggers">Steps and their triggers</a></li>
+          <li><a href="#scale-1">1 and 2: one box, then a separate database</a></li>
+          <li><a href="#scale-3">3: load balancer and stateless app tier</a></li>
+          <li><a href="#scale-4">4: read replicas</a></li>
+          <li><a href="#scale-5">5: cache</a></li>
+          <li><a href="#scale-6">6: CDN</a></li>
+          <li><a href="#scale-7">7: queue and workers</a></li>
+          <li><a href="#scale-8">8: sharding</a></li>
+          <li><a href="#scale-9">9: multi-region</a></li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="scale-triggers">
+        <h2>Steps and their triggers</h2>
+        <p class="kind"><a href="#part-scaling">Scaling step by step</a></p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Step</th><th>Change</th><th>Trigger</th><th>New problem it brings</th></tr></thead>
+            <tbody>
+              <tr><td>1</td><td>Single server</td><td>Start here</td><td>One failure domain; app and DB compete for resources</td></tr>
+              <tr><td>2</td><td>Separate database server</td><td>CPU / memory contention; need to scale tiers independently</td><td>Network hop per query</td></tr>
+              <tr><td>3</td><td>Load balancer + stateless app tier</td><td>App CPU saturated; need zero-downtime deploys and redundancy</td><td>Sessions must move out of the process</td></tr>
+              <tr><td>4</td><td>Read replicas</td><td>DB read load saturates the primary; need failover target</td><td>Replication lag, stale reads</td></tr>
+              <tr><td>5</td><td>Cache</td><td>Same hot rows read repeatedly; DB latency dominates p99</td><td>Invalidation, stampedes, hot keys</td></tr>
+              <tr><td>6</td><td>CDN</td><td>Static and media bytes dominate bandwidth; users are far away</td><td>Purging, cache-control correctness</td></tr>
+              <tr><td>7</td><td>Queue + workers</td><td>Slow or spiky work on the request path</td><td>Duplicates, ordering, monitoring lag</td></tr>
+              <tr><td>8</td><td>Sharding</td><td>Write volume or dataset exceeds one primary</td><td>Cross-shard queries and transactions, rebalancing, hot shards</td></tr>
+              <tr><td>9</td><td>Multi-region</td><td>Global latency, region-level disaster recovery, data residency</td><td>Cross-region replication, conflicts, cost</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><b>Interview tip:</b> steps 3 to 7 are nearly free of regret and can be drawn immediately at any real scale. Steps 8 and 9 are expensive; justify them with a number.</p>
+      </section>
+
+      <section class="chapter" id="scale-1">
+        <h2>1 and 2: one box, then a separate database</h2>
+        <p class="kind"><a href="#part-scaling">Scaling step by step</a></p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart TD
+  subgraph Step1["Step 1"]
+    direction LR
+    U1([Users]) --> S1["Web + app + DB<br/>one server"]
+  end
+  subgraph Step2["Step 2"]
+    direction LR
+    U2([Users]) --> S2[Web + app]
+    S2 --> D2[(Database)]
+  end
+  Step1 ~~~ Step2
+          </script>
+          <figcaption>Splitting the database off lets each tier get the hardware it needs and be scaled on its own.</figcaption>
+        </figure>
+        <ul>
+          <li>Good for: a few hundred requests per second with vertical scaling. Many products never need more than step 2 plus backups.</li>
+          <li><b>Trigger to move on:</b> the app server is CPU-bound, or any deploy or crash is an outage.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="scale-3">
+        <h2>3: load balancer and stateless app tier</h2>
+        <p class="kind"><a href="#part-scaling">Scaling step by step</a></p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  U([Users]) --> LB[Load balancer]
+  LB --> A1[App 1]
+  LB --> A2[App 2]
+  LB --> A3[App N]
+  A1 --> SS[(Session store)]
+  A2 --> SS
+  A1 --> DB[(Database)]
+  A2 --> DB
+  A3 --> DB
+          </script>
+          <figcaption>Session state moves to a shared store (or a signed token), so any app instance can serve any request.</figcaption>
+        </figure>
+        <ul>
+          <li>Gain: horizontal app capacity, rolling deploys, health-checked failover. Run the load balancer itself as a redundant pair.</li>
+          <li><b>Trigger to move on:</b> the database is now the bottleneck, usually on reads first.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="scale-4">
+        <h2>4: read replicas</h2>
+        <p class="kind"><a href="#part-scaling">Scaling step by step</a></p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  A[App tier] -->|writes| P[(Primary)]
+  A -->|reads| R1[(Replica 1)]
+  A -->|reads| R2[(Replica 2)]
+  P -.->|async replication| R1
+  P -.->|async replication| R2
+          </script>
+          <figcaption>Writes go to one primary; reads spread over replicas that lag by milliseconds to seconds.</figcaption>
+        </figure>
+        <ul>
+          <li>Gain: read capacity and a promotion target if the primary fails.</li>
+          <li><b>Failure mode:</b> read-after-write returns stale data. Route a user's reads to the primary briefly after their own write.</li>
+          <li><b>Trigger to move on:</b> the same queries repeat, or replicas keep being added for a few hot rows.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="scale-5">
+        <h2>5: cache</h2>
+        <p class="kind"><a href="#part-scaling">Scaling step by step</a></p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  A[App tier] -->|1 get| C[(Cache)]
+  A -->|2 on miss| DB[(Database)]
+  A -->|3 set with TTL| C
+          </script>
+          <figcaption>Cache-aside: the app checks the cache, falls back to the database on a miss and populates the cache.</figcaption>
+        </figure>
+        <ul>
+          <li>Gain: sub-millisecond reads for hot data and an order of magnitude less database load.</li>
+          <li>Pay: staleness and invalidation. The database must still survive a cold cache. Patterns and failure modes are in <a href="sd-building-blocks.html">Building Blocks</a>.</li>
+          <li><b>Trigger to move on:</b> bandwidth and latency for static assets and media.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="scale-6">
+        <h2>6: CDN</h2>
+        <p class="kind"><a href="#part-scaling">Scaling step by step</a></p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  U([Users]) -->|static, media| CDN[CDN edge]
+  CDN -.->|miss| OS[(Object storage)]
+  U -->|API calls| LB[Load balancer]
+  LB --> A[App tier]
+  A --> OS
+          </script>
+          <figcaption>Bytes are served from an edge near the user; only dynamic API calls reach the origin.</figcaption>
+        </figure>
+        <ul>
+          <li>Gain: lower latency worldwide, origin offload, absorption of traffic spikes.</li>
+          <li>Media goes to object storage, not app-server disks; uploads use pre-signed URLs so bytes bypass the app tier.</li>
+          <li><b>Trigger to move on:</b> slow or bursty work (email, thumbnails, fan-out) is making requests slow.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="scale-7">
+        <h2>7: queue and workers</h2>
+        <p class="kind"><a href="#part-scaling">Scaling step by step</a></p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  A[App tier] -->|enqueue| Q[[Queue]]
+  Q --> W1[Worker]
+  Q --> W2[Worker]
+  W1 --> DB[(Database)]
+  W2 --> X[External service]
+  Q -.->|after N failures| DLQ[[Dead-letter queue]]
+          </script>
+          <figcaption>The request returns after the enqueue; workers scale on queue depth and failures park in a dead-letter queue.</figcaption>
+        </figure>
+        <ul>
+          <li>Gain: fast responses, spike absorption, independent scaling and failure isolation of slow work.</li>
+          <li>Pay: at-least-once delivery means handlers must be idempotent.</li>
+          <li><b>Trigger to move on:</b> the primary database cannot keep up with writes, or the dataset no longer fits one node comfortably.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="scale-8">
+        <h2>8: sharding</h2>
+        <p class="kind"><a href="#part-scaling">Scaling step by step</a></p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  A[App tier] --> R{{Shard router}}
+  R -->|"hash(user_id)"| S1[(Shard 1)]
+  R --> S2[(Shard 2)]
+  R --> S3[(Shard 3)]
+  S1 -.-> F1[(Replica)]
+  S2 -.-> F2[(Replica)]
+  S3 -.-> F3[(Replica)]
+          </script>
+          <figcaption>Each shard is its own primary plus replicas; the shard key decides which queries stay on one shard.</figcaption>
+        </figure>
+        <ul>
+          <li>Before sharding: bigger primary, archive cold data, split by function (move a table or service to its own database).</li>
+          <li>Choose the shard key from the dominant access pattern; queries that do not include it become scatter-gather.</li>
+          <li><b>Trigger to move on:</b> users on other continents, or a requirement to survive the loss of a region.</li>
+        </ul>
+      </section>
+
+      <section class="chapter" id="scale-9">
+        <h2>9: multi-region</h2>
+        <p class="kind"><a href="#part-scaling">Scaling step by step</a></p>
+        <figure class="diagram">
+          <script type="text/x-mermaid">
+flowchart LR
+  U([Users]) --> G[Geo DNS / global LB]
+  subgraph RA["Region A"]
+    AA[LB + app tier] --> DA[(Data)]
+  end
+  subgraph RB["Region B"]
+    AB[LB + app tier] --> DBB[(Data)]
+  end
+  G --> AA
+  G --> AB
+  DA -.->|replication| DBB
+          </script>
+          <figcaption>Each region is a full stack; the hard part is the dashed line between the data tiers.</figcaption>
+        </figure>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Mode</th><th>Writes</th><th>Gain</th><th>Pay</th></tr></thead>
+            <tbody>
+              <tr><td>Active-passive</td><td>One region; the other is a warm standby</td><td>Simple; disaster recovery</td><td>Failover time; possible loss of the last async writes; far users stay slow on writes</td></tr>
+              <tr><td>Active-active, partitioned by user home region</td><td>Each user writes in one region</td><td>Low latency, no conflicts for most data</td><td>Routing, user migration, global data still needs a plan</td></tr>
+              <tr><td>Active-active, multi-leader</td><td>Any region for any data</td><td>Best write latency and availability</td><td>Conflict resolution everywhere</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="chapter" id="cheat-sheet">
+        <h2>Cheat sheet</h2>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Topic</th><th>Remember</th></tr></thead>
+            <tbody>
+              <tr><td>Framework</td><td>Clarify 5, estimate 4, API 4, data model 4, high-level 10, deep dives 12, bottlenecks 4, wrap-up 2 (minutes)</td></tr>
+              <tr><td>Requirements</td><td>Functional, non-functional, out of scope. Ask scale, latency, consistency; assume the rest out loud</td></tr>
+              <tr><td>Estimation</td><td>Day = 10^5 s. 1M/day = about 10/s. 1M x 1 KB = 1 GB. Peak = 2x to 3x. 5 years = about 2,000 days</td></tr>
+              <tr><td>Latency</td><td>RAM 100 ns, SSD 100 us, datacentre hop 0.5 ms, disk seek 10 ms, cross-continent 100 to 150 ms</td></tr>
+              <tr><td>One node (approx.)</td><td>App 1k rps, SQL 10k reads/s and 1k to 5k writes/s, Redis-like 100k ops/s, Kafka-like 100k+ msgs/s</td></tr>
+              <tr><td>Nines</td><td>99.9% = 8.8 h/year, 99.99% = 53 min/year, 99.999% = 5 min/year</td></tr>
+              <tr><td>Availability maths</td><td>Series multiply availabilities; parallel multiply failure probabilities; correlated failures break both</td></tr>
+              <tr><td>Percentiles</td><td>Quote p99. Fan-out of 100 turns backend p99 into a 63% chance of a slow request</td></tr>
+              <tr><td>Consistency ladder</td><td>Linearizable, sequential, causal, read-your-writes / monotonic reads, eventual. Weakest that is correct, per operation</td></tr>
+              <tr><td>CAP / PACELC</td><td>During a partition choose C or A; otherwise choose latency or consistency</td></tr>
+              <tr><td>Strong vs eventual</td><td>Money, inventory, uniqueness: strong. Counts, feeds, search: eventual. Own edits: read-your-writes</td></tr>
+              <tr><td>Read-heavy</td><td>Cache, CDN, replicas, precomputed read models</td></tr>
+              <tr><td>Write-heavy</td><td>Append-only log, queue, batching, sharding, LSM storage</td></tr>
+              <tr><td>Replication</td><td>Single-leader by default; multi-leader for multi-region writes; leaderless for write availability</td></tr>
+              <tr><td>Scaling order</td><td>Separate DB, LB + stateless apps, replicas, cache, CDN, queue, sharding, multi-region; each with a trigger</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>Next in the path: <a href="sd-building-blocks.html">Building Blocks</a>.</p>
+      </section>
+
+    </div>
+  </main>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script src="../../assets/tutorial.js?v=8"></script>
+</body>
+</html>
