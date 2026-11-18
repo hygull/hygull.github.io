@@ -12,6 +12,7 @@
   --python: #1c64a0;
   --bash: #2a7a3c;
   --go: #00758f;
+  --qa: #7a6400;
   --system: #b4541a;
   --accent: var(--react);
   --note-bg: #ecf2fb;
@@ -45,6 +46,7 @@
     --python: #7db7f5;
     --bash: #7fd392;
     --go: #5fd0ea;
+    --qa: #e3c95a;
     --system: #f2a36b;
     --note-bg: #172134;
     --code-bg: #090d15;
@@ -64,6 +66,7 @@
   --python: #7db7f5;
   --bash: #7fd392;
   --go: #5fd0ea;
+  --qa: #e3c95a;
   --system: #f2a36b;
   --note-bg: #172134;
   --code-bg: #090d15;
@@ -87,6 +90,7 @@ body[data-track="design"] { --accent: var(--design); }
 body[data-track="python"] { --accent: var(--python); }
 body[data-track="bash"] { --accent: var(--bash); }
 body[data-track="go"] { --accent: var(--go); }
+body[data-track="qa"] { --accent: var(--qa); }
 body[data-track="system"] { --accent: var(--system); }
 body[data-track="system"] main { max-width: 900px; }
 [data-track="hub"] { --accent: var(--fg); }
@@ -501,6 +505,7 @@ th { font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; color: 
 .track.python { --accent: var(--python); }
 .track.bash { --accent: var(--bash); }
 .track.go { --accent: var(--go); }
+.track.qa { --accent: var(--qa); }
 .track.system { --accent: var(--system); }
 
 /* Hub layouts: list is the default; grid and card are chosen with the view switch */
@@ -544,3 +549,8 @@ th { font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; color: 
   .track { grid-template-columns: minmax(0, 1fr); }
   .tools input { width: 130px; }
 }
+
+/* Collapsible blocks: exercise solutions, long listings */
+details { margin: 14px 0; }
+details > summary { cursor: pointer; font-weight: 600; color: var(--accent); padding: 6px 0; }
+details > summary:hover { text-decoration: underline; }
