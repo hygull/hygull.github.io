@@ -30,6 +30,8 @@ SAME_AS = [
     "https://www.instagram.com/hygull/",
     "https://www.facebook.com/rishikesh.agrawani",
     "https://open.spotify.com/artist/2ocvkFVNkJXmbkgpReOxtC",
+    "https://music.apple.com/us/artist/rishikesh-agrawani/6814114165",
+    "https://music.amazon.in/artists/B0HKGNVG6N/rishikesh-agrawani",
 ]
 HOME_TITLE = "Rishikesh Agrawani (hygull) | Python and System Design Tutorials"
 CAREER_START = datetime.date(2016, 6, 9)   # "N+ years of experience" is counted from this day
