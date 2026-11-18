@@ -255,6 +255,7 @@ source venv/bin/activate          # Windows: venv\Scripts\activate
 pip install pytest-playwright     # installs playwright and pytest too
 playwright install chromium       # downloads the browser (about 150 MB), once
         </script>
+        <p class="note"><b>Two steps, both needed:</b> <code>pip install pytest-playwright</code> is the only Python package to install. It brings in <code>playwright</code> (the library), <code>pytest</code> (the test runner) and <code>pytest-base-url</code> as dependencies. But pip does not download a browser. That is what <code>playwright install chromium</code> does. Skip it and the API tests still run, while every UI test fails with a message telling you to run <code>playwright install</code>.</p>
         <ul>
           <li><code>playwright install</code> with no name downloads all three browsers. Start with Chromium.</li>
           <li>Playwright uses its own browser copies, kept apart from the Chrome on your machine, so the browser version always matches the library.</li>
