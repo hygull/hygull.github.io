@@ -493,6 +493,8 @@ $ python first_api.py
           <li><a href="#conftest">Shared setup: conftest.py</a></li>
           <li><a href="#ui-login">Testing the sign-in page</a></li>
           <li><a href="#locators">Locators: finding things</a></li>
+          <li><a href="#inspect">Inspecting elements with DevTools</a></li>
+          <li><a href="#css-xpath">CSS selectors and XPath</a></li>
           <li><a href="#actions">Actions: doing things</a></li>
           <li><a href="#expect">expect: checking things</a></li>
           <li><a href="#ui-deposit">A test that waits for the page</a></li>
@@ -632,6 +634,84 @@ page.get_by_role("listitem").first        # also .last and .nth(2)
 page.get_by_role("listitem").count()      # how many there are
         </script>
         <p class="note"><b>Strict by default:</b> if a locator matches two elements and you try to click it, Playwright stops with an error that lists both. That is a feature: it never silently clicks the wrong one.</p>
+      </section>
+
+      <section class="chapter" id="inspect">
+        <h2>Inspecting elements with DevTools</h2>
+        <p class="kind"><a href="#part-ui">UI automation</a></p>
+        <p>Before you can locate an element you have to look at it. Every browser has built-in developer tools (<b>DevTools</b>) that show the HTML behind what is on screen. The steps below are for Chrome and Edge; Firefox is almost identical.</p>
+        <ol>
+          <li><b>Open the inspector on an element:</b> right-click it on the page and choose <b>Inspect</b>. Or press <code>F12</code> (<code>Cmd+Option+I</code> on a Mac), click the arrow icon at the top left of DevTools, then click the element.</li>
+          <li><b>Read the highlighted line</b> in the <b>Elements</b> panel. That is the element's HTML: its tag (<code>input</code>, <code>button</code>), attributes (<code>id</code>, <code>name</code>, <code>data-testid</code>) and text. Hovering over a line highlights the matching area on the page.</li>
+          <li><b>Copy an address for it:</b> right-click the highlighted line, open <b>Copy</b>, and pick one of the options in the table.</li>
+        </ol>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Copy option</th><th>Gives, for the Amount field of the bank dashboard</th><th>Use in a test?</th></tr></thead>
+            <tbody>
+              <tr><td>Copy selector</td><td><code>#amount</code></td><td>Fine when it is a short id like this. Long chains such as <code>div &gt; div:nth-child(3)</code> are fragile.</td></tr>
+              <tr><td>Copy XPath</td><td><code>//*[@id="amount"]</code></td><td>Same: fine when it is based on an id</td></tr>
+              <tr><td>Copy full XPath</td><td><code>/html/body/label/input</code></td><td>Avoid. It is the path from the top of the page and breaks when anything above the element moves.</td></tr>
+              <tr><td>Copy JS path</td><td><code>document.querySelector("#amount")</code></td><td>For the Console, not for tests</td></tr>
+              <tr><td>Copy element</td><td>The HTML itself</td><td>Handy for a bug report</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p><b>Check a selector before you put it in a test.</b> Two ways, both inside DevTools:</p>
+        <ul>
+          <li>In the Elements panel press <code>Ctrl+F</code> (<code>Cmd+F</code>) and type a CSS selector or an XPath. It shows "1 of 1" when exactly one element matches, which is what you want.</li>
+          <li>In the <b>Console</b> panel, <code>$$("css selector")</code> and <code>$x("xpath")</code> return the list of matches.</li>
+        </ul>
+        <script type="text/plain" data-lang="text" data-file="DevTools Console">
+> $$("#amount")
+[input#amount]
+> $x("//button[text()='Deposit']")
+[button]
+        </script>
+        <p><b>Find the role and name</b> for <code>get_by_role</code>: select the element, then open the <b>Accessibility</b> tab beside Styles. It shows, for example, Role: <code>button</code>, Name: <code>"Deposit"</code>, which is exactly what <code>page.get_by_role("button", name="Deposit")</code> looks for.</p>
+        <p class="note"><b>Easier still:</b> Playwright has its own picker. Run <a href="#codegen"><code>playwright codegen &lt;url&gt;</code></a>, press "Pick locator" and click any element: it prints the best locator, usually a role or label one, ready to paste. Use DevTools to understand the page and the picker to write the locator.</p>
+      </section>
+
+      <section class="chapter" id="css-xpath">
+        <h2>CSS selectors and XPath in Playwright</h2>
+        <p class="kind"><a href="#part-ui">UI automation</a></p>
+        <p>Older pages often have no labels or test ids, and many teams already hold a list of XPaths from Selenium days. <code>page.locator()</code> accepts both CSS and XPath. This test signs in to the bank using only those, and passes:</p>
+        <script type="text/plain" data-lang="py" data-file="tests/test_ui_css_xpath.py" data-norun>
+from playwright.sync_api import Page, expect
+
+
+def test_css_and_xpath_locators(page: Page, api):
+    page.goto("/")
+    page.locator("input[name='username']").fill("rishikesh")                 # CSS
+    page.locator("xpath=//input[@name='password']").fill("secret123")        # XPath, explicit
+    page.locator("//button[text()='Sign in']").click()                       # XPath, detected by //
+    expect(page.locator("#amount")).to_be_visible()                          # CSS id
+    expect(page.locator("//*[@id='amount']")).to_be_visible()                # what "Copy XPath" gives
+    expect(page.locator("//span[@data-testid='balance']")).to_have_text("5000")
+    expect(page.locator("xpath=/html/body/p[1]/span")).to_have_text("5000")  # "Copy full XPath"
+    expect(page.locator("//button[contains(text(), 'Depo')]")).to_be_enabled()
+        </script>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>I want</th><th>CSS</th><th>XPath</th></tr></thead>
+            <tbody>
+              <tr><td>By id</td><td><code>#amount</code></td><td><code>//*[@id='amount']</code></td></tr>
+              <tr><td>By attribute</td><td><code>input[name='username']</code></td><td><code>//input[@name='username']</code></td></tr>
+              <tr><td>By class</td><td><code>.error</code></td><td><code>//*[contains(@class, 'error')]</code></td></tr>
+              <tr><td>By exact text</td><td>Not possible in plain CSS</td><td><code>//button[text()='Sign in']</code></td></tr>
+              <tr><td>By part of the text</td><td>Not possible in plain CSS</td><td><code>//button[contains(text(), 'Sign')]</code></td></tr>
+              <tr><td>Inside something</td><td><code>form input</code></td><td><code>//form//input</code></td></tr>
+              <tr><td>Parent of something</td><td>Not possible in plain CSS</td><td><code>//input[@name='username']/..</code></td></tr>
+              <tr><td>The second match</td><td><code>li:nth-child(2)</code></td><td><code>(//li)[2]</code></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><b>Trap with a full XPath:</b> Playwright treats a string starting with <code>//</code> or <code>..</code> as XPath. A copied full XPath starts with a single <code>/</code>, is read as CSS and fails with <code>Unexpected token "/" while parsing css selector</code>. Put <code>xpath=</code> in front, as in the test above.</p>
+        <ul>
+          <li><b>Good XPath is short and names a meaning:</b> an id, a <code>name</code>, a <code>data-testid</code>, a visible text. Bad XPath counts positions: <code>/div[2]/div[1]/span[3]</code>.</li>
+          <li><b>Order of preference:</b> role or label locator, then test id, then a short CSS or XPath, and a copied full XPath never.</li>
+          <li>Everything else still applies to these locators: auto-waiting, <code>expect</code>, strictness.</li>
+        </ul>
       </section>
 
       <section class="chapter" id="actions">
@@ -930,6 +1010,7 @@ tests/test_api_accounts.py ..........                                    [100%]
           <li><a href="#login-once">Sign in once, reuse everywhere</a></li>
           <li><a href="#page-objects">Page objects</a></li>
           <li><a href="#layout">Project layout</a></li>
+          <li><a href="#real-case">A real case: Next.js frontend, FastAPI backend</a></li>
           <li><a href="#flaky">Flaky tests</a></li>
           <li><a href="#ci">Running in CI</a></li>
           <li><a href="#cheatsheet">Cheat sheet</a></li>
@@ -1101,6 +1182,78 @@ bank-tests/
 testpaths = tests
         </script>
         <p>Naming files <code>test_api_*</code> and <code>test_ui_*</code> lets you run one kind: <code>pytest -k api</code> for a fast check on every change, everything before a release. Options you always want, such as <code>--tracing retain-on-failure</code>, can go in <code>pytest.ini</code> on a line starting <code>addopts =</code>.</p>
+      </section>
+
+      <section class="chapter" id="real-case">
+        <h2>A real case: Next.js frontend, FastAPI backend</h2>
+        <p class="kind"><a href="#part-together">Putting it together</a></p>
+        <p>A common setup: the web pages are a Next.js application, and they fetch their data from a Python FastAPI backend. A QA engineer is asked to automate one journey: <b>log in, open a certain page, type a prompt, click Submit</b>, and check that an answer appears.</p>
+        <p>The key idea: a UI test only needs the address of the frontend. The test drives the browser, and the browser calls FastAPI by itself, exactly as it does for a real user. The test does not care what the frontend or backend is written in.</p>
+        <ol>
+          <li><b>Get a place to test and a test account.</b> A staging address where both parts are deployed, and a login made for automation. Never a real person's account.</li>
+          <li><b>Install</b>, as in <a href="#install">Install</a>.</li>
+          <li><b>Do the journey once by hand</b> with <a href="#codegen"><code>playwright codegen https://staging.example.com</code></a> and note the locators it suggests. <a href="#inspect">Inspect</a> anything it cannot name well.</li>
+          <li><b>Write the test</b> below, replacing the labels and addresses with the real ones.</li>
+          <li><b>Run it</b> with <code>pytest --base-url https://staging.example.com --headed</code> to watch, and without <code>--headed</code> in CI.</li>
+        </ol>
+        <script type="text/plain" data-lang="py" data-file="tests/test_prompt.py" data-norun>
+import os
+import re
+
+from playwright.sync_api import Page, expect
+
+
+def log_in(page: Page):
+    page.goto("/login")
+    page.get_by_label("Email").fill(os.environ["QA_EMAIL"])
+    page.get_by_label("Password").fill(os.environ["QA_PASSWORD"])
+    page.get_by_role("button", name="Sign in").click()
+    expect(page).to_have_url("/dashboard")
+
+
+def test_submit_prompt(page: Page):
+    log_in(page)
+
+    page.get_by_role("link", name="Assistant").click()
+    page.get_by_placeholder("Ask something").fill("Summarise last month's deposits")
+
+    with page.expect_response("**/api/prompts") as reply:     # the call to FastAPI
+        page.get_by_role("button", name="Submit").click()
+    assert reply.value.status == 200
+
+    answer = page.get_by_test_id("answer")
+    expect(answer).to_be_visible(timeout=30_000)              # answers can be slow
+    expect(answer).not_to_be_empty()
+    expect(answer).to_contain_text(re.compile("deposit", re.IGNORECASE))
+
+
+def test_prompt_page_with_fixed_answer(page: Page):
+    log_in(page)
+    page.goto("/assistant")
+    page.route("**/api/prompts", lambda route: route.fulfill(
+        status=200, json={"answer": "Fixed answer for the test"}))
+
+    page.get_by_placeholder("Ask something").fill("anything")
+    page.get_by_role("button", name="Submit").click()
+    expect(page.get_by_test_id("answer")).to_have_text("Fixed answer for the test")
+        </script>
+        <p>This file was run, and passes, against a small stand-in app with the same pages and a prompt endpoint that takes 1.5 seconds to answer. It was not run against a real Next.js and FastAPI application: the labels, addresses and the <code>/api/prompts</code> path are examples.</p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Concern in this kind of app</th><th>What to do</th></tr></thead>
+            <tbody>
+              <tr><td>Password in the test file</td><td>Never. Read it from environment variables, as here, and store it as a secret in CI.</td></tr>
+              <tr><td>Every test logs in again</td><td><a href="#login-once">Sign in once</a> and reuse the saved state</td></tr>
+              <tr><td>Login through Google, SSO or a one-time code</td><td>Hard and fragile to automate through the UI. Ask the developers for a test-only login or a token you can set.</td></tr>
+              <tr><td>Next.js class names change on every build</td><td>Do not locate by class. Use role, label and placeholder, and ask the frontend developers to add <code>data-testid</code> to the prompt box and the answer area.</td></tr>
+              <tr><td>The answer takes many seconds, or streams in piece by piece</td><td>Wait for the response with <code>page.expect_response</code> or for a "finished" state on the page, with a longer timeout. Never a fixed sleep.</td></tr>
+              <tr><td>The answer comes from an AI model and differs every run</td><td>Check that an answer appears, is not empty and contains expected words or structure. Do not compare with an exact text.</td></tr>
+              <tr><td>You want to test the page without waiting for the model</td><td><a href="#mocking">Fake the reply</a> with <code>page.route</code>, as the second test does</td></tr>
+              <tr><td>The backend's own rules: empty prompt, no login, very long input</td><td><a href="#api-tests">API tests</a> straight against FastAPI. Its <code>/docs</code> page lists every endpoint with the fields it expects.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><b>How to split the work:</b> one or two UI tests for the journey, a handful of faked-reply tests for how the page behaves, and many API tests for the rules. That is the <a href="#ui-vs-api">test pyramid</a> applied to this application.</p>
       </section>
 
       <section class="chapter" id="flaky">
