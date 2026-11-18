@@ -431,6 +431,39 @@ th { font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; color: 
 }
 .hub { max-width: 920px; margin: 0 auto; padding-block: 48px 96px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
 .track-list { display: flex; flex-direction: column; margin-top: 40px; }
+
+/* Landing page: sticky list of paths on the left, content on the right (the row of jump links takes over on small screens) */
+.hub.has-side { max-width: 1240px; }
+.hub-shell { display: grid; grid-template-columns: 210px minmax(0, 1fr); gap: 56px; }
+.hub-main { min-width: 0; }
+.hub-side {
+  position: sticky;
+  top: calc(var(--bar-h) + env(safe-area-inset-top, 0px) + 24px);
+  align-self: start;
+  max-height: calc(100vh - var(--bar-h) - 48px);
+  overflow-y: auto;
+}
+#hub-nav ol { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+#hub-nav a {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 7px 10px;
+  border-left: 2px solid var(--line);
+  color: var(--muted);
+  text-decoration: none;
+  font-size: 14px;
+  line-height: 1.4;
+}
+#hub-nav a:hover { color: var(--fg); }
+#hub-nav a.active { color: var(--fg); border-left-color: var(--fg); font-weight: 600; }
+#hub-nav .count { font-variant-numeric: tabular-nums; font-size: 12.5px; font-weight: 400; color: var(--muted); }
+.hub.has-side .jump { display: none; }
+@media (max-width: 900px) {
+  .hub-shell { grid-template-columns: minmax(0, 1fr); gap: 0; }
+  .hub-side { display: none; }
+  .hub.has-side .jump { display: flex; }
+}
 .track { display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: 12px 32px; padding-block: 28px; border-top: 1px solid var(--line); }
 .track h2, .track h3 { font-size: 24px; margin: 0 0 4px; }
 .track h2 a, .track h3 a { color: var(--fg); text-decoration: none; }
@@ -448,6 +481,7 @@ th { font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; color: 
 
 /* Hub layouts: list is the default; grid and card are chosen with the view switch */
 .hub[data-view="grid"], .hub[data-view="card"] { max-width: 1180px; }
+.hub.has-side[data-view="grid"], .hub.has-side[data-view="card"] { max-width: 1480px; }
 .hub[data-view="grid"] .track-list, .hub[data-view="card"] .track-list { display: grid; gap: 16px; }
 .hub[data-view="grid"] .track-list { grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); }
 .hub[data-view="card"] .track-list { grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); }
