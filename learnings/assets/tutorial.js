@@ -181,6 +181,8 @@
       hubSections.forEach(function (section, i) {
         if (section && section.getBoundingClientRect().top <= line) current = i;
       });
+      /* the last group is short, so its heading may never reach the line: at the bottom of the page it wins */
+      if (window.innerHeight + (window.pageYOffset || root.scrollTop) >= root.scrollHeight - 4) current = hubSections.length - 1;
       hubLinks.forEach(function (a, i) { a.classList.toggle("active", i === current); });
     };
     window.addEventListener("scroll", function () {
