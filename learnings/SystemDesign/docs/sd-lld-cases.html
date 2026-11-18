@@ -413,7 +413,7 @@ print(lot.park(Vehicle("MH12 GH 4444", VehicleKind.MOTORBIKE)).spot.spot_id)   #
           <script type="text/x-mermaid">
 flowchart LR
   M[("dict: key to node")]
-  H(["head sentinel"]) <--> A["subhash<br/>most recent"] <--> B["rishikesh<br/>least recent"] <--> T(["back to head"])
+  H(["head sentinel"]) <--> A["key c<br/>most recent"] <--> B["key a<br/>least recent"] <--> T(["back to head"])
   M -.-> A
   M -.-> B
           </script>
@@ -545,17 +545,17 @@ class OrderedDictLRU(Generic[K, V]):
 
 
 cache: LRUCache[str, int] = LRUCache(capacity=2)
-cache.put("rishikesh", 1)
-cache.put("sandhya", 2)
-print(cache.get("rishikesh"), cache.keys())   # 1 ['rishikesh', 'sandhya']
-cache.put("subhash", 3)                       # evicts sandhya, the least recent
-print(cache.get("sandhya"), cache.keys())     # None ['subhash', 'rishikesh']
-cache.put("rishikesh", 10)
-print(cache.get("rishikesh"))                 # 10
+cache.put("a", 1)
+cache.put("b", 2)
+print(cache.get("a"), cache.keys())   # 1 ['a', 'b']
+cache.put("c", 3)                     # evicts b, the least recent
+print(cache.get("b"), cache.keys())   # None ['c', 'a']
+cache.put("a", 10)
+print(cache.get("a"))                 # 10
 
 short: OrderedDictLRU[str, int] = OrderedDictLRU(capacity=2)
-for name, value in [("a", 1), ("b", 2)]:
-    short.put(name, value)
+for key, value in [("a", 1), ("b", 2)]:
+    short.put(key, value)
 short.get("a")
 short.put("c", 3)
 print(short.get("b"), short.get("a"))         # None 1
@@ -618,13 +618,13 @@ class LFUCache:
 
 
 lfu = LFUCache(capacity=2)
-lfu.put("hemkesh", "H")
-lfu.put("malinikesh", "M")
-lfu.get("hemkesh")
-lfu.get("hemkesh")
-lfu.get("malinikesh")
-lfu.put("subhash", "S")                   # malinikesh: 2 uses, hemkesh: 3
-print(lfu.get("malinikesh"), lfu.get("hemkesh"), lfu.get("subhash"))   # None H S
+lfu.put("x", "X")
+lfu.put("y", "Y")
+lfu.get("x")
+lfu.get("x")
+lfu.get("y")
+lfu.put("z", "Z")                   # evicts y: 2 uses, x: 3
+print(lfu.get("y"), lfu.get("x"), lfu.get("z"))   # None X Z
         </script>
         <div class="scroll">
           <table>
