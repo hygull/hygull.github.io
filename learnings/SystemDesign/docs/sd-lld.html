@@ -1324,16 +1324,16 @@ print(a.balance, b.balance, a.balance + b.balance)    # 1000 1000 2000
         <figure class="diagram">
           <script type="text/x-mermaid">
 sequenceDiagram
-  participant A as Rishikesh
+  participant A as User A
   participant S as SeatStore
-  participant B as Sandhya
+  participant B as User B
   A->>S: read A1
   S-->>A: free, version 0
   B->>S: read A1
   S-->>B: free, version 0
-  A->>S: write holder=Rishikesh if version is 0
+  A->>S: write holder=A if version is 0
   S-->>A: ok, version 1
-  B->>S: write holder=Sandhya if version is 0
+  B->>S: write holder=B if version is 0
   S-->>B: StaleWrite
           </script>
           <figcaption>Compare-and-set. Only the comparison and the write are atomic; nobody waits on a lock while a user decides.</figcaption>
