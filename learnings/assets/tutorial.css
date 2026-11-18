@@ -411,6 +411,7 @@ th { font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; color: 
   letter-spacing: 0.02em;
 }
 .profile-text { min-width: 0; }
+.profile .handle { font-family: var(--font-mono); font-size: 14px; color: var(--muted); margin: -4px 0 14px; }
 .socials { display: flex; flex-wrap: wrap; gap: 8px; list-style: none; padding: 0; margin: 20px 0 0; }
 .socials a {
   display: inline-block;
