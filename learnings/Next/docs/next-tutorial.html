@@ -40,7 +40,7 @@
     "name": "Rishikesh Agrawani",
     "url": "https://hygull.github.io/"
    },
-   "dateModified": "2026-11-18",
+   "dateModified": "2026-11-22",
    "isPartOf": {
     "@type": "WebSite",
     "name": "Learnings by Rishikesh Agrawani",
@@ -84,7 +84,9 @@
     <a class="brand" href="../../../index.html">Learnings</a>
     <nav class="tracks" aria-label="Tutorials">
       <a href="../../React/docs/react-tutorial.html">React</a>
+      <a href="../../React/docs/react-practice.html">React practice</a>
       <a href="next-tutorial.html" aria-current="page">Next.js</a>
+      <a href="next-practice.html">Next practice</a>
       <a href="../../Next_React/docs/react-vs-next.html">React vs Next</a>
       <a href="../../Design/docs/design-to-code.html">Design</a>
       <a href="../../../archive.html">Archive</a>
@@ -105,9 +107,9 @@
 
   <main>
     <div class="page-head">
-      <p class="eyebrow">Tutorial 2 of 4</p>
+      <p class="eyebrow">Tutorial 3 of 6</p>
       <h1>Next.js Essentials</h1>
-      <p class="lead">Next.js is a framework built on React. You still write React components, and Next adds the parts React leaves out: routing, a server, data fetching, caching and deployment. Examples use Next 16 with the App Router and TypeScript.</p>
+      <p class="lead">Next.js is a framework built on React. You still write React components, and Next adds the parts React leaves out: routing, a server, data fetching, caching and deployment. Examples use Next 16.4 with the App Router, TypeScript and Cache Components, which is how <code>create-next-app</code> sets up a new project today.</p>
     </div>
 
     <div class="chapters">
@@ -128,6 +130,7 @@ app/
 public/           static files, served from "/"
 next.config.ts    framework settings
         </script>
+        <p>The generated <code>next.config.ts</code> also switches on <b>Cache Components</b> (<code>cacheComponents: true</code>). It changes how pages are rendered and cached, and every example on this page is written for it: Next builds as much of each page as it can ahead of time, and anything that depends on the request must be marked. <a href="#data">Data fetching and caching</a> explains the rule.</p>
         <p class="note"><b>Concept:</b> a Next app runs in two places. Some code runs on the server, some in the browser. Most of this tutorial is about knowing which is which.</p>
       </section>
 
@@ -145,20 +148,32 @@ next.config.ts    framework settings
             </tbody>
           </table>
         </div>
-        <script type="text/plain" data-lang="tsx" data-file="app/users/[id]/page.tsx">
+        <script type="text/plain" data-lang="tsx" data-file="app/users/[id]/page.tsx" data-group="pages">
+import { Suspense } from "react";
+
 type Props = { params: Promise<{ id: string }> };
 
-export default async function UserPage({ params }: Props) {
+export default function UserPage({ params }: Props) {
+  return (
+    <Suspense fallback={<p>Loading user...</p>}>
+      <User params={params} />
+    </Suspense>
+  );
+}
+
+async function User({ params }: Props) {
   const { id } = await params;     // params is a Promise, so await it
   return <h1>User {id}</h1>;
 }
         </script>
+        <p>The <code>id</code> is only known when a request arrives, so the part that reads it sits inside <code>&lt;Suspense&gt;</code>. Next prerenders everything outside the boundary, sends the fallback first, and streams the real content in. Await <code>params</code> directly in the page function with no boundary and <code>npm run build</code> fails with "uncached or runtime data during prerendering".</p>
+        <p class="note"><b>Shortcut:</b> a <code>loading.tsx</code> file next to the page wraps the whole page in a Suspense boundary for you (next chapter). Then the page itself may be <code>async</code> and await <code>params</code> at the top.</p>
       </section>
 
       <section class="chapter" id="layouts">
         <h2>Layouts and special files</h2>
         <p>A <code>layout.tsx</code> wraps every page in its folder and below. It stays mounted while you navigate, so the nav does not re-render.</p>
-        <script type="text/plain" data-lang="tsx" data-file="app/layout.tsx">
+        <script type="text/plain" data-lang="tsx" data-file="app/layout.tsx" data-group="layouts">
 import Link from "next/link";
 import "./globals.css";
 
@@ -180,13 +195,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <table>
             <thead><tr><th>File</th><th>Shown when</th></tr></thead>
             <tbody>
-              <tr><td><code>loading.tsx</code></td><td>The page is still fetching data</td></tr>
+              <tr><td><code>loading.tsx</code></td><td>The page is still waiting for data. It becomes the Suspense fallback for the whole page.</td></tr>
               <tr><td><code>error.tsx</code></td><td>The page threw an error (must start with <code>"use client"</code>)</td></tr>
               <tr><td><code>not-found.tsx</code></td><td>You call <code>notFound()</code> or no route matches</td></tr>
             </tbody>
           </table>
         </div>
-        <script type="text/plain" data-lang="tsx" data-file="app/dashboard/loading.tsx">
+        <script type="text/plain" data-lang="tsx" data-file="app/dashboard/loading.tsx" data-group="layouts">
 export default function Loading() {
   return <p>Loading dashboard...</p>;
 }
@@ -228,11 +243,23 @@ const pathname = usePathname();    // "/dashboard", handy for active links
             </tbody>
           </table>
         </div>
-        <p>The usual pattern: the page is a server component that fetches data, and it passes that data to a small client component for the interactive part.</p>
-        <script type="text/plain" data-lang="tsx" data-file="app/products/page.tsx (server)">
+        <p>The usual pattern: a server component fetches the data and passes it to a small client component for the interactive part. Below, <code>page.tsx</code> is a server component and <code>LikeButton.tsx</code> is a client component. The fetch lives in its own component inside <code>&lt;Suspense&gt;</code>, so the heading is prerendered and the list streams in.</p>
+        <script type="text/plain" data-lang="tsx" data-file="app/products/page.tsx" data-group="server-client">
+import { Suspense } from "react";
 import { LikeButton } from "./LikeButton";
 
-export default async function ProductsPage() {
+export default function ProductsPage() {
+  return (
+    <main>
+      <h1>Products</h1>
+      <Suspense fallback={<p>Loading products...</p>}>
+        <ProductList />
+      </Suspense>
+    </main>
+  );
+}
+
+async function ProductList() {
   const res = await fetch("https://api.example.com/products");
   const products: { id: number; name: string }[] = await res.json();
 
@@ -247,7 +274,7 @@ export default async function ProductsPage() {
   );
 }
         </script>
-        <script type="text/plain" data-lang="tsx" data-file="app/products/LikeButton.tsx (client)">
+        <script type="text/plain" data-lang="tsx" data-file="app/products/LikeButton.tsx" data-group="server-client">
 "use client";
 import { useState } from "react";
 
@@ -265,34 +292,96 @@ export function LikeButton({ productId }: { productId: number }) {
 
       <section class="chapter" id="data">
         <h2>Data fetching and caching</h2>
-        <p>In a server component you just <code>await</code>. No <code>useEffect</code>, no loading state, and the user receives finished HTML.</p>
-        <script type="text/plain" data-lang="tsx" data-file="app/dashboard/page.tsx">
-async function getStats() {
+        <p>In a server component you just <code>await</code>. No <code>useEffect</code>, no loading state in your own code, and the user receives finished HTML.</p>
+        <p>With Cache Components, Next tries to prerender every page at build time. Data it cannot know in advance has to be put in one of two boxes, and the build refuses a page that does neither:</p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>The data is</th><th>You write</th><th>Result</th></tr></thead>
+            <tbody>
+              <tr><td>Fresh for every request, or personal: a fetch, a database read, <code>cookies()</code>, <code>headers()</code>, <code>params</code>, <code>searchParams</code></td><td>Read it in a component wrapped in <code>&lt;Suspense&gt;</code></td><td>The page shell is prerendered, the fallback shows first, the data streams in</td></tr>
+              <tr><td>The same for everyone and fine to reuse for a while</td><td><code>"use cache"</code> in the function or component, with <code>cacheLife</code></td><td>The result is stored and becomes part of the prerendered page</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <h3>Fresh data: stream it</h3>
+        <script type="text/plain" data-lang="tsx" data-file="app/dashboard/page.tsx" data-group="data">
+import { Suspense } from "react";
+
+async function getStats(): Promise<{ activeUsers: number }> {
   const res = await fetch(`${process.env.API_URL}/stats`);
   if (!res.ok) throw new Error("Failed to load stats");   // shows error.tsx
   return res.json();
 }
 
-export default async function Dashboard() {
+async function Stats() {
   const stats = await getStats();
   return <p>Active users: {stats.activeUsers}</p>;
 }
+
+export default function Dashboard() {
+  return (
+    <main>
+      <h1>Dashboard</h1>
+      <Suspense fallback={<p>Loading stats...</p>}>
+        <Stats />
+      </Suspense>
+    </main>
+  );
+}
         </script>
-        <p>By default each request fetches fresh data. You opt in to caching per call:</p>
-        <script type="text/plain" data-lang="ts">
-fetch(url);                                  // fresh on every request
-fetch(url, { cache: "force-cache" });        // cache until you invalidate it
-fetch(url, { next: { revalidate: 60 } });    // reuse for 60 seconds, then refresh
+        <p>The heading is static. <code>Stats</code> runs on each request and replaces the fallback when it is ready.</p>
+        <h3>Shared data: cache it</h3>
+        <script type="text/plain" data-lang="ts" data-file="lib/plans.ts" data-group="data">
+import { cacheLife, cacheTag } from "next/cache";
+
+export async function getPlans() {
+  "use cache";              // remember the result
+  cacheLife("hours");       // refresh it about once an hour
+  cacheTag("plans");        // a name to invalidate it by
+
+  await new Promise((resolve) => setTimeout(resolve, 100));   // stands in for a database or API call
+  return [
+    { id: 1, name: "Free", price: 0 },
+    { id: 2, name: "Pro", price: 499 },
+  ];
+}
         </script>
+        <script type="text/plain" data-lang="tsx" data-file="app/pricing/page.tsx" data-group="data">
+import { getPlans } from "@/lib/plans";
+
+export default async function PricingPage() {
+  const plans = await getPlans();    // cached, so no Suspense is needed
+  return (
+    <ul>
+      {plans.map((plan) => (
+        <li key={plan.id}>
+          {plan.name}: {plan.price}
+        </li>
+      ))}
+    </ul>
+  );
+}
+        </script>
+        <p>Arguments of a cached function are part of the cache key, so <code>getUser(7)</code> and <code>getUser(8)</code> are stored separately. <code>cacheLife</code> takes a profile name: <code>"seconds"</code>, <code>"minutes"</code>, <code>"hours"</code>, <code>"days"</code>, <code>"weeks"</code> or <code>"max"</code>. To throw a cached result away after a change, see <a href="#actions">Server Actions</a>.</p>
+        <h3>If you forget</h3>
+        <script type="text/plain" data-lang="text" data-file="npm run build">
+Error: Route "/dashboard": Next.js encountered uncached or runtime data during prerendering.
+`fetch(...)`, `cookies()`, `headers()`, `params`, `searchParams`, or `connection()` accessed outside of
+`<Suspense>` prevents the route from being prerendered ...
+Ways to fix this:
+  - [stream] Provide a placeholder with `<Suspense fallback={...}>` around the data access
+  - [cache] For uncached data (`fetch`, database calls): cache the access with `"use cache"`
+        </script>
+        <p class="note"><b>Older tutorials</b> cache per request with <code>fetch(url, { cache: "force-cache" })</code> or <code>{ next: { revalidate: 60 } }</code>, and await data at the top of an <code>async</code> page. That is the model before Cache Components. It still works in a project with <code>cacheComponents</code> off, but it is not what a new app uses.</p>
         <p>Need two things at once? Start both, then await together: <code>const [user, posts] = await Promise.all([getUser(), getPosts()]);</code></p>
       </section>
 
       <section class="chapter" id="actions">
         <h2>Server Actions: forms and mutations</h2>
         <p>A Server Action is a function marked <code>"use server"</code>. You pass it to a form, and Next calls it on the server when the form submits. No API endpoint and no <code>fetch</code> to write.</p>
-        <script type="text/plain" data-lang="ts" data-file="app/todos/actions.ts">
+        <script type="text/plain" data-lang="ts" data-file="app/todos/actions.ts" data-group="actions">
 "use server";
-import { revalidatePath } from "next/cache";
+import { updateTag } from "next/cache";
 
 export async function addTodo(formData: FormData) {
   const text = String(formData.get("text") ?? "").trim();
@@ -304,10 +393,10 @@ export async function addTodo(formData: FormData) {
     body: JSON.stringify({ text }),
   });
 
-  revalidatePath("/todos");    // refresh the list on that page
+  updateTag("todos");    // drop everything cached under the "todos" tag
 }
         </script>
-        <script type="text/plain" data-lang="tsx" data-file="app/todos/page.tsx">
+        <script type="text/plain" data-lang="tsx" data-file="app/todos/page.tsx" data-group="actions">
 import { addTodo } from "./actions";
 
 export default function TodosPage() {
@@ -319,13 +408,24 @@ export default function TodosPage() {
   );
 }
         </script>
+        <p>After a change, cached data is out of date. Tag it where it is read, with <code>cacheTag("todos")</code> inside the <code>"use cache"</code> function, and expire the tag where it is changed:</p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Call</th><th>Effect</th><th>Use it</th></tr></thead>
+            <tbody>
+              <tr><td><code>updateTag("todos")</code></td><td>Expires the tag at once, so the user sees their own change. Server Actions only.</td><td>After a form submit</td></tr>
+              <tr><td><code>revalidateTag("todos", "max")</code></td><td>Serves the old result while a fresh one is prepared in the background</td><td>Webhooks, content updates where a short delay is fine</td></tr>
+              <tr><td><code>revalidatePath("/todos")</code></td><td>Invalidates everything cached for one URL</td><td>When you do not know the tags</td></tr>
+            </tbody>
+          </table>
+        </div>
         <p class="note"><b>Important:</b> a Server Action is a public endpoint under the hood. Validate the input and check the user inside every action.</p>
       </section>
 
       <section class="chapter" id="api">
         <h2>Route handlers: API endpoints</h2>
         <p>A <code>route.ts</code> file is an HTTP endpoint. Export a function per method.</p>
-        <script type="text/plain" data-lang="ts" data-file="app/api/health/route.ts">
+        <script type="text/plain" data-lang="ts" data-file="app/api/health/route.ts" data-group="api">
 import { NextResponse } from "next/server";
 
 export async function GET() {
@@ -337,6 +437,7 @@ export async function POST(request: Request) {
   return NextResponse.json({ received: body }, { status: 201 });
 }
         </script>
+        <p>A <code>GET</code> handler follows the same rule as a page: one that returns fixed data, like this, can be prerendered, and one that reads the request, cookies or a database runs on each request. Other methods always run on request.</p>
         <p>Use route handlers for things called from outside your UI: webhooks, mobile apps, other services. For your own pages, server components and Server Actions are simpler.</p>
       </section>
 
@@ -344,7 +445,7 @@ export async function POST(request: Request) {
         <h2>Auth</h2>
         <p>The pattern: a Server Action logs in and stores the token in an <b>httpOnly cookie</b> (JavaScript in the browser cannot read it). A proxy file blocks protected URLs before they render. Server code reads the cookie when it needs the user.</p>
         <h3>1. Log in and set the cookie</h3>
-        <script type="text/plain" data-lang="ts" data-file="app/login/actions.ts">
+        <script type="text/plain" data-lang="ts" data-file="app/login/actions.ts" data-group="auth">
 "use server";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
@@ -376,7 +477,7 @@ export async function logout() {
   redirect("/login");
 }
         </script>
-        <script type="text/plain" data-lang="tsx" data-file="app/login/page.tsx">
+        <script type="text/plain" data-lang="tsx" data-file="app/login/page.tsx" data-group="auth">
 import { login } from "./actions";
 
 export default function LoginPage() {
@@ -390,7 +491,7 @@ export default function LoginPage() {
 }
         </script>
         <h3>2. Block protected routes</h3>
-        <script type="text/plain" data-lang="ts" data-file="proxy.ts (project root)">
+        <script type="text/plain" data-lang="ts" data-file="proxy.ts" data-group="auth">
 import { NextResponse, type NextRequest } from "next/server";
 
 export function proxy(request: NextRequest) {
@@ -402,44 +503,54 @@ export function proxy(request: NextRequest) {
 
 export const config = { matcher: ["/dashboard/:path*"] };
         </script>
-        <p>Before Next 16 this file was called <code>middleware.ts</code> and the function <code>middleware</code>. Same idea.</p>
+        <p>The file sits in the project root, next to <code>app/</code>. Before Next 16 it was called <code>middleware.ts</code> and the function <code>middleware</code>. Same idea.</p>
         <h3>3. Use the session on the server</h3>
-        <script type="text/plain" data-lang="tsx" data-file="app/dashboard/page.tsx">
+        <script type="text/plain" data-lang="tsx" data-file="app/dashboard/page.tsx" data-group="auth">
+import { Suspense } from "react";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
-export default async function Dashboard() {
+export default function Dashboard() {
+  return (
+    <Suspense fallback={<p>Loading...</p>}>
+      <Welcome />
+    </Suspense>
+  );
+}
+
+async function Welcome() {
   const token = (await cookies()).get("session")?.value;
   if (!token) redirect("/login");
 
   const res = await fetch(`${process.env.API_URL}/me`, {
     headers: { Authorization: `Bearer ${token}` },
   });
-  const user = await res.json();
+  const user: { name: string } = await res.json();
   return <h1>Welcome, {user.name}</h1>;
 }
         </script>
-        <p class="note"><b>Important:</b> the proxy is a fast first check, not the only one. Check the session again where the data is read, as the page above does.</p>
+        <p>Reading a cookie is request data, so <code>Welcome</code> sits inside <code>&lt;Suspense&gt;</code>, as in <a href="#data">Data fetching</a>.</p>
+        <p class="note"><b>Important:</b> the proxy is a fast first check, not the only one. Check the session again where the data is read, as the component above does.</p>
         <p>For Google or GitHub login, password reset and session rotation, use a library instead of writing it yourself: Auth.js, Better Auth or Clerk.</p>
       </section>
 
       <section class="chapter" id="assets">
         <h2>Styling, images and fonts</h2>
         <p>Tailwind is already set up by <code>create-next-app</code>. CSS Modules also work with no setup.</p>
-        <script type="text/plain" data-lang="tsx" data-file="app/page.tsx">
+        <script type="text/plain" data-lang="tsx" data-file="app/page.tsx" data-group="assets">
 import Image from "next/image";
 
 export default function Home() {
   return (
     <main className="mx-auto max-w-2xl p-6">
       <h1 className="text-3xl font-bold">Hello</h1>
-      <Image src="/hero.png" alt="Product screenshot" width={800} height={450} priority />
+      <Image src="/hero.png" alt="Product screenshot" width={800} height={450} preload />
     </main>
   );
 }
         </script>
         <p><code>Image</code> resizes the file, serves a modern format, lazy loads it, and reserves space so the page does not jump. Put the file in <code>public/</code>.</p>
-        <script type="text/plain" data-lang="tsx" data-file="app/layout.tsx">
+        <script type="text/plain" data-lang="tsx" data-file="app/layout.tsx" data-norun>
 import { Inter } from "next/font/google";
 
 const inter = Inter({ subsets: ["latin"] });
@@ -452,20 +563,43 @@ const inter = Inter({ subsets: ["latin"] });
       <section class="chapter" id="metadata">
         <h2>Metadata and SEO</h2>
         <p>Export <code>metadata</code> from a page or layout. Next writes the <code>&lt;title&gt;</code> and meta tags into the server HTML, so search engines and link previews see them.</p>
-        <script type="text/plain" data-lang="tsx" data-file="app/about/page.tsx">
+        <script type="text/plain" data-lang="tsx" data-file="app/about/page.tsx" data-group="metadata">
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "About us",
   description: "Who we are and what we build",
 };
+
+export default function AboutPage() {
+  return <h1>About us</h1>;
+}
         </script>
-        <script type="text/plain" data-lang="tsx" data-file="app/users/[id]/page.tsx (dynamic title)">
-export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
+        <p>For a title that depends on the URL, export <code>generateMetadata</code>. It receives the same <code>params</code> as the page.</p>
+        <script type="text/plain" data-lang="tsx" data-file="app/users/[id]/page.tsx" data-group="metadata">
+import { Suspense } from "react";
+
+type Props = { params: Promise<{ id: string }> };
+
+export async function generateMetadata({ params }: Props) {
   const { id } = await params;
   return { title: `User ${id}` };
 }
+
+export default function UserPage({ params }: Props) {
+  return (
+    <Suspense fallback={<p>Loading user...</p>}>
+      <User params={params} />
+    </Suspense>
+  );
+}
+
+async function User({ params }: Props) {
+  const { id } = await params;
+  return <h1>User {id}</h1>;
+}
         </script>
+        <p class="note"><b>Same rule as pages:</b> metadata that reads <code>params</code>, cookies or uncached data is resolved at request time. That is fine here because the page body already streams. On a page that is otherwise fully static, Next asks you to cache that data with <code>"use cache"</code> instead.</p>
       </section>
 
       <section class="chapter" id="env">
@@ -494,7 +628,7 @@ NEXT_PUBLIC_APP_NAME=My App              # also available in the browser
             </tbody>
           </table>
         </div>
-        <script type="text/plain" data-lang="css" data-file="app/globals.css">
+        <script type="text/plain" data-lang="css" data-file="app/globals.css" data-group="figma">
 @import "tailwindcss";
 
 @theme {
@@ -515,18 +649,43 @@ claude mcp add --transport http figma https://mcp.figma.com/mcp
 
       <section class="chapter" id="rendering">
         <h2>How pages get rendered</h2>
-        <p>Next decides per route, based on what the page uses.</p>
+        <p>Next decides per route, and often per part of a page, from what the code uses. A page is a prerendered <b>shell</b> plus optional holes that are filled at request time.</p>
         <div class="scroll">
           <table>
-            <thead><tr><th>Mode</th><th>HTML is built</th><th>Triggered by</th><th>Good for</th></tr></thead>
+            <thead><tr><th>Part of a page</th><th>HTML is built</th><th>Triggered by</th><th>Good for</th></tr></thead>
             <tbody>
-              <tr><td>Static</td><td>Once, at build time</td><td>No request data, cached fetches</td><td>Marketing pages, docs</td></tr>
-              <tr><td>Revalidated</td><td>At build, then refreshed on a timer</td><td><code>revalidate: 60</code></td><td>Product lists, blogs</td></tr>
-              <tr><td>Dynamic</td><td>On every request</td><td><code>cookies()</code>, <code>headers()</code>, <code>searchParams</code>, uncached fetches</td><td>Dashboards, anything per user</td></tr>
+              <tr><td>Static</td><td>Once, at build time</td><td>No data, or only data known at build</td><td>Marketing pages, docs, headings and layout</td></tr>
+              <tr><td>Cached</td><td>At build, then refreshed by <code>cacheLife</code> or when its tag is expired</td><td><code>"use cache"</code></td><td>Product lists, blogs, pricing</td></tr>
+              <tr><td>Streamed</td><td>On every request, inside a <code>&lt;Suspense&gt;</code> boundary</td><td><code>cookies()</code>, <code>headers()</code>, <code>params</code>, <code>searchParams</code>, uncached fetches</td><td>Dashboards, anything per user</td></tr>
             </tbody>
           </table>
         </div>
-        <p><code>npm run build</code> prints which mode each route got. For dynamic segments you can prebuild known pages with <code>generateStaticParams</code>.</p>
+        <p><code>npm run build</code> prints what each route became. This is the table for the examples on this page, built together:</p>
+        <script type="text/plain" data-lang="text" data-file="npm run build">
+Route (app)           Revalidate  Expire
+┌ ○ /
+├ ○ /about
+├ ƒ /api/health
+├ ◐ /dashboard
+├ ○ /login
+├ ○ /pricing                  1h      1d
+├ ◐ /products
+├ ○ /todos
+└   /users/[id]
+  └ ◐ /users/[id]
+
+ƒ Proxy (Middleware)
+
+○  (Static)             prerendered as static content
+◐  (Partial Prerender)  prerendered as static HTML with dynamic server-streamed content
+ƒ  (Dynamic)            server-rendered on demand
+        </script>
+        <ul>
+          <li><code>/pricing</code> is static with a lifetime: that is <code>cacheLife("hours")</code> from <a href="#data">the cached example</a>.</li>
+          <li><code>/dashboard</code>, <code>/products</code> and <code>/users/[id]</code> are partial: a static shell with a streamed hole.</li>
+          <li><code>/api/health</code> is dynamic because the file also has a <code>POST</code> handler.</li>
+        </ul>
+        <p>For dynamic segments you can prebuild known pages with <code>generateStaticParams</code>.</p>
       </section>
 
       <section class="chapter" id="build">
@@ -550,9 +709,9 @@ npm run start      # runs the production server on port 3000
           <li>Components run on the server unless you say <code>"use client"</code>.</li>
           <li>Read data by awaiting in server components. Change data with Server Actions.</li>
           <li>Secrets and cookies live on the server. The browser gets HTML and only the JavaScript it needs.</li>
-          <li>Caching is opt in, per fetch.</li>
+          <li>Request data goes inside <code>&lt;Suspense&gt;</code> and streams. Shared data is cached with <code>"use cache"</code>. The build tells you when a page does neither.</li>
         </ul>
-        <p>To see exactly what each of these replaced in plain React, open <a href="../../Next_React/docs/react-vs-next.html">React vs Next</a>.</p>
+        <p>Next: <a href="next-practice.html">Next.js Practice</a>, usage examples and exercises with solutions. To see exactly what each of these replaced in plain React, open <a href="../../Next_React/docs/react-vs-next.html">React vs Next</a>.</p>
       </section>
 
     </div>
