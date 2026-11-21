@@ -1,16 +1,17 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url><loc>https://hygull.github.io/</loc><lastmod>2026-11-18</lastmod><priority>1.0</priority></url>
+  <url><loc>https://hygull.github.io/</loc><lastmod>2026-11-22</lastmod><priority>1.0</priority></url>
   <url><loc>https://hygull.github.io/archive.html</loc><lastmod>2026-11-18</lastmod><priority>0.3</priority></url>
   <url><loc>https://hygull.github.io/learnings/Bash/docs/bash-notes.html</loc><lastmod>2026-11-18</lastmod><priority>0.8</priority></url>
-  <url><loc>https://hygull.github.io/learnings/Design/docs/design-to-code.html</loc><lastmod>2026-11-18</lastmod><priority>0.8</priority></url>
+  <url><loc>https://hygull.github.io/learnings/Design/docs/design-to-code.html</loc><lastmod>2026-11-22</lastmod><priority>0.8</priority></url>
   <url><loc>https://hygull.github.io/learnings/Go/docs/go-basics.html</loc><lastmod>2026-11-18</lastmod><priority>0.8</priority></url>
   <url><loc>https://hygull.github.io/learnings/Go/docs/go-concurrency.html</loc><lastmod>2026-11-18</lastmod><priority>0.8</priority></url>
   <url><loc>https://hygull.github.io/learnings/Go/docs/go-practice.html</loc><lastmod>2026-11-18</lastmod><priority>0.8</priority></url>
   <url><loc>https://hygull.github.io/learnings/Go/docs/go-setup.html</loc><lastmod>2026-11-18</lastmod><priority>0.8</priority></url>
   <url><loc>https://hygull.github.io/learnings/Go/docs/go-types.html</loc><lastmod>2026-11-18</lastmod><priority>0.8</priority></url>
-  <url><loc>https://hygull.github.io/learnings/Next/docs/next-tutorial.html</loc><lastmod>2026-11-18</lastmod><priority>0.8</priority></url>
-  <url><loc>https://hygull.github.io/learnings/Next_React/docs/react-vs-next.html</loc><lastmod>2026-11-18</lastmod><priority>0.8</priority></url>
+  <url><loc>https://hygull.github.io/learnings/Next/docs/next-practice.html</loc><lastmod>2026-11-22</lastmod><priority>0.8</priority></url>
+  <url><loc>https://hygull.github.io/learnings/Next/docs/next-tutorial.html</loc><lastmod>2026-11-22</lastmod><priority>0.8</priority></url>
+  <url><loc>https://hygull.github.io/learnings/Next_React/docs/react-vs-next.html</loc><lastmod>2026-11-22</lastmod><priority>0.8</priority></url>
   <url><loc>https://hygull.github.io/learnings/Python/docs/design-patterns.html</loc><lastmod>2026-11-18</lastmod><priority>0.8</priority></url>
   <url><loc>https://hygull.github.io/learnings/Python/docs/design-principles.html</loc><lastmod>2026-11-18</lastmod><priority>0.8</priority></url>
   <url><loc>https://hygull.github.io/learnings/Python/docs/python-asyncio.html</loc><lastmod>2026-11-18</lastmod><priority>0.8</priority></url>
@@ -34,7 +35,8 @@
   <url><loc>https://hygull.github.io/learnings/Python/docs/python-testing.html</loc><lastmod>2026-11-18</lastmod><priority>0.8</priority></url>
   <url><loc>https://hygull.github.io/learnings/Python/docs/python-web-apis.html</loc><lastmod>2026-11-18</lastmod><priority>0.8</priority></url>
   <url><loc>https://hygull.github.io/learnings/QA/docs/playwright.html</loc><lastmod>2026-11-18</lastmod><priority>0.8</priority></url>
-  <url><loc>https://hygull.github.io/learnings/React/docs/react-tutorial.html</loc><lastmod>2026-11-18</lastmod><priority>0.8</priority></url>
+  <url><loc>https://hygull.github.io/learnings/React/docs/react-practice.html</loc><lastmod>2026-11-22</lastmod><priority>0.8</priority></url>
+  <url><loc>https://hygull.github.io/learnings/React/docs/react-tutorial.html</loc><lastmod>2026-11-22</lastmod><priority>0.8</priority></url>
   <url><loc>https://hygull.github.io/learnings/SystemDesign/docs/sd-api-design.html</loc><lastmod>2026-11-18</lastmod><priority>0.8</priority></url>
   <url><loc>https://hygull.github.io/learnings/SystemDesign/docs/sd-architecture.html</loc><lastmod>2026-11-18</lastmod><priority>0.8</priority></url>
   <url><loc>https://hygull.github.io/learnings/SystemDesign/docs/sd-building-blocks.html</loc><lastmod>2026-11-18</lastmod><priority>0.8</priority></url>
