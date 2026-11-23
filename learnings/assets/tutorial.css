@@ -13,6 +13,7 @@
   --bash: #2a7a3c;
   --go: #00758f;
   --qa: #7a6400;
+  --redis: #b3261e;
   --system: #b4541a;
   --accent: var(--react);
   --note-bg: #ecf2fb;
@@ -47,6 +48,7 @@
     --bash: #7fd392;
     --go: #5fd0ea;
     --qa: #e3c95a;
+    --redis: #ff8f85;
     --system: #f2a36b;
     --note-bg: #172134;
     --code-bg: #090d15;
@@ -67,6 +69,7 @@
   --bash: #7fd392;
   --go: #5fd0ea;
   --qa: #e3c95a;
+  --redis: #ff8f85;
   --system: #f2a36b;
   --note-bg: #172134;
   --code-bg: #090d15;
@@ -91,6 +94,7 @@ body[data-track="python"] { --accent: var(--python); }
 body[data-track="bash"] { --accent: var(--bash); }
 body[data-track="go"] { --accent: var(--go); }
 body[data-track="qa"] { --accent: var(--qa); }
+body[data-track="redis"] { --accent: var(--redis); }
 body[data-track="system"] { --accent: var(--system); }
 body[data-track="system"] main { max-width: 900px; }
 [data-track="hub"] { --accent: var(--fg); }
@@ -506,6 +510,7 @@ th { font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; color: 
 .track.bash { --accent: var(--bash); }
 .track.go { --accent: var(--go); }
 .track.qa { --accent: var(--qa); }
+.track.redis { --accent: var(--redis); }
 .track.system { --accent: var(--system); }
 
 /* Hub layouts: list is the default; grid and card are chosen with the view switch */

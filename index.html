@@ -64,7 +64,7 @@
 </script>
 <!-- seo:end -->
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@500;700&display=swap">
-<link rel="stylesheet" href="learnings/assets/tutorial.css?v=15">
+<link rel="stylesheet" href="learnings/assets/tutorial.css?v=16">
 </head>
 <body data-track="hub">
 
@@ -122,10 +122,11 @@
           <li><a href="#bash"><span>Bash</span><span class="count">1</span></a></li>
           <li><a href="#go"><span>Go</span><span class="count">5</span></a></li>
           <li><a href="#qa"><span>QA and Testing</span><span class="count">1</span></a></li>
+          <li><a href="#redis"><span>Redis</span><span class="count">1</span></a></li>
           <li class="nav-label">Planned</li>
           <li><a href="#planned-languages"><span>Languages</span><span class="count">12</span></a></li>
           <li><a href="#planned-web"><span>Web Frontend</span><span class="count">9</span></a></li>
-          <li><a href="#planned-databases"><span>Databases</span><span class="count">11</span></a></li>
+          <li><a href="#planned-databases"><span>Databases</span><span class="count">10</span></a></li>
           <li><a href="#planned-apis"><span>APIs and Formats</span><span class="count">10</span></a></li>
           <li><a href="#planned-packages"><span>Package Tools</span><span class="count">11</span></a></li>
         </ol>
@@ -146,6 +147,7 @@
     <li><a href="#bash">Command line: Bash</a></li>
     <li><a href="#go">Go</a></li>
     <li><a href="#qa">QA and Testing</a></li>
+    <li><a href="#redis">Redis</a></li>
     <li><a href="#planned-languages">Planned: Languages</a></li>
     <li><a href="#planned-web">Planned: Web Frontend</a></li>
     <li><a href="#planned-databases">Planned: Databases</a></li>
@@ -1210,6 +1212,54 @@
     </div>
   </section>
 
+  <section class="group" id="redis">
+    <p class="eyebrow">Data store</p>
+    <h2>Redis</h2>
+    <p>Notes on Redis, one topic at a time: how a feature works, what it guarantees, and small Python examples with redis-py.</p>
+
+    <div class="track-list">
+
+      <div class="track redis">
+        <div>
+          <p class="step">Topic 1</p>
+          <h3><a href="learnings/Redis/docs/redis-pubsub.html">Pub/Sub: How It Works and Where to Use It</a></h3>
+          <p class="path">learnings/Redis/docs/redis-pubsub.html</p>
+        </div>
+        <div>
+          <p>Channels, fan-out and at-most-once delivery, how Redis delivers down open connections, the lost-message race and the key-then-publish fix, with twelve redis-py examples and nine diagrams.</p>
+          <ul class="chips">
+            <li><a href="learnings/Redis/docs/redis-pubsub.html#what">What it is</a></li>
+            <li><a href="learnings/Redis/docs/redis-pubsub.html#guarantees">Guarantees</a></li>
+            <li><a href="learnings/Redis/docs/redis-pubsub.html#fanout-queue">Fan-out vs queue</a></li>
+            <li><a href="learnings/Redis/docs/redis-pubsub.html#ex-hello">Hello Pub/Sub</a></li>
+            <li><a href="learnings/Redis/docs/redis-pubsub.html#ex-lost">Lost message</a></li>
+            <li><a href="learnings/Redis/docs/redis-pubsub.html#ex-pattern">Patterns</a></li>
+            <li><a href="learnings/Redis/docs/redis-pubsub.html#connections">Connections</a></li>
+            <li><a href="learnings/Redis/docs/redis-pubsub.html#fix">Key then publish</a></li>
+            <li><a href="learnings/Redis/docs/redis-pubsub.html#ex-cache">Cache invalidation</a></li>
+            <li><a href="learnings/Redis/docs/redis-pubsub.html#ex-chat">Chat across nodes</a></li>
+            <li><a href="learnings/Redis/docs/redis-pubsub.html#ex-cancel">Cancel a job</a></li>
+            <li><a href="learnings/Redis/docs/redis-pubsub.html#ex-keyspace">Keyspace events</a></li>
+            <li><a href="learnings/Redis/docs/redis-pubsub.html#ex-streams">Streams contrast</a></li>
+            <li><a href="learnings/Redis/docs/redis-pubsub.html#ex-limits">Connection limits</a></li>
+            <li><a href="learnings/Redis/docs/redis-pubsub.html#recap">Recap</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="track todo">
+        <div>
+          <p class="step"><span class="badge">To do</span></p>
+          <h3>Redis</h3>
+        </div>
+        <div>
+          <p>Strings, hashes, sorted sets and streams, expiry, persistence, and patterns such as caching, locks and rate limits.</p>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
   <section class="group" id="planned-languages">
     <p class="eyebrow">Planned, not written yet</p>
     <h2>Backend and Systems Languages</h2>
@@ -1484,16 +1534,6 @@
         </div>
         <div>
           <p>Documents and collections, schema design, the aggregation pipeline, indexes and replica sets.</p>
-        </div>
-      </div>
-
-      <div class="track todo">
-        <div>
-          <p class="step"><span class="badge">To do</span></p>
-          <h3>Redis</h3>
-        </div>
-        <div>
-          <p>Strings, hashes, sorted sets and streams, expiry, persistence, and patterns such as caching, locks and rate limits.</p>
         </div>
       </div>
 
@@ -1793,6 +1833,6 @@
   </div>
 </main>
 
-<script src="learnings/assets/tutorial.js?v=15"></script>
+<script src="learnings/assets/tutorial.js?v=16"></script>
 </body>
 </html>
