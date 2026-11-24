@@ -64,7 +64,7 @@
 </script>
 <!-- seo:end -->
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@500;700&display=swap">
-<link rel="stylesheet" href="learnings/assets/tutorial.css?v=16">
+<link rel="stylesheet" href="learnings/assets/tutorial.css?v=17">
 </head>
 <body data-track="hub">
 
@@ -120,15 +120,20 @@
           <li><a href="#python-design"><span>Python Design</span><span class="count">2</span></a></li>
           <li><a href="#system-design"><span>System Design</span><span class="count">12</span></a></li>
           <li><a href="#bash"><span>Bash</span><span class="count">1</span></a></li>
-          <li><a href="#go"><span>Go</span><span class="count">5</span></a></li>
+          <li><a href="#go"><span>Go</span><span class="count">6</span></a></li>
           <li><a href="#qa"><span>QA and Testing</span><span class="count">1</span></a></li>
           <li><a href="#redis"><span>Redis</span><span class="count">1</span></a></li>
+          <li><a href="#cloud"><span>Cloud and DevOps</span><span class="count">6</span></a></li>
+          <li><a href="#engineering"><span>Senior Skills</span><span class="count">4</span></a></li>
           <li class="nav-label">Planned</li>
           <li><a href="#planned-languages"><span>Languages</span><span class="count">12</span></a></li>
           <li><a href="#planned-web"><span>Web Frontend</span><span class="count">9</span></a></li>
           <li><a href="#planned-databases"><span>Databases</span><span class="count">10</span></a></li>
           <li><a href="#planned-apis"><span>APIs and Formats</span><span class="count">10</span></a></li>
           <li><a href="#planned-packages"><span>Package Tools</span><span class="count">11</span></a></li>
+          <li><a href="#planned-cloud"><span>Cloud and DevOps</span><span class="count">6</span></a></li>
+          <li><a href="#planned-ai"><span>AI Engineering</span><span class="count">7</span></a></li>
+          <li><a href="#planned-craft"><span>Senior Skills</span><span class="count">3</span></a></li>
         </ol>
       </nav>
     </aside>
@@ -148,11 +153,16 @@
     <li><a href="#go">Go</a></li>
     <li><a href="#qa">QA and Testing</a></li>
     <li><a href="#redis">Redis</a></li>
+    <li><a href="#cloud">Cloud and DevOps</a></li>
+    <li><a href="#engineering">Senior Skills</a></li>
     <li><a href="#planned-languages">Planned: Languages</a></li>
     <li><a href="#planned-web">Planned: Web Frontend</a></li>
     <li><a href="#planned-databases">Planned: Databases</a></li>
     <li><a href="#planned-apis">Planned: APIs and Formats</a></li>
     <li><a href="#planned-packages">Planned: Package Tools</a></li>
+    <li><a href="#planned-cloud">Planned: Cloud and DevOps</a></li>
+    <li><a href="#planned-ai">Planned: AI Engineering</a></li>
+    <li><a href="#planned-craft">Planned: Senior Skills</a></li>
   </ul>
 
   <section class="group" id="frontend">
@@ -1037,7 +1047,7 @@
   <section class="group" id="go">
     <p class="eyebrow">Backend language</p>
     <h2>Go</h2>
-    <p>Five tutorials: setup, three pages of concepts, then practice. Read them in order. Every program was run on Go 1.27 and its output pasted from that run.</p>
+    <p>Six tutorials: setup, three pages of concepts, practice, then the standard library. Read them in order. Every program was run on Go 1.27 and its output pasted from that run.</p>
 
     <div class="track-list">
 
@@ -1168,6 +1178,34 @@
         </div>
       </div>
 
+      <div class="track go">
+        <div>
+          <p class="step">Part 6</p>
+          <h3><a href="learnings/Go/docs/go-stdlib.html">Standard Library for Backend Work</a></h3>
+          <p class="path">learnings/Go/docs/go-stdlib.html</p>
+        </div>
+        <div>
+          <p>The packages a backend engineer uses every day, each as one small program with its real output: encoding/json, net/http servers and clients, database/sql, files and io, time, slog, flag and testing.</p>
+          <ul class="chips">
+            <li><a href="learnings/Go/docs/go-stdlib.html#json-basics">JSON and tags</a></li>
+            <li><a href="learnings/Go/docs/go-stdlib.html#json-omit">omitempty, omitzero</a></li>
+            <li><a href="learnings/Go/docs/go-stdlib.html#json-custom">Custom MarshalJSON</a></li>
+            <li><a href="learnings/Go/docs/go-stdlib.html#http-mux">ServeMux patterns</a></li>
+            <li><a href="learnings/Go/docs/go-stdlib.html#http-middleware">Middleware</a></li>
+            <li><a href="learnings/Go/docs/go-stdlib.html#http-timeouts">Timeouts, shutdown</a></li>
+            <li><a href="learnings/Go/docs/go-stdlib.html#http-api">Accounts API</a></li>
+            <li><a href="learnings/Go/docs/go-stdlib.html#client-timeout">Client timeout</a></li>
+            <li><a href="learnings/Go/docs/go-stdlib.html#client-retry">Retries</a></li>
+            <li><a href="learnings/Go/docs/go-stdlib.html#sql-model">database/sql pool</a></li>
+            <li><a href="learnings/Go/docs/go-stdlib.html#sql-tx">Transactions</a></li>
+            <li><a href="learnings/Go/docs/go-stdlib.html#io-compose">io.Reader, io.Writer</a></li>
+            <li><a href="learnings/Go/docs/go-stdlib.html#slog">slog</a></li>
+            <li><a href="learnings/Go/docs/go-stdlib.html#test-table">Table-driven tests</a></li>
+            <li><a href="learnings/Go/docs/go-stdlib.html#cheatsheet">Which package</a></li>
+          </ul>
+        </div>
+      </div>
+
     </div>
   </section>
 
@@ -1226,7 +1264,7 @@
           <p class="path">learnings/Redis/docs/redis-pubsub.html</p>
         </div>
         <div>
-          <p>Channels, fan-out and at-most-once delivery, how Redis delivers down open connections, the lost-message race and the key-then-publish fix, with twelve redis-py examples and nine diagrams.</p>
+          <p>Channels, fan-out and at-most-once delivery, how Redis delivers down open connections, the lost-message race and the key-then-publish fix, with eight interactive step-through diagrams and twelve redis-py examples.</p>
           <ul class="chips">
             <li><a href="learnings/Redis/docs/redis-pubsub.html#what">What it is</a></li>
             <li><a href="learnings/Redis/docs/redis-pubsub.html#guarantees">Guarantees</a></li>
@@ -1254,6 +1292,296 @@
         </div>
         <div>
           <p>Strings, hashes, sorted sets and streams, expiry, persistence, and patterns such as caching, locks and rate limits.</p>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <section class="group" id="cloud">
+    <p class="eyebrow">Running a service</p>
+    <h2>Cloud, Containers and DevOps</h2>
+    <p>What it takes to run a service, not only write it. Short text, diagrams that do the explaining, and output from real runs.</p>
+
+    <div class="track-list">
+
+      <div class="track cloud">
+        <div>
+          <p class="step">Topic 1</p>
+          <h3><a href="learnings/Cloud/docs/docker.html">Docker for Backend Engineers</a></h3>
+          <p class="path">learnings/Cloud/docs/docker.html</p>
+        </div>
+        <div>
+          <p>Package a small Python service into an image, run it, wire it to Redis with Compose, debug it and prepare it for production, told mostly in diagrams with output from real runs.</p>
+          <ul class="chips">
+            <li><a href="learnings/Cloud/docs/docker.html#vm">Container vs VM</a></li>
+            <li><a href="learnings/Cloud/docs/docker.html#image-registry">Image, container, registry</a></li>
+            <li><a href="learnings/Cloud/docs/docker.html#lifecycle">Lifecycle</a></li>
+            <li><a href="learnings/Cloud/docs/docker.html#cache">Layers and cache</a></li>
+            <li><a href="learnings/Cloud/docs/docker.html#multistage">Multi-stage builds</a></li>
+            <li><a href="learnings/Cloud/docs/docker.html#secure">Small, secure images</a></li>
+            <li><a href="learnings/Cloud/docs/docker.html#pid1">PID 1 and signals</a></li>
+            <li><a href="learnings/Cloud/docs/docker.html#storage">Volumes and mounts</a></li>
+            <li><a href="learnings/Cloud/docs/docker.html#networks">Networks</a></li>
+            <li><a href="learnings/Cloud/docs/docker.html#health">Health checks</a></li>
+            <li><a href="learnings/Cloud/docs/docker.html#compose-file">Compose</a></li>
+            <li><a href="learnings/Cloud/docs/docker.html#exits">Exits at once</a></li>
+            <li><a href="learnings/Cloud/docs/docker.html#errors">Common errors</a></li>
+            <li><a href="learnings/Cloud/docs/docker.html#k8s">To Kubernetes</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="track cloud">
+        <div>
+          <p class="step">Topic 2</p>
+          <h3><a href="learnings/Cloud/docs/linux-networking.html">Linux and Networking for Backend Engineers</a></h3>
+          <p class="path">learnings/Cloud/docs/linux-networking.html</p>
+        </div>
+        <div>
+          <p>What to know and what to type when a service misbehaves on a server: processes, files, memory, TCP, DNS, HTTP and TLS, told mostly in diagrams and real terminal sessions.</p>
+          <ul class="chips">
+            <li><a href="learnings/Cloud/docs/linux-networking.html#signals">Signals</a></li>
+            <li><a href="learnings/Cloud/docs/linux-networking.html#zombies">Zombies</a></li>
+            <li><a href="learnings/Cloud/docs/linux-networking.html#top">top and load</a></li>
+            <li><a href="learnings/Cloud/docs/linux-networking.html#permissions">Permissions</a></li>
+            <li><a href="learnings/Cloud/docs/linux-networking.html#fds">File descriptors</a></li>
+            <li><a href="learnings/Cloud/docs/linux-networking.html#disk">Disk full</a></li>
+            <li><a href="learnings/Cloud/docs/linux-networking.html#oom">OOM killer</a></li>
+            <li><a href="learnings/Cloud/docs/linux-networking.html#bind">localhost vs 0.0.0.0</a></li>
+            <li><a href="learnings/Cloud/docs/linux-networking.html#handshake">TCP handshake</a></li>
+            <li><a href="learnings/Cloud/docs/linux-networking.html#tcp-failures">Refused, timeout, reset</a></li>
+            <li><a href="learnings/Cloud/docs/linux-networking.html#dig">Reading dig</a></li>
+            <li><a href="learnings/Cloud/docs/linux-networking.html#tls">TLS handshake</a></li>
+            <li><a href="learnings/Cloud/docs/linux-networking.html#curl-timing">curl timing</a></li>
+            <li><a href="learnings/Cloud/docs/linux-networking.html#unreachable">Unreachable: checklist</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="track cloud">
+        <div>
+          <p class="step">Topic 3</p>
+          <h3><a href="learnings/Cloud/docs/nginx-load-balancing.html">Nginx and Load Balancing</a></h3>
+          <p class="path">learnings/Cloud/docs/nginx-load-balancing.html</p>
+        </div>
+        <div>
+          <p>What a reverse proxy does in front of an app: routing, headers, timeouts, load-balancing algorithms, TLS, rate limits, caching, deploys and 5xx debugging, on one Compose project of nginx in front of three Python instances.</p>
+          <ul class="chips">
+            <li><a href="learnings/Cloud/docs/nginx-load-balancing.html#forward-reverse">Forward vs reverse</a></li>
+            <li><a href="learnings/Cloud/docs/nginx-load-balancing.html#location-match">Location matching</a></li>
+            <li><a href="learnings/Cloud/docs/nginx-load-balancing.html#proxy-pass">Trailing-slash trap</a></li>
+            <li><a href="learnings/Cloud/docs/nginx-load-balancing.html#headers">Forwarded headers</a></li>
+            <li><a href="learnings/Cloud/docs/nginx-load-balancing.html#timeouts">Timeouts</a></li>
+            <li><a href="learnings/Cloud/docs/nginx-load-balancing.html#round-robin">Round robin, least_conn</a></li>
+            <li><a href="learnings/Cloud/docs/nginx-load-balancing.html#hashing">Hashing</a></li>
+            <li><a href="learnings/Cloud/docs/nginx-load-balancing.html#health-checks">Health checks</a></li>
+            <li><a href="learnings/Cloud/docs/nginx-load-balancing.html#l4-l7">Layer 4 vs 7</a></li>
+            <li><a href="learnings/Cloud/docs/nginx-load-balancing.html#tls">TLS</a></li>
+            <li><a href="learnings/Cloud/docs/nginx-load-balancing.html#rate-limit">Rate limits</a></li>
+            <li><a href="learnings/Cloud/docs/nginx-load-balancing.html#errors">502, 504, 499</a></li>
+            <li><a href="learnings/Cloud/docs/nginx-load-balancing.html#status-codes">Status codes</a></li>
+            <li><a href="learnings/Cloud/docs/nginx-load-balancing.html#cheat-sheet">Cheat sheet</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="track cloud">
+        <div>
+          <p class="step">Topic 4</p>
+          <h3><a href="learnings/Cloud/docs/observability.html">Observability: Logs, Metrics and Traces</a></h3>
+          <p class="path">learnings/Cloud/docs/observability.html</p>
+        </div>
+        <div>
+          <p>Structured logs, Prometheus metrics and OpenTelemetry traces on one small bank API with a planted slow endpoint and a planted failure, then the alerts, SLOs and dashboards built on them.</p>
+          <ul class="chips">
+            <li><a href="learnings/Cloud/docs/observability.html#signals">Three signals</a></li>
+            <li><a href="learnings/Cloud/docs/observability.html#structured">JSON logs</a></li>
+            <li><a href="learnings/Cloud/docs/observability.html#request-id">Request id</a></li>
+            <li><a href="learnings/Cloud/docs/observability.html#metric-types">Metric types</a></li>
+            <li><a href="learnings/Cloud/docs/observability.html#cardinality">Cardinality trap</a></li>
+            <li><a href="learnings/Cloud/docs/observability.html#promql">PromQL</a></li>
+            <li><a href="learnings/Cloud/docs/observability.html#percentiles">p95 vs average</a></li>
+            <li><a href="learnings/Cloud/docs/observability.html#red-use">RED and USE</a></li>
+            <li><a href="learnings/Cloud/docs/observability.html#traceparent">Trace context</a></li>
+            <li><a href="learnings/Cloud/docs/observability.html#otel-python">OpenTelemetry</a></li>
+            <li><a href="learnings/Cloud/docs/observability.html#alert-rule">Alert rule</a></li>
+            <li><a href="learnings/Cloud/docs/observability.html#slo">SLOs</a></li>
+            <li><a href="learnings/Cloud/docs/observability.html#burn-rate">Burn rate</a></li>
+            <li><a href="learnings/Cloud/docs/observability.html#walkthrough">Alert to root cause</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="track cloud">
+        <div>
+          <p class="step">Topic 5</p>
+          <h3><a href="learnings/Cloud/docs/cicd-github-actions.html">CI/CD with GitHub Actions</a></h3>
+          <p class="path">learnings/Cloud/docs/cicd-github-actions.html</p>
+        </div>
+        <div>
+          <p>A small Python bank service taken from a first lint-and-test workflow to a matrix build, a container image and an approved production deploy, mostly in diagrams and tables.</p>
+          <ul class="chips">
+            <li><a href="learnings/Cloud/docs/cicd-github-actions.html#pipeline">The pipeline</a></li>
+            <li><a href="learnings/Cloud/docs/cicd-github-actions.html#ci-cd-terms">CI vs CD</a></li>
+            <li><a href="learnings/Cloud/docs/cicd-github-actions.html#model">Actions model</a></li>
+            <li><a href="learnings/Cloud/docs/cicd-github-actions.html#first-ci">First workflow</a></li>
+            <li><a href="learnings/Cloud/docs/cicd-github-actions.html#triggers">Triggers</a></li>
+            <li><a href="learnings/Cloud/docs/cicd-github-actions.html#pr-target">pull_request_target</a></li>
+            <li><a href="learnings/Cloud/docs/cicd-github-actions.html#matrix">Matrix builds</a></li>
+            <li><a href="learnings/Cloud/docs/cicd-github-actions.html#caching">Caching</a></li>
+            <li><a href="learnings/Cloud/docs/cicd-github-actions.html#oidc">OIDC</a></li>
+            <li><a href="learnings/Cloud/docs/cicd-github-actions.html#image">Build an image</a></li>
+            <li><a href="learnings/Cloud/docs/cicd-github-actions.html#environments">Environments</a></li>
+            <li><a href="learnings/Cloud/docs/cicd-github-actions.html#migrations">Migrations</a></li>
+            <li><a href="learnings/Cloud/docs/cicd-github-actions.html#failed-run">Reading a failed run</a></li>
+            <li><a href="learnings/Cloud/docs/cicd-github-actions.html#reference">Reference workflow</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="track cloud">
+        <div>
+          <p class="step">Topic 6</p>
+          <h3><a href="learnings/Cloud/docs/security-basics.html">Security Basics for Backend Engineers</a></h3>
+          <p class="path">learnings/Cloud/docs/security-basics.html</p>
+        </div>
+        <div>
+          <p>What an API builder has to get right: passwords, sessions, JWT, OAuth, authorisation, input handling, secrets and crypto primitives, with each bug reproduced on a tiny local bank demo and then fixed.</p>
+          <ul class="chips">
+            <li><a href="learnings/Cloud/docs/security-basics.html#trust-boundaries">Trust boundaries</a></li>
+            <li><a href="learnings/Cloud/docs/security-basics.html#password-hashing">Storing passwords</a></li>
+            <li><a href="learnings/Cloud/docs/security-basics.html#sessions-tokens">Sessions vs tokens</a></li>
+            <li><a href="learnings/Cloud/docs/security-basics.html#cookie-flags">Cookie flags</a></li>
+            <li><a href="learnings/Cloud/docs/security-basics.html#jwt-structure">JWT, field by field</a></li>
+            <li><a href="learnings/Cloud/docs/security-basics.html#jwt-mistakes">JWT mistakes</a></li>
+            <li><a href="learnings/Cloud/docs/security-basics.html#refresh-rotation">Refresh rotation</a></li>
+            <li><a href="learnings/Cloud/docs/security-basics.html#oauth-pkce">OAuth with PKCE</a></li>
+            <li><a href="learnings/Cloud/docs/security-basics.html#bola">Object-level authorisation</a></li>
+            <li><a href="learnings/Cloud/docs/security-basics.html#ssrf">SSRF</a></li>
+            <li><a href="learnings/Cloud/docs/security-basics.html#csrf">CSRF</a></li>
+            <li><a href="learnings/Cloud/docs/security-basics.html#secrets">Secrets</a></li>
+            <li><a href="learnings/Cloud/docs/security-basics.html#crypto-primitives">Crypto primitives</a></li>
+            <li><a href="learnings/Cloud/docs/security-basics.html#owasp-map">OWASP mapping</a></li>
+          </ul>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <section class="group" id="engineering">
+    <p class="eyebrow">Beyond writing code</p>
+    <h2>Senior Engineering Skills</h2>
+    <p>The skills that separate a senior engineer from a fast coder, each shown with diagrams and small programs that were run.</p>
+
+    <div class="track-list">
+
+      <div class="track craft">
+        <div>
+          <p class="step">Topic 1</p>
+          <h3><a href="learnings/Engineering/docs/git-in-depth.html">Git in Depth</a></h3>
+          <p class="path">learnings/Engineering/docs/git-in-depth.html</p>
+        </div>
+        <div>
+          <p>The model behind the commands you already type, drawn as graphs: objects, pointers, the three areas, four ways to integrate a branch, and how to recover anything that looks lost.</p>
+          <ul class="chips">
+            <li><a href="learnings/Engineering/docs/git-in-depth.html#objects">Commits are snapshots</a></li>
+            <li><a href="learnings/Engineering/docs/git-in-depth.html#branch-head">Branches and HEAD</a></li>
+            <li><a href="learnings/Engineering/docs/git-in-depth.html#areas">Three areas</a></li>
+            <li><a href="learnings/Engineering/docs/git-in-depth.html#add-p">Stage by hunk</a></li>
+            <li><a href="learnings/Engineering/docs/git-in-depth.html#ranges">Two dots, three dots</a></li>
+            <li><a href="learnings/Engineering/docs/git-in-depth.html#merge">Merge</a></li>
+            <li><a href="learnings/Engineering/docs/git-in-depth.html#rebase">Rebase</a></li>
+            <li><a href="learnings/Engineering/docs/git-in-depth.html#which">Which one, when</a></li>
+            <li><a href="learnings/Engineering/docs/git-in-depth.html#rebase-i">Interactive rebase</a></li>
+            <li><a href="learnings/Engineering/docs/git-in-depth.html#golden-rule">force-with-lease</a></li>
+            <li><a href="learnings/Engineering/docs/git-in-depth.html#conflict">Conflicts</a></li>
+            <li><a href="learnings/Engineering/docs/git-in-depth.html#reflog">Reflog recovery</a></li>
+            <li><a href="learnings/Engineering/docs/git-in-depth.html#undo">Undo table</a></li>
+            <li><a href="learnings/Engineering/docs/git-in-depth.html#bisect">Bisect</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="track craft">
+        <div>
+          <p class="step">Topic 2</p>
+          <h3><a href="learnings/Engineering/docs/caching-strategies.html">Caching Strategies</a></h3>
+          <p class="path">learnings/Engineering/docs/caching-strategies.html</p>
+        </div>
+        <div>
+          <p>Cache-aside to write-behind, expiry and eviction, invalidation races, stampede, penetration and avalanche, HTTP caching and what to measure, each with a diagram and a small Python program run against Redis.</p>
+          <ul class="chips">
+            <li><a href="learnings/Engineering/docs/caching-strategies.html#layers">Cache layers</a></li>
+            <li><a href="learnings/Engineering/docs/caching-strategies.html#hit-ratio">Hit ratio</a></li>
+            <li><a href="learnings/Engineering/docs/caching-strategies.html#cache-aside">Cache-aside</a></li>
+            <li><a href="learnings/Engineering/docs/caching-strategies.html#compare">Patterns compared</a></li>
+            <li><a href="learnings/Engineering/docs/caching-strategies.html#eviction">Eviction</a></li>
+            <li><a href="learnings/Engineering/docs/caching-strategies.html#lru-cache">lru_cache traps</a></li>
+            <li><a href="learnings/Engineering/docs/caching-strategies.html#race">Two-writer race</a></li>
+            <li><a href="learnings/Engineering/docs/caching-strategies.html#versioned-keys">Versioned keys</a></li>
+            <li><a href="learnings/Engineering/docs/caching-strategies.html#per-user">Per-user keys</a></li>
+            <li><a href="learnings/Engineering/docs/caching-strategies.html#stampede">Stampede</a></li>
+            <li><a href="learnings/Engineering/docs/caching-strategies.html#penetration">Penetration</a></li>
+            <li><a href="learnings/Engineering/docs/caching-strategies.html#avalanche">Avalanche</a></li>
+            <li><a href="learnings/Engineering/docs/caching-strategies.html#etag">ETag and 304</a></li>
+            <li><a href="learnings/Engineering/docs/caching-strategies.html#decide">Decision table</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="track craft">
+        <div>
+          <p class="step">Topic 3</p>
+          <h3><a href="learnings/Engineering/docs/task-queues.html">Task Queues and Messaging</a></h3>
+          <p class="path">learnings/Engineering/docs/task-queues.html</p>
+        </div>
+        <div>
+          <p>How to get background work done reliably: delivery guarantees, a queue built by hand on Redis, idempotency, retries, ordering, scheduling, and Celery in practice.</p>
+          <ul class="chips">
+            <li><a href="learnings/Engineering/docs/task-queues.html#why">Enqueue and return</a></li>
+            <li><a href="learnings/Engineering/docs/task-queues.html#guarantees">Delivery guarantees</a></li>
+            <li><a href="learnings/Engineering/docs/task-queues.html#ack">Acks and timeouts</a></li>
+            <li><a href="learnings/Engineering/docs/task-queues.html#naive">A queue that loses a job</a></li>
+            <li><a href="learnings/Engineering/docs/task-queues.html#reliable">Reliable queue</a></li>
+            <li><a href="learnings/Engineering/docs/task-queues.html#streams">Consumer groups</a></li>
+            <li><a href="learnings/Engineering/docs/task-queues.html#idempotency">Idempotency keys</a></li>
+            <li><a href="learnings/Engineering/docs/task-queues.html#outbox">Outbox</a></li>
+            <li><a href="learnings/Engineering/docs/task-queues.html#retries">Backoff and jitter</a></li>
+            <li><a href="learnings/Engineering/docs/task-queues.html#dlq">Dead-letter queue</a></li>
+            <li><a href="learnings/Engineering/docs/task-queues.html#ordering">Ordering</a></li>
+            <li><a href="learnings/Engineering/docs/task-queues.html#delayed">Delayed tasks</a></li>
+            <li><a href="learnings/Engineering/docs/task-queues.html#celery-acks">Celery acks_late</a></li>
+            <li><a href="learnings/Engineering/docs/task-queues.html#brokers">Choosing a broker</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="track craft">
+        <div>
+          <p class="step">Topic 4</p>
+          <h3><a href="learnings/Engineering/docs/performance-load-testing.html">Performance and Load Testing</a></h3>
+          <p class="path">learnings/Engineering/docs/performance-load-testing.html</p>
+        </div>
+        <div>
+          <p>The measure, find the bottleneck, fix, measure loop, run on a small bank API with seven classic backend problems, using k6, cProfile and tracemalloc with real before and after numbers.</p>
+          <ul class="chips">
+            <li><a href="learnings/Engineering/docs/performance-load-testing.html#percentiles">Percentiles</a></li>
+            <li><a href="learnings/Engineering/docs/performance-load-testing.html#knee">The knee</a></li>
+            <li><a href="learnings/Engineering/docs/performance-load-testing.html#bottleneck">Bottleneck rule</a></li>
+            <li><a href="learnings/Engineering/docs/performance-load-testing.html#timing-middleware">Timing middleware</a></li>
+            <li><a href="learnings/Engineering/docs/performance-load-testing.html#cprofile">cProfile</a></li>
+            <li><a href="learnings/Engineering/docs/performance-load-testing.html#tracemalloc">tracemalloc</a></li>
+            <li><a href="learnings/Engineering/docs/performance-load-testing.html#n-plus-one">N+1 queries</a></li>
+            <li><a href="learnings/Engineering/docs/performance-load-testing.html#missing-index">Missing index</a></li>
+            <li><a href="learnings/Engineering/docs/performance-load-testing.html#pool">Pool too small</a></li>
+            <li><a href="learnings/Engineering/docs/performance-load-testing.html#blocking-async">Blocking in async</a></li>
+            <li><a href="learnings/Engineering/docs/performance-load-testing.html#timeout">No timeout</a></li>
+            <li><a href="learnings/Engineering/docs/performance-load-testing.html#k6-summary">k6 summary</a></li>
+            <li><a href="learnings/Engineering/docs/performance-load-testing.html#open-closed">Open vs closed</a></li>
+            <li><a href="learnings/Engineering/docs/performance-load-testing.html#capacity">Capacity planning</a></li>
+          </ul>
         </div>
       </div>
 
@@ -1829,10 +2157,200 @@
 
     </div>
   </section>
+
+  <section class="group" id="planned-cloud">
+    <p class="eyebrow">Planned, not written yet</p>
+    <h2>Cloud, Containers and DevOps</h2>
+    <p>What it takes to run a service, not only write it: packaging, deploying, scaling, watching and securing it, on a small running example.</p>
+
+    <div class="track-list">
+
+      <div class="track todo">
+        <div>
+          <p class="step"><span class="badge">To do</span></p>
+          <h3>Kubernetes</h3>
+        </div>
+        <div>
+          <p>Pods, Deployments, Services, Ingress, ConfigMaps and Secrets, probes, requests and limits, autoscaling, rollouts and debugging with kubectl.</p>
+        </div>
+      </div>
+
+      <div class="track todo">
+        <div>
+          <p class="step"><span class="badge">To do</span></p>
+          <h3>Helm</h3>
+        </div>
+        <div>
+          <p>Charts, values, templates and releases: packaging a service for several environments.</p>
+        </div>
+      </div>
+
+      <div class="track todo">
+        <div>
+          <p class="step"><span class="badge">To do</span></p>
+          <h3>Google Cloud (GCP)</h3>
+        </div>
+        <div>
+          <p>Projects and IAM, Compute Engine, GKE, Cloud Run, Cloud Storage, Cloud SQL, Pub/Sub, BigQuery, VPC, logging and cost control.</p>
+        </div>
+      </div>
+
+      <div class="track todo">
+        <div>
+          <p class="step"><span class="badge">To do</span></p>
+          <h3>AWS</h3>
+        </div>
+        <div>
+          <p>IAM, EC2, S3, RDS, Lambda, SQS and SNS, ECS and EKS, VPC, CloudWatch, with the GCP equivalent of each.</p>
+        </div>
+      </div>
+
+      <div class="track todo">
+        <div>
+          <p class="step"><span class="badge">To do</span></p>
+          <h3>Azure</h3>
+        </div>
+        <div>
+          <p>The same map for Azure: Entra ID, VMs, AKS, App Service, Blob Storage, Azure SQL and Service Bus.</p>
+        </div>
+      </div>
+
+      <div class="track todo">
+        <div>
+          <p class="step"><span class="badge">To do</span></p>
+          <h3>Terraform</h3>
+        </div>
+        <div>
+          <p>Infrastructure as code: providers, state, modules, plan and apply, workspaces, and keeping state safe.</p>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <section class="group" id="planned-ai">
+    <p class="eyebrow">Planned, not written yet</p>
+    <h2>AI Engineering</h2>
+    <p>Building features on top of language models as a backend engineer: the plumbing, the failure modes and how to measure quality.</p>
+
+    <div class="track-list">
+
+      <div class="track todo">
+        <div>
+          <p class="step"><span class="badge">To do</span></p>
+          <h3>LLM APIs and Prompting</h3>
+        </div>
+        <div>
+          <p>Calling a model from code: messages, system prompts, structured output, streaming, token limits, cost and retries.</p>
+        </div>
+      </div>
+
+      <div class="track todo">
+        <div>
+          <p class="step"><span class="badge">To do</span></p>
+          <h3>Embeddings and Vector Search</h3>
+        </div>
+        <div>
+          <p>What an embedding is, similarity search, chunking, and pgvector, OpenSearch k-NN or a vector database.</p>
+        </div>
+      </div>
+
+      <div class="track todo">
+        <div>
+          <p class="step"><span class="badge">To do</span></p>
+          <h3>Retrieval-Augmented Generation</h3>
+        </div>
+        <div>
+          <p>A RAG pipeline end to end: ingest, retrieve, rerank, answer with citations, and why answers go wrong.</p>
+        </div>
+      </div>
+
+      <div class="track todo">
+        <div>
+          <p class="step"><span class="badge">To do</span></p>
+          <h3>Agents and Tool Use</h3>
+        </div>
+        <div>
+          <p>Tool calling, the agent loop, the Model Context Protocol (MCP), multi-step tasks, and limits on what an agent may do.</p>
+        </div>
+      </div>
+
+      <div class="track todo">
+        <div>
+          <p class="step"><span class="badge">To do</span></p>
+          <h3>Evaluating LLM Systems</h3>
+        </div>
+        <div>
+          <p>Test sets, automated graders, regression checks, tracing and measuring quality before and after a change.</p>
+        </div>
+      </div>
+
+      <div class="track todo">
+        <div>
+          <p class="step"><span class="badge">To do</span></p>
+          <h3>Serving and Operating AI Features</h3>
+        </div>
+        <div>
+          <p>Latency and cost budgets, caching, rate limits, fallbacks, prompt injection and data privacy.</p>
+        </div>
+      </div>
+
+      <div class="track todo">
+        <div>
+          <p class="step"><span class="badge">To do</span></p>
+          <h3>Machine Learning Basics</h3>
+        </div>
+        <div>
+          <p>Training versus inference, features, overfitting, common model types and metrics, enough to work with ML teams.</p>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <section class="group" id="planned-craft">
+    <p class="eyebrow">Planned, not written yet</p>
+    <h2>Senior Engineering Skills</h2>
+    <p>The skills that separate a senior engineer from a fast coder: operating systems in production, deciding in writing and making a team better.</p>
+
+    <div class="track-list">
+
+      <div class="track todo">
+        <div>
+          <p class="step"><span class="badge">To do</span></p>
+          <h3>Debugging Production</h3>
+        </div>
+        <div>
+          <p>Working an incident: logs, metrics, traces, safe rollbacks, root cause analysis and a blameless write-up.</p>
+        </div>
+      </div>
+
+      <div class="track todo">
+        <div>
+          <p class="step"><span class="badge">To do</span></p>
+          <h3>Design Docs and Technical Writing</h3>
+        </div>
+        <div>
+          <p>Proposing a change in writing: problem, options, trade-offs, decision, rollout and risks.</p>
+        </div>
+      </div>
+
+      <div class="track todo">
+        <div>
+          <p class="step"><span class="badge">To do</span></p>
+          <h3>Code Review and Mentoring</h3>
+        </div>
+        <div>
+          <p>Reviewing for correctness and design, giving feedback that lands, and raising the level of a team.</p>
+        </div>
+      </div>
+
+    </div>
+  </section>
     </div>
   </div>
 </main>
 
-<script src="learnings/assets/tutorial.js?v=16"></script>
+<script src="learnings/assets/tutorial.js?v=17"></script>
 </body>
 </html>

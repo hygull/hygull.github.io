@@ -40,7 +40,7 @@
     "name": "Rishikesh Agrawani",
     "url": "https://hygull.github.io/"
    },
-   "dateModified": "2026-11-23",
+   "dateModified": "2026-11-24",
    "isPartOf": {
     "@type": "WebSite",
     "name": "Learnings by Rishikesh Agrawani",
@@ -75,7 +75,8 @@
 </script>
 <!-- seo:end -->
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@500;700&display=swap">
-<link rel="stylesheet" href="../../assets/tutorial.css?v=16">
+<link rel="stylesheet" href="../../assets/tutorial.css?v=17">
+<link rel="stylesheet" href="../../assets/stepper.css?v=1">
 </head>
 <body data-track="redis">
 
@@ -104,7 +105,7 @@
     <div class="page-head">
       <p class="eyebrow">Redis notes</p>
       <h1>Redis Pub/Sub: How It Works and Where to Use It</h1>
-      <p class="lead">Publish/subscribe lets one program announce something to every program that is listening right now, without knowing who they are. These notes cover what Redis guarantees and what it does not, how delivery works underneath, the classic lost-message race and its fix, and twelve small Python examples with <code>redis-py</code>. Every example was run with redis-py 7 against a local Redis 8.10.3, and its output is pasted from that run.</p>
+      <p class="lead">Publish/subscribe lets one program announce something to every program that is listening right now, without knowing who they are. These notes cover what Redis guarantees and what it does not, how delivery works underneath, the classic lost-message race and its fix, eight step-through diagrams, and twelve small Python examples with <code>redis-py</code>. Every example was run with redis-py 7 against a local Redis 8.10.3, and its output is pasted from that run.</p>
     </div>
 
     <div class="chapters">
@@ -130,15 +131,8 @@
           <li><b>SUBSCRIBE</b> means "send me everything published on this channel from now on". The connection then waits and listens.</li>
           <li><b>PUBLISH</b> means "send this to whoever is listening on this channel right now". It returns how many clients received it.</li>
         </ul>
-        <figure class="diagram">
-          <script type="text/x-mermaid">
-flowchart LR
-  P["Publisher"] -->|"PUBLISH news:sports goal!"| C(["channel: news:sports"])
-  C --> S1["Subscriber 1"]
-  C --> S2["Subscriber 2"]
-  C --> S3["Subscriber 3"]
-          </script>
-          <figcaption>Think of a channel as a named pipe: one end to drop messages in, one outlet per subscriber. Each outlet gets its own copy.</figcaption>
+        <figure class="stepper" data-diagram="pipe">
+          <figcaption>Think of a channel as a named pipe. Step through it: the pipe appears with the first subscriber and is gone with the last.</figcaption>
         </figure>
         <div class="scroll">
           <table>
@@ -158,20 +152,8 @@ flowchart LR
       <section class="chapter" id="radio">
         <h2>Live radio, not a mailbox</h2>
         <p class="kind"><a href="#part-idea">The idea</a></p>
-        <figure class="diagram">
-          <script type="text/x-mermaid">
-flowchart LR
-  A["Announcer: PUBLISH"] -->|"heard only if tuned in now"| L["Listener: SUBSCRIBE"]
-          </script>
-          <figcaption>Pub/Sub is live radio: a message is heard once, by whoever is listening at that moment.</figcaption>
-        </figure>
-        <figure class="diagram">
-          <script type="text/x-mermaid">
-flowchart LR
-  W["Writer: SET"] --> N[("key")]
-  N -->|"read any time later"| R["Reader: GET"]
-          </script>
-          <figcaption>A key is a notice on a board: it stays until it is deleted or expires, and nobody is told when it changes.</figcaption>
+        <figure class="stepper" data-diagram="radio">
+          <figcaption>Two different tools. A message is heard once by whoever is listening; a key stays until it is deleted or expires.</figcaption>
         </figure>
         <ul>
           <li><b>Pub/Sub works like live radio.</b> If your radio is on, you hear the announcement. If it was off, the announcement is gone, and there is no replay.</li>
@@ -202,23 +184,8 @@ flowchart LR
       <section class="chapter" id="fanout-queue">
         <h2>Fan-out versus a work queue</h2>
         <p class="kind"><a href="#part-idea">The idea</a></p>
-        <figure class="diagram">
-          <script type="text/x-mermaid">
-flowchart LR
-  P1["PUBLISH m1"] --> CH(["channel"])
-  CH -->|m1| SA["Subscriber A"]
-  CH -->|m1| SB["Subscriber B"]
-          </script>
-          <figcaption>Pub/Sub channel: a broadcast. Every subscriber gets its own copy of m1.</figcaption>
-        </figure>
-        <figure class="diagram">
-          <script type="text/x-mermaid">
-flowchart LR
-  P2["LPUSH j1, j2"] --> Q[["list"]]
-  Q -->|j1| WA["Worker A"]
-  Q -->|j2| WB["Worker B"]
-          </script>
-          <figcaption>Work queue: a ticket counter. Each job goes to exactly one worker. Mixing the two up is the most common design mistake with Pub/Sub.</figcaption>
+        <figure class="stepper" data-diagram="fanq">
+          <figcaption>A broadcast and a ticket counter. Mixing them up is the most common design mistake with Pub/Sub.</figcaption>
         </figure>
         <div class="scroll">
           <table>
@@ -464,16 +431,7 @@ publish payments:new    receivers: 0
         <h2>Clients dial Redis, never the reverse</h2>
         <p class="kind"><a href="#part-under">How it works underneath</a></p>
         <p>Every publisher and subscriber opens its own TCP connection to Redis (port 6379 by default). Redis keeps a table in memory: channel name to the list of subscribed connections, and pattern to the list of pattern-subscribed connections.</p>
-        <figure class="diagram">
-          <script type="text/x-mermaid">
-flowchart TD
-  A["App server A<br/>SUBSCRIBE job:42:cancel"] -->|"1. opens TCP connection"| T
-  B["App server B<br/>PUBLISH job:42:cancel 1"] -->|"2. opens TCP connection"| T
-  subgraph Redis
-    T["channel table<br/>job:42:cancel : connection of A"]
-  end
-  T -.->|"3. message written down A's open connection"| A
-          </script>
+        <figure class="stepper" data-diagram="dial">
           <figcaption>Redis never connects out. It writes to sockets that the subscribers already opened.</figcaption>
         </figure>
         <p>On <code>PUBLISH</code>, Redis looks up the channel name and the matching patterns and writes the message to each of those already-open sockets. It never needs a subscriber's IP address or host name. That is why Pub/Sub works across many app servers, containers or pods: each one connects out to the same Redis.</p>
@@ -526,19 +484,8 @@ a message later: *3\r\n$7\r\nmessage\r\n$11\r\nnews:sports\r\n$5\r\ngoal!\r\n
         <h2>The race</h2>
         <p class="kind"><a href="#part-race">Lost messages and the fix</a></p>
         <p><code>PUBLISH</code> to a channel with no subscribers returns <code>0</code> and the message is gone. Subscribing a moment later does not bring it back. This bites whenever two things happen close together: "I published the event just before the other side finished subscribing."</p>
-        <figure class="diagram">
-          <script type="text/x-mermaid">
-sequenceDiagram
-  participant S as Sender
-  participant R as Redis
-  participant W as Receiver
-  S->>R: PUBLISH job:42:cancel 1
-  R-->>S: 0 receivers
-  Note over R: message dropped
-  W->>R: SUBSCRIBE job:42:cancel
-  Note over W: waits for ever
-          </script>
-          <figcaption>Nothing failed and nothing was logged. The receiver simply never hears about it.</figcaption>
+        <figure class="stepper" data-diagram="race">
+          <figcaption>Steps 1 to 3 are the race. Steps 4 to 7 are the same two programs in an order that cannot lose the signal.</figcaption>
         </figure>
       </section>
 
@@ -546,22 +493,7 @@ sequenceDiagram
         <h2>The fix: key first, then publish</h2>
         <p class="kind"><a href="#part-race">Lost messages and the fix</a></p>
         <p><b>The sender writes durable state first, then publishes. The receiver subscribes first, then reads the state.</b></p>
-        <figure class="diagram">
-          <script type="text/x-mermaid">
-sequenceDiagram
-  participant S as Sender
-  participant R as Redis
-  participant W as Receiver
-  S->>R: SET job:42:status cancelled
-  S->>R: PUBLISH job:42:cancel 1
-  Note over R: 0 receivers, and it does not matter
-  W->>R: SUBSCRIBE job:42:cancel
-  W->>R: GET job:42:status
-  R-->>W: cancelled
-  Note over W: acts at once
-          </script>
-          <figcaption>Whichever order the two sides run in, the receiver finds out: from the live message, or from the key.</figcaption>
-        </figure>
+        <p>Steps 4 to 7 of <a href="#race">the diagram above</a> walk through this order.</p>
         <div class="scroll">
           <table>
             <thead><tr><th>Timing</th><th>How the receiver learns</th></tr></thead>
@@ -693,15 +625,8 @@ cancel job 44: 0 completed
         <h2>5. Cache invalidation across app servers</h2>
         <p class="kind"><a href="#part-uses">Use cases</a></p>
         <p>Each app server keeps prices in a local dict so it does not ask the database on every request. When a price changes, every server must forget its copy.</p>
-        <figure class="diagram">
-          <script type="text/x-mermaid">
-flowchart TD
-  U["Price update<br/>1. write the database"] -->|"2. PUBLISH cache-invalidate product:123"| R(["Redis channel"])
-  R --> A["Server A<br/>drops product:123"]
-  R --> B["Server B<br/>drops product:123"]
-  R --> C["Server C<br/>drops product:123"]
-          </script>
-          <figcaption>Each server reloads the entry from the database the next time it is asked for it.</figcaption>
+        <figure class="stepper" data-diagram="cache">
+          <figcaption>Database first, then publish. Each server reloads the entry the next time it is asked for it.</figcaption>
         </figure>
         <p>The "database" here is a plain Redis key, <code>db:product:123</code>. Start two servers in two terminals, then run the update in a third.</p>
         <script type="text/plain" data-lang="py" data-file="app_server.py" data-norun>
@@ -861,6 +786,9 @@ Bob (node 9002) sees:   Bob: yes, on the other node
         <h2>8. Cancel a job on another server</h2>
         <p class="kind"><a href="#part-uses">Use cases</a></p>
         <p>A long job runs on one server. The "cancel" request lands on a different one. Per-job channel plus status key: the key-then-publish pattern with asyncio.</p>
+        <figure class="stepper" data-diagram="routing">
+          <figcaption>One channel per job routes the signal to exactly the server that needs it.</figcaption>
+        </figure>
         <script type="text/plain" data-lang="py" data-file="jobs.py" data-norun>
 """python jobs.py run 42      (terminal 1: the server doing the work)
    python jobs.py cancel 42   (terminal 2: any other server)"""
@@ -1073,6 +1001,9 @@ entries kept in the stream: 4
         <h2>10. Connection limits</h2>
         <p class="kind"><a href="#part-ops">Operating it</a></p>
         <p>Each subscriber object holds a connection for as long as it lives. A process that creates one per request, user or job runs out. Here the pool allows 5 connections and six jobs each want their own subscriber.</p>
+        <figure class="stepper" data-diagram="pool">
+          <figcaption>Subscribers pin connections. Share one subscriber per process and the pool stays free for commands.</figcaption>
+        </figure>
         <script type="text/plain" data-lang="py" data-file="connection_limits.py" data-norun>
 import redis
 
@@ -1245,6 +1176,8 @@ MONITOR: PUBLISH news:sports goal!
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
-<script src="../../assets/tutorial.js?v=16"></script>
+<script src="../../assets/tutorial.js?v=17"></script>
+<script src="../../assets/stepper.js?v=1"></script>
+<script src="redis-pubsub-diagrams.js?v=1"></script>
 </body>
 </html>

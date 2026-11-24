@@ -14,6 +14,9 @@
   --go: #00758f;
   --qa: #7a6400;
   --redis: #b3261e;
+  --cloud: #2f5fd0;
+  --craft: #6d4c9f;
+  --ai: #0f7a6c;
   --system: #b4541a;
   --accent: var(--react);
   --note-bg: #ecf2fb;
@@ -49,6 +52,9 @@
     --go: #5fd0ea;
     --qa: #e3c95a;
     --redis: #ff8f85;
+    --cloud: #8fb0ff;
+    --craft: #c4a7ff;
+    --ai: #6fd6c4;
     --system: #f2a36b;
     --note-bg: #172134;
     --code-bg: #090d15;
@@ -70,6 +76,9 @@
   --go: #5fd0ea;
   --qa: #e3c95a;
   --redis: #ff8f85;
+  --cloud: #8fb0ff;
+  --craft: #c4a7ff;
+  --ai: #6fd6c4;
   --system: #f2a36b;
   --note-bg: #172134;
   --code-bg: #090d15;
@@ -95,6 +104,9 @@ body[data-track="bash"] { --accent: var(--bash); }
 body[data-track="go"] { --accent: var(--go); }
 body[data-track="qa"] { --accent: var(--qa); }
 body[data-track="redis"] { --accent: var(--redis); }
+body[data-track="cloud"] { --accent: var(--cloud); }
+body[data-track="craft"] { --accent: var(--craft); }
+body[data-track="ai"] { --accent: var(--ai); }
 body[data-track="system"] { --accent: var(--system); }
 body[data-track="system"] main { max-width: 900px; }
 [data-track="hub"] { --accent: var(--fg); }
@@ -511,6 +523,9 @@ th { font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; color: 
 .track.go { --accent: var(--go); }
 .track.qa { --accent: var(--qa); }
 .track.redis { --accent: var(--redis); }
+.track.cloud { --accent: var(--cloud); }
+.track.craft { --accent: var(--craft); }
+.track.ai { --accent: var(--ai); }
 .track.system { --accent: var(--system); }
 
 /* Hub layouts: list is the default; grid and card are chosen with the view switch */
